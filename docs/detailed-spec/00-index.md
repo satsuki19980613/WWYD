@@ -25,6 +25,7 @@
 | 09 | [09-info-modal.md](09-info-modal.md) | インフォメーションモーダルの文言 |
 | 10 | [10-manual-tasks.md](10-manual-tasks.md) | さつきが手作業で行う作業の一覧と手順 |
 | 11 | [11-open-questions.md](11-open-questions.md) | 仕様書の曖昧な点・矛盾・判断が必要な点 |
+| 12 | [12-neon-migration.md](12-neon-migration.md) | バックエンドを Supabase から Neon に移す設計案（2026-09-28〜。確定まで 01〜03・08・10 章の Supabase 固有の記述より優先して読む） |
 
 ## 共通の表記
 

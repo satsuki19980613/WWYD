@@ -1,6 +1,8 @@
 # CLAUDE.md — WWYD（What Would You Do?）
 
 このファイルは、このリポジトリで作業するすべてのセッションが**最初に読む**文書である。
+
+> **2026-09-28: バックエンドを Supabase から Neon に移行中**（詳細仕様 [12 章](docs/detailed-spec/12-neon-migration.md)）。§3・§5・§10 の Supabase 固有の記述は、12 章が確定するまで古い情報として扱う。
 読んだら次に [docs/plan.md](docs/plan.md) の「現在の状況」を読み、そこから作業を再開する。
 
 ---
@@ -45,11 +47,11 @@
 
 | 区分 | 内容 | 状態 |
 |---|---|---|
-| バックエンド | **Supabase**（Auth の Google プロバイダ、Postgres、RLS、トリガ） | **確定** |
-| サーバー側のポーカーロジック | Supabase Edge Functions（Deno / TypeScript）。`packages/core` を相対 import で共有 | **確定**（詳細仕様 03 章。T-103 で検証） |
+| バックエンド | **Neon**（Postgres、Managed Better Auth の Google ログイン、Data API、RLS、トリガ）。Supabase から変更 | **変更決定（2026-09-28）**。細部は詳細仕様 12 章の確認待ち Q-25〜Q-29 とスパイクの後に確定 |
+| サーバー側のポーカーロジック | Neon Functions（Node.js / TypeScript）で `packages/core` を共有する案（旧: Supabase Edge Functions） | **提案・未確定**（詳細仕様 12 章 Q-28・S-4） |
 | フロントエンド | React 18 + Vite + TypeScript（ICMCLEC と同じ） | **確定** |
 | モノレポ | npm workspaces（`packages/*`） | **確定** |
-| テスト | Vitest（TS）、pgTAP（`supabase test db`）、Playwright（E2E） | **確定** |
+| テスト | Vitest（TS）、pgTAP（Neon 移行後はローカルの Postgres で実行。12 章 S-7）、Playwright（E2E） | **確定**（pgTAP の実行環境は移行中） |
 | 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ） | **確定**（無料枠は 2026-09-27 に再確認済み。詳細仕様 08 章） |
 | OCR | 流用元 `tenfour_watcher` を TypeScript に移植、本文認識は tesseract.js を自サイトから配信 | **確定**（詳細仕様 07 章） |
 | Node.js | 22（`.node-version`） | **確定** |
