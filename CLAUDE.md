@@ -95,6 +95,7 @@ WWYD/
 |---|---|
 | セットアップ | `npm install`。Neon CLI のログイン `npx neonctl auth`（さつき。ブラウザで許可） |
 | 開発サーバー | `npm run dev`（http://localhost:5173。`.env.development` で Neon の `dev` ブランチにつなぐ）。部品一覧は `/_dev/ui`、全画面の状態は `?devstate=maintenance` 等（開発時のみ） |
+| 手元で本番につなぐ確認 | `npm run dev:prod`（`.env.production` の本番の URL を使う。Google ログインはテストユーザーだけ。本番のデータを書き換えるので確認だけに使う） |
 | 単体テスト | `npm test`（Vitest）。カバレッジは `npm run test:coverage`（core の行 90% 以上） |
 | 型検査 | `npm run typecheck` |
 | ビルド | `npm run build`（出力 `packages/app/dist`） |

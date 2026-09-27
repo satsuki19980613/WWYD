@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @wwyd/app",
+    "dev:prod": "npm run dev -w @wwyd/app -- --mode production",
     "build": "npm run build -w @wwyd/app",
     "preview": "npm run preview -w @wwyd/app",
     "test": "vitest run",

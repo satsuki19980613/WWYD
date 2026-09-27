@@ -147,6 +147,13 @@ Claude がマイグレーションの適用と Functions の配備に使う。�
 - Neon のコンソール「Settings → Auth → OAuth providers → Add OAuth provider」に、クライアント ID とシークレットを入れる。
 - 同じ画面の「trusted domains」に、アプリの URL（`http://localhost:5173` と本番の URL）を入れる。
 
+実施時の注意（2026-09-28、production で実施）:
+- Google Cloud のプロジェクトは `wwyd`、クライアント名は `wwyd-neon`。同意画面の承認済みドメインに `neon.tech`。
+- 同意画面の「アプリを公開」は、ブランディングのホームページ・プライバシーポリシーの URL が無いと押せない。公開は M-05b（Cloudflare Pages の後）に回し、それまでは「テスト中」のまま「対象 → テストユーザー」にログインする人を登録する。
+- Neon の Google の行（Shared keys）の「⋮」から開く画面に入力欄が出ないときは、Google を一度外して「Add OAuth provider → Google」で追加し直すと、クライアント ID とシークレットの欄が出る。
+- 同じ画面の「Sign-up with Email」がオンになっていないか確かめる（オンならオフにする）。
+- 設定はブランチごと。dev は共用の鍵のままでよい。
+
 ## N-05 CI 用の Neon の API キー（GitHub の Secrets）
 
 CI（GitHub Actions）で DB テストを動かすために、Neon の API キーを GitHub に預ける。キーは秘密情報なので、Claude には渡さず、さつきが直接 GitHub に入れる。
