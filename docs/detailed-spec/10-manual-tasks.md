@@ -1,5 +1,8 @@
 # 10 さつきが手作業で行う作業
 
+> **2026-09-28 追記**: バックエンドを Supabase から Neon に変える（12 章）。Supabase の M-01〜M-03・M-07 は使わず、下の **N-01〜N-04** に置き換える。
+> Google OAuth（M-05・M-06）はリダイレクト URI だけ変わる（N-04）。
+
 アカウント・秘密情報・課金設定・外部への公開にかかわる作業は、Claude が代行しない（CLAUDE.md §10, §12）。
 ここに手順をまとめ、plan.md のタスク一覧に担当「さつき」として載せる。
 
@@ -25,6 +28,7 @@
 1. リポジトリ直下で `.env.example` を `.env` に複製。
 2. M-01 の URL と anon キーを入れる。
 3. `.env` はコミットされない（`.gitignore` 済み）。Claude は `.env` を読めない設定になっている。
+4. 補足: `npm run dev` はリポジトリ直下の `.env.development`（ローカルの Supabase につなぐ値。コミット済み）を `.env` より優先する。`.env` の値が使われるのは `npm run build` / `npm run preview` のとき。開発サーバーで本番 DB につなぎたいときは `.env.development.local` に本番の値を書く（コミットされない）。
 
 ## M-03 Supabase CLI のログインとリンク
 
@@ -97,3 +101,65 @@ Claude が起案した文面（06 章 §6.2）を読み、承認または修正�
 ## M-13 OCR の流用元の確認と正解データの扱い
 
 【Q-17】の回答。流用元のリポジトリとパス、正解画像を公開リポジトリに置いてよいか。
+
+---
+
+## N-01 Neon のアカウントとプロジェクトの作成（Supabase の M-01 の代わり）
+
+Neon は WWYD のデータとログインを預かる「倉庫」。無料で使う（クレジットカードの登録は要らない）。
+
+1. https://neon.com を開き、右上の「**Sign up**」。Google アカウントか GitHub アカウントで登録できる。
+2. 登録後の画面、または「**New project**」でプロジェクトを作る。
+
+| 項目 | 入れるもの |
+|---|---|
+| Project name | `wwyd` |
+| Cloud provider | **AWS** |
+| Region | **AWS Asia Pacific (Singapore)** |
+| Postgres version | 最初に選ばれているまま |
+| その他（Neon Auth などの項目が出たら） | 分からなければ最初のまま。後で Claude が案内する |
+
+3. 作成後、プロジェクトの「**Settings**」を開き、**Project ID**（`例: cool-river-12345678` のような文字列）を Claude に伝える。
+4. 接続文字列（`postgresql://…` で始まり、パスワードを含むもの）が表示されても、**Claude には渡さない**（パスワードが含まれる）。
+
+教えてよいもの・いけないもの:
+
+| もの | Claude に教えてよいか |
+|---|---|
+| Project ID | ✅ |
+| Data API の URL・Auth の URL（`https://…neon.tech/…` でパスワードを含まないもの） | ✅ |
+| 接続文字列（`postgresql://ユーザー:パスワード@…`） | ❌ |
+| API キー（Neon CLI 用） | ❌ |
+
+## N-02 Auth と Data API の有効化
+
+N-01 の後、Claude が画面に沿って案内する（コンソールの「Auth」「Data API」の画面で有効にする）。
+
+## N-03 Neon CLI のログイン
+
+Claude がマイグレーションの適用と Functions の配備に使う。ターミナルで `npx neonctl auth` を実行し、開いたブラウザで許可する。
+以後、本番のブランチへの適用・配備は、Claude が提案してさつきの承認を得てから行う。
+
+## N-04 Google ログインを Neon につなぐ（M-05・M-06 の差し替え部分）
+
+- M-06 の「承認済みのリダイレクト URI」は、Supabase の URL ではなく **Neon Auth の URL ＋ `/callback/google`**（Neon のコンソールの Auth 画面に出る）。
+- 承認済みの JavaScript 生成元に、アプリの URL（`http://localhost:5173` と本番の URL）と Neon Auth の URL を入れる。
+- Neon のコンソール「Settings → Auth → OAuth providers → Add OAuth provider」に、クライアント ID とシークレットを入れる。
+- 同じ画面の「trusted domains」に、アプリの URL（`http://localhost:5173` と本番の URL）を入れる。
+
+実施時の注意（2026-09-28、production で実施）:
+- Google Cloud のプロジェクトは `wwyd`、クライアント名は `wwyd-neon`。同意画面の承認済みドメインに `neon.tech`。
+- 同意画面の「アプリを公開」は、ブランディングのホームページ・プライバシーポリシーの URL が無いと押せない。公開は M-05b（Cloudflare Pages の後）に回し、それまでは「テスト中」のまま「対象 → テストユーザー」にログインする人を登録する。
+- Neon の Google の行（Shared keys）の「⋮」から開く画面に入力欄が出ないときは、Google を一度外して「Add OAuth provider → Google」で追加し直すと、クライアント ID とシークレットの欄が出る。
+- 同じ画面の「Sign-up with Email」がオンになっていないか確かめる（オンならオフにする）。
+- 設定はブランチごと。dev は共用の鍵のままでよい。
+
+## N-05 CI 用の Neon の API キー（GitHub の Secrets）
+
+CI（GitHub Actions）で DB テストを動かすために、Neon の API キーを GitHub に預ける。キーは秘密情報なので、Claude には渡さず、さつきが直接 GitHub に入れる。
+
+1. Neon のコンソールで、組織（Organization）の設定 →「**API keys**」→「**Create new API key**」。種類を選べる場合は **Project-scoped（プロジェクト `wwyd` だけ）** を選ぶ。名前は `wwyd-ci`。
+2. 表示されたキーをコピーする（一度しか表示されない）。
+3. GitHub のリポジトリ `satsuki19980613/WWYD` →「**Settings**」→「**Secrets and variables**」→「**Actions**」→「**New repository secret**」。
+4. Name に `NEON_API_KEY`、Secret にコピーしたキーを貼って「Add secret」。
+5. 終わったら Claude に「入れた」とだけ伝える（キーは伝えない）。

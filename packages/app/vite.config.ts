@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react';
 // 直接開いても資産が読めるように）。本番の SPA フォールバックは Cloudflare Pages が行う（08 章）。
 export default defineConfig({
   base: '/',
+  // .env はリポジトリ直下に置く（.env.example と同じ場所。CLAUDE.md §5）
+  envDir: '../..',
   plugins: [react()],
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },

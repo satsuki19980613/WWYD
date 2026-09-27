@@ -26,3 +26,25 @@ jobs:
         run: npm run test:coverage
       - name: ビルド
         run: npm run build
+
+  # DB のテスト（pgTAP の DB-01〜18 と同時回答の DB-19）。Neon の一時ブランチ（1 時間で自動削除）で実行する。
+  # リポジトリの Secrets に NEON_API_KEY が無いとき（フォークからの PR など）は飛ばす。
+  db:
+    runs-on: ubuntu-latest
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: 共有テストベクタから生成した pgTAP が最新か
+        run: npm run check:db-vectors
+      - name: Neon の一時ブランチで DB テスト
+        if: env.NEON_API_KEY != ''
+        run: npm run test:db
+      - name: NEON_API_KEY が無いので DB テストを飛ばす
+        if: env.NEON_API_KEY == ''
+        run: echo "NEON_API_KEY が設定されていないため、DB テストを飛ばしました。"

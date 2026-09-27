@@ -1,3 +1,7 @@
+| さつきの確認待ち | N-05（CI 用 API キー）の手作業 |
+| 次にやること | 1. `phase/03-db-auth` を push → PR → CI → マージ<br>2. さつき: N-05（CI 用の NEON_API_KEY）、M-09（管理者 UID の登録）、dev の「Sign-up with Email」をオフ<br>3. P4 一覧（T-401〜） |
+| 直近で完了したこと | 本番（production）へのマイグレーション適用（T-311。さつきが実行、Claude が 10 本の適用・全表の RLS・未認証の拒否を確認）。N-04（WWYD 専用の Google OAuth。同意画面はテスト中＋テストユーザー）。本番につないだ開発サーバー（`npm run dev:prod`）で、さつきが Google ログイン → スポット一覧を確認 |
+| 現在のフェーズ | **P3 DB と認証 — 完了**（本番で Google ログイン → 一覧まで確認）。次は P4 一覧 |
 # WWYD 実装計画書（進捗管理書）
 
 このファイル 1 つで、どのセッションでも現状を把握して作業を再開できるようにする。
@@ -10,11 +14,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P2 ポーカーロジック 完了**（2026-09-27、PR #3 をマージ）→ 次は P3 DB と認証 |
-| 直近で完了したこと | P2 の T-201〜T-206（`packages/core` のポーカーロジック・paint／集計・投稿の検証）。テスト 254 件、行カバレッジ 100%。Q-24 を推奨案で決定 |
-| 次にやること | 0. まず [BATON.md](BATON.md) を読む<br>1. main から `phase/03-db-auth` を切り、P3 に着手（T-301 マイグレーション → T-302 RLS・トリガ・RPC → T-303 pgTAP）。ローカルの Supabase で進められる<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）と M-05〜M-07（Google OAuth）が T-304・T-305 の前に必要 |
-| ブロッカー | なし（Docker Desktop は導入済み。使う前に起動しておく必要がある） |
-| さつきの確認待ち | なし |
+| 現在のフェーズ | **P3 DB と認証 — Neon への移行はほぼ完了**（12 章を確定稿に）。残りは本番への適用と本番の Google ログイン |
+| 直近で完了したこと | Neon への移行: スパイク S-1〜S-7（iPhone を除く）、マイグレーションと DB テスト（Neon の一時ブランチで 143 件＋DB-19 緑）、ログインの書き換え（パソコンの Chrome で Google ログイン → 一覧を確認）、Neon Functions の試作（core の取り込み・JWT の検証を確認、試作は削除）、Supabase の撤去、CLAUDE.md の更新 |
+| 次にやること | 1. さつきの承認: 本番（production）へのマイグレーション適用（T-311）<br>2. さつき: N-04（本番用の Google OAuth。M-05・M-06 と合わせて）、N-05（CI 用の API キー）<br>3. 本番で Google ログイン → whoami を確認して P3 完了 → push・PR・マージ |
+| ブロッカー | なし |
+| さつきの確認待ち | ① 本番へのマイグレーション適用（T-311）の承認 ② N-04・N-05 の手作業 ③ `phase/03-db-auth` の push・PR（P3 完了時） |
 
 ---
 
@@ -25,7 +29,7 @@
 | P0 準備 | Skill 導入、CLAUDE.md、詳細仕様、計画書 | さつきがレビューし、優先度 A の確認待ちに回答済み | 完了 |
 | P1 基盤 | モノレポ、ツール、CI、デザイントークンとアプリの外枠、Edge Function の import 検証 | `npm run typecheck` / `npm test` / `npm run build` が CI で緑。外枠（ヘッダー・ⓘ・ルーティング・メンテナンス画面）がローカルで表示され、`wwyd-ui-concept` の自己レビューに合格 | 完了 |
 | P2 ポーカーロジック | `packages/core` のロジックと paint / 集計コーデック | 04 章 §10 と 05 章 §5 のテストケースがすべて自動テストで緑。カバレッジ（行）90% 以上 | 完了 |
-| P3 DB と認証 | マイグレーション、RLS、トリガ、RPC、Google ログイン | 02 章 §5 の DB テスト（pgTAP）がすべて緑。ローカルと本番で Google ログイン → `whoami` が動く | 未着手 |
+| P3 DB と認証 | マイグレーション、RLS、トリガ、RPC、Google ログイン | 02 章 §5 の DB テスト（pgTAP）がすべて緑。ローカルと本番で Google ログイン → `whoami` が動く | 完了（2026-09-28。本番で Google ログイン → 一覧を確認。iPhone は M-08 の後） |
 | P4 一覧 | スポット一覧 | 06 章 §2 の状態がすべて表示できる。タブ・フィルタ・並び替え・追加読み込み・削除が本番 DB で動く | 未着手 |
 | P5 スポット投稿 | 投稿画面、カードキーボード、Edge Function `create-post` | 03 章 §5 の EF テストが緑。PC とスマホで H-S1 / H-MW / H-S3 を入力して投稿でき、`get_post_detail` で読める | 未着手 |
 | P6 回答 | リプレイ、ブラシ、塗り、サイズ、送信、Hero の予想 | 06 章 §4 の操作を E2E で確認（塗り・なぞり・スポイト・重なったハンドル・元に戻す・送信・再回答の拒否）。スマホ実機で確認 | 未着手 |
@@ -78,19 +82,30 @@
 
 | ID | 内容 | 依存 | 完了条件 | 状態 | 担当 | 詳細仕様 |
 |---|---|---|---|---|---|---|
-| M-01 | Supabase プロジェクトの作成 | — | Project ref を Claude に共有 | 未着手 | さつき | 10 M-01 |
-| M-02 | `.env` の作成 | M-01 | ローカルで接続できる | 未着手 | さつき | 10 M-02 |
-| M-03 | Supabase CLI のログインとリンク | M-01 | `npx supabase link` 済み | 未着手 | さつき | 10 M-03 |
+| M-01 | Supabase プロジェクトの作成 | — | Project ref を Claude に共有 | 取り消し（Supabase の枠が無い。N-01 に置き換え） | さつき | 10 M-01 |
+| M-02 | `.env` の作成 | M-01 | ローカルで接続できる | 取り消し（Neon の N-01〜N-04 に置き換え） | さつき | 10 M-02 |
+| M-03 | Supabase CLI のログインとリンク | M-01 | `npx supabase link` 済み | 取り消し（Neon の N-01〜N-04 に置き換え） | さつき | 10 M-03 |
 | M-04 | Docker Desktop のインストール | — | `docker run hello-world` 成功（2026-09-27）。`npx supabase start` は P1 / P3 で確認 | 完了 | さつき | 10 M-04 |
-| T-301 | マイグレーション: 型・表・インデックス | T-006(Q-9,10,20), M-04 | ローカルで `supabase db reset` が通る | 未着手 | | 01 |
-| T-302 | マイグレーション: 共通関数・RLS・トリガ・RPC | T-301 | 同上 | 未着手 | | 02 |
-| T-303 | pgTAP テスト DB-01〜19、共有テストベクタで DB-06 | T-302, T-205 | `supabase test db` が緑 | 未着手 | | 02 §5 |
-| M-05 | Google Cloud: OAuth 同意画面（テスト状態で開始） | — | 設定済み | 未着手 | さつき | 10 M-05 |
-| M-06 | Google Cloud: OAuth クライアント ID | M-05, M-01 | 作成済み | 未着手 | さつき | 10 M-06 |
-| M-07 | Supabase: Google プロバイダと URL 設定 | M-06 | 有効化済み | 未着手 | さつき | 10 M-07 |
-| T-304 | ログイン画面・認証状態・`whoami`・利用不可画面 | T-105, T-302, M-07 | ローカルで Google ログイン → 一覧（空）まで | 未着手 | | 06 §0.3, §1 |
-| T-305 | 本番 DB へのマイグレーション適用（承認後） | T-303, M-03 | さつきの承認後に `db push`、本番で DB テストの一部をスモーク | 未着手 | | — |
-| M-09 | 管理者 UID の登録 | T-305 | `app_admins` に 1 行 | 未着手 | さつき | 10 M-09 |
+| T-301 | マイグレーション: 型・表・インデックス | T-006(Q-9,10,20), M-04 | ローカルで `supabase db reset` が通る | 完了 | | 01 |
+| T-302 | マイグレーション: 共通関数・RLS・トリガ・RPC | T-301 | 同上 | 完了 | | 02 |
+| T-303 | pgTAP テスト DB-01〜19、共有テストベクタで DB-06 | T-302, T-205 | `supabase test db` が緑 | 完了 | | 02 §5 |
+| M-05 | Google Cloud: OAuth 同意画面（テスト状態で開始） | — | 設定済み | 完了（2026-09-28。プロジェクト `wwyd`、テスト中＋さつきをテストユーザーに。公開は M-05b） | さつき | 10 M-05 |
+| M-06 | Google Cloud: OAuth クライアント ID | M-05, M-01 | 作成済み | 完了（2026-09-28。`wwyd-neon`） | さつき | 10 M-06 |
+| M-07 | Supabase: Google プロバイダと URL 設定 | M-06 | 有効化済み | 取り消し（Neon の N-01〜N-04 に置き換え） | さつき | 10 M-07 |
+| T-304 | ログイン画面・認証状態・`whoami`・利用不可画面 | T-105, T-302, M-07 | ローカルで Google ログイン → 一覧（空）まで | 完了（T-309 で Neon に書き換え、本番で確認） | | 06 §0.3, §1 |
+| T-305 | 本番 DB へのマイグレーション適用（承認後） | T-303, M-03 | さつきの承認後に `db push`、本番で DB テストの一部をスモーク | 取り消し（Neon に移行。T-311 に置き換え） | | — |
+| M-09 | 管理者 UID の登録 | T-311 | `app_admins` に 1 行 | 未着手 | さつき | 10 M-09 |
+| N-01 | Neon のアカウントとプロジェクト作成（シンガポール） | Q-25 | Project ID を Claude に共有 | 完了（Project ID `patient-leaf-06853495`、AWS Asia Pacific 1 (Singapore)。アカウント作成時に自動で作られたものを使う。2026-09-28） | さつき | 10 N-01 |
+| N-02 | Neon の Auth と Data API の有効化 | N-01 | 有効化済み | 完了（2026-09-28。Data API URL と Auth URL を 12 章 §7.1 に記録） | さつき | 10 N-02 |
+| N-03 | Neon CLI のログイン | N-01 | `npx neonctl` が使える | 完了（2026-09-28） | さつき | 10 N-03 |
+| N-04 | Google OAuth を Neon Auth につなぐ（M-05・M-06 の差し替え） | N-02, M-05 | Neon Auth に Google を設定済み | 完了（2026-09-28。production は専用の鍵、信頼するドメイン `http://localhost:5173`。dev は共用の鍵のまま） | さつき | 10 N-04 |
+| N-05 | CI 用の Neon の API キーを GitHub の Secrets（NEON_API_KEY）に入れる | N-01 | CI の db ジョブが動く | 未着手 | さつき | 10 N-05 |
+| T-306 | スパイク: Neon の Data API・Auth・Functions・権限・ローカルの pgTAP（12 章 §5 の S-1〜S-7） | N-01〜N-03, Q-25〜Q-29 | 結果を 12 章と決定ログに記録し、12 章を確定稿に | 完了（iPhone でのログインだけ M-08 の後に確認。12 章 §5.1） | | 12 §5 |
+| T-307 | マイグレーションを Neon 向けに書き換え（利用者の表・auth.uid・ロール・権限） | T-306 | 開発用ブランチに適用できる | 完了（dev ブランチに適用済み） | | 12 §4 |
+| T-308 | pgTAP を Neon 向けに書き換え、ローカルの Postgres で実行（CI の db ジョブも） | T-307 | DB-01〜19 が緑 | 完了（Neon の一時ブランチで 143 件＋DB-19 が緑） | | 12 §5 S-7 |
+| T-309 | アプリのログインまわりを neon-js に書き換え（T-304 の置き換え） | T-306, N-04 | 開発用ブランチで Google ログイン → whoami | 完了（パソコンの Chrome で確認。iPhone は M-08 の後） | | 12 §2 |
+| T-310 | Supabase のローカル環境・設定・依存を外す | T-307〜T-309 | 残骸なし | 完了 | | 12 Q-29 |
+| T-311 | 本番ブランチへのマイグレーション適用（承認後） | T-308 | さつきの承認後に適用、スモーク | 完了（2026-09-28。さつきが実行。10 本の適用、public の 10 表すべてで RLS、未認証の Data API が 400 で拒否されることを確認） | | — |
 
 ### P4 一覧
 
@@ -194,6 +209,25 @@
 | 2026-09-27 | CI の単体テストを `npm run test:coverage` に変更（core の行カバレッジ 90% 未満で失敗） | P2 の完了条件を CI で保つため | Claude |
 | 2026-09-27 | Q-24: RAISE-08 は §5 の規則どおり raise なし（推奨 (a)）。04 章の RAISE-08 を修正し RAISE-08b を追加 | さつきの回答（推奨どおり） | さつき |
 | 2026-09-27 | P2 を承認。`phase/02-poker-logic` を push し PR #3 で CI 緑を確認して main へマージ | さつきの指示（マージ） | さつき |
+| 2026-09-27 | 関数の実行権限は「関数を作るたびに PUBLIC・anon・authenticated から取り消し、必要な付与だけ」にする。02 章の SQL のままでは、後から作る関数（insert_post を含む）に PUBLIC の実行権限が残り anon から呼べた | Postgres の関数の既定権限はスキーマ単位では取り消せない。全体の既定権限を変えるとテスト用の一時関数など他へも影響するため、局所的に行う。DB-01 のテストで実行できる関数の一覧を固定して検出する | Claude |
+| 2026-09-27 | validate_paint の判定順を 05 章 §2.3 と TS に合わせる（値域 → 合法キー → 合計 → 空を、それぞれ全マスについて） | 02 章の SQL はマスごとに混ぜて判定しており、違反が複数あると TS と結果が変わるため | Claude |
+| 2026-09-27 | アカウント削除は RPC `delete_my_account` だけで行う（予備の Edge Function `delete-account` は作らない） | ローカル（CLI 2.118.0 / Postgres 17）で postgres 所有の関数から auth.users を削除できた（DB-16）。本番でも T-305 で確認する | Claude |
+| 2026-09-27 | DB-19（同時回答）は pgTAP ではなく `scripts/dbConcurrency.mjs`（10 接続で同時に挿入）で確かめ、CI の db ジョブで実行する | pgTAP は 1 トランザクションで動くため同時実行を作れない | Claude |
+| 2026-09-27 | DB-06 の pgTAP は共有テストベクタ（JSON）から `scripts/genPaintVectorsSql.mjs` で生成し、CI で最新かを検査する | pgTAP から JSON ファイルを直接読むにはスーパーユーザー権限が要るため | Claude |
+| 2026-09-27 | `.env` はリポジトリ直下から読む（Vite の envDir）。開発時はローカルの Supabase につなぐ `.env.development`（CLI の公開デモキー。秘密情報ではない）をコミットし、`.env` より優先する | .env.example と同じ場所に置く手順（CLAUDE.md §5）に合わせ、ローカル開発を既定にするため | Claude |
+| 2026-09-27 | `@supabase/supabase-js` ^2.117.2 を追加 | Q-16 で承認済みの依存 | さつき（Q-16） |
+| 2026-09-28 | **バックエンドを Supabase から Neon に変更する** | Supabase の無料プランは 1 人 2 プロジェクトまでで、さつきの枠は使用中の 2 つで埋まっている。代替（既存の Supabase への同居、Neon、Cloudflare D1、Firebase、Nhost）を比較し、WWYD 専用にでき、無料枠が広く、Postgres・RLS・PostgREST 互換の API で今の設計を活かせる Neon を選んだ。細部は詳細仕様 12 章（確認待ち Q-25〜Q-29、スパイク S-1〜S-7） | さつき |
+| 2026-09-28 | 12 章の Q-25〜Q-29 をすべて推奨案で決定（地域はシンガポール、表示名・メールは neon_auth に置き非公開、新しい依存を追加、投稿の検証は Neon Functions、Supabase 向けの成果は書き換えて使う） | さつきの回答 | さつき |
+| 2026-09-28 | 利用者の ID は Neon の `auth.uid()` ではなく自前の `public.current_uid()`（`request.jwt.claims` の `sub` を読む）で取る | Neon の `auth.uid()` は `authenticated` から使えず（`auth` スキーマの権限を付与できない）、SECURITY DEFINER の関数の中では値を返さないため（スパイク S-1） | Claude |
+| 2026-09-28 | 開発用ブランチ `dev`（`br-morning-thunder-b3cfadmk`）を production から作り、スパイクと開発に使う | 本番を触らずに試すため | Claude |
+| 2026-09-28 | メールアドレス＋パスワードの新規登録を production・dev で無効化 | WWYD は Google ログインだけ（さつき承認） | さつき |
+| 2026-09-28 | DB テストは Neon の一時ブランチ（空の `test-base` から作成、1 時間で自動削除）で実行する。CI は Secrets の NEON_API_KEY があるときだけ | Neon にローカル版が無く、本物のロール・拡張で確かめられるため | Claude |
+| 2026-09-28 | Neon の公式 SDK は使わず、Neon Auth の REST を直接呼ぶ（`backend/neon.ts`）。Data API は `@supabase/postgrest-js`。`better-auth` は入れない | 公式 SDK は Next.js を必須の依存に持ち Vite では入らない。直接呼ぶ手順は 4 つだけで依存を増やさずに済む | Claude（Q-27 の範囲） |
+| 2026-09-28 | 投稿の検証は Neon Functions（`packages/functions`、Node.js 24）で行う。JWT は `jose`（Q-27 で承認）で Neon Auth の JWKS に対して検証し、CORS は許可するオリジンの一覧で限定する | スパイク S-4 で core の取り込み・JWT の検証を確認（12 章 §5.1） | Claude |
+| 2026-09-28 | Google の同意画面は「テスト中」のまま進め、さつきをテストユーザーに登録する。公開（本番）は M-05b（Cloudflare Pages の後） | 公開にはブランディングのホームページ・プライバシーポリシーの URL が必要で、まだ公開のページが無い | さつき（推奨どおり） |
+| 2026-09-28 | 本番の公開の URL を `.env.production` に置き、手元で本番につなぐ確認は `npm run dev:prod`（`.claude/launch.json` の `app-production`）で行う | URL は秘密ではない（12 章 §7.1）。ビルドもこの値を使う | Claude |
+| 2026-09-28 | 本番を変える操作（マイグレーション適用など）は Claude Code の安全機能で止められるため、さつきが自分で実行し、Claude は読み取りで結果を確かめる | T-311 で実際に止められた | Claude |
+| 2026-09-28 | 詳細仕様 12 章を確定稿 1.0 にし、CLAUDE.md の技術構成・コマンド・秘密情報・確認が必要な操作を Neon に合わせて更新 | スパイクが iPhone を除き完了したため | Claude |
 
 ---
 
@@ -262,3 +296,30 @@
 - **残課題**: Q-24 の回答、push・PR での CI 確認、P2 の承認。EF-01〜04 の Edge Function 本体での実行は T-501（純関数部分は `post.test.ts` で確認済み）。
 - **追記**: さつきが Q-24 を推奨案 (a) で決定。04 章の RAISE-08 を修正し RAISE-08b を追加、11 章を「決定」に更新。
 - **追記**: さつきの指示で push → [satsuki19980613/WWYD#3](https://github.com/satsuki19980613/WWYD/pull/3) を作成。CI 緑（カバレッジ検査を含む）を確認して main へマージ。
+
+### 2026-09-27（セッション 2 の続き・P3）
+
+- **行ったこと**: ブランチ `phase/03-db-auth` で P3 のうちローカルでできる分を実装。
+  - T-301 / T-302: `supabase/migrations/` に 9 本（型・設定表・投稿・回答と集計・インデックス・共通関数・RLS・トリガ・RPC）。
+  - T-303: `supabase/tests/` に pgTAP 7 ファイル 143 件（DB-01〜18。DB-06 は共有テストベクタから生成）。DB-19 は `scripts/dbConcurrency.mjs`。CI に db ジョブを追加。
+  - T-304: `@supabase/supabase-js` を追加。起動時の判定（ヘルスチェック → セッション → whoami）、Google ログイン（PKCE）、ログアウト、利用不可画面。
+- **見つけて直したこと**: 02 章の SQL のままだと insert_post などが anon から実行できた（DB-01 で検出）。validate_paint の判定順が TS と違った。いずれもマイグレーションで修正し、02 章に注記。
+- **確認**: pgTAP 143 件緑、同時回答 10 件で集計一致、Vitest 267 件緑（core の行カバレッジ 100%）、型検査・ビルド緑。ブラウザ（ローカルの Supabase）で、未ログイン → ログイン画面、テスト用アカウントでのログイン → 一覧（whoami の allowed）、許可リスト有効 → 利用不可 → ログアウト、`?error=` で戻る → 「ログインできませんでした」と URL の後始末、API 停止 → メンテナンス中 → 再開後に再読み込みで復帰、を確認（テスト用アカウントは削除済み）。
+- **変更したファイル**: `supabase/migrations/*`、`supabase/tests/*`、`supabase/config.toml`、`scripts/*`、`package.json`、`package-lock.json`、`.github/workflows/ci.yml`、`.env.development`、`packages/app/**`（auth・supabase・App・vite 設定）、`docs/detailed-spec/02-rls-triggers-rpc.md`、`docs/detailed-spec/10-manual-tasks.md`、`docs/plan.md`、`docs/BATON.md`
+- **残課題**: M-01〜M-03・M-05〜M-07（さつき）→ T-305 本番適用（承認後）→ 本番で Google ログイン確認 → M-09。push はまだしていない（CI の db ジョブは初回 push で確認）。
+
+### 2026-09-28（セッション 2 の続き・Neon への移行決定）
+
+- **行ったこと**: Supabase のプロジェクト作成で無料枠の上限（1 人 2 つ）に当たった。代替をネットで調査して比較（既存 Supabase への同居・Neon・Cloudflare D1・Firebase・Nhost・有料化・別アカウント）。さつきが Neon を選択。Neon の文書（Data API・Managed Better Auth・Functions・地域・移行ガイド）を読み、移行の設計案を詳細仕様 12 章にまとめた。10 章に Neon の手作業 N-01〜N-04、11 章に Q-25〜Q-29、CLAUDE.md に移行中の注記。
+- **分かったこと**: Neon に東京リージョンは無い（最寄りはシンガポール）。Neon Auth は利用者（表示名・メールを含む）を同じ DB の `neon_auth` スキーマに置く。Neon Functions は Node.js で、シンガポールで使える。Data API は PostgREST 互換で、ロール名は `authenticated` / `anonymous`。
+- **変更したファイル**: `docs/detailed-spec/12-neon-migration.md`（新規）、`00-index.md`、`10-manual-tasks.md`、`11-open-questions.md`、`CLAUDE.md`、`docs/plan.md`、`docs/BATON.md`
+- **残課題**: Q-25〜Q-29 の回答、N-01（Neon のプロジェクト作成）、スパイク T-306。
+- **追記（2026-09-28）**: さつきが N-01 を完了（Neon の Project ID `patient-leaf-06853495`）。N-02 の手順を案内。
+- **追記（2026-09-28）**: N-01 のプロジェクトはアカウント作成時に自動で作られたもの（Singapore）と確認。作り直しは不要。作成直後の使用量は 31.69MB（0.5GB の枠に含まれる初期分）。
+- **追記（2026-09-28）**: さつきが N-02（Data API と Managed Better Auth の有効化）を完了。
+- **追記（2026-09-28）**: N-03 完了。dev ブランチを作成し、スパイク S-1〜S-3・S-5 を確認（12 章 §5.1）。`auth.uid()` の制約を見つけ、自前の `current_uid()` で解決できることを確認。
+- **追記（2026-09-28）**: T-307〜T-310 を完了（Neon 向けのマイグレーション・DB テスト・ログイン、Supabase の撤去）。さつきがパソコンの Chrome で Google ログイン → 一覧まで確認。
+- **追記（2026-09-28）**: スパイク S-4（Neon Functions に core を配備、さつきのログインの JWT を検証）を完了し、試作の関数は削除。12 章を確定稿に、CLAUDE.md を Neon に更新。10 章に N-05（CI 用 API キー）を追加。
+- **追記（2026-09-28）**: T-311（本番へのマイグレーション適用）をさつきが実行し、Claude が読み取りで確認。N-04（WWYD 専用の Google OAuth、同意画面はテスト中）をさつきが完了。本番の「Sign-up with Email」が残っていたのでオフにしてもらった（Claude の確認漏れ）。`.env.production` と `npm run dev:prod` を追加し、さつきが本番で Google ログイン → スポット一覧を確認。**P3 完了**。
+  - 変更したファイル: `.env.production`（新規）、`package.json`、`.claude/launch.json`、`CLAUDE.md`、`docs/detailed-spec/10-manual-tasks.md`、`docs/plan.md`、`docs/BATON.md`
+  - 残課題: push・PR・マージ、N-05、M-09、dev の Sign-up with Email をオフ、iPhone の確認（M-08 の後）

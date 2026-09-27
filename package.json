@@ -9,17 +9,22 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @wwyd/app",
+    "dev:prod": "npm run dev -w @wwyd/app -- --mode production",
     "build": "npm run build -w @wwyd/app",
     "preview": "npm run preview -w @wwyd/app",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/app && tsc --noEmit -p tsconfig.tools.json",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "gen:db-vectors": "node scripts/genPaintVectorsSql.mjs",
+    "check:db-vectors": "node scripts/genPaintVectorsSql.mjs --check",
+    "test:db": "node scripts/db.mjs test",
+    "db:migrate": "node scripts/db.mjs migrate"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
     "@vitest/coverage-v8": "^5.0.2",
-    "supabase": "^2.118.0",
+    "neonctl": "^6.2.3",
     "typescript": "~5.9.3",
     "vitest": "^5.0.2"
   },
