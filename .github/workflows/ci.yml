@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
       - name: 型検査
         run: npm run typecheck
-      - name: 単体テスト
-        run: npm test
+      - name: 単体テスト（core の行カバレッジ 90% 以上）
+        run: npm run test:coverage
       - name: ビルド
         run: npm run build
