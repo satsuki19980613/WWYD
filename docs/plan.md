@@ -10,9 +10,9 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P5 スポット投稿 — dev で実装・確認済み、本番への配備待ち**（ブランチ `phase/05-post`。未 push）。P4 は PR #5 でマージ済み（本番確認は P5 の本番配備の後） |
+| 現在のフェーズ | **P5 スポット投稿 — dev で実装・確認済み、本番への配備待ち**。PR #6 で main へマージ済み。P4 も PR #5 でマージ済み（両方とも本番確認は create-post の本番配備の後）。次の作業ブランチは `phase/06-answer` |
 | 直近で完了したこと | Neon Function `create-post`（T-501。dev に配備）と投稿画面（T-502〜T-506）。dev で H-S1 / H-MW（PC 幅）・H-S3（スマホ幅 375px の 4 ステップ）を画面から投稿し、`get_post_detail` の値が 04 章の期待値と一致。フリック・使用済みトースト・額の範囲外・ボードを押して消す・ロックと「すべて消す」・エラー一覧を確認 |
-| 次にやること | 1. さつきの承認: `create-post` の本番（production）への配備と `.env.production` への URL 追加 → `npm run dev:prod` で本番に投稿 → P4・P5 の本番確認<br>2. `phase/05-post` の push・PR・マージ<br>3. P6 回答（T-601〜）。スマホ実機の確認（T-503・T-506）は M-08（Cloudflare Pages）の後 |
+| 次にやること | 1. さつきの承認: `create-post` の本番（production）への配備と `.env.production` への URL 追加 → `npm run dev:prod` で本番に投稿 → P4・P5 の本番確認<br>2. P6 回答（T-601〜）。スマホ実機の確認（T-503・T-506）は M-08（Cloudflare Pages）の後 |
 | ブロッカー | なし |
 | さつきの確認待ち | ① `create-post` の本番への配備（許可するオリジンは当面 `http://localhost:5173`。Cloudflare Pages の URL は M-08 の後に足す） ② N-05・M-09 の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） ③ M-08（Cloudflare Pages。スマホ実機の確認に必要） |
 
@@ -352,3 +352,4 @@
 - **直したこと**: 合成イベントで setPointerCapture が例外を出してフリックが止まったので握りつぶすようにした。
 - **変更したファイル**: `packages/functions/**`、`packages/core/src/post/postFixtures.ts`（新規）・`post.test.ts`、`packages/app/src/post/**`（新規）、`packages/app/src/screens/NewPostScreen.tsx`（新規）、`packages/app/src/components/{PlayingCard,ChipGroup}.tsx`・`posColor.ts`（新規）、`Select.tsx`、`ListScreen.tsx`、`App.tsx`、`main.tsx`、`styles/post.css`（新規）、`backend/neon.ts`、`vite-env.d.ts`、`.env.development`、`.env.example`、`package.json`、`package-lock.json`、`vitest.config.ts`、`docs/plan.md`、`docs/BATON.md`
 - **残課題**: create-post の本番配備（承認待ち）と `.env.production` の URL、本番での P4・P5 の確認、スマホ実機（M-08 の後）、CSP の `_headers`（本番の関数 URL が決まってから）、dev に試験投稿が 4 件（題名「試験」。`npm run db:seed -- --branch dev` で消える）。
+- **追記（2026-09-28）**: さつきの指示で `phase/05-post` を push → [satsuki19980613/WWYD#6](https://github.com/satsuki19980613/WWYD/pull/6) を作成。CI（check・db）緑を確認して main へマージ。db ジョブは N-05 が未設定のため DB テストを実行していない。

@@ -7,11 +7,10 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**P5（投稿）は dev で実装・確認済み**（ブランチ `phase/05-post`）。Neon Function `create-post` は dev にだけ配備してある。
+**P5（投稿）は dev で実装・確認済みで、PR #6 で main へマージ済み**。次の作業ブランチは `phase/06-answer`（作成済み）。Neon Function `create-post` は dev にだけ配備してある。
 
 1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
 2. さつきの承認があれば `create-post` を本番に配備（下のコマンド）→ Invocation URL を `.env.production` の `VITE_NEON_CREATE_POST_URL` に → `npm run dev:prod` で本番に投稿し、P4（一覧・削除）と P5 を本番で確認。
-3. `phase/05-post` の push・PR・マージ（さつきの確認）。
 4. P6 回答（T-601〜）。
 5. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ、M-08（Cloudflare Pages。スマホ実機の確認に必要）。
 
