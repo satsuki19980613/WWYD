@@ -25,6 +25,7 @@
 1. リポジトリ直下で `.env.example` を `.env` に複製。
 2. M-01 の URL と anon キーを入れる。
 3. `.env` はコミットされない（`.gitignore` 済み）。Claude は `.env` を読めない設定になっている。
+4. 補足: `npm run dev` はリポジトリ直下の `.env.development`（ローカルの Supabase につなぐ値。コミット済み）を `.env` より優先する。`.env` の値が使われるのは `npm run build` / `npm run preview` のとき。開発サーバーで本番 DB につなぎたいときは `.env.development.local` に本番の値を書く（コミットされない）。
 
 ## M-03 Supabase CLI のログインとリンク
 

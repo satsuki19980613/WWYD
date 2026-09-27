@@ -55,6 +55,10 @@ $$;
 
 ### 1.1 paint の検証（05 章 §2.3 と同じ規則）
 
+> **実装での修正（2026-09-27、T-302）**: 下の SQL はマスごとに値域・合法キー・合計を混ぜて判定しているため、違反が複数あると
+> 05 章 §2.3 の順（値域 → 合法キー → 合計 → 空、それぞれ全マスについて）や TS の `validatePaintBytes` と結果が変わる。
+> マイグレーション（`20260927000006_helpers.sql`）では 05 章の順に全マスを判定する形にした。共有テストベクタ（DB-06）で一致を確認済み。
+
 ```sql
 -- 戻り値: s1 を 1 マスでも使っているか
 create or replace function public.validate_paint(p_paint bytea, p_keys text[])
@@ -144,6 +148,11 @@ alter table public.answers         enable row level security;
 alter table public.post_aggregates enable row level security;
 
 -- Supabase の既定の付与を取り消し、必要な権限だけ与える
+-- 【実装での修正（2026-09-27、T-302）】下の revoke は「作成済み」の関数にしか効かない。Postgres は新しい関数に PUBLIC の
+-- 実行権限を付け、これはスキーマ単位の既定権限（alter default privileges … in schema）では取り消せない。
+-- そのままでは §3・§4 で後から作る関数（insert_post を含む）が anon から実行できてしまう（DB-01 のテストで検出）。
+-- マイグレーションでは、関数を作るたびにその場で `revoke all on function … from public, anon, authenticated` し、
+-- 必要な付与だけを行う。表・シーケンスは `alter default privileges for role postgres in schema public revoke …` で防ぐ。
 revoke all on all tables    in schema public from anon, authenticated;
 revoke all on all functions in schema public from public, anon, authenticated;
 
@@ -498,7 +507,8 @@ end $$;
 grant execute on function public.delete_my_account() to authenticated;
 ```
 
-- 実装時に、Supabase の現行の権限で `postgres` 所有の関数から `auth.users` を削除できることを確認する。
+- **確認済み（2026-09-27、ローカルの Supabase CLI 2.118.0 / Postgres 17）**: `postgres` 所有の関数から `auth.users` を削除できた（DB-16）。予備の Edge Function `delete-account`（03 章 §6）は作らない。本番でも T-305 のスモークで確かめる。
+- 当初の確認事項: Supabase の現行の権限で `postgres` 所有の関数から `auth.users` を削除できることを確認する。
   できない場合は、データ削除までを RPC で行い、認証ユーザーの削除は Edge Function `delete-account`
   （service_role で `auth.admin.deleteUser`）に分ける（03 章 §6）。
 - 呼び出し後、フロントエンドはサインアウトしてログイン画面に戻る。
@@ -558,4 +568,4 @@ grant execute on function public.whoami() to authenticated;
 | DB-16 | `delete_my_account`: 本人の回答が消え、回答していた他人の投稿の `answer_count` と集計が元に戻る。本人の投稿が消える。`auth.users` の行が消える |
 | DB-17 | `save_host_answer`: 投稿者のみ・何度でも上書き・集計に入らない |
 | DB-18 | `list_posts`: タブ・ストリート・並び順・ページングが正しい。`answered_by_me` / `can_delete` が正しい |
-| DB-19 | 同じ投稿への同時回答 10 件で集計の合計が一致する（ロックの確認） |
+| DB-19 | 同じ投稿への同時回答 10 件で集計の合計が一致する（ロックの確認）。pgTAP は 1 トランザクションで同時実行できないため、`scripts/dbConcurrency.mjs`（10 接続で同時に挿入）で確かめる |
