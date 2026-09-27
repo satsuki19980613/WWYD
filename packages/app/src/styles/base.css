@@ -1,0 +1,89 @@
+/* 下地・本文・ヘッダー・アプリ面（ICMCLEC の styles.css の基礎部分と同じ作り） */
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html { background: var(--bg2); }
+html, body {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--body);
+  font-feature-settings: 'palt' 1;
+  -webkit-text-size-adjust: 100%;
+}
+body { background: transparent; min-height: 100vh; min-height: 100dvh; }
+
+/* ごく薄い CRT スキャンライン（常に前景の非干渉層） */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0.3;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 3px);
+}
+
+h1, h2, h3, p, dl, dd { margin: 0; }
+button, input { font: inherit; color: inherit; }
+a { color: var(--cyan); }
+
+/* フォーカス表示はシアンのリング（06 章 §0.4） */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.tab-num { font-variant-numeric: tabular-nums; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---- HUD ヘッダー（全画面・固定） ---- */
+.hdr {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding-top: var(--sat);
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+/* ハザードイエローのアンダーライン（左から減衰。シグネチャー 4） */
+.hdr::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--yellow), transparent 45%);
+}
+.hdr-inner {
+  max-width: var(--app-w);
+  height: var(--hdr-h);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 max(var(--s4), var(--safe-r)) 0 max(var(--s4), var(--safe-l));
+}
+.hdr-brand {
+  font-family: var(--disp);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fg);
+  text-decoration: none;
+  padding: var(--s2) 0;
+}
+.hdr-actions { display: flex; align-items: center; gap: var(--s1); }
+
+/* ---- アプリ面 ---- */
+.app-main {
+  max-width: var(--app-w);
+  margin: 0 auto;
+  padding: var(--s4) max(var(--s4), var(--safe-r)) calc(var(--s6) + var(--sab)) max(var(--s4), var(--safe-l));
+}

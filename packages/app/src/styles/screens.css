@@ -1,0 +1,66 @@
+/* 全画面の状態（起動中・ログイン・メンテナンス等）と画面の器 */
+
+/* ---- 起動中: ロゴのみ（文字なし） ---- */
+.boot {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+}
+#root > .boot { min-height: 100vh; min-height: 100dvh; }
+.boot-mark {
+  width: 56px;
+  height: 56px;
+  background: var(--yellow);
+  clip-path: var(--chamfer);
+  box-shadow: 0 0 32px rgba(252, 238, 10, 0.32);
+  animation: boot-pulse 1.2s var(--ease) infinite alternate;
+}
+@keyframes boot-pulse { from { opacity: 0.55; } to { opacity: 1; } }
+
+/* ---- ログイン ---- */
+.login {
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 12vh 0 var(--s6);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s4);
+  text-align: center;
+}
+.login-name {
+  font-family: var(--disp);
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  color: var(--yellow);
+  text-shadow: 0 0 24px rgba(252, 238, 10, 0.35);
+  margin-bottom: var(--s5);
+}
+.login-links { display: flex; justify-content: center; gap: var(--s4); }
+.login-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.login-links a:hover { color: var(--cyan); }
+
+/* ---- メンテナンス中・オフライン・利用不可・404 ---- */
+.status-screen {
+  max-width: 420px;
+  margin: 8vh auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+.status-title {
+  font-family: var(--disp);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.screen { display: flex; flex-direction: column; gap: var(--s4); }
