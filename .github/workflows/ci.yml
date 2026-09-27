@@ -26,3 +26,22 @@ jobs:
         run: npm run test:coverage
       - name: ビルド
         run: npm run build
+
+  # DB のテスト（pgTAP の DB-01〜19 と、同時回答の DB-19）。ローカルの Supabase を CI 上で起動する
+  db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: 共有テストベクタから生成した pgTAP が最新か
+        run: npm run check:db-vectors
+      - name: ローカルの Supabase を起動（DB と API だけ）
+        run: npx supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor,edge-runtime
+      - name: pgTAP
+        run: npx supabase test db
+      - name: 同時回答（DB-19）
+        run: npm run test:db-concurrency
