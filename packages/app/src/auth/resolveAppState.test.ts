@@ -62,15 +62,15 @@ describe('checkHealth', () => {
   const stub = (impl: () => Promise<Response>): typeof fetch => (async () => impl()) as unknown as typeof fetch;
 
   it('200 → ok、503 → http', async () => {
-    expect(await checkHealth('http://x', 'k', stub(async () => new Response('{}', { status: 200 })))).toEqual({ kind: 'ok' });
-    expect(await checkHealth('http://x', 'k', stub(async () => new Response('', { status: 503 })))).toEqual({
+    expect(await checkHealth('http://x/ok', stub(async () => new Response('{}', { status: 200 })))).toEqual({ kind: 'ok' });
+    expect(await checkHealth('http://x/ok', stub(async () => new Response('', { status: 503 })))).toEqual({
       kind: 'http',
       status: 503,
     });
   });
 
   it('通信失敗 → network', async () => {
-    expect(await checkHealth('http://x', 'k', stub(async () => Promise.reject(new TypeError('failed'))))).toEqual({
+    expect(await checkHealth('http://x/ok', stub(async () => Promise.reject(new TypeError('failed'))))).toEqual({
       kind: 'network',
     });
   });
@@ -80,40 +80,41 @@ describe('checkHealth', () => {
       new Promise((_resolve, reject) => {
         init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
       })) as typeof fetch;
-    expect(await checkHealth('http://x', 'k', hang, 10)).toEqual({ kind: 'timeout' });
+    expect(await checkHealth('http://x/ok', hang, 10)).toEqual({ kind: 'timeout' });
   });
 
-  it('apikey を付けて /auth/v1/health を呼ぶ', async () => {
-    let seen: { url: string; key: string | null } | null = null;
-    const spy = (async (url: string, init?: RequestInit) => {
-      seen = { url, key: new Headers(init?.headers).get('apikey') };
-      return new Response('{}', { status: 200 });
+  it('渡した URL を呼ぶ', async () => {
+    let seen = '';
+    const spy = (async (url: string) => {
+      seen = url;
+      return new Response('{"ok":true}', { status: 200 });
     }) as unknown as typeof fetch;
-    await checkHealth('https://p.supabase.co', 'anon', spy);
-    expect(seen).toEqual({ url: 'https://p.supabase.co/auth/v1/health', key: 'anon' });
+    await checkHealth('https://ep-x.neonauth.example/neondb/auth/ok', spy);
+    expect(seen).toBe('https://ep-x.neonauth.example/neondb/auth/ok');
   });
 });
 
 describe('cleanAuthParams', () => {
-  it('code を除く', () => {
-    expect(cleanAuthParams('http://localhost:5173/s/abc/answer?code=xyz')).toEqual({
+  it('session verifier を取り出して除く', () => {
+    expect(cleanAuthParams('http://localhost:5173/s/abc/answer?neon_auth_session_verifier=xyz')).toEqual({
       path: '/s/abc/answer',
       failed: false,
       changed: true,
+      verifier: 'xyz',
     });
   });
 
   it('他のクエリは残す', () => {
-    expect(cleanAuthParams('http://localhost:5173/?tab=mine&code=1').path).toBe('/?tab=mine');
+    expect(cleanAuthParams('http://localhost:5173/?tab=mine&neon_auth_session_verifier=1').path).toBe('/?tab=mine');
   });
 
   it('同意の拒否などのエラー', () => {
     const r = cleanAuthParams('http://localhost:5173/?error=access_denied&error_description=denied');
-    expect(r).toEqual({ path: '/', failed: true, changed: true });
+    expect(r).toEqual({ path: '/', failed: true, changed: true, verifier: null });
     expect(cleanAuthParams('http://localhost:5173/#error=server_error').failed).toBe(true);
   });
 
   it('何もなければ変えない', () => {
-    expect(cleanAuthParams('http://localhost:5173/new')).toEqual({ path: '/new', failed: false, changed: false });
+    expect(cleanAuthParams('http://localhost:5173/new')).toEqual({ path: '/new', failed: false, changed: false, verifier: null });
   });
 });

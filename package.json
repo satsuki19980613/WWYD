@@ -24,7 +24,6 @@
     "@types/node": "^22.19.0",
     "@vitest/coverage-v8": "^5.0.2",
     "neonctl": "^6.2.3",
-    "supabase": "^2.118.0",
     "typescript": "~5.9.3",
     "vitest": "^5.0.2"
   },
