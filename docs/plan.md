@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P4 一覧 — 実装完了、本番での確認待ち**（ブランチ `phase/04-list`。未 push） |
+| 現在のフェーズ | **P4 一覧 — 実装完了・main へマージ済み（PR #5）、本番での確認は P5 の後**。次は P5（ブランチ `phase/05-post`） |
 | 直近で完了したこと | 一覧画面（T-401・T-402）と削除（T-403 の dev 分）。dev の試験データ（`npm run db:seed -- --branch dev`）で、カード・タブ・ストリート・並び替え・URL のクエリ・追加読み込み（46 件を重複なし）・骨組み・空状態・読み込みエラーと再試行・削除（確認ダイアログ → カスケード）・削除の失敗のトーストを確認 |
-| 次にやること | 1. さつき: `phase/04-list` の push・PR の承認<br>2. P5 スポット投稿（T-501〜）。本番での一覧・削除の確認（P4 の完了条件）は、本番に投稿ができる P5 の後に行う<br>3. さつき: N-05（CI 用の NEON_API_KEY）、M-09（管理者 UID の登録）、dev の「Sign-up with Email」をオフ |
+| 次にやること | 1. P5 スポット投稿（T-501〜）<br>2. 本番での一覧・削除の確認（P4 の完了条件）は、本番に投稿ができる P5 の後に行う<br>3. さつき: N-05（CI 用の NEON_API_KEY）、M-09（管理者 UID の登録）、dev の「Sign-up with Email」をオフ |
 | ブロッカー | なし |
-| さつきの確認待ち | ① `phase/04-list` の push・PR ② P4 の本番確認を P5 の後に回してよいか ③ N-05・M-09 の手作業 |
+| さつきの確認待ち | ① P4 の本番確認を P5 の後に回してよいか ② N-05・M-09 の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
 
 ---
 
@@ -334,3 +334,4 @@
 - **確認**: dev の試験データで、表示・タブ・ストリート・並び替え・URL・追加読み込み（46 件、重複なし）・空状態・骨組み・読み込みエラーと再試行・削除（画面から削除 → posts / post_hands / post_secrets / answers / post_aggregates / host_answers が 0 行）・削除の失敗のトースト（role=alert）を確認。スマホ幅で横スクロールが出ないこと。Vitest 296 件、core の行カバレッジ 99.8%、型検査・ビルド緑。
 - **変更したファイル**: `packages/app/src/list/*`（新規）、`packages/app/src/screens/ListScreen.tsx`（新規）、`packages/app/src/App.tsx`、`packages/app/src/styles/screens.css`、`db/seed/dev.sql`（新規）、`scripts/db.mjs`、`package.json`、`CLAUDE.md`、`docs/plan.md`
 - **残課題**: 本番での一覧・削除の確認（本番に投稿が無いので P5 の後）、管理者の削除の画面確認（M-09 の後）、push・PR（さつきの承認待ち）。
+- **追記（2026-09-28）**: さつきの指示で `phase/04-list` を push → [satsuki19980613/WWYD#5](https://github.com/satsuki19980613/WWYD/pull/5) を作成。CI（check・db）緑を確認して main へマージ。db ジョブは NEON_API_KEY（N-05）が未設定のため DB テストを実行していない。

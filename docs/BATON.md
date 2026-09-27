@@ -10,7 +10,7 @@
 **P4（一覧）は実装済み**（ブランチ `phase/04-list`）。dev の試験データで全状態と削除 → カスケードを確認済み。本番には投稿がまだ無いので、本番での一覧・削除の確認は P5 の後。
 
 1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
-2. `phase/04-list` が未 push なら、さつきの承認を得て push → PR → CI → マージ。
+2. `phase/04-list` は PR #5 で main へマージ済み。P5 はブランチ `phase/05-post`（作成済み）で行う。
 3. P5 スポット投稿（T-501〜）に着手。
 4. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ。iPhone のログイン確認は M-08（Cloudflare Pages）の後。
 
