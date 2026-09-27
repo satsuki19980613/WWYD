@@ -71,6 +71,22 @@
 | S-6 | Google ログイン（自前のクライアント ID）でログインし、`whoami` まで動く | — |
 | S-7 | ローカルの Docker の Postgres＋pgTAP で、Neon と同じロール・`auth.uid()` を再現して DB-01〜19 が通る | Neon の開発用ブランチに対してテストを流す |
 
+### 5.1 スパイクの途中結果（2026-09-28、開発用ブランチ `dev` = `br-morning-thunder-b3cfadmk`）
+
+| # | 結果 |
+|---|---|
+| 環境 | PostgreSQL 18.6。スキーマ `auth`（所有者 cloud_admin、拡張 pg_session_jwt 0.5.0）・`neon_auth`・`public`。ロール `authenticated` / `anonymous` / `authenticator`。DB 所有者 `neondb_owner` は `neon_auth` のメンバーで BYPASSRLS。pgTAP 拡張は Neon 上でも使える |
+| S-1（一部） | `auth.uid()`（uuid）と `auth.user_id()`（text）がある。`request.jwt.claims` を設定すると `auth.uid()` が値を返す（Supabase と同じなりすましでテストできる）。**ただし `authenticated` には `auth` スキーマの使用権限が無く、所有者からも付与できない。さらに `auth.uid()` は SECURITY DEFINER の関数の中では値を返さない**（「cannot set parameter request.jwt.claims within security-definer function」）。→ **自前の `public.current_uid()`（`request.jwt.claims` の `sub` を読む SQL 関数。Supabase の `auth.uid()` と同じ作り）を使う**。呼び出し元・DEFINER のどちらでも値が取れることを確認。Data API が `request.jwt.claims` を設定することは、実際のログイン（S-6）で確かめる |
+| S-2 | `public` の表から `neon_auth."user"(id)` へ `on delete cascade` の外部キーを張れる（トランザクション内で確認し、ロールバック） |
+| S-3 | DB 所有者の関数から `neon_auth."user"` の行を消せる（`session`・`account` はカスケードで消える）。確認時の関数は `auth.uid()` を使ったため値が取れず削除されなかった。`current_uid()` に置き換えて本実装で確かめる |
+| S-5 | 関数の既定の実行権限は Postgres の既定どおり（PUBLIC）。Supabase と同じく、関数ごとに取り消す方式でよい |
+| Data API | トークンの無いリクエストは 400 で拒否（未認証では何も読めない） |
+| Auth | `{Auth URL}/ok` が `{"ok":true}` を返す → **メンテナンス判定のヘルスチェックに使う**。dev ブランチでは Neon の共有 Google 認証がすでに有効。信頼するドメインは未設定 |
+| 注意 | **両ブランチでメールアドレス＋パスワードの新規登録が有効**（確認メールなしで誰でも登録できる）。WWYD は Google だけにするため、無効にする（本番の設定変更なのでさつきの承認後） |
+| 注意 | JWT の有効期限は 15 分で、`email`・`name` の claims を含む（DB には保存しない。`request.jwt.claims` として一時的に見えるだけ）。セッションは Neon Auth のドメインの `SameSite=None` のクッキー → **iPhone の Safari など、他サイトのクッキーを制限するブラウザでログインが保てるか**を S-6 で必ず確かめる |
+| S-4 | 未着手（dev ブランチへの Functions の配備にさつきの承認が要る） |
+| S-6 | 未着手（公式 SDK でログイン画面を試作し、さつきが localhost と実機で Google ログインを試す） |
+
 ## 6. 確認待ち（さつきの判断）→ 2026-09-28 すべて推奨案で決定
 
 | # | 内容 | 推奨 |
