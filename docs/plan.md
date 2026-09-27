@@ -91,7 +91,7 @@
 | T-304 | ログイン画面・認証状態・`whoami`・利用不可画面 | T-105, T-302, M-07 | ローカルで Google ログイン → 一覧（空）まで | 進行中（ローカルで実装・確認済み。Google ログインの実地確認は M-05〜M-07 の後） | | 06 §0.3, §1 |
 | T-305 | 本番 DB へのマイグレーション適用（承認後） | T-303, M-03 | さつきの承認後に `db push`、本番で DB テストの一部をスモーク | 取り消し（Neon に移行。T-311 に置き換え） | | — |
 | M-09 | 管理者 UID の登録 | T-305 | `app_admins` に 1 行 | 未着手 | さつき | 10 M-09 |
-| N-01 | Neon のアカウントとプロジェクト作成（シンガポール） | Q-25 | Project ID を Claude に共有 | 完了（Project ID `patient-leaf-06853495`。2026-09-28） | さつき | 10 N-01 |
+| N-01 | Neon のアカウントとプロジェクト作成（シンガポール） | Q-25 | Project ID を Claude に共有 | 完了（Project ID `patient-leaf-06853495`、AWS Asia Pacific 1 (Singapore)。アカウント作成時に自動で作られたものを使う。2026-09-28） | さつき | 10 N-01 |
 | N-02 | Neon の Auth と Data API の有効化 | N-01 | 有効化済み | 進行中（手順を案内済み） | さつき | 10 N-02 |
 | N-03 | Neon CLI のログイン | N-01 | `npx neonctl` が使える | 未着手 | さつき | 10 N-03 |
 | N-04 | Google OAuth を Neon Auth につなぐ（M-05・M-06 の差し替え） | N-02, M-05 | Neon Auth に Google を設定済み | 未着手 | さつき | 10 N-04 |
@@ -299,3 +299,4 @@
 - **変更したファイル**: `docs/detailed-spec/12-neon-migration.md`（新規）、`00-index.md`、`10-manual-tasks.md`、`11-open-questions.md`、`CLAUDE.md`、`docs/plan.md`、`docs/BATON.md`
 - **残課題**: Q-25〜Q-29 の回答、N-01（Neon のプロジェクト作成）、スパイク T-306。
 - **追記（2026-09-28）**: さつきが N-01 を完了（Neon の Project ID `patient-leaf-06853495`）。N-02 の手順を案内。
+- **追記（2026-09-28）**: N-01 のプロジェクトはアカウント作成時に自動で作られたもの（Singapore）と確認。作り直しは不要。作成直後の使用量は 31.69MB（0.5GB の枠に含まれる初期分）。
