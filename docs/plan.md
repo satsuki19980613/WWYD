@@ -14,7 +14,7 @@
 | 直近で完了したこと | T-101 モノレポ雛形、T-102 CI（ワークフロー作成）、T-103 Edge Function の import スパイク（直接 import で可）、T-104 トークンと基本部品、T-105 アプリの外枠、T-106 Cloudflare Pages の確認 |
 | 次にやること | 0. まず [BATON.md](BATON.md) を読む<br>1. main から `phase/02-poker-logic` を切り、P2 に着手（T-201 金額 → T-202 状態遷移 → …）<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）を P3 の前までに |
 | ブロッカー | なし（Docker Desktop は導入済み。使う前に起動しておく必要がある） |
-| さつきの確認待ち | `@vitest/coverage-v8` の追加（P2 の完了条件「行カバレッジ 90% 以上」の計測に必要） |
+| さつきの確認待ち | なし |
 
 ---
 
@@ -188,6 +188,7 @@
 | 2026-09-27 | ローカル Supabase のポートを 5432x から 5532x に変更（`supabase/config.toml`） | Windows（Hyper-V）が 54319〜54418 を予約しており DB が起動できなかった | Claude |
 | 2026-09-27 | P1 を承認。`phase/01-foundation` を push し PR #2 で CI 緑を確認して main へマージ | さつきの指示（PR を作成してマージ） | さつき |
 | 2026-09-27 | GitHub Actions を `actions/checkout@v7` / `actions/setup-node@v7` に更新 | v4 は Node 20 の非推奨警告が出たため | Claude |
+| 2026-09-27 | `@vitest/coverage-v8` ^5.0.2 を追加。`npm run test:coverage` で `packages/core` の行カバレッジを計測し、90% 未満で失敗させる | P2 の完了条件の計測のため（さつき承認） | さつき |
 
 ---
 
