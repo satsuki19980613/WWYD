@@ -139,7 +139,7 @@ WWYD/
 ## 8. セッションの開始手順
 
 1. この CLAUDE.md を読む。
-2. [docs/plan.md](docs/plan.md) の「現在の状況」と「確認待ち」を読む。確認待ちに回答が来ていれば、決定ログに記録してから進む。
+2. [docs/BATON.md](docs/BATON.md)（前セッションからの引き継ぎ）があれば読む。続けて [docs/plan.md](docs/plan.md) の「現在の状況」と「確認待ち」を読む。確認待ちに回答が来ていれば、決定ログに記録してから進む。
 3. `git status` と `git log --oneline -10` で、前回の終わりの状態と plan.md が一致しているか確かめる（食い違えば先に報告する）。
 4. 今回やるタスクを plan.md のタスク一覧から選び、状態を「進行中」にする。
 5. 着手するタスクに関係する詳細仕様の章を読む。UI を触るなら `wwyd-ui-concept` Skill を使う。
@@ -173,6 +173,8 @@ WWYD/
   - 例: `feat(core): 不完全レイズでアクションを再オープンしない`
 - `git push` はさつきの確認後に行う（初回 push を含む）。force push はしない。
 - `.env` 等の秘密情報、`node_modules`、ビルド成果物はコミットしない（`.gitignore`）。
+- コミットの作者アドレスは GitHub の noreply（`221932870+satsuki19980613@users.noreply.github.com`、リポジトリ単位で設定済み）。個人のメールアドレスのコミットは GitHub に拒否される。
+- **ICMCLEC（非公開リポジトリ）由来の資料をコミットしない**（`.claude/skills/wwyd-ui-concept/references/icmclec-*` は git 管理外）。
 
 ---
 
