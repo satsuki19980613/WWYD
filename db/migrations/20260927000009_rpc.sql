@@ -1,7 +1,8 @@
 -- RPC（詳細仕様 02 章 §4）
 -- 関数を作るたびに PUBLIC・anon・authenticated から実行権限を取り消し、必要な付与だけを行う（0007 の注記）
 
--- insert_post: service_role 専用。Edge Function `create-post` だけが、サーバーで検証・再計算した値で呼ぶ
+-- insert_post: DB の所有者専用。Neon Function `create-post` だけが、サーバーで検証・再計算した値で呼ぶ
+-- （Function には所有者の DATABASE_URL が入る。所有者は自分の関数を実行できるので付与は要らない）
 create or replace function public.insert_post(p_author uuid, p jsonb)
 returns uuid language plpgsql volatile security definer set search_path = '' as $$
 declare
@@ -39,8 +40,7 @@ begin
   return v_id;
 end $$;
 
-revoke all on function public.insert_post(uuid, jsonb) from public, anon, authenticated;
-grant execute on function public.insert_post(uuid, jsonb) to service_role;
+revoke all on function public.insert_post(uuid, jsonb) from public, anonymous, authenticated;
 
 -- list_posts: 一覧（仕様書 §5.1）。SECURITY INVOKER なので posts の RLS（許可済みのみ）がそのまま効く。
 -- author_uid は返さない（他人の投稿の結び付けを避ける）
@@ -57,11 +57,11 @@ returns table (
 language sql stable security invoker set search_path = '' as $$
   select p.id, p.created_at, p.title, p.fmt, p.hero::text, p.villain::text, p.street::text,
          p.effective_stack::numeric, p.answer_count,
-         p.author_uid = auth.uid(),
-         exists (select 1 from public.answers a where a.post_id = p.id and a.uid = auth.uid()),
-         p.author_uid = auth.uid() or public.is_admin()
+         p.author_uid = public.current_uid(),
+         exists (select 1 from public.answers a where a.post_id = p.id and a.uid = public.current_uid()),
+         p.author_uid = public.current_uid() or public.is_admin()
   from public.posts p
-  where (p_tab = 'all' or p.author_uid = auth.uid())
+  where (p_tab = 'all' or p.author_uid = public.current_uid())
     and (p_street is null or p.street = p_street)
     and (p_after is null or (
           case when p_sort = 'many'
@@ -75,7 +75,7 @@ language sql stable security invoker set search_path = '' as $$
   limit least(greatest(p_limit, 1), 50);
 $$;
 
-revoke all on function public.list_posts(text, text, text, jsonb, integer) from public, anon, authenticated;
+revoke all on function public.list_posts(text, text, text, jsonb, integer) from public, anonymous, authenticated;
 grant execute on function public.list_posts(text, text, text, jsonb, integer) to authenticated;
 
 -- get_post_detail: 回答・集計画面（仕様書 §4, 5.3, 5.4, 7.6）。
@@ -83,7 +83,7 @@ grant execute on function public.list_posts(text, text, text, jsonb, integer) to
 create or replace function public.get_post_detail(p_post_id uuid)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare
-  me        uuid := auth.uid();
+  me        uuid := public.current_uid();
   p         public.posts;
   h         public.post_hands;
   viewer    text;
@@ -140,7 +140,7 @@ begin
   );
 end $$;
 
-revoke all on function public.get_post_detail(uuid) from public, anon, authenticated;
+revoke all on function public.get_post_detail(uuid) from public, anonymous, authenticated;
 grant execute on function public.get_post_detail(uuid) to authenticated;
 
 -- save_host_answer: Hero の予想（仕様書 §5.3.8「別の経路」）。投稿者のみ・何度でも上書き・集計に入れない
@@ -153,7 +153,7 @@ begin
   if not public.is_allowed() then perform public.fail('not_allowed'); end if;
   select * into p from public.posts where id = p_post_id;
   if not found then perform public.fail('post_not_found'); end if;
-  if p.author_uid <> auth.uid() then perform public.fail('not_author'); end if;
+  if p.author_uid <> public.current_uid() then perform public.fail('not_author'); end if;
   uses_s1 := public.validate_paint(p_paint, p.keys);
   perform public.check_size(uses_s1, p_size, p.min_to, p.max_to);
   insert into public.host_answers (post_id, paint, size, updated_at)
@@ -161,7 +161,7 @@ begin
   on conflict (post_id) do update set paint = excluded.paint, size = excluded.size, updated_at = now();
 end $$;
 
-revoke all on function public.save_host_answer(uuid, bytea, numeric) from public, anon, authenticated;
+revoke all on function public.save_host_answer(uuid, bytea, numeric) from public, anonymous, authenticated;
 grant execute on function public.save_host_answer(uuid, bytea, numeric) to authenticated;
 
 -- delete_my_account（仕様書 §3・§7.6）: ①本人の回答（トリガで他人の投稿の集計と answer_count を減算）
@@ -169,15 +169,15 @@ grant execute on function public.save_host_answer(uuid, bytea, numeric) to authe
 create or replace function public.delete_my_account()
 returns void language plpgsql volatile security definer set search_path = '' as $$
 declare
-  me uuid := auth.uid();
+  me uuid := public.current_uid();
 begin
   if me is null then perform public.fail('not_authenticated'); end if;
   delete from public.answers where uid = me;
   delete from public.posts   where author_uid = me;
-  delete from auth.users     where id = me;
+  delete from neon_auth."user" where id = me;  -- セッション・OAuth の連携もカスケードで消える
 end $$;
 
-revoke all on function public.delete_my_account() from public, anon, authenticated;
+revoke all on function public.delete_my_account() from public, anonymous, authenticated;
 grant execute on function public.delete_my_account() to authenticated;
 
 -- admin_delete_unanswered_posts: 容量の整理（仕様書 §8）。管理者が SQL エディタから実行する
@@ -192,7 +192,7 @@ begin
   return n;
 end $$;
 
-revoke all on function public.admin_delete_unanswered_posts(timestamptz) from public, anon, authenticated;
+revoke all on function public.admin_delete_unanswered_posts(timestamptz) from public, anonymous, authenticated;
 grant execute on function public.admin_delete_unanswered_posts(timestamptz) to authenticated;
 
 -- whoami: 画面の出し分け用（allowed = false なら「利用できません」画面）
@@ -201,5 +201,5 @@ returns jsonb language sql stable security definer set search_path = '' as $$
   select jsonb_build_object('allowed', public.is_allowed(), 'admin', public.is_admin());
 $$;
 
-revoke all on function public.whoami() from public, anon, authenticated;
+revoke all on function public.whoami() from public, anonymous, authenticated;
 grant execute on function public.whoami() to authenticated;

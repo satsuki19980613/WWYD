@@ -11,41 +11,41 @@ select pg_temp.paint('[[0,0,0,20,0]]') as aa_call \gset
 
 -- ---- DB-01 未認証（anon）は何も読めない・書けない・RPC を実行できない ----
 select pg_temp.login(0);
-select throws_ok($$ select * from public.posts $$, '42501', null, 'DB-01 anon は posts を読めない');
-select throws_ok($$ select * from public.post_hands $$, '42501', null, 'DB-01 anon は post_hands を読めない');
-select throws_ok($$ select * from public.post_secrets $$, '42501', null, 'DB-01 anon は post_secrets を読めない');
-select throws_ok($$ select * from public.host_answers $$, '42501', null, 'DB-01 anon は host_answers を読めない');
-select throws_ok($$ select * from public.answers $$, '42501', null, 'DB-01 anon は answers を読めない');
-select throws_ok($$ select * from public.post_aggregates $$, '42501', null, 'DB-01 anon は post_aggregates を読めない');
-select throws_ok($$ select * from public.app_settings $$, '42501', null, 'DB-01 anon は app_settings を読めない');
-select throws_ok($$ select * from public.app_admins $$, '42501', null, 'DB-01 anon は app_admins を読めない');
-select throws_ok($$ select * from public.app_allowlist $$, '42501', null, 'DB-01 anon は app_allowlist を読めない');
-select throws_ok($$ select * from public.post_quota $$, '42501', null, 'DB-01 anon は post_quota を読めない');
+select throws_ok($$ select * from public.posts $$, '42501', null, 'DB-01 未ログイン（anonymous）は posts を読めない');
+select throws_ok($$ select * from public.post_hands $$, '42501', null, 'DB-01 未ログイン（anonymous）は post_hands を読めない');
+select throws_ok($$ select * from public.post_secrets $$, '42501', null, 'DB-01 未ログイン（anonymous）は post_secrets を読めない');
+select throws_ok($$ select * from public.host_answers $$, '42501', null, 'DB-01 未ログイン（anonymous）は host_answers を読めない');
+select throws_ok($$ select * from public.answers $$, '42501', null, 'DB-01 未ログイン（anonymous）は answers を読めない');
+select throws_ok($$ select * from public.post_aggregates $$, '42501', null, 'DB-01 未ログイン（anonymous）は post_aggregates を読めない');
+select throws_ok($$ select * from public.app_settings $$, '42501', null, 'DB-01 未ログイン（anonymous）は app_settings を読めない');
+select throws_ok($$ select * from public.app_admins $$, '42501', null, 'DB-01 未ログイン（anonymous）は app_admins を読めない');
+select throws_ok($$ select * from public.app_allowlist $$, '42501', null, 'DB-01 未ログイン（anonymous）は app_allowlist を読めない');
+select throws_ok($$ select * from public.post_quota $$, '42501', null, 'DB-01 未ログイン（anonymous）は post_quota を読めない');
 select throws_ok(format($$ insert into public.answers (post_id, paint) values (%L, %L) $$, :'post', :'aa_call'),
-  '42501', null, 'DB-01 anon は answers に書けない');
-select throws_ok($$ select public.whoami() $$, '42501', null, 'DB-01 anon は whoami を実行できない');
-select throws_ok($$ select * from public.list_posts() $$, '42501', null, 'DB-01 anon は list_posts を実行できない');
-select throws_ok(format($$ select public.get_post_detail(%L) $$, :'post'), '42501', null, 'DB-01 anon は get_post_detail を実行できない');
-select throws_ok($$ select public.delete_my_account() $$, '42501', null, 'DB-01 anon は delete_my_account を実行できない');
-select throws_ok(format($$ select public.insert_post(%L, '{}') $$, pg_temp.uid(1)), '42501', null, 'DB-01 anon は insert_post を実行できない');
+  '42501', null, 'DB-01 未ログイン（anonymous）は answers に書けない');
+select throws_ok($$ select public.whoami() $$, '42501', null, 'DB-01 未ログイン（anonymous）は whoami を実行できない');
+select throws_ok($$ select * from public.list_posts() $$, '42501', null, 'DB-01 未ログイン（anonymous）は list_posts を実行できない');
+select throws_ok(format($$ select public.get_post_detail(%L) $$, :'post'), '42501', null, 'DB-01 未ログイン（anonymous）は get_post_detail を実行できない');
+select throws_ok($$ select public.delete_my_account() $$, '42501', null, 'DB-01 未ログイン（anonymous）は delete_my_account を実行できない');
+select throws_ok(format($$ select public.insert_post(%L, '{}') $$, pg_temp.uid(1)), '42501', null, 'DB-01 未ログイン（anonymous）は insert_post を実行できない');
 select pg_temp.logout();
 
--- public スキーマの関数で anon が実行できるものが 1 つも無い（新しい関数に既定で付与されていない）
+-- public スキーマの関数で anonymous が実行できるものが 1 つも無い（新しい関数に既定で付与されていない）
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')),
-  0, 'DB-01 anon が実行できる public の関数は無い');
+   where n.nspname = 'public' and has_function_privilege('anonymous', p.oid, 'execute')),
+  0, 'DB-01 未ログイン（anonymous）が実行できる public の関数は無い');
 select is(
   (select array_agg(p.proname::text order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and has_function_privilege('authenticated', p.oid, 'execute')),
-  array['admin_delete_unanswered_posts', 'can_view_results', 'delete_my_account', 'get_post_detail',
+  array['admin_delete_unanswered_posts', 'can_view_results', 'current_uid', 'delete_my_account', 'get_post_detail',
         'is_admin', 'is_allowed', 'list_posts', 'save_host_answer', 'whoami'],
   'DB-01 authenticated が実行できる関数は決めたものだけ');
 
 -- ---- DB-03 / DB-04 authenticated は posts に直接書けない・insert_post を実行できない ----
 select pg_temp.login(1);
 select throws_ok($$ insert into public.posts (author_uid, title, fmt, hero, villain, street, effective_stack, keys, pot_base)
-                   values (auth.uid(), 't', 'cash', 'BTN', 'BB', 'pf', 100, '{check}', 1) $$,
+                   values (public.current_uid(), 't', 'cash', 'BTN', 'BB', 'pf', 100, '{check}', 1) $$,
   '42501', null, 'DB-03 posts に直接 insert できない');
 select throws_ok(format($$ update public.posts set title = 'x' where id = %L $$, :'post'), '42501', null, 'DB-03 posts を update できない');
 select throws_ok(format($$ select public.insert_post(%L, '{}') $$, pg_temp.uid(1)), '42501', null, 'DB-04 insert_post は authenticated から実行できない');
@@ -97,5 +97,5 @@ select pg_temp.login(2);
 select is((select count(*)::int from public.posts), 1, 'DB-02 リストに載っていれば読める');
 select pg_temp.logout();
 
-select * from finish();
+select * from finish(true);
 rollback;

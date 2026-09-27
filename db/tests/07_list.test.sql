@@ -57,5 +57,5 @@ select is((select count(*)::int from information_schema.routines r
            join information_schema.parameters p on p.specific_name = r.specific_name
            where r.routine_name = 'list_posts' and p.parameter_name = 'author_uid'), 0, 'list_posts は author_uid を返さない');
 
-select * from finish();
+select * from finish(true);
 rollback;

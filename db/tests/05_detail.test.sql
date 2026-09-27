@@ -43,5 +43,5 @@ select pg_temp.login(1);
 select throws_ok($$ select public.get_post_detail(gen_random_uuid()) $$, 'P0001', 'post_not_found', '存在しない投稿は post_not_found');
 select pg_temp.logout();
 
-select * from finish();
+select * from finish(true);
 rollback;

@@ -7,18 +7,18 @@ create table public.app_settings (
 insert into public.app_settings default values;
 
 create table public.app_admins (
-  uid        uuid primary key references auth.users (id) on delete cascade,
+  uid        uuid primary key references neon_auth."user" (id) on delete cascade,
   created_at timestamptz not null default now()
 );
 
 create table public.app_allowlist (
-  uid        uuid primary key references auth.users (id) on delete cascade,
+  uid        uuid primary key references neon_auth."user" (id) on delete cascade,
   created_at timestamptz not null default now()
 );
 
 -- 日ごとの投稿数。削除しても枠が戻らないように別に数える（Q-10）
 create table public.post_quota (
-  uid   uuid    not null references auth.users (id) on delete cascade,
+  uid   uuid    not null references neon_auth."user" (id) on delete cascade,
   day   date    not null,                -- UTC の日付
   count integer not null default 0 check (count >= 0),
   primary key (uid, day)

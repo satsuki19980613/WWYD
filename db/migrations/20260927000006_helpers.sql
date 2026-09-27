@@ -20,20 +20,20 @@ $$;
 
 create or replace function public.is_allowed()
 returns boolean language sql stable security definer set search_path = '' as $$
-  select public.is_allowed_uid(auth.uid());
+  select public.is_allowed_uid(public.current_uid());
 $$;
 
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.app_admins m where m.uid = auth.uid());
+  select exists (select 1 from public.app_admins m where m.uid = public.current_uid());
 $$;
 
 -- 集計・Hero のハンド・known_cards・Hero の予想を見てよいか（投稿者本人か、回答済み）
 create or replace function public.can_view_results(p_post_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
   select public.is_allowed() and (
-    exists (select 1 from public.posts p where p.id = p_post_id and p.author_uid = auth.uid())
-    or exists (select 1 from public.answers a where a.post_id = p_post_id and a.uid = auth.uid())
+    exists (select 1 from public.posts p where p.id = p_post_id and p.author_uid = public.current_uid())
+    or exists (select 1 from public.answers a where a.post_id = p_post_id and a.uid = public.current_uid())
   );
 $$;
 

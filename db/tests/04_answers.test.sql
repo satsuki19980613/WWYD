@@ -27,7 +27,7 @@ select throws_ok(format($$ insert into public.answers (post_id, paint) values (%
 
 -- uid はクライアントの値を信用しない（他人の uid を入れても自分の回答になる）
 insert into public.answers (post_id, uid, paint) values (:'post', pg_temp.uid(9), :'pa');
-select is((select uid from public.answers where post_id = :'post'), pg_temp.uid(2), 'uid は auth.uid() で上書きされる');
+select is((select uid from public.answers where post_id = :'post'), pg_temp.uid(2), 'uid は public.current_uid() で上書きされる');
 
 -- ---- DB-08 2 回目の回答は 23505 ----
 select throws_ok(format($$ insert into public.answers (post_id, paint) values (%L, %L) $$, :'post', :'pa'),
@@ -90,5 +90,5 @@ select is((select n from public.post_aggregates where post_id = :'post19'), 10, 
 select is(pg_temp.agg(:'post19', 0, 3), 200, 'DB-19 AA の sum_call = 200');
 select is(pg_temp.agg(:'post19', 168, 1), 200, 'DB-19 22 の sum_fold = 200');
 
-select * from finish();
+select * from finish(true);
 rollback;

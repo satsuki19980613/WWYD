@@ -73,7 +73,7 @@ select is((select n from public.post_aggregates where post_id = :'q1'), 1, 'DB-1
 select is(pg_temp.agg(:'q1', 0, 3), 20, 'DB-16 AA の sum_call が戻る');
 select is(pg_temp.agg(:'q1', 14, 0), 0, 'DB-16 KK の n_cell が戻る');
 select is((select count(*)::int from public.posts where id = :'q3'), 0, 'DB-16 本人の投稿が消える');
-select is((select count(*)::int from auth.users where id = pg_temp.uid(3)), 0, 'DB-16 auth.users の行が消える');
+select is((select count(*)::int from neon_auth."user" where id = pg_temp.uid(3)), 0, 'DB-16 neon_auth."user" の行が消える');
 
-select * from finish();
+select * from finish(true);
 rollback;

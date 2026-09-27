@@ -1,7 +1,7 @@
 -- 投稿（詳細仕様 01 章 §2.3）
 create table public.posts (
   id              uuid primary key default gen_random_uuid(),
-  author_uid      uuid not null references auth.users (id) on delete cascade,
+  author_uid      uuid not null references neon_auth."user" (id) on delete cascade,
   created_at      timestamptz not null default now(),
   title           text not null
                     check (title = btrim(title) and char_length(title) between 1 and 40),

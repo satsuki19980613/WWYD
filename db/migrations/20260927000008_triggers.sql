@@ -7,7 +7,7 @@ declare
   p public.posts;
   uses_s1 boolean;
 begin
-  new.uid := auth.uid();
+  new.uid := public.current_uid();
   new.created_at := now();
   if new.uid is null then perform public.fail('not_authenticated'); end if;
   select * into p from public.posts where id = new.post_id;
@@ -74,8 +74,8 @@ create trigger posts_only_count_update before update on public.posts
   for each row execute function public.posts_only_count_update();
 
 -- トリガ関数は直接呼ばせない（トリガからの実行に実行権限は要らない）
-revoke all on function public.answers_before_insert()   from public, anon, authenticated;
-revoke all on function public.answers_after_insert()    from public, anon, authenticated;
-revoke all on function public.answers_after_delete()    from public, anon, authenticated;
-revoke all on function public.forbid_update()           from public, anon, authenticated;
-revoke all on function public.posts_only_count_update() from public, anon, authenticated;
+revoke all on function public.answers_before_insert()   from public, anonymous, authenticated;
+revoke all on function public.answers_after_insert()    from public, anonymous, authenticated;
+revoke all on function public.answers_after_delete()    from public, anonymous, authenticated;
+revoke all on function public.forbid_update()           from public, anonymous, authenticated;
+revoke all on function public.posts_only_count_update() from public, anonymous, authenticated;

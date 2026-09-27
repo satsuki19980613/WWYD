@@ -1,7 +1,7 @@
 -- 回答と集計（詳細仕様 01 章 §2.4）
 create table public.answers (
   post_id    uuid not null references public.posts (id) on delete cascade,
-  uid        uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  uid        uuid not null default public.current_uid() references neon_auth."user" (id) on delete cascade,
   created_at timestamptz not null default now(),
   paint      bytea not null check (octet_length(paint) = 676),
   size       public.bb_amount,

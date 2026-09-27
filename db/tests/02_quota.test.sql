@@ -23,5 +23,5 @@ select lives_ok($$ select pg_temp.make_post(1) $$, 'DB-05 UTC の日付が変わ
 update public.app_settings set daily_post_limit = 1;
 select throws_ok($$ select pg_temp.make_post(2) $$, 'P0001', 'daily_limit', 'DB-05 上限は app_settings の値');
 
-select * from finish();
+select * from finish(true);
 rollback;

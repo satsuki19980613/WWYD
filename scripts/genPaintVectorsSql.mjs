@@ -1,11 +1,11 @@
 // 共有テストベクタ（packages/core/test-vectors/paint-validation.json）から pgTAP のテスト
-// （supabase/tests/03_paint_vectors.test.sql）を生成する。TS（Vitest）と SQL が同じベクタで判定されることを保つ（DB-06）。
+// （db/tests/03_paint_vectors.test.sql）を生成する。TS（Vitest）と SQL が同じベクタで判定されることを保つ（DB-06）。
 //   node scripts/genPaintVectorsSql.mjs          … 生成する
 //   node scripts/genPaintVectorsSql.mjs --check  … 生成物が最新かを確かめる（CI）
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const SRC = 'packages/core/test-vectors/paint-validation.json';
-const OUT = 'supabase/tests/03_paint_vectors.test.sql';
+const OUT = 'db/tests/03_paint_vectors.test.sql';
 
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const num = (v) => (v === null ? 'null' : String(v));
@@ -36,7 +36,7 @@ for (const v of vectors) {
     `select is(pg_temp.answer_code(${q(v.hex)}, ${keys}, ${num(v.size)}, ${num(v.min_to)}, ${num(v.max_to)}), ${v.expect === null ? 'null' : q(v.expect)}, ${q(v.name)});`,
   );
 }
-lines.push('', 'select * from finish();', 'rollback;', '');
+lines.push('', 'select * from finish(true);', 'rollback;', '');
 const sql = lines.join('\n');
 
 if (process.argv.includes('--check')) {
