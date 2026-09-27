@@ -7,6 +7,7 @@ import { InfoModal } from './components/InfoModal.tsx';
 import { INFO_SECTIONS, infoSectionFor, type InfoSectionId } from './info/infoSections.ts';
 import { useLocation, useRoute, useScrollTopOnNavigate, type Route } from './router.ts';
 import { BootScreen } from './screens/BootScreen.tsx';
+import { ListScreen } from './screens/ListScreen.tsx';
 import { LoginScreen } from './screens/LoginScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
 import { ScreenStub } from './screens/ScreenStub.tsx';
@@ -78,7 +79,7 @@ function RouteScreen(props: { route: Route }): JSX.Element {
   const { route } = props;
   switch (route.name) {
     case 'list':
-      return <ScreenStub title="スポット一覧" />;
+      return <ListScreen />;
     case 'new':
       return <ScreenStub title="スポット投稿" />;
     case 'spot':

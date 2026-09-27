@@ -64,3 +64,145 @@
 }
 
 .screen { display: flex; flex-direction: column; gap: var(--s4); }
+
+/* ---- スポット一覧（06 章 §2） ---- */
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 44px;
+}
+.list-head .sec-h { margin: 0; }
+.list-filters { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); }
+.chip-row { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.chip-lbl { flex: none; }
+.chips { display: flex; gap: var(--s1); }
+/* スマホはチップの列を横スクロール（06 章 §2.1） */
+.list-screen.sp .list-filters { flex-direction: column; gap: var(--s1); }
+.list-screen.sp .chips {
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-right: calc(-1 * var(--s4));
+  padding-right: var(--s4);
+}
+.list-screen.sp .chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--dim);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms var(--ease), border-color 150ms var(--ease);
+}
+.chip:hover { color: var(--fg); border-color: var(--line-2); }
+.chip[aria-pressed='true'] { color: var(--yellow); border-color: rgba(252, 238, 10, 0.55); background: rgba(252, 238, 10, 0.06); }
+
+.spot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--s3);
+}
+.list-screen.sp .spot-grid { grid-template-columns: 1fr; }
+.spot-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: border-color 150ms var(--ease);
+}
+.spot-card:hover { border-color: var(--line-2); }
+.spot-top { display: flex; align-items: center; gap: var(--s2); min-height: 22px; }
+.street-badge {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg);
+}
+.spot-fmt { font-size: 12px; color: var(--dim); }
+.spot-tag {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.spot-tag.mine { color: var(--yellow); }
+.spot-tag.answered { color: var(--cyan); }
+.spot-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.spot-seats { font-family: var(--disp); font-size: 14px; font-weight: 600; letter-spacing: 0.03em; color: var(--dim); }
+.spot-seats .pos { font-weight: 700; }
+.spot-foot {
+  margin-top: auto;
+  padding-top: var(--s2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  border-top: 1px solid var(--line);
+}
+.spot-meta { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.spot-count { font-size: 18px; color: var(--fg); }
+.spot-ops { display: flex; gap: var(--s2); flex: none; }
+.btn.sm { font-size: 14px; padding: 8px 14px; text-decoration: none; }
+a.btn { text-decoration: none; }
+
+/* 読み込み中（初回）= カードの骨組み */
+.spot-card.skeleton { min-height: 150px; }
+.sk { display: block; height: 12px; background: var(--surface-3); animation: sk-pulse 1.1s var(--ease) infinite alternate; }
+.sk-s { width: 30%; }
+.sk-l { width: 85%; height: 18px; }
+.sk-m { width: 55%; }
+@keyframes sk-pulse { from { opacity: 0.45; } to { opacity: 1; } }
+
+.list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s6) 0;
+}
+.list-empty-label { font-size: 14px; color: var(--dim); }
+.list-sentinel { height: 1px; }
+.list-more { display: grid; place-items: center; min-height: 44px; }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--yellow);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* スマホは投稿ボタンを画面下部に固定（06 章 §2.1） */
+.list-screen.sp { padding-bottom: 72px; }
+.list-fab {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--s3) max(var(--s4), var(--sar)) calc(var(--s3) + var(--sab)) max(var(--s4), var(--sal));
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+.list-fab .btn { max-width: calc(var(--app-w) - 2 * var(--s4)); margin: 0 auto; display: flex; }

@@ -3,6 +3,7 @@
 //   node scripts/db.mjs migrate --branch dev   … db/migrations の未適用分をブランチに適用する
 //   node scripts/db.mjs test                   … 一時ブランチで DB テスト（下記）
 //   node scripts/db.mjs test --keep            … 一時ブランチを消さずに残す（調べるとき。1 時間で自動削除）
+//   node scripts/db.mjs seed --branch dev      … 開発用の試験データ（db/seed/dev.sql）を dev ブランチに入れ直す
 //
 // DB テスト: 空のブランチ test-base から一時ブランチを作り（1 時間で自動削除）、全マイグレーションを適用して
 // pgTAP（db/tests/*.test.sql）と同時回答のテスト（DB-19）を実行し、最後に一時ブランチを消す。
@@ -162,8 +163,12 @@ try {
     await migrate(await connectionString(branchArg));
   } else if (cmd === 'test') {
     await test(rest.includes('--keep'));
+  } else if (cmd === 'seed') {
+    // 開発用の試験データ（db/seed/dev.sql）。本番のデータを消さないよう dev ブランチだけに限る
+    if (branchArg !== 'dev') throw new Error('seed は --branch dev にだけ実行できます');
+    process.stdout.write(await psql(await connectionString(branchArg), '-f /db/seed/dev.sql'));
   } else {
-    console.log('使い方: node scripts/db.mjs migrate --branch <ブランチ> | test [--keep]');
+    console.log('使い方: node scripts/db.mjs migrate --branch <ブランチ> | test [--keep] | seed --branch dev');
     process.exitCode = 1;
   }
 } catch (e) {

@@ -103,6 +103,7 @@ WWYD/
 | DB テスト | `npm run test:db`（空の `test-base` から一時ブランチを作り、全マイグレーション → pgTAP → 同時回答 → 削除。1 時間で自動削除もされる。Docker が必要） |
 | 共有テストベクタの pgTAP を生成 | `npm run gen:db-vectors`（CI は `check:db-vectors` で最新かを検査） |
 | マイグレーションを dev に適用 | `npm run db:migrate -- --branch dev` |
+| dev に試験データを入れ直す | `npm run db:seed -- --branch dev`（`db/seed/dev.sql`。試験用ユーザー 8 人の投稿 40 件と回答、dev の実在ユーザーの「自分の投稿」。題名が「試験」で始まる投稿を消してから作る。dev 以外には実行できない） |
 | マイグレーションを本番に適用 | `npm run db:migrate -- --branch production`（**さつきの確認が必要**） |
 | Function の配備 | `npx neonctl functions deploy <slug> --project-id patient-leaf-06853495 --branch <ブランチ> --src <入口>`（本番は**さつきの確認が必要**）。配備直後の 1 分ほどは新旧の版が混ざって応答する |
 

@@ -1,18 +1,27 @@
-# バトン: P4 一覧へ（P3 は完了）
+# バトン: P5 投稿へ（P4 一覧は実装済み・本番確認待ち）
 
-**更新 2026-09-28 / セッション 2（Opus 5.5）から次セッションへの引き継ぎ**
+**更新 2026-09-28 / セッション 3（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている）**
 
 ---
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**P3（DB と認証）は完了**。バックエンドは Neon（詳細仕様 [12 章](detailed-spec/12-neon-migration.md)）。本番（production）にマイグレーション適用済み、本番で Google ログイン → 一覧を確認済み。
+**P4（一覧）は実装済み**（ブランチ `phase/04-list`）。dev の試験データで全状態と削除 → カスケードを確認済み。本番には投稿がまだ無いので、本番での一覧・削除の確認は P5 の後。
 
 1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
-2. `phase/03-db-auth` が未マージなら、PR の CI を確かめてマージ（さつきの確認）。
-3. P4 一覧（T-401〜）に着手。
+2. `phase/04-list` が未 push なら、さつきの承認を得て push → PR → CI → マージ。
+3. P5 スポット投稿（T-501〜）に着手。
 4. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ。iPhone のログイン確認は M-08（Cloudflare Pages）の後。
+
+## 0.01 P4 で作ったもの
+
+| ファイル | 内容 |
+|---|---|
+| `packages/app/src/list/spotList.ts` | 一覧の純関数（クエリ・カーソル・重複除去・経過時間・カードの操作）。テストは同名の `.test.ts` |
+| `packages/app/src/list/useSpotList.ts` | 読み込みの状態（初回・追加・エラー）と `deletePost`（`delete ... select id` で 1 件消えたか確かめる） |
+| `packages/app/src/screens/ListScreen.tsx` | 一覧画面（チップ・カード・骨組み・追加読み込み・削除ダイアログ・スマホの下部固定ボタン） |
+| `db/seed/dev.sql` | dev 専用の試験データ（`npm run db:seed -- --branch dev`）。何度でも入れ直せる |
 
 ## 0.05 Neon の要点（詳しくは 12 章 §5.1・§7.1）
 
