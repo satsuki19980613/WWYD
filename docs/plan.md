@@ -12,7 +12,7 @@
 |---|---|
 | 現在のフェーズ | **P3 DB と認証 — バックエンドを Neon に移行中**（2026-09-28 決定。設計案は詳細仕様 12 章。確認待ち Q-25〜Q-29） |
 | 直近で完了したこと | Supabase の無料枠（1 人 2 プロジェクト）が埋まっていたため代替を調査し、さつきが Neon への変更を決定。移行の設計案（12 章）と Neon の手作業手順（10 章 N-01〜N-04）を作成。Supabase 向けの T-301〜T-304 はローカルで完了済み（Neon 向けに書き換えて使う） |
-| 次にやること | 1. さつき: 12 章の確認待ち Q-25〜Q-29 に回答、N-01（Neon のアカウントとプロジェクト作成・シンガポール）→ Project ID を Claude に<br>2. Claude: N-02（Auth・Data API の有効化）を案内 → T-306 スパイク（12 章 §5 の S-1〜S-7）<br>3. スパイクの結果で 12 章を確定し、T-307〜T-310 で Neon 向けに書き換え |
+| 次にやること | 1. さつき: N-02（Data API と Managed Better Auth の有効化。「Grant public schema access」は外す）→ Data API URL と Auth URL を Claude に。12 章の確認待ち Q-25〜Q-29 に回答<br>2. さつき: N-03（Neon CLI のログイン）<br>3. Claude: T-306 スパイク（12 章 §5） |
 | ブロッカー | Neon のプロジェクト（N-01）と確認待ち Q-25〜Q-29 |
 | さつきの確認待ち | 12 章 §6 の Q-25（地域シンガポール）・Q-26（表示名・メールの置き場所）・Q-27（新しい依存）・Q-28（投稿の検証の置き場所）・Q-29（Supabase 用の作業の扱い）。N-01 の実施 |
 
@@ -91,8 +91,8 @@
 | T-304 | ログイン画面・認証状態・`whoami`・利用不可画面 | T-105, T-302, M-07 | ローカルで Google ログイン → 一覧（空）まで | 進行中（ローカルで実装・確認済み。Google ログインの実地確認は M-05〜M-07 の後） | | 06 §0.3, §1 |
 | T-305 | 本番 DB へのマイグレーション適用（承認後） | T-303, M-03 | さつきの承認後に `db push`、本番で DB テストの一部をスモーク | 取り消し（Neon に移行。T-311 に置き換え） | | — |
 | M-09 | 管理者 UID の登録 | T-305 | `app_admins` に 1 行 | 未着手 | さつき | 10 M-09 |
-| N-01 | Neon のアカウントとプロジェクト作成（シンガポール） | Q-25 | Project ID を Claude に共有 | 未着手 | さつき | 10 N-01 |
-| N-02 | Neon の Auth と Data API の有効化 | N-01 | 有効化済み | 未着手 | さつき | 10 N-02 |
+| N-01 | Neon のアカウントとプロジェクト作成（シンガポール） | Q-25 | Project ID を Claude に共有 | 完了（Project ID `patient-leaf-06853495`。2026-09-28） | さつき | 10 N-01 |
+| N-02 | Neon の Auth と Data API の有効化 | N-01 | 有効化済み | 進行中（手順を案内済み） | さつき | 10 N-02 |
 | N-03 | Neon CLI のログイン | N-01 | `npx neonctl` が使える | 未着手 | さつき | 10 N-03 |
 | N-04 | Google OAuth を Neon Auth につなぐ（M-05・M-06 の差し替え） | N-02, M-05 | Neon Auth に Google を設定済み | 未着手 | さつき | 10 N-04 |
 | T-306 | スパイク: Neon の Data API・Auth・Functions・権限・ローカルの pgTAP（12 章 §5 の S-1〜S-7） | N-01〜N-03, Q-25〜Q-29 | 結果を 12 章と決定ログに記録し、12 章を確定稿に | 未着手 | | 12 §5 |
@@ -298,3 +298,4 @@
 - **分かったこと**: Neon に東京リージョンは無い（最寄りはシンガポール）。Neon Auth は利用者（表示名・メールを含む）を同じ DB の `neon_auth` スキーマに置く。Neon Functions は Node.js で、シンガポールで使える。Data API は PostgREST 互換で、ロール名は `authenticated` / `anonymous`。
 - **変更したファイル**: `docs/detailed-spec/12-neon-migration.md`（新規）、`00-index.md`、`10-manual-tasks.md`、`11-open-questions.md`、`CLAUDE.md`、`docs/plan.md`、`docs/BATON.md`
 - **残課題**: Q-25〜Q-29 の回答、N-01（Neon のプロジェクト作成）、スパイク T-306。
+- **追記（2026-09-28）**: さつきが N-01 を完了（Neon の Project ID `patient-leaf-06853495`）。N-02 の手順を案内。

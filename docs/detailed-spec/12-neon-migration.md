@@ -85,8 +85,8 @@
 
 | ID | 内容 | いつ |
 |---|---|---|
-| N-01 | Neon のアカウント作成とプロジェクト作成（地域はシンガポール）。Project ID を Claude に伝える | 今（スパイクの前） |
-| N-02 | Neon のコンソールで Auth と Data API を有効にする | N-01 の直後（Claude が画面に沿って案内） |
+| N-01 | Neon のアカウント作成とプロジェクト作成（地域はシンガポール）。Project ID を Claude に伝える | **完了（2026-09-28、Project ID `patient-leaf-06853495`）** |
+| N-02 | Neon のコンソールで Auth と Data API を有効にする（「Postgres database → Data API」で「Use Managed Better Auth」をオン、「Grant public schema access」は**オフ**＝権限はマイグレーションで必要な分だけ付ける）。Data API URL と Auth URL を Claude に伝える | N-01 の直後 |
 | N-03 | Neon CLI のログイン（Claude が配備・マイグレーション適用に使う。実行前に毎回さつきの承認） | スパイクの前 |
 | N-04 | Google OAuth のリダイレクト URI を Neon Auth のもの（`{NEON_AUTH_BASE_URL}/callback/google`）にする（M-05・M-06 の手順の差し替え）、Neon の Auth 設定にクライアント ID とシークレットを入れる | S-6 の前 |
 
