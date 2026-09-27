@@ -230,7 +230,8 @@ raise (currentBet > 0): to = currentBet + potBase × p
 | RAISE-05 | `UTG r100.5` | エラー `amount_out_of_range`（max 100 超） |
 | RAISE-06 | UTG **1.8**。`UTG r1.8` | 合法（minTo = min(2, 1.8) = 1.8）。不完全（幅 0.8 < 1）。minRaise 1 のまま。HJ は未アクションなので raise[2.8, 100] |
 | RAISE-07 | `BTN r2.5, SB f, BB c`、フロップ `BB b3` | minRaise 3、BTN raise[6, 97.5] |
-| RAISE-08 | BB **3.1**。`BTN r2.5, SB f, BB c`、フロップ `BB b0.6`（オールイン） | currentBet 0.6、minRaise **1 のまま**（不完全ベット）、BTN 合法 = fold, call 0.6, raise[1.6, 97.5] |
+| RAISE-08 | BB **3.1**。`BTN r2.5, SB f, BB c`、フロップ `BB b0.6`（オールイン） | currentBet 0.6、minRaise **1 のまま**（不完全ベット）、BTN 合法 = fold, call 0.6（他にアクションできる席がないので raise なし。§5・LEGAL-04 と同じ）【Q-24】 |
+| RAISE-08b | BB **3.1**。`UTG..HJ f, CO r2.5, BTN c, SB f, BB c`、フロップ `BB b0.6`（オールイン） | minRaise **1 のまま**、CO 合法 = fold, call 0.6, raise[1.6, 97.5] |
 
 ### 10.4 不完全レイズ（INC）
 

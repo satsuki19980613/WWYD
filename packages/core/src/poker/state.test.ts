@@ -190,8 +190,7 @@ describe('RAISE レイズと最小レイズ', () => {
     const s = at(setup({ BB: 3.1 }), acts({ pf: 'UTG..CO f, BTN r2.5, SB f, BB c', flop: 'BB b0.6' }));
     expect(mbbToBb(s.currentBet)).toBe(0.6);
     expect(mbbToBb(s.minRaise)).toBe(1);
-    // 表の期待値は raise[1.6, 97.5] だが、§5 の規則（LEGAL-04 と同じ。他にアクションできる席がない）では raise なし。
-    // 食い違いは plan.md の確認待ち Q-24。規則どおりにし、3 人目がいる形（RAISE-08b）で minRaise を確かめる
+    // 他にアクションできる席がないので raise なし（§5・LEGAL-04 と同じ。Q-24 で決定）
     expect(legalBb(s, 'BTN')).toEqual({ fold: true, call: 0.6 });
   });
 

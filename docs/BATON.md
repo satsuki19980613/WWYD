@@ -7,9 +7,8 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-1. [plan.md](plan.md) の「さつきの確認待ち」を見る。**Q-24（RAISE-08 の期待値）と P2 の承認**が出ていれば:
+1. [plan.md](plan.md) の「さつきの確認待ち」を見る。**P2 の承認**が出ていれば（Q-24 は推奨 (a) で決定済み）:
    - 秘密情報のスキャン → `git push -u origin phase/02-poker-logic` → PR → CI 緑を確認 → main へマージ（P1 と同じ手順）。
-   - Q-24 が (b) になった場合は `poker/state.ts` の `legal` の raise 条件と LEGAL-04 / RAISE-08 のテストを直す。
 2. **P3 DB と認証**（T-301〜）。01 章・02 章のマイグレーションをローカル（`npx supabase start`、ポート 5532x）で作り、pgTAP で DB-01〜19。DB-06 は `packages/core/test-vectors/paint-validation.json` を読む。
    - 本番への適用（T-305）と Google ログイン（T-304）には、さつきの手作業 M-01〜M-03・M-05〜M-07 が要る。
 3. P3 の終わりで止まり、完了条件の確認結果を報告して承認を得る。
