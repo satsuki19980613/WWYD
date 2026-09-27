@@ -17,7 +17,7 @@
 2. **T-102** GitHub Actions（typecheck・test・build）。
 3. **T-104** デザイントークンと基本部品 → **T-105** アプリの外枠（ⓘ の文言は [09-info-modal.md](detailed-spec/09-info-modal.md)）。
 4. **T-106** Cloudflare Pages の無料枠を公式ページで再確認し、決定ログに確認日を記録。
-5. **T-103**（Edge Function から `packages/core` を import できるかのスパイク）は **Docker が必要**。この PC には未インストール（さつきの手作業 M-04 待ち）。入っていなければ後回しにして報告する。
+5. **T-103**（Edge Function から `packages/core` を import できるかのスパイク）。Docker Desktop は導入済み（M-04 完了）。
 
 **P1 の終わりで必ず止まり、完了条件の確認結果を報告して、さつきの承認を得てから P2 へ進む**（依頼の STEP 4 の規則）。
 
@@ -56,12 +56,13 @@
 | 履歴の書き換え | `git filter-branch` 等は権限で止められる。必要なら理由を説明してさつきに許可を求める |
 | `.env` | Claude Code から読み書き禁止の設定（`.claude/settings.json`）。値が必要な作業はさつきに依頼 |
 | 改行 | `.gitattributes` で LF に統一済み。Windows の作業フォルダは OneDrive 配下で、パスに日本語を含む（`ドキュメント\一時ツール\WWYD`） |
-| Docker / Supabase CLI | Docker は未インストール。Supabase CLI も未導入（`npx supabase` は初回にパッケージ取得が必要。devDependency として入れる） |
+| Docker | 導入済み（2026-09-27）。**ユーザー単位のインストール**で本体は `%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe`（`Program Files` ではない）。アプリが起動していないと `docker` は `failed to connect to the docker API at npipe:////./pipe/docker_engine` になる → Docker Desktop を起動して「Engine running」を待つ。Claude のシェルは起動が古いと PATH に `docker` が無いことがある |
+| Supabase CLI | 未導入（`npx supabase` は初回にパッケージ取得が必要。devDependency として入れる） |
 | モックの版 | 受領したモックは v0.1 の挙動（仕様書 §9.2 の差分あり）。仕様書が正 |
 
 ## 4. さつきの手作業（担当: さつき。進み具合は plan.md のタスク一覧）
 
-- **M-04 Docker Desktop のインストール**（T-103 と P3 の DB テストに必要）
+- ~~M-04 Docker Desktop のインストール~~（2026-09-27 完了）
 - M-01〜M-03 Supabase プロジェクト作成・`.env`・CLI リンク（P3 の前まで）
 - M-05〜M-07 Google OAuth の設定（P3）、M-08 Cloudflare Pages（P5 まで）
 

@@ -12,8 +12,8 @@
 |---|---|
 | 現在のフェーズ | **P0 準備 完了** → 次は P1 基盤 |
 | 直近で完了したこと | STEP 1〜3 の承認、Q-1〜Q-23 を推奨案で決定（決定ログ）、詳細仕様を d1.0 に |
-| 次にやること | 0. まず [BATON.md](BATON.md) を読む（ブランチ `phase/01-foundation` で作業）<br>1. P1 基盤に着手（T-101 モノレポの雛形 → T-102 CI → T-104 デザイントークン）<br>2. さつきの手作業 M-04（Docker Desktop）を T-103 の前までに<br>3. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）を P3 の前までに |
-| ブロッカー | なし（T-103 のスパイクは Docker が必要。この PC には未インストール） |
+| 次にやること | 0. まず [BATON.md](BATON.md) を読む（ブランチ `phase/01-foundation` で作業）<br>1. P1 基盤に着手（T-101 モノレポの雛形 → T-102 CI → T-104 デザイントークン）<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）を P3 の前までに |
+| ブロッカー | なし（Docker Desktop は導入済み。使う前に起動しておく必要がある） |
 | さつきの確認待ち | なし |
 
 ---
@@ -81,7 +81,7 @@
 | M-01 | Supabase プロジェクトの作成 | — | Project ref を Claude に共有 | 未着手 | さつき | 10 M-01 |
 | M-02 | `.env` の作成 | M-01 | ローカルで接続できる | 未着手 | さつき | 10 M-02 |
 | M-03 | Supabase CLI のログインとリンク | M-01 | `npx supabase link` 済み | 未着手 | さつき | 10 M-03 |
-| M-04 | Docker Desktop のインストール | — | `npx supabase start` が動く | 未着手 | さつき | 10 M-04 |
+| M-04 | Docker Desktop のインストール | — | `docker run hello-world` 成功（2026-09-27）。`npx supabase start` は P1 / P3 で確認 | 完了 | さつき | 10 M-04 |
 | T-301 | マイグレーション: 型・表・インデックス | T-006(Q-9,10,20), M-04 | ローカルで `supabase db reset` が通る | 未着手 | | 01 |
 | T-302 | マイグレーション: 共通関数・RLS・トリガ・RPC | T-301 | 同上 | 未着手 | | 02 |
 | T-303 | pgTAP テスト DB-01〜19、共有テストベクタで DB-06 | T-302, T-205 | `supabase test db` が緑 | 未着手 | | 02 §5 |
@@ -214,5 +214,6 @@
 - **行ったこと**: さつきの承認（すべて推奨案）を決定ログ・11 章・CLAUDE.md §3・Skill に反映。詳細仕様を d1.0 に。ICMCLEC が非公開リポジトリと判明したため、同梱していた本番モックとトークンの写しを git 管理外にした（ファイルはローカルに残す）。履歴（72e7c66）からの削除は `git filter-branch` が権限で拒否されたため未実施。
 - **変更したファイル**: `CLAUDE.md`、`.gitignore`、`.claude/skills/wwyd-ui-concept/SKILL.md`、`docs/detailed-spec/00-index.md`、`07-ocr.md`、`11-open-questions.md`、`docs/plan.md`
 - **残課題**: 初回 push の方法をさつきが決める → push → `phase/00-prep` を main へマージ → P1 着手。
+- **追記（M-04）**: さつきが Docker Desktop を導入。ユーザー単位のインストール（`%LOCALAPPDATA%\Programs\DockerDesktop`）で、アプリが起動していないと `docker` が `npipe:////./pipe/docker_engine` のエラーになることを確認。起動後 `docker run hello-world` 成功。
 - **追記（引き継ぎ）**: 次セッション向けに `docs/BATON.md` を作成し、CLAUDE.md の開始手順に追加。ブランチ `phase/01-foundation` を作成してコミット（未 push）。
 - **追記**: さつきの許可を得て `git filter-branch` で 2 ファイルを履歴から削除（該当 0 件を確認、ファイルはローカルに残置）。全コミットの秘密情報スキャン（該当なし）の後、`main` を初回 push し、`phase/00-prep` を PR 経由でマージ。
