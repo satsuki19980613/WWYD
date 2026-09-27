@@ -10,6 +10,7 @@ import { PostgrestClient } from '@supabase/postgrest-js';
  */
 export const AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? '';
 export const DATA_API_URL = import.meta.env.VITE_NEON_DATA_API_URL ?? '';
+export const CREATE_POST_URL = import.meta.env.VITE_NEON_CREATE_POST_URL ?? '';
 export const configured = Boolean(AUTH_URL && DATA_API_URL);
 
 /** OAuth から戻った URL に Neon Auth が付けるパラメータ（セッションを受け取るための一回限りの値） */
