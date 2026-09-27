@@ -1,0 +1,28 @@
+# CI: 型検査・単体テスト・ビルド（plan.md T-102）。
+# PR と main への push で実行する。秘密情報は使わない（ビルドは環境変数なしで通る）。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: 型検査
+        run: npm run typecheck
+      - name: 単体テスト
+        run: npm test
+      - name: ビルド
+        run: npm run build

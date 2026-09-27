@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P0 準備 完了** → 次は P1 基盤 |
-| 直近で完了したこと | STEP 1〜3 の承認、Q-1〜Q-23 を推奨案で決定（決定ログ）、詳細仕様を d1.0 に |
-| 次にやること | 1. P1 基盤に着手（T-101 モノレポの雛形 → T-102 CI → T-104 デザイントークン）<br>2. さつきの手作業 M-04（Docker Desktop）を T-103 の前までに<br>3. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）を P3 の前までに |
-| ブロッカー | なし（T-103 のスパイクは Docker が必要。この PC には未インストール） |
-| さつきの確認待ち | なし |
+| 現在のフェーズ | **P1 基盤 完了**（2026-09-27、PR #2 をマージ）→ 次は P2 ポーカーロジック |
+| 直近で完了したこと | T-101 モノレポ雛形、T-102 CI（ワークフロー作成）、T-103 Edge Function の import スパイク（直接 import で可）、T-104 トークンと基本部品、T-105 アプリの外枠、T-106 Cloudflare Pages の確認 |
+| 次にやること | 0. まず [BATON.md](BATON.md) を読む<br>1. main から `phase/02-poker-logic` を切り、P2 に着手（T-201 金額 → T-202 状態遷移 → …）<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）を P3 の前までに |
+| ブロッカー | なし（Docker Desktop は導入済み。使う前に起動しておく必要がある） |
+| さつきの確認待ち | `@vitest/coverage-v8` の追加（P2 の完了条件「行カバレッジ 90% 以上」の計測に必要） |
 
 ---
 
@@ -23,7 +23,7 @@
 | フェーズ | 内容 | 完了条件 | 状態 |
 |---|---|---|---|
 | P0 準備 | Skill 導入、CLAUDE.md、詳細仕様、計画書 | さつきがレビューし、優先度 A の確認待ちに回答済み | 完了 |
-| P1 基盤 | モノレポ、ツール、CI、デザイントークンとアプリの外枠、Edge Function の import 検証 | `npm run typecheck` / `npm test` / `npm run build` が CI で緑。外枠（ヘッダー・ⓘ・ルーティング・メンテナンス画面）がローカルで表示され、`wwyd-ui-concept` の自己レビューに合格 | 未着手 |
+| P1 基盤 | モノレポ、ツール、CI、デザイントークンとアプリの外枠、Edge Function の import 検証 | `npm run typecheck` / `npm test` / `npm run build` が CI で緑。外枠（ヘッダー・ⓘ・ルーティング・メンテナンス画面）がローカルで表示され、`wwyd-ui-concept` の自己レビューに合格 | 完了 |
 | P2 ポーカーロジック | `packages/core` のロジックと paint / 集計コーデック | 04 章 §10 と 05 章 §5 のテストケースがすべて自動テストで緑。カバレッジ（行）90% 以上 | 未着手 |
 | P3 DB と認証 | マイグレーション、RLS、トリガ、RPC、Google ログイン | 02 章 §5 の DB テスト（pgTAP）がすべて緑。ローカルと本番で Google ログイン → `whoami` が動く | 未着手 |
 | P4 一覧 | スポット一覧 | 06 章 §2 の状態がすべて表示できる。タブ・フィルタ・並び替え・追加読み込み・削除が本番 DB で動く | 未着手 |
@@ -56,12 +56,12 @@
 
 | ID | 内容 | 依存 | 完了条件 | 状態 | 担当 | 詳細仕様 |
 |---|---|---|---|---|---|---|
-| T-101 | npm workspaces の雛形（`packages/core`, `packages/app`）、TypeScript strict、Vitest、ESLint 相当の最小設定 | T-006(Q-16) | `npm run typecheck` / `npm test` が通る | 未着手 | | CLAUDE.md §3–6 |
-| T-102 | GitHub Actions: typecheck・test・build | T-101, T-007 | PR で CI が緑 | 未着手 | | — |
-| T-103 | スパイク: Edge Function から `packages/core` を import して配備できるか（ローカルの `supabase functions serve`） | T-101, M-04 | 結果を決定ログに記録（直接 import か複製＋CI 検査か） | 未着手 | | 03 §2.1 |
-| T-104 | デザイントークン（`wwyd-ui-concept`）と基本部品（ボタン・面取りプレート・タブ・確認ダイアログ・トースト・カスタムセレクト） | T-101, T-006(Q-1,2) | 部品一覧ページで表示確認、自己レビュー 4 項目に合格 | 未着手 | | 06 §0, §8 |
-| T-105 | アプリの外枠: ヘッダー、ⓘ モーダル（09 章の文言）、ルーティング、起動中・メンテナンス中・オフライン・404 | T-104 | 各状態をローカルで表示確認 | 未着手 | | 06 §0, 09 |
-| T-106 | ホスティング先の最終確認（料金ページ再確認）と決定 | T-006(Q-18) | 決定ログに記録 | 未着手 | | 08 |
+| T-101 | npm workspaces の雛形（`packages/core`, `packages/app`）、TypeScript strict、Vitest、ESLint 相当の最小設定 | T-006(Q-16) | `npm run typecheck` / `npm test` が通る | 完了 | | CLAUDE.md §3–6 |
+| T-102 | GitHub Actions: typecheck・test・build | T-101, T-007 | PR で CI が緑 | 完了 | | — |
+| T-103 | スパイク: Edge Function から `packages/core` を import して配備できるか（ローカルの `supabase functions serve`） | T-101, M-04 | 結果を決定ログに記録（直接 import か複製＋CI 検査か） | 完了 | | 03 §2.1 |
+| T-104 | デザイントークン（`wwyd-ui-concept`）と基本部品（ボタン・面取りプレート・タブ・確認ダイアログ・トースト・カスタムセレクト） | T-101, T-006(Q-1,2) | 部品一覧ページで表示確認、自己レビュー 4 項目に合格 | 完了 | | 06 §0, §8 |
+| T-105 | アプリの外枠: ヘッダー、ⓘ モーダル（09 章の文言）、ルーティング、起動中・メンテナンス中・オフライン・404 | T-104 | 各状態をローカルで表示確認 | 完了 | | 06 §0, 09 |
+| T-106 | ホスティング先の最終確認（料金ページ再確認）と決定 | T-006(Q-18) | 決定ログに記録 | 完了 | | 08 |
 
 ### P2 ポーカーロジック
 
@@ -81,7 +81,7 @@
 | M-01 | Supabase プロジェクトの作成 | — | Project ref を Claude に共有 | 未着手 | さつき | 10 M-01 |
 | M-02 | `.env` の作成 | M-01 | ローカルで接続できる | 未着手 | さつき | 10 M-02 |
 | M-03 | Supabase CLI のログインとリンク | M-01 | `npx supabase link` 済み | 未着手 | さつき | 10 M-03 |
-| M-04 | Docker Desktop のインストール | — | `npx supabase start` が動く | 未着手 | さつき | 10 M-04 |
+| M-04 | Docker Desktop のインストール | — | `docker run hello-world` 成功（2026-09-27）。`npx supabase start` は P1 / P3 で確認 | 完了 | さつき | 10 M-04 |
 | T-301 | マイグレーション: 型・表・インデックス | T-006(Q-9,10,20), M-04 | ローカルで `supabase db reset` が通る | 未着手 | | 01 |
 | T-302 | マイグレーション: 共通関数・RLS・トリガ・RPC | T-301 | 同上 | 未着手 | | 02 |
 | T-303 | pgTAP テスト DB-01〜19、共有テストベクタで DB-06 | T-302, T-205 | `supabase test db` が緑 | 未着手 | | 02 §5 |
@@ -177,6 +177,17 @@
 | 2026-09-27 | OCR の正解画像（個人の対戦画像）は公開リポジトリに置かず、ローカルのみで検証する | Q-17 ③は推奨を示していなかったため、公開範囲を広げない側を選んだ | Claude |
 | 2026-09-27 | ICMCLEC（pocket-ICM・非公開）由来の本番モックとトークンの写しは git 管理外にし、未 push の履歴からも削除する | WWYD は公開リポジトリのため | さつき（履歴の削除を許可） |
 | 2026-09-27 | 正となる資料 2 点を `C:\Users\sa641.SATSUKIPC\Downloads` から `docs/source/` に配置（内容は無変更） | 依頼時点でリポジトリが空だったため | Claude |
+| 2026-09-27 | 依存の版: TypeScript ~5.9.3、Vite ^8.3.1、@vitejs/plugin-react ^6.1.1、Vitest ^5.0.2、React 18.3、Supabase CLI ^2.118.0（開発用） | TypeScript 7（Go 版）はエコシステムの対応を待つため 5 系の最新にした。他は執筆時点の最新 | Claude |
+| 2026-09-27 | ESLint は入れず、tsc の検査（`noUnusedLocals` / `noUnusedParameters` / `noImplicitReturns` / `noFallthroughCasesInSwitch` / `noUncheckedIndexedAccess`）で「ESLint 相当」とする | 承認済みの依存に ESLint が無く、依存を増やさない方針（T-101） | Claude |
+| 2026-09-27 | UI 部品の単体テストは入れない（jsdom 等を追加しない）。画面の挙動は P6 以降の Playwright で確かめる。純関数（ルーター・状態判定・ⓘ の対応）は Vitest | 依存を増やさない | Claude |
+| 2026-09-27 | PC（700px 以上）ではアプリ面の幅 `--app-w` を 1120px に広げる（スマホは ICMCLEC と同じ 420px）。トークンの追加はアクション色の別名 `--act-*`（既存色の参照のみ）と `--hdr-h` だけ | 06 章 §0.2 の「PC は構成を変える」。新しい色は作らない | Claude |
+| 2026-09-27 | 開発時だけ `/_dev/ui`（部品一覧）と `?devstate=`（全画面の状態の強制表示）を置く。本番ビルドには含めない（`import.meta.env.DEV` で分岐ごと削除されることを確認） | T-104 / T-105 の表示確認のため | Claude |
+| 2026-09-27 | **ホスティングは Cloudflare Pages で確定（T-106）**。公式ページで確認（2026-09-27）: 全プランで帯域・リクエスト無制限、1 ファイル 25MiB、2 万ファイル、ビルド月 500 回、`_headers` 100 ルール（1 ヘッダー 2,000 文字）、プレビュー無制限、トップレベルに `404.html` が無ければ SPA として扱う | 08 章の要件をすべて満たす | Claude（Q-18 の決定の再確認） |
+| 2026-09-27 | Supabase Edge Functions の制限を公式ページで確認（2026-09-27）: CPU 2 秒/リクエスト、メモリ 256MB、関数サイズ 20MB（CLI でローカル bundle）、無料で 100 関数 | 03 章 §1 の前提どおり | Claude |
+| 2026-09-27 | **Edge Function から `packages/core` を相対 import で共有する（T-103）**。関数ごとに `deno.json`（`"nodeModulesDir": "none"`）を置く。本番配備での確認は T-501 で行い、失敗したら複製＋CI 検査方式に切り替える | ローカル serve と edge-runtime の bundle で動作を確認。`deno.json` なしでは node_modules 全体（232MB）が bundle に入る。詳細は 03 章 §2.1 | Claude |
+| 2026-09-27 | ローカル Supabase のポートを 5432x から 5532x に変更（`supabase/config.toml`） | Windows（Hyper-V）が 54319〜54418 を予約しており DB が起動できなかった | Claude |
+| 2026-09-27 | P1 を承認。`phase/01-foundation` を push し PR #2 で CI 緑を確認して main へマージ | さつきの指示（PR を作成してマージ） | さつき |
+| 2026-09-27 | GitHub Actions を `actions/checkout@v7` / `actions/setup-node@v7` に更新 | v4 は Node 20 の非推奨警告が出たため | Claude |
 
 ---
 
@@ -214,4 +225,20 @@
 - **行ったこと**: さつきの承認（すべて推奨案）を決定ログ・11 章・CLAUDE.md §3・Skill に反映。詳細仕様を d1.0 に。ICMCLEC が非公開リポジトリと判明したため、同梱していた本番モックとトークンの写しを git 管理外にした（ファイルはローカルに残す）。履歴（72e7c66）からの削除は `git filter-branch` が権限で拒否されたため未実施。
 - **変更したファイル**: `CLAUDE.md`、`.gitignore`、`.claude/skills/wwyd-ui-concept/SKILL.md`、`docs/detailed-spec/00-index.md`、`07-ocr.md`、`11-open-questions.md`、`docs/plan.md`
 - **残課題**: 初回 push の方法をさつきが決める → push → `phase/00-prep` を main へマージ → P1 着手。
+- **追記（M-04）**: さつきが Docker Desktop を導入。ユーザー単位のインストール（`%LOCALAPPDATA%\Programs\DockerDesktop`）で、アプリが起動していないと `docker` が `npipe:////./pipe/docker_engine` のエラーになることを確認。起動後 `docker run hello-world` 成功。
+- **追記（引き継ぎ）**: 次セッション向けに `docs/BATON.md` を作成し、CLAUDE.md の開始手順に追加。ブランチ `phase/01-foundation` を作成してコミット（未 push）。
 - **追記**: さつきの許可を得て `git filter-branch` で 2 ファイルを履歴から削除（該当 0 件を確認、ファイルはローカルに残置）。全コミットの秘密情報スキャン（該当なし）の後、`main` を初回 push し、`phase/00-prep` を PR 経由でマージ。
+
+### 2026-09-27（セッション 2）
+
+- **行ったこと**: P1 基盤（T-101〜T-106）を実装。
+  - T-101: npm workspaces（`packages/core`、`packages/app`）、TypeScript 5.9 strict（ESLint の代わりに tsc の検査を強化）、Vitest 5。
+  - T-104 / T-105: ICMCLEC と同名・同値のトークン、基本部品（ボタン・面取りプレート・コーナーブラケット・ハザード見出し・タブ・カスタムセレクト・モーダル・確認ダイアログ・トースト・アカウントメニュー）、ヘッダー、ⓘ（09 章の文言）、History API ルーター、起動中・未ログイン・利用不可・メンテナンス中・オフライン・404。開発時だけの部品一覧 `/_dev/ui` と `?devstate=`。
+  - T-102: `.github/workflows/ci.yml`（typecheck・test・build）。push 前のため CI の実行は未確認。
+  - T-106: Cloudflare Pages と Supabase Edge Functions の制限を公式ページで再確認（決定ログ）。
+  - T-103: Supabase CLI を導入、`supabase init`。スパイク関数で直接 import を確認（serve と bundle）。スパイク関数は削除済み。
+- **完了条件の確認**: `npm run typecheck` 緑、`npm test` 緑（4 ファイル 44 件）、`npm run build` 緑（JS 157KB / gzip 51KB、部品一覧は本番ビルドに含まれない）。ブラウザ（PC 幅とスマホ 375px）で、ヘッダー・ⓘ（画面ごとの節、アカウントメニューを開いているときはアカウントの節）・アカウントメニュー・確認ダイアログ（Esc で閉じてフォーカスが戻る）・各状態の画面・404 を表示確認。コンソールエラーなし。
+- **自己レビュー（wwyd-ui-concept）**: 黄＝主要 CTA・選択中のタブ・ヘッダーの線・ハザードティック・起動中のマーク／赤＝削除・エラー・利用不可のブラケットのみ／シアン＝ⓘ・リンク・副次ボタン・フォーカス。シグネチャー: 面取り（主要ボタン・プレート・モーダル）、ブラケット（状態画面）、ハザードティック（見出し）、ヘッダーの減衰線、mono の小ラベル。トークン名は ICMCLEC と同じ（追加は別名 `--act-*` と `--hdr-h` のみ）。画面に説明文なし（未実装画面は見出しだけの器）。
+- **変更したファイル**: `package.json`、`package-lock.json`、`tsconfig.base.json`、`tsconfig.tools.json`、`vitest.config.ts`、`packages/core/**`、`packages/app/**`、`.github/workflows/ci.yml`、`.claude/launch.json`、`supabase/config.toml`、`supabase/.gitignore`、`CLAUDE.md`、`docs/detailed-spec/03-server-replay.md`、`docs/plan.md`、`docs/BATON.md`
+- **残課題**: push と PR での CI 確認（さつきの承認待ち）。本番の `functions deploy` での import 確認は T-501。CSP の `_headers` は Supabase の URL が決まってから（M-01 後、遅くとも P5）。
+- **追記**: さつきの指示で push → [satsuki19980613/WWYD#2](https://github.com/satsuki19980613/WWYD/pull/2) を作成。CI 緑（19 秒）を確認。Node 20 の警告に対応して Actions を v7 に上げ、再度 CI 緑を確認してから main へマージ。

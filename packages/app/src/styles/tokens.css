@@ -1,0 +1,95 @@
+/*
+ * WWYD のデザイントークン（.claude/skills/wwyd-ui-concept）。
+ * 姉妹プロジェクト ICMCLEC のトークンをそのまま使う（名前と値を変えない。新しい色を作らない）。
+ * 配色 = 黄60 / 赤20 / シアン20:
+ *   黄 = ブランド / 主要 CTA / アクティブ・選択 / アグレッシブなアクション（bet・raise）
+ *   赤 = fold / 削除 / エラー（装飾に使わない）
+ *   シアン = 情報 / リンク / 操作系 / パッシブなアクション（check・call）
+ * ダーク固定（詳細仕様 11 章 Q-1）。深度は境界線ベース＋アクティブ要素だけのグロー。
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- サーフェス ---- */
+  --bg2: #000;
+  --bg: #0c0d0a;
+  --surface: #15160f;
+  --surface-2: #1c1e13;
+  --surface-3: #26281a;
+  --cell-off: #22241a;
+
+  /* ---- 境界 ---- */
+  --line: #33361f;
+  --line-2: #4a4d2e;
+
+  /* ---- テキスト階層 ---- */
+  --fg: #f6f7ec;
+  --dim: #a7a98c;
+  --dim2: #74765d;
+  --faint: #5f6148;
+
+  /* ---- ブランド三色 ---- */
+  --yellow: #fcee0a;      --yellow-ink: #1a1900;
+  --red: #ff3b3b;
+  --cyan: #3ae6ff;        --cyan-ink: #032830;
+  --steel: #9aa08a;
+
+  /* ---- ポジション色（席の識別にだけ使う） ---- */
+  --utg: #c9a8ff; --hj: #ff9f6b; --co: #79ebc7; --bu: #ff9ad5; --sb: #8fb4ff; --bb-c: #ffc773;
+
+  /* ---- アクション色（詳細仕様 06 章 §8。既存の色への別名で、新しい色ではない） ---- */
+  --act-fold: var(--red);
+  --act-check: var(--cyan);
+  --act-call: var(--cyan);
+  --act-s1: var(--yellow);
+  /* s1（bet・raise）の細いハザードストライプ。黄の上に黄上の文字色を薄く重ねる */
+  --act-s1-stripe: repeating-linear-gradient(-45deg, rgba(26, 25, 0, 0.28) 0 1.5px, transparent 1.5px 5px);
+
+  /* ---- スペーシング（4px 基準） ---- */
+  --s1: 4px;  --s2: 8px;  --s3: 12px;  --s4: 16px;  --s5: 24px;  --s6: 32px;
+
+  /* ---- 半径 ---- */
+  --r-sm: 3px;  --r: 4px;  --r-lg: 6px;
+
+  /* ---- タイポ ---- */
+  --disp: 'Rajdhani', 'Zen Kaku Gothic New', system-ui, sans-serif;
+  --body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', system-ui, sans-serif;
+  --mono: 'Share Tech Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+
+  /* ---- 面取りクリップ ---- */
+  --chamfer: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  --chamfer-sm: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  --chamfer-xs: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+
+  --ease: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* ---- 端末の安全領域（env() 非対応でも var() が無効にならないよう 0px で定義してから上書き） ---- */
+  --sat: 0px;
+  --sar: 0px;
+  --sab: 0px;
+  --sal: 0px;
+
+  /* アプリ面の横幅（中央寄せ）。スマホは ICMCLEC と同じ縦長カラム。 */
+  --app-w: 420px;
+  --edge: max(0px, calc((100vw - var(--app-w)) / 2));
+  --safe-l: max(0px, calc(var(--sal) - var(--edge)));
+  --safe-r: max(0px, calc(var(--sar) - var(--edge)));
+
+  /* ヘッダーの高さ（安全領域を除く） */
+  --hdr-h: 52px;
+}
+
+/* PC（700px 以上）はレンジ表とテーブルを並べるため、アプリ面を広げる（06 章 §0.2） */
+@media (min-width: 700px) {
+  :root { --app-w: 1120px; }
+}
+
+@supports (top: env(safe-area-inset-top)) {
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+  }
+}

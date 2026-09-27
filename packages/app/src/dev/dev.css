@@ -1,0 +1,16 @@
+/* 部品一覧（開発用）だけのレイアウト */
+.dev .sec-h { margin-top: var(--s4); }
+.dev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s3); align-items: start; }
+.dev-big { font-size: 28px; }
+.dev-word {
+  font-family: var(--disp);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--yellow);
+  text-shadow: 0 0 24px rgba(252, 238, 10, 0.45);
+}
+.dev-swatches { display: flex; gap: var(--s4); flex-wrap: wrap; }
+.dev-swatch { display: inline-flex; flex-direction: column; align-items: center; gap: var(--s1); }
+.dev-links { display: flex; gap: var(--s4); flex-wrap: wrap; font-family: var(--mono); font-size: 13px; }
+.dev-links a { display: inline-flex; align-items: center; min-height: 44px; }

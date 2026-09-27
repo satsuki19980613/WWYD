@@ -1,0 +1,382 @@
+/* 基本部品（ボタン・ⓘ・モーダル・メニュー・タブ・セレクト・トースト・見出し・ブラケット） */
+
+/* ---- ボタン ---- */
+/* 主要 CTA = ハザードイエローの面取りプレート（画面で唯一の実面ソリッド。シグネチャー 1） */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  width: 100%;
+  font-family: var(--disp);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border: 0;
+  padding: 11px 16px;
+  background: var(--yellow);
+  color: var(--yellow-ink);
+  cursor: pointer;
+  clip-path: var(--chamfer);
+  transition: filter 150ms var(--ease), background-color 150ms var(--ease), border-color 150ms var(--ease);
+}
+.btn:hover:not(:disabled) { filter: brightness(1.06); }
+.btn:active:not(:disabled) { filter: brightness(0.92); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+/* 面取りは外側のフォーカスリングを削るので、内側に出す */
+.btn:focus-visible { outline-offset: -4px; outline-color: var(--yellow-ink); }
+/* 副次 = シアンのアウトライン（操作系）。面取りしない＝主 CTA と差別化 */
+.btn.ghost {
+  background: var(--surface-2);
+  color: var(--cyan);
+  border: 1px solid rgba(58, 230, 255, 0.4);
+  clip-path: none;
+  font-weight: 600;
+}
+.btn.ghost:hover:not(:disabled) { border-color: var(--cyan); background: rgba(58, 230, 255, 0.08); filter: none; }
+.btn.ghost:focus-visible { outline-offset: 2px; outline-color: var(--cyan); }
+/* 破壊的 = サムライレッドのアウトライン */
+.btn.red {
+  background: rgba(255, 59, 59, 0.1);
+  color: var(--red);
+  border: 1px solid rgba(255, 59, 59, 0.45);
+  clip-path: none;
+}
+.btn.red:hover:not(:disabled) { background: rgba(255, 59, 59, 0.16); filter: none; }
+.btn.red:focus-visible { outline-offset: 2px; outline-color: var(--cyan); }
+.btn.auto { width: auto; }
+.btn-row { display: flex; gap: var(--s2); }
+.btn-row .btn { flex: 1; }
+
+/* アイコンだけのボタン（44px 四方のタッチ領域） */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 150ms var(--ease), border-color 150ms var(--ease);
+}
+.icon-btn:hover { color: var(--fg); }
+.acct-btn[aria-expanded='true'] { color: var(--yellow); border-color: var(--line-2); background: var(--surface); }
+
+/* ⓘ = シアン（情報）。見た目は 24px の丸、タッチ領域は 44px */
+.infomark {
+  position: relative;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 10px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(58, 230, 255, 0.55);
+  border-radius: 50%;
+  background: none;
+  color: var(--cyan);
+  font-family: var(--disp);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.infomark::after { content: ''; position: absolute; inset: -10px; }
+.infomark:hover { background: rgba(58, 230, 255, 0.12); }
+
+/* ---- 見出し = ハザードティック＋mono（シグネチャー 3・5） ---- */
+.sec-h {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0 0 var(--s3);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+}
+.sec-h::before {
+  content: '';
+  width: 16px;
+  height: 11px;
+  flex: none;
+  background: repeating-linear-gradient(-45deg, var(--yellow) 0 3px, var(--bg) 3px 6px);
+}
+.mono-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim2);
+}
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---- パネル / 面取りプレート ---- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: var(--s4);
+}
+.plate {
+  background: var(--surface);
+  padding: var(--s4);
+  clip-path: var(--chamfer);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* ---- コーナーブラケット（結果・判定のヒーロー。左上と右下だけ。シグネチャー 2） ---- */
+.bracket-hero {
+  position: relative;
+  padding: var(--s5);
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(252, 238, 10, 0.1), transparent 55%), var(--surface);
+}
+.bracket-hero .brk {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--yellow);
+  border-style: solid;
+  border-width: 0;
+}
+.bracket-hero .brk.tl { left: 8px; top: 8px; border-left-width: 2px; border-top-width: 2px; }
+.bracket-hero .brk.br { right: 8px; bottom: 8px; border-right-width: 2px; border-bottom-width: 2px; }
+.bracket-hero.tone-error { background: linear-gradient(135deg, rgba(255, 59, 59, 0.1), transparent 55%), var(--surface); }
+.bracket-hero.tone-error .brk { border-color: var(--red); }
+
+/* ---- 入力 ---- */
+.inp {
+  width: 100%;
+  min-height: 44px;
+  font-size: 15px;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  background: var(--surface-2);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease);
+}
+.inp::placeholder { color: var(--faint); }
+.inp:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan), 0 0 12px rgba(58, 230, 255, 0.15); }
+.inp:disabled { opacity: 0.45; }
+.inp[aria-invalid='true'] { border-color: rgba(255, 59, 59, 0.7); }
+.form-err { font-size: 12px; color: var(--red); }
+
+/* ---- タブ（選択 = 黄の下線） ---- */
+.tabs {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.tab {
+  flex: 1;
+  min-height: 44px;
+  font-family: var(--disp);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 150ms var(--ease);
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected='true'] { color: var(--yellow); border-bottom-color: var(--yellow); background: rgba(252, 238, 10, 0.05); }
+.tab:focus-visible { outline-offset: -2px; }
+
+/* ---- カスタムセレクト ---- */
+.select { position: relative; }
+.select-trigger {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease);
+}
+.select-trigger:hover:not(:disabled) { border-color: var(--line-2); }
+.select-trigger:disabled { opacity: 0.45; cursor: default; }
+.select.open .select-trigger { border-color: var(--cyan); }
+.select-chev { flex: none; color: var(--dim); transition: transform 150ms var(--ease); }
+.select.open .select-chev { transform: rotate(180deg); }
+.select-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: var(--s1) 0;
+  list-style: none;
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+  max-height: 280px;
+  overflow-y: auto;
+}
+.select-list li {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--dim);
+  cursor: pointer;
+}
+.select-list li.active { background: rgba(58, 230, 255, 0.08); color: var(--fg); }
+.select-list li[aria-selected='true'] { color: var(--yellow); }
+
+/* ---- モーダル（面取りプレート。スマホは下からのシート、PC は中央） ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  background: rgba(3, 4, 2, 0.72);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+/* 上端の線は意味の色（情報 = シアン、確認 = 黄、破壊的 = 赤） */
+.modal {
+  --tone: var(--yellow);
+  width: 100%;
+  max-width: 440px;
+  max-height: 92vh;
+  max-height: calc(92dvh - var(--sat));
+  padding-bottom: var(--sab);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-top: 2px solid var(--tone);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  animation: modal-in 200ms var(--ease);
+}
+.modal.tone-info { --tone: var(--cyan); }
+.modal.tone-danger { --tone: var(--red); }
+@keyframes modal-in { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (min-width: 700px) {
+  .modal-backdrop { align-items: center; }
+  .modal { max-width: 520px; padding-bottom: 0; clip-path: var(--chamfer); }
+}
+.modal-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  min-height: 52px;
+  padding: 0 var(--s2) 0 var(--s4);
+  border-bottom: 1px solid var(--line);
+}
+.modal-title { font-family: var(--disp); font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
+.modal-body { overflow-y: auto; padding: var(--s4); }
+.modal-foot { flex: none; padding: var(--s3) var(--s4) var(--s4); border-top: 1px solid var(--line); }
+.confirm-body { font-size: 14px; line-height: 1.8; color: var(--dim); }
+
+/* インフォメーションの定義リスト */
+.info-list { display: flex; flex-direction: column; gap: var(--s4); }
+.info-item dt {
+  font-family: var(--disp);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--fg);
+  margin-bottom: var(--s1);
+}
+.info-item dd { font-size: 13px; line-height: 1.8; color: var(--dim); }
+
+/* ---- アカウントメニュー ---- */
+.acct { position: relative; }
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  min-width: 220px;
+  padding: var(--s1) 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+  border-top: 2px solid var(--yellow);
+  animation: menu-in 150ms var(--ease);
+}
+@keyframes menu-in { from { transform: translateY(-4px); opacity: 0; } to { transform: none; opacity: 1; } }
+.menu-item {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s4);
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.menu-item:hover:not(:disabled), .menu-item:focus-visible { background: rgba(58, 230, 255, 0.08); outline-offset: -2px; }
+.menu-item:disabled { color: var(--faint); cursor: default; }
+.menu-item.danger { color: var(--red); }
+.menu-item.danger:disabled { color: var(--faint); }
+.menu-sep { height: 1px; margin: var(--s1) 0; background: var(--line); }
+
+/* ---- 戻る導線 ---- */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  min-height: 44px;
+  margin: calc(-1 * var(--s2)) 0 var(--s2);
+  font-size: 13px;
+  color: var(--cyan);
+  text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }
+
+/* ---- トースト（エラーは赤の左線） ---- */
+.toast-wrap {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(24px + var(--sab));
+  z-index: 70;
+  width: calc(100% - 24px);
+  max-width: 396px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  padding: 12px 14px;
+  background: rgba(21, 22, 15, 0.97);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--cyan);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg);
+  cursor: pointer;
+  animation: toast-in 200ms var(--ease);
+}
+.toast.err { border-left-color: var(--red); }
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---- アクションの色見本（レンジ表のマスで使う。06 章 §8） ---- */
+.act-swatch { display: inline-block; width: 28px; height: 28px; }
+.act-swatch.fold { background: var(--act-fold); }
+.act-swatch.check, .act-swatch.call { background: var(--act-call); }
+.act-swatch.s1 { background: var(--act-s1-stripe), var(--act-s1); }
+.act-swatch.off { background: var(--cell-off); }

@@ -35,6 +35,20 @@
   - 不可なら: ビルド前に `packages/core/src` を `supabase/functions/_shared/core/` へ複製するスクリプト（`npm run sync:core`）を用意し、CI で「複製が正本と一致すること」を検査する（正本は `packages/core` のまま）。
 - 無料プランの Edge Function の CPU 時間制限（1 リクエストあたり 2 秒）に対し、再生は 1 ms 未満の見込み。
 
+#### スパイクの結果（2026-09-27、T-103）
+
+**直接 import で進める。** 複製スクリプト（`sync:core`）は作らない。
+
+| 確認 | 結果 |
+|---|---|
+| `supabase functions serve`（CLI 2.118.0 / edge-runtime 1.76.2 / Deno 2.1.4） | `../../../packages/core/src/index.ts` を相対 import して動作した |
+| 配備用の bundle（edge-runtime の `bundle` を Docker で直接実行） | `packages/core` が取り込まれ、できた eszip を単体の edge-runtime で起動して正しい応答を確認 |
+| 注意点 | ルートの `package.json` を見て **node_modules 全体（232MB）まで bundle に入る**（関数サイズの上限 20MB を超える）。**関数ごとに `deno.json` を置き `"nodeModulesDir": "none"` を指定する**と 4.6KB になった |
+
+- 規則: `supabase/functions/<名前>/deno.json` に `{ "nodeModulesDir": "none" }` を必ず置く。`packages/core` は外部依存ゼロ・拡張子付き import を守る。
+- 残るリスク: 本番への `supabase functions deploy` そのもの（CLI が bundle 時にどのディレクトリを Docker に渡すか）は、Supabase プロジェクト（M-01）が無いため未確認。**最初の配備（T-501）で確認**し、外部ファイルが取り込めなければ上の「不可なら」の複製方式に切り替える。
+- ローカルの Supabase のポート: Windows（Hyper-V）が 54319〜54418 を予約していて既定の 5432x が使えないため、`supabase/config.toml` を **5532x 系**（API 55321、DB 55322 など）に変更した。
+
 ## 3. Edge Function `create-post` の仕様
 
 ### 3.1 リクエスト
