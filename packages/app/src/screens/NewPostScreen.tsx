@@ -1,0 +1,195 @@
+import type { Action, Card, Pos } from '@wwyd/core';
+import { useEffect, useState } from 'react';
+import { cardText } from '../components/PlayingCard.tsx';
+import { useToast } from '../components/Toast.tsx';
+import { ActionSection } from '../post/ActionSection.tsx';
+import { applyCardKey, isHandComplete, type CardKey } from '../post/cardInput.ts';
+import { CardKeyboard } from '../post/CardKeyboard.tsx';
+import {
+  addAction,
+  addBoardCard,
+  buildSubmission,
+  clearActions,
+  normalizeSpot,
+  parseSettings,
+  phaseOf,
+  removeBoardFrom,
+  selectSpot,
+  undoAction,
+  usedCards,
+  type Draft,
+} from '../post/draft.ts';
+import { getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
+import { messageForCode } from '../post/errorMessages.ts';
+import { sendPost } from '../post/sendPost.ts';
+import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
+import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
+import { navigate } from '../router.ts';
+import { useIsMobile } from '../useMediaQuery.ts';
+
+const STEPS = ['基本設定', 'プレイヤー', 'アクション', 'スポット'] as const;
+
+/**
+ * スポット投稿（06 章 §3。仕様書 §5.2）。
+ * PC は 3 列（基本設定・プレイヤー / アクション / スポット＋エラー＋投稿）、スマホは 4 ステップ。
+ * 下書きはメモリのストア（draftStore）に持つ。
+ */
+export function NewPostScreen(): JSX.Element {
+  const d = useDraft();
+  const mobile = useIsMobile();
+  const toast = useToast();
+  const [step, setStep] = useState(0);
+  const [seat, setSeat] = useState<Pos | null>(null);
+  const [attempted, setAttempted] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const { setup, invalid } = parseSettings(d);
+  const phase = phaseOf(setup, d.actions, d.board);
+
+  // 入力が変わったらサーバーのエラーは消す（投稿前の一覧はその場で計算し直す）
+  useEffect(() => setServerError(null), [d]);
+
+  // キーボードを開いた欄が隠れないよう、画面の中ほどへスクロールする
+  useEffect(() => {
+    if (!seat) return;
+    document.querySelector(`[data-seat="${seat}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [seat]);
+
+  const update = (f: (x: Draft) => Draft): void => setDraft(f);
+  const patch = (p: Partial<Draft>): void => update((x) => normalizeSpot({ ...x, ...p }));
+
+  const onKey = (key: CardKey): void => {
+    if (!seat) return;
+    const cur = getDraft();
+    const r = applyCardKey(cur.hands[seat], key, usedCards(cur, seat));
+    if (r.used) toast(`${cardText(r.used)} は使用済み`);
+    if (r.hand !== cur.hands[seat]) setDraft({ ...cur, hands: { ...cur.hands, [seat]: r.hand } });
+  };
+
+  const errors = [...(attempted ? submissionErrors(d) : []), ...(serverError ? [serverError] : [])];
+
+  const submit = (): void => {
+    setAttempted(true);
+    const s = buildSubmission(d);
+    if (!s.ok || busy) return;
+    setBusy(true);
+    void sendPost(s.body).then((r) => {
+      setBusy(false);
+      if (r.ok) {
+        resetDraft();
+        navigate('/?tab=mine');
+      } else {
+        setServerError(messageForCode(r.code, r.index));
+      }
+    });
+  };
+
+  const settings = <SettingsSection draft={d} invalid={invalid} onChange={patch} />;
+  const players = (
+    <PlayersSection draft={d} invalid={invalid} activeSeat={seat} onChange={patch} onOpenHand={(p) => setSeat(p)} />
+  );
+  const actions = (
+    <ActionSection
+      draft={d}
+      setup={setup}
+      phase={phase}
+      onAction={(a: Action) => update((x) => addAction(x, a))}
+      onUndo={() => update(undoAction)}
+      onClear={() => update(clearActions)}
+      onBoardAdd={(c: Card) => update((x) => addBoardCard(x, c))}
+      onBoardRemoveFrom={(i) => update((x) => removeBoardFrom(x, i))}
+    />
+  );
+  const spot = (
+    <SpotSection
+      draft={d}
+      onSelectSpot={(i) => update((x) => selectSpot(x, i))}
+      onVillain={(v) => update((x) => ({ ...x, villain: v }))}
+      onTitle={(title) => update((x) => ({ ...x, title }))}
+    />
+  );
+  const submitButton = (
+    <button type="button" className="btn" disabled={busy} onClick={submit}>
+      {busy ? '投稿中…' : '投稿する'}
+    </button>
+  );
+  const keyboard = seat && <CardKeyboard seat={seat} onKey={onKey} onClose={() => setSeat(null)} />;
+
+  if (!mobile) {
+    return (
+      <section className={`screen pf ${seat ? 'kb-open' : ''}`}>
+        <h1 className="sec-h">スポット投稿</h1>
+        <div className="pf-grid">
+          <div className="pf-col">
+            {settings}
+            {players}
+          </div>
+          <div className="pf-col">{actions}</div>
+          <div className="pf-col">
+            {spot}
+            <ErrorList errors={errors} />
+            {submitButton}
+          </div>
+        </div>
+        {keyboard}
+      </section>
+    );
+  }
+
+  const done = stepDone(d, phase.kind === 'done');
+  const last = step === STEPS.length - 1;
+  return (
+    <section className={`screen pf sp ${seat ? 'kb-open' : ''}`}>
+      <h1 className="sec-h">スポット投稿</h1>
+      <nav className="pf-steps" aria-label="ステップ">
+        {STEPS.map((name, i) => (
+          <button
+            key={name}
+            type="button"
+            className={`pf-step ${done[i] ? 'done' : ''}`}
+            aria-current={i === step ? 'step' : undefined}
+            onClick={() => setStep(i)}
+          >
+            <span className="num">{i + 1}</span>
+            {name}
+          </button>
+        ))}
+      </nav>
+      {step === 0 && settings}
+      {step === 1 && players}
+      {step === 2 && actions}
+      {step === 3 && spot}
+      {!seat && (
+        <div className="pf-bar">
+          <ErrorList errors={errors} />
+          <div className="btn-row">
+            <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+              戻る
+            </button>
+            {last ? (
+              submitButton
+            ) : (
+              <button type="button" className="btn" onClick={() => setStep((s) => s + 1)}>
+                次へ：{STEPS[step + 1]}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {keyboard}
+    </section>
+  );
+}
+
+function submissionErrors(d: Draft): string[] {
+  const s = buildSubmission(d);
+  return s.ok ? [] : s.errors;
+}
+
+/** ステップの完了（シアン）: 設定が正しい / ハンドが揃っている / ハンドが最後まで / スポットとタイトル */
+function stepDone(d: Draft, handDone: boolean): boolean[] {
+  const settingsOk = parseSettings(d).invalid.length === 0;
+  const handsOk = Object.values(d.hands).every(isHandComplete) && d.hands[d.hero].length === 4;
+  return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.villain !== null && d.title.trim() !== ''];
+}

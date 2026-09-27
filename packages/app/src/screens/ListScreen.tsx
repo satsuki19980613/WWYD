@@ -1,7 +1,8 @@
-import type { Pos } from '@wwyd/core';
 import { useEffect, useRef, useState } from 'react';
+import { ChipGroup } from '../components/ChipGroup.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { Link } from '../components/Link.tsx';
+import { POS_VAR } from '../components/posColor.ts';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
 import {
@@ -129,44 +130,6 @@ export function ListScreen(): JSX.Element {
     </section>
   );
 }
-
-/** 択一のチップ（ストリート・並び替え）。選択中は黄。スマホでは横スクロール。 */
-function ChipGroup<T extends string>(props: {
-  label: string;
-  items: readonly { value: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
-}): JSX.Element {
-  return (
-    <div className="chip-row" role="group" aria-label={props.label}>
-      <span className="mono-lbl chip-lbl" aria-hidden="true">
-        {props.label}
-      </span>
-      <div className="chips">
-        {props.items.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            className="chip"
-            aria-pressed={item.value === props.value}
-            onClick={() => props.onChange(item.value)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const POS_VAR: Record<Pos, string> = {
-  UTG: 'var(--utg)',
-  HJ: 'var(--hj)',
-  CO: 'var(--co)',
-  BTN: 'var(--bu)',
-  SB: 'var(--sb)',
-  BB: 'var(--bb-c)',
-};
 
 function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): JSX.Element {
   const { row } = props;

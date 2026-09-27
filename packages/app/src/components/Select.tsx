@@ -11,6 +11,8 @@ export function Select<T extends string>(props: {
   value: T;
   onChange: (value: T) => void;
   disabled?: boolean;
+  /** 値が候補に無いとき（未選択）の表示 */
+  placeholder?: string;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -21,7 +23,7 @@ export function Select<T extends string>(props: {
     0,
     props.options.findIndex((o) => o.value === props.value),
   );
-  const current = props.options[selectedIndex];
+  const current = props.options.find((o) => o.value === props.value);
 
   const openList = (): void => {
     setActive(selectedIndex);
@@ -74,7 +76,7 @@ export function Select<T extends string>(props: {
         onClick={() => (open ? setOpen(false) : openList())}
         onKeyDown={onKeyDown}
       >
-        <span>{current?.label}</span>
+        <span className={current ? '' : 'select-ph'}>{current?.label ?? props.placeholder}</span>
         <svg className="select-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true">
           <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" />
         </svg>

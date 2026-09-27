@@ -4,10 +4,12 @@ import { useAuth } from './auth/useAuth.ts';
 import { BackLink } from './components/BackLink.tsx';
 import { Header } from './components/Header.tsx';
 import { InfoModal } from './components/InfoModal.tsx';
+import { useLeaveGuard } from './post/draftStore.ts';
 import { INFO_SECTIONS, infoSectionFor, type InfoSectionId } from './info/infoSections.ts';
 import { useLocation, useRoute, useScrollTopOnNavigate, type Route } from './router.ts';
 import { BootScreen } from './screens/BootScreen.tsx';
 import { ListScreen } from './screens/ListScreen.tsx';
+import { NewPostScreen } from './screens/NewPostScreen.tsx';
 import { LoginScreen } from './screens/LoginScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
 import { ScreenStub } from './screens/ScreenStub.tsx';
@@ -66,6 +68,7 @@ export function App(): JSX.Element {
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}
         onLogout={() => void auth.signOut()}
       />
+      <DraftLeaveGuard />
       <main className="app-main">
         {showBack && <BackLink />}
         {body}
@@ -81,7 +84,7 @@ function RouteScreen(props: { route: Route }): JSX.Element {
     case 'list':
       return <ListScreen />;
     case 'new':
-      return <ScreenStub title="スポット投稿" />;
+      return <NewPostScreen />;
     case 'spot':
       // P6（T-601）で get_post_detail の viewer により answer / result へ置き換え遷移する
       return <BootScreen />;
@@ -104,4 +107,10 @@ function RouteScreen(props: { route: Route }): JSX.Element {
     case 'notFound':
       return <NotFoundScreen />;
   }
+}
+
+/** 投稿の下書きがあるうちは、タブを閉じる・再読み込みの前に離脱確認を出す（06 章 §3.2。どの画面にいても） */
+function DraftLeaveGuard(): null {
+  useLeaveGuard();
+  return null;
 }
