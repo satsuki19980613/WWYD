@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { APP_STATES, type AppState } from './appState.ts';
+import { useAuth } from './auth/useAuth.ts';
 import { BackLink } from './components/BackLink.tsx';
 import { Header } from './components/Header.tsx';
 import { InfoModal } from './components/InfoModal.tsx';
@@ -31,9 +32,8 @@ export function App(): JSX.Element {
   const { pathname, search } = useLocation();
   useScrollTopOnNavigate(pathname);
 
-  // P3（T-304）で Supabase のセッション確認・whoami・ヘルスチェックの結果に置き換える。
-  const [baseState] = useState<AppState>('ready');
-  const state = devStateFrom(search) ?? baseState;
+  const auth = useAuth();
+  const state = devStateFrom(search) ?? auth.state;
 
   const [info, setInfo] = useState<InfoSectionId | null>(null);
 
@@ -44,10 +44,12 @@ export function App(): JSX.Element {
 
   let body: ReactNode;
   if (isLegal) body = <RouteScreen route={route} />;
-  else if (state === 'signedOut') body = <LoginScreen />;
+  else if (state === 'signedOut')
+    body = <LoginScreen onLogin={auth.signIn} busy={auth.signingIn} failed={auth.loginFailed} />;
   else if (state === 'unavailable')
-    // ログアウトの処理は P3（T-304）で渡す。それまでは再読み込みで代用する
-    body = <StatusScreen title="このアカウントは利用できません" actionLabel="ログアウト" tone="error" onAction={reload} />;
+    body = (
+      <StatusScreen title="このアカウントは利用できません" actionLabel="ログアウト" tone="error" onAction={() => void auth.signOut()} />
+    );
   else if (state === 'maintenance')
     body = <StatusScreen title="メンテナンス中" actionLabel="再読み込み" tone="warn" onAction={reload} />;
   else if (state === 'offline')
@@ -58,7 +60,11 @@ export function App(): JSX.Element {
 
   return (
     <>
-      <Header showAccount={state === 'ready'} onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))} />
+      <Header
+        showAccount={state === 'ready'}
+        onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}
+        onLogout={() => void auth.signOut()}
+      />
       <main className="app-main">
         {showBack && <BackLink />}
         {body}
