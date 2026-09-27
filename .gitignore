@@ -12,3 +12,8 @@ Thumbs.db
 coverage/
 .claude/settings.local.json
 .claude/worktrees/
+
+# 非公開リポジトリ（ICMCLEC / pocket-ICM）由来の資料。ローカルのみで参照する
+.claude/skills/wwyd-ui-concept/references/icmclec-*
+# OCR の正解画像（個人の対戦画像）
+packages/ocr/fixtures-local/

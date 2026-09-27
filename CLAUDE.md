@@ -46,13 +46,13 @@
 | 区分 | 内容 | 状態 |
 |---|---|---|
 | バックエンド | **Supabase**（Auth の Google プロバイダ、Postgres、RLS、トリガ） | **確定** |
-| サーバー側のポーカーロジック | Supabase Edge Functions（Deno / TypeScript）で共有ロジックを実行する案 | 提案・未確定（詳細仕様 03 章） |
-| フロントエンド | React 18 + Vite + TypeScript（ICMCLEC と同じ） | 提案・未確定 |
-| モノレポ | npm workspaces（`packages/*`） | 提案・未確定 |
-| テスト | Vitest（TS）、pgTAP（`supabase test db`）、Playwright（E2E） | 提案・未確定 |
-| 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ） | 提案・未確定（詳細仕様 08 章） |
-| OCR | 流用元（T4watcher）を端末内で動く TypeScript に移植 | 流用元の確認待ち（詳細仕様 07 章） |
-| Node.js | 22（`.node-version`） | 提案・未確定 |
+| サーバー側のポーカーロジック | Supabase Edge Functions（Deno / TypeScript）で共有ロジックを実行する案 | **確定**（詳細仕様 03 章） |
+| フロントエンド | React 18 + Vite + TypeScript（ICMCLEC と同じ） | **確定** |
+| モノレポ | npm workspaces（`packages/*`） | **確定** |
+| テスト | Vitest（TS）、pgTAP（`supabase test db`）、Playwright（E2E） | **確定** |
+| 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ） | **確定**（無料枠は基盤フェーズで再確認。詳細仕様 08 章） |
+| OCR | 流用元 `tenfour_watcher` を TypeScript に移植、本文認識は tesseract.js を自サイトから配信 | **確定**（詳細仕様 07 章） |
+| Node.js | 22（`.node-version`） | **確定** |
 
 「提案・未確定」の項目は、さつきの承認で plan.md の決定ログに記録してから、この表を「確定」に書き換える。
 
