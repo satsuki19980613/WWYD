@@ -1,4 +1,4 @@
-# バトン: P1 基盤の承認 → P2 ポーカーロジック
+# バトン: P2 ポーカーロジックの着手
 
 **作成 2026-09-27 / セッション 2（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている）**
@@ -7,9 +7,7 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-1. [plan.md](plan.md) の「さつきの確認待ち」を見る。**P1 の承認と push の許可**が出ていれば:
-   - push 前に秘密情報のスキャン → `git push -u origin phase/01-foundation` → PR 作成 → CI（`.github/workflows/ci.yml`）が緑か確認（T-102 を完了にする）。
-   - 承認後に main へマージ（PR 経由）し、P2 用のブランチ `phase/02-poker-logic` を切る。
+1. **P1 は完了・main にマージ済み**（[satsuki19980613/WWYD#2](https://github.com/satsuki19980613/WWYD/pull/2)）。main から `phase/02-poker-logic` を切る。
 2. **P2 ポーカーロジック**（T-201〜T-206）。仕様は [04-poker-logic.md](detailed-spec/04-poker-logic.md) と [05-paint-format.md](detailed-spec/05-paint-format.md)。
    - 完了条件: 04 章 §10 と 05 章 §5 のテストケースがすべて緑、行カバレッジ 90% 以上。
    - **カバレッジの計測には `@vitest/coverage-v8` が要る（未承認の依存）→ 着手時にさつきに確認する。**
