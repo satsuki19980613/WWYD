@@ -92,7 +92,7 @@
 | T-305 | 本番 DB へのマイグレーション適用（承認後） | T-303, M-03 | さつきの承認後に `db push`、本番で DB テストの一部をスモーク | 取り消し（Neon に移行。T-311 に置き換え） | | — |
 | M-09 | 管理者 UID の登録 | T-305 | `app_admins` に 1 行 | 未着手 | さつき | 10 M-09 |
 | N-01 | Neon のアカウントとプロジェクト作成（シンガポール） | Q-25 | Project ID を Claude に共有 | 完了（Project ID `patient-leaf-06853495`、AWS Asia Pacific 1 (Singapore)。アカウント作成時に自動で作られたものを使う。2026-09-28） | さつき | 10 N-01 |
-| N-02 | Neon の Auth と Data API の有効化 | N-01 | 有効化済み | 完了（2026-09-28。URL の共有待ち） | さつき | 10 N-02 |
+| N-02 | Neon の Auth と Data API の有効化 | N-01 | 有効化済み | 完了（2026-09-28。Data API URL と Auth URL を 12 章 §7.1 に記録） | さつき | 10 N-02 |
 | N-03 | Neon CLI のログイン | N-01 | `npx neonctl` が使える | 未着手 | さつき | 10 N-03 |
 | N-04 | Google OAuth を Neon Auth につなぐ（M-05・M-06 の差し替え） | N-02, M-05 | Neon Auth に Google を設定済み | 未着手 | さつき | 10 N-04 |
 | T-306 | スパイク: Neon の Data API・Auth・Functions・権限・ローカルの pgTAP（12 章 §5 の S-1〜S-7） | N-01〜N-03, Q-25〜Q-29 | 結果を 12 章と決定ログに記録し、12 章を確定稿に | 未着手 | | 12 §5 |

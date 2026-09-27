@@ -92,6 +92,18 @@
 
 手順の詳細は、非エンジニア向けの説明を 10 章に追記する（N-01 から順に）。
 
+## 7.1 プロジェクトの情報（秘密情報ではない）
+
+| 項目 | 値 |
+|---|---|
+| Project ID | `patient-leaf-06853495`（AWS Asia Pacific 1 (Singapore)） |
+| ブランチ | `production`（`br-old-meadow-b3h9xgbz`）＝本番 |
+| Data API URL | `https://ep-aged-wave-b3j6dpzy.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1` |
+| Auth URL | `https://ep-aged-wave-b3j6dpzy.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth` |
+
+- 上の 2 つの URL は、ブラウザ（アプリ）が使う公開の住所。環境変数 `VITE_NEON_DATA_API_URL` / `VITE_NEON_AUTH_URL` に入れる。
+- DB の接続文字列（パスワードを含む）はここに書かない。
+
 ## 8. 参照
 
 - [Neon Pricing](https://neon.com/pricing) / [Neon Regions](https://neon.com/docs/introduction/regions)
