@@ -1,0 +1,10 @@
+{
+  "name": "@wwyd/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ポーカーロジックと paint コーデックの単一実装（純 TS・依存ゼロ。フロントと Edge Function が共有する）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

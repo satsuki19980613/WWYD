@@ -1,0 +1,26 @@
+{
+  "name": "wwyd",
+  "version": "0.0.0",
+  "private": true,
+  "description": "WWYD（What Would You Do?）— ポーカーのスポットで Villain のレンジを集合知として見るアプリ",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @wwyd/app",
+    "build": "npm run build -w @wwyd/app",
+    "preview": "npm run preview -w @wwyd/app",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/app && tsc --noEmit -p tsconfig.tools.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
