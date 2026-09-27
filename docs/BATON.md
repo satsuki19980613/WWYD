@@ -1,4 +1,4 @@
-# バトン: P2 ポーカーロジックの着手
+# バトン: P3 DB と認証の着手
 
 **作成 2026-09-27 / セッション 2（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている）**
@@ -7,11 +7,22 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-1. **P1 は完了・main にマージ済み**（[satsuki19980613/WWYD#2](https://github.com/satsuki19980613/WWYD/pull/2)）。main から `phase/02-poker-logic` を切る。
-2. **P2 ポーカーロジック**（T-201〜T-206）。仕様は [04-poker-logic.md](detailed-spec/04-poker-logic.md) と [05-paint-format.md](detailed-spec/05-paint-format.md)。
-   - 完了条件: 04 章 §10 と 05 章 §5 のテストケースがすべて緑、行カバレッジ 90% 以上。
-   - **カバレッジの計測には `@vitest/coverage-v8` が要る（未承認の依存）→ 着手時にさつきに確認する。**
-3. P2 の終わりで止まり、完了条件の確認結果を報告して承認を得る。
+1. **P2 は完了・main にマージ済み**（[satsuki19980613/WWYD#3](https://github.com/satsuki19980613/WWYD/pull/3)）。main から `phase/03-db-auth` を切る。
+2. **P3 DB と認証**（T-301〜）。01 章・02 章のマイグレーションをローカル（`npx supabase start`、ポート 5532x）で作り、pgTAP で DB-01〜19。DB-06 は `packages/core/test-vectors/paint-validation.json` を読む。
+   - 本番への適用（T-305）と Google ログイン（T-304）には、さつきの手作業 M-01〜M-03・M-05〜M-07 が要る。
+3. P3 の終わりで止まり、完了条件の確認結果を報告して承認を得る。
+
+## 0.1 P2 で作ったもの（`packages/core`）
+
+| ファイル | 内容 |
+|---|---|
+| `money.ts` / `cards.ts` / `errors.ts` | mbb 変換と表示、カード、`ValidationError`（コード＋添字） |
+| `poker/state.ts` | `initialState`・`status`・`nextActor`・`advance`・`legal`・`apply`（04 章 §3〜6） |
+| `poker/replay.ts` | `runActions`（途中まで。`states[0]` が初期状態）・`replay`（完了とボード枚数の検査） |
+| `poker/spot.ts` | `spotCandidates`・`spotView`（停止位置・派生メタ・実際のキー）・`sizeFromPct`・`pctFromSize` |
+| `paint/*` | ラベル・コンボ、paint の encode / decode / hex、`validatePaintBytes`、集計と表示計算 |
+| `post/*` | `validateInput`（JSON → mbb の型付き入力）・`verifyPost`（再生・照合・マック補完） |
+| `poker/testHelpers.ts` | テスト用の記法（`acts({ pf: 'UTG..CO f, BTN r2.5' })`）。本番コードからは使わない |
 
 ## 1. P1 で決まったこと（再確認不要。詳細は plan.md の決定ログ）
 

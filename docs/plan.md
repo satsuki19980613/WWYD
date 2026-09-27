@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P1 基盤 完了**（2026-09-27、PR #2 をマージ）→ 次は P2 ポーカーロジック |
-| 直近で完了したこと | T-101 モノレポ雛形、T-102 CI（ワークフロー作成）、T-103 Edge Function の import スパイク（直接 import で可）、T-104 トークンと基本部品、T-105 アプリの外枠、T-106 Cloudflare Pages の確認 |
-| 次にやること | 0. まず [BATON.md](BATON.md) を読む<br>1. main から `phase/02-poker-logic` を切り、P2 に着手（T-201 金額 → T-202 状態遷移 → …）<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）を P3 の前までに |
+| 現在のフェーズ | **P2 ポーカーロジック 完了**（2026-09-27、PR #3 をマージ）→ 次は P3 DB と認証 |
+| 直近で完了したこと | P2 の T-201〜T-206（`packages/core` のポーカーロジック・paint／集計・投稿の検証）。テスト 254 件、行カバレッジ 100%。Q-24 を推奨案で決定 |
+| 次にやること | 0. まず [BATON.md](BATON.md) を読む<br>1. main から `phase/03-db-auth` を切り、P3 に着手（T-301 マイグレーション → T-302 RLS・トリガ・RPC → T-303 pgTAP）。ローカルの Supabase で進められる<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）と M-05〜M-07（Google OAuth）が T-304・T-305 の前に必要 |
 | ブロッカー | なし（Docker Desktop は導入済み。使う前に起動しておく必要がある） |
-| さつきの確認待ち | `@vitest/coverage-v8` の追加（P2 の完了条件「行カバレッジ 90% 以上」の計測に必要） |
+| さつきの確認待ち | なし |
 
 ---
 
@@ -24,7 +24,7 @@
 |---|---|---|---|
 | P0 準備 | Skill 導入、CLAUDE.md、詳細仕様、計画書 | さつきがレビューし、優先度 A の確認待ちに回答済み | 完了 |
 | P1 基盤 | モノレポ、ツール、CI、デザイントークンとアプリの外枠、Edge Function の import 検証 | `npm run typecheck` / `npm test` / `npm run build` が CI で緑。外枠（ヘッダー・ⓘ・ルーティング・メンテナンス画面）がローカルで表示され、`wwyd-ui-concept` の自己レビューに合格 | 完了 |
-| P2 ポーカーロジック | `packages/core` のロジックと paint / 集計コーデック | 04 章 §10 と 05 章 §5 のテストケースがすべて自動テストで緑。カバレッジ（行）90% 以上 | 未着手 |
+| P2 ポーカーロジック | `packages/core` のロジックと paint / 集計コーデック | 04 章 §10 と 05 章 §5 のテストケースがすべて自動テストで緑。カバレッジ（行）90% 以上 | 完了 |
 | P3 DB と認証 | マイグレーション、RLS、トリガ、RPC、Google ログイン | 02 章 §5 の DB テスト（pgTAP）がすべて緑。ローカルと本番で Google ログイン → `whoami` が動く | 未着手 |
 | P4 一覧 | スポット一覧 | 06 章 §2 の状態がすべて表示できる。タブ・フィルタ・並び替え・追加読み込み・削除が本番 DB で動く | 未着手 |
 | P5 スポット投稿 | 投稿画面、カードキーボード、Edge Function `create-post` | 03 章 §5 の EF テストが緑。PC とスマホで H-S1 / H-MW / H-S3 を入力して投稿でき、`get_post_detail` で読める | 未着手 |
@@ -67,12 +67,12 @@
 
 | ID | 内容 | 依存 | 完了条件 | 状態 | 担当 | 詳細仕様 |
 |---|---|---|---|---|---|---|
-| T-201 | 金額（mbb）の変換・丸め・表示 | T-101, T-006(Q-5) | 単体テスト緑 | 未着手 | | 04 §1 |
-| T-202 | 初期状態・合法アクション・適用・status・advance | T-201, T-006(Q-4,7,8) | INIT / LEGAL / RAISE / INC / BBOPT / ANTE / RUN / END のテスト緑 | 未着手 | | 04 §3–7, §10.1–10.8 |
-| T-203 | 再生（replay）と検証エラー | T-202 | VAL のテスト緑 | 未着手 | | 04 §7, §10.12 |
-| T-204 | スポット候補・停止位置・派生メタ・% pot | T-202, T-006(Q-6) | MW / SPOT / PCT / SD のテスト緑 | 未着手 | | 04 §8–9, §10.9–10.13 |
-| T-205 | paint / 集計コーデックと検証、共有テストベクタ | T-101 | PAINT のテスト緑、`test-vectors/paint-validation.json` 作成 | 未着手 | | 05 |
-| T-206 | 投稿入力の形の検証（`validateInput`） | T-203 | VAL-04, 10, 11, 15〜17 のテスト緑 | 未着手 | | 03 §3.2 |
+| T-201 | 金額（mbb）の変換・丸め・表示 | T-101, T-006(Q-5) | 単体テスト緑 | 完了 | | 04 §1 |
+| T-202 | 初期状態・合法アクション・適用・status・advance | T-201, T-006(Q-4,7,8) | INIT / LEGAL / RAISE / INC / BBOPT / ANTE / RUN / END のテスト緑 | 完了 | | 04 §3–7, §10.1–10.8 |
+| T-203 | 再生（replay）と検証エラー | T-202 | VAL のテスト緑 | 完了 | | 04 §7, §10.12 |
+| T-204 | スポット候補・停止位置・派生メタ・% pot | T-202, T-006(Q-6) | MW / SPOT / PCT / SD のテスト緑 | 完了 | | 04 §8–9, §10.9–10.13 |
+| T-205 | paint / 集計コーデックと検証、共有テストベクタ | T-101 | PAINT のテスト緑、`test-vectors/paint-validation.json` 作成 | 完了 | | 05 |
+| T-206 | 投稿入力の形の検証（`validateInput`） | T-203 | VAL-04, 10, 11, 15〜17 のテスト緑 | 完了 | | 03 §3.2 |
 
 ### P3 DB と認証
 
@@ -188,6 +188,12 @@
 | 2026-09-27 | ローカル Supabase のポートを 5432x から 5532x に変更（`supabase/config.toml`） | Windows（Hyper-V）が 54319〜54418 を予約しており DB が起動できなかった | Claude |
 | 2026-09-27 | P1 を承認。`phase/01-foundation` を push し PR #2 で CI 緑を確認して main へマージ | さつきの指示（PR を作成してマージ） | さつき |
 | 2026-09-27 | GitHub Actions を `actions/checkout@v7` / `actions/setup-node@v7` に更新 | v4 は Node 20 の非推奨警告が出たため | Claude |
+| 2026-09-27 | `@vitest/coverage-v8` ^5.0.2 を追加。`npm run test:coverage` で `packages/core` の行カバレッジを計測し、90% 未満で失敗させる | P2 の完了条件の計測のため（さつき承認） | さつき |
+| 2026-09-27 | レーキ（%）は小数第 2 位まで。第 3 位以下は `malformed`（DB の numeric(5,2) に合わせる。0〜100 の外は仕様どおり `invalid_settings`） | 04 章 VAL-15/16 にレーキの小数桁の定めが無いため、DB の型に合わせた | Claude |
+| 2026-09-27 | `runActions` の戻り値は `states[0]` = 初期状態、`states[i+1]` = アクション i の適用直後。検証エラーの順序は street_mismatch → not_your_turn → malformed（to の有無）→ illegal_action → amount_out_of_range | 04 章 §6・§7 に順序の定めが無いため。リプレイ画面でも同じ配列を使う | Claude |
+| 2026-09-27 | CI の単体テストを `npm run test:coverage` に変更（core の行カバレッジ 90% 未満で失敗） | P2 の完了条件を CI で保つため | Claude |
+| 2026-09-27 | Q-24: RAISE-08 は §5 の規則どおり raise なし（推奨 (a)）。04 章の RAISE-08 を修正し RAISE-08b を追加 | さつきの回答（推奨どおり） | さつき |
+| 2026-09-27 | P2 を承認。`phase/02-poker-logic` を push し PR #3 で CI 緑を確認して main へマージ | さつきの指示（マージ） | さつき |
 
 ---
 
@@ -242,3 +248,17 @@
 - **変更したファイル**: `package.json`、`package-lock.json`、`tsconfig.base.json`、`tsconfig.tools.json`、`vitest.config.ts`、`packages/core/**`、`packages/app/**`、`.github/workflows/ci.yml`、`.claude/launch.json`、`supabase/config.toml`、`supabase/.gitignore`、`CLAUDE.md`、`docs/detailed-spec/03-server-replay.md`、`docs/plan.md`、`docs/BATON.md`
 - **残課題**: push と PR での CI 確認（さつきの承認待ち）。本番の `functions deploy` での import 確認は T-501。CSP の `_headers` は Supabase の URL が決まってから（M-01 後、遅くとも P5）。
 - **追記**: さつきの指示で push → [satsuki19980613/WWYD#2](https://github.com/satsuki19980613/WWYD/pull/2) を作成。CI 緑（19 秒）を確認。Node 20 の警告に対応して Actions を v7 に上げ、再度 CI 緑を確認してから main へマージ。
+
+### 2026-09-27（セッション 2 の続き・P2）
+
+- **行ったこと**: `@vitest/coverage-v8` を追加（さつき承認）。`packages/core` に P2 を実装。
+  - T-201 `money.ts`（bb ↔ mbb、表示）、`cards.ts`、`errors.ts`
+  - T-202〜T-204 `poker/state.ts`（初期状態・status・nextActor・advance・legal・apply）、`poker/replay.ts`、`poker/spot.ts`（候補・停止位置・派生メタ・% pot と逆算）
+  - T-205 `paint/`（ラベル・コンボ、paint の encode / decode / hex、検証、集計の encode / decode・差分加算・表示計算）、共有テストベクタ `test-vectors/paint-validation.json`（18 件）
+  - T-206 `post/validateInput.ts`・`post/verifyPost.ts`（03 章 §3.2 の 2〜7）
+- **完了条件の確認**: 04 章 §10.1〜10.13 と 05 章 §5 の全ケースを自動テスト化して緑（254 件）。行カバレッジ 100%（閾値 90%）。型検査・ビルド緑。edge-runtime（Deno）上で `validateInput` → `verifyPost` と paint の往復が Node と同じ結果になることを確認（一時関数で確認し、削除済み）。
+- **見つけた食い違い**: RAISE-08 の期待値が §5 の規則と合わない → 11 章 Q-24（確認待ち）。規則どおり実装し、RAISE-08b を追加。
+- **変更したファイル**: `package.json`、`package-lock.json`、`vitest.config.ts`、`.github/workflows/ci.yml`、`packages/core/**`、`docs/detailed-spec/11-open-questions.md`、`docs/plan.md`、`docs/BATON.md`
+- **残課題**: Q-24 の回答、push・PR での CI 確認、P2 の承認。EF-01〜04 の Edge Function 本体での実行は T-501（純関数部分は `post.test.ts` で確認済み）。
+- **追記**: さつきが Q-24 を推奨案 (a) で決定。04 章の RAISE-08 を修正し RAISE-08b を追加、11 章を「決定」に更新。
+- **追記**: さつきの指示で push → [satsuki19980613/WWYD#3](https://github.com/satsuki19980613/WWYD/pull/3) を作成。CI 緑（カバレッジ検査を含む）を確認して main へマージ。
