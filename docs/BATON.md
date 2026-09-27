@@ -1,4 +1,4 @@
-# バトン: P5 投稿へ（P4 一覧は実装済み・本番確認待ち）
+# バトン: P5 の本番配備 → P6 回答へ
 
 **更新 2026-09-28 / セッション 3（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている）**
@@ -7,12 +7,26 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**P4（一覧）は実装済み**（ブランチ `phase/04-list`）。dev の試験データで全状態と削除 → カスケードを確認済み。本番には投稿がまだ無いので、本番での一覧・削除の確認は P5 の後。
+**P5（投稿）は dev で実装・確認済み**（ブランチ `phase/05-post`）。Neon Function `create-post` は dev にだけ配備してある。
 
 1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
-2. `phase/04-list` が未 push なら、さつきの承認を得て push → PR → CI → マージ。
-3. P5 スポット投稿（T-501〜）に着手。
-4. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ。iPhone のログイン確認は M-08（Cloudflare Pages）の後。
+2. さつきの承認があれば `create-post` を本番に配備（下のコマンド）→ Invocation URL を `.env.production` の `VITE_NEON_CREATE_POST_URL` に → `npm run dev:prod` で本番に投稿し、P4（一覧・削除）と P5 を本番で確認。
+3. `phase/05-post` の push・PR・マージ（さつきの確認）。
+4. P6 回答（T-601〜）。
+5. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ、M-08（Cloudflare Pages。スマホ実機の確認に必要）。
+
+## 0.001 P5 で作ったもの
+
+| ファイル | 内容 |
+|---|---|
+| `packages/functions/src/createPost/` | `handler.ts`（CORS・認証・検証・エラーの写し方。単体テスト付き）、`payload.ts`（insert_post の引数）、`index.ts`（pg のプールと jose の入口） |
+| `packages/app/src/post/` | `cardInput.ts`（カードキーボードの規則・フリック）、`draft.ts`（下書き・進行・ログ・送信前の検査）、`draftStore.ts`（メモリの下書き・離脱確認）、`sendPost.ts`、`errorMessages.ts`（06 章 §7）、各セクションの部品 |
+| `packages/app/src/screens/NewPostScreen.tsx` | PC 3 列 / スマホ 4 ステップ |
+| `packages/core/src/post/postFixtures.ts` | H-S1 / H-MW / H-S3 の入力例（テスト専用） |
+
+- 配備: `npx neonctl functions deploy createpost --project-id patient-leaf-06853495 --branch <dev|production> --src packages/functions/src/createPost/index.ts --env ALLOWED_ORIGINS=<カンマ区切りのオリジン>`（毎回さつきの承認。本番は Claude Code の安全機能で止められる可能性があり、その場合はさつきが実行）。
+- dev の関数 URL は `.env.development` の `VITE_NEON_CREATE_POST_URL`。dev には試験投稿が 4 件ある（題名「試験」。`npm run db:seed -- --branch dev` で消える）。
+- dev のさつきのユーザーは、2026-09-28（UTC）の投稿枠 5 件のうち 4 件を使った。
 
 ## 0.01 P4 で作ったもの
 

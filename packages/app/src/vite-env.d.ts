@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_NEON_AUTH_URL?: string;
   /** Neon Data API の URL（同上） */
   readonly VITE_NEON_DATA_API_URL?: string;
+  /** Neon Function create-post の URL（同上） */
+  readonly VITE_NEON_CREATE_POST_URL?: string;
 }
 
 interface ImportMeta {
