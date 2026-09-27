@@ -44,8 +44,24 @@ export async function signInWithGoogle(callbackURL: string): Promise<void> {
  * 通信に失敗したら例外（呼び出し側でメンテナンス中・オフラインに振り分ける）。
  */
 export async function getSessionUser(verifier: string | null): Promise<AuthUser | null> {
-  const q = verifier ? `?${SESSION_VERIFIER_PARAM}=${encodeURIComponent(verifier)}` : '';
-  const res = await authFetch(`/get-session${q}`);
+  if (verifier) {
+    // verifier は一度しか使えない。同じ値で 2 回呼ばれても（React の開発モードは起動処理を 2 回実行する）
+    // 最初の 1 回の結果を共有する。受け取れなかったときは、通常のセッション確認にまわす
+    let first = verifierExchanges.get(verifier);
+    if (!first) {
+      first = fetchSession(`?${SESSION_VERIFIER_PARAM}=${encodeURIComponent(verifier)}`);
+      verifierExchanges.set(verifier, first);
+    }
+    const user = await first;
+    if (user) return user;
+  }
+  return fetchSession('');
+}
+
+const verifierExchanges = new Map<string, Promise<AuthUser | null>>();
+
+async function fetchSession(query: string): Promise<AuthUser | null> {
+  const res = await authFetch(`/get-session${query}`);
   if (!res.ok) throw Object.assign(new Error(`get-session ${res.status}`), { status: res.status });
   const body = (await res.json()) as { user?: { id?: string } } | null;
   return body?.user?.id ? { id: body.user.id } : null;

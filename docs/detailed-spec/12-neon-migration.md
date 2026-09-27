@@ -84,8 +84,13 @@
 | Auth | `{Auth URL}/ok` が `{"ok":true}` を返す → **メンテナンス判定のヘルスチェックに使う**。dev ブランチでは Neon の共有 Google 認証がすでに有効。信頼するドメインは未設定 |
 | 注意 | **両ブランチでメールアドレス＋パスワードの新規登録が有効**（確認メールなしで誰でも登録できる）。WWYD は Google だけにするため、無効にする（本番の設定変更なのでさつきの承認後） |
 | 注意 | JWT の有効期限は 15 分で、`email`・`name` の claims を含む（DB には保存しない。`request.jwt.claims` として一時的に見えるだけ）。セッションは Neon Auth のドメインの `SameSite=None` のクッキー → **iPhone の Safari など、他サイトのクッキーを制限するブラウザでログインが保てるか**を S-6 で必ず確かめる |
-| S-4 | 未着手（dev ブランチへの Functions の配備にさつきの承認が要る） |
-| S-6 | 未着手（公式 SDK でログイン画面を試作し、さつきが localhost と実機で Google ログインを試す） |
+| S-3（完了） | `delete_my_account`（`neon_auth."user"` の削除）を DB-16 で確認（Neon の一時ブランチ） |
+| S-5（完了） | DB-01 で、anonymous・authenticated が実行できる関数が決めたものだけであることを確認 |
+| S-7（完了） | **DB テストは Neon の一時ブランチで実行する**（空のブランチ `test-base` から作り、1 時間で自動削除。`npm run test:db`）。pgTAP は `tap` スキーマに入れる（`fail()` の衝突回避）。pgTAP 143 件＋DB-19 が緑 |
+| クライアント | 公式 SDK（`@neondatabase/neon-js` 0.7.0-beta / `@neondatabase/auth` 0.5.0-beta）は Next.js を必須の依存に持ち、Vite の workspace ではインストールに失敗した。SDK が内部で行う手順（`POST /sign-in/social` → 戻り先 URL の `neon_auth_session_verifier` → `GET /get-session?neon_auth_session_verifier=…` → `GET /token`）を `packages/app/src/backend/neon.ts` で直接行う。Data API は `@supabase/postgrest-js`（安定版・依存なし）に JWT を付けて使う |
+| S-1・S-6（パソコン、完了） | さつきが Chrome（http://localhost:5173）で Google ログイン（dev ブランチ・Neon の共有認証）→ whoami（Data API 経由。`current_uid()` が値を返し allowed = true）→ 一覧まで到達。再読み込み後もログインが保たれた。**注意: verifier は一度しか使えず、React の開発モードは起動処理を 2 回実行するため、2 回目の失敗で未ログインになっていた → 同じ verifier の結果を共有するよう修正** |
+| S-6（iPhone） | 未確認。Cloudflare Pages に置いた後（M-08）に確かめる |
+| S-4 | 未着手（承認済み。次に行う） |
 
 ## 6. 確認待ち（さつきの判断）→ 2026-09-28 すべて推奨案で決定
 
