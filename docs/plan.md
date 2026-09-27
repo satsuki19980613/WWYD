@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P2 ポーカーロジック — 実装完了、さつきの承認待ち**（ブランチ `phase/02-poker-logic`） |
-| 直近で完了したこと | P1 完了（PR #2 マージ）。P2 の T-201〜T-206（`packages/core` のポーカーロジック・paint／集計・投稿の検証）。テスト 254 件、行カバレッジ 100% |
-| 次にやること | 1. さつきの確認: P2 の承認 → push・PR・CI 確認・マージ<br>2. 承認後 P3 DB と認証（T-301 マイグレーション〜）。**その前にさつきの手作業 M-01〜M-03 が必要**（T-305・T-304 のため。T-301〜T-303 はローカルで先に進められる）|
+| 現在のフェーズ | **P2 ポーカーロジック 完了**（2026-09-27、PR #3 をマージ）→ 次は P3 DB と認証 |
+| 直近で完了したこと | P2 の T-201〜T-206（`packages/core` のポーカーロジック・paint／集計・投稿の検証）。テスト 254 件、行カバレッジ 100%。Q-24 を推奨案で決定 |
+| 次にやること | 0. まず [BATON.md](BATON.md) を読む<br>1. main から `phase/03-db-auth` を切り、P3 に着手（T-301 マイグレーション → T-302 RLS・トリガ・RPC → T-303 pgTAP）。ローカルの Supabase で進められる<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）と M-05〜M-07（Google OAuth）が T-304・T-305 の前に必要 |
 | ブロッカー | なし（Docker Desktop は導入済み。使う前に起動しておく必要がある） |
-| さつきの確認待ち | P2 完了の承認と `phase/02-poker-logic` の push・PR・マージ |
+| さつきの確認待ち | なし |
 
 ---
 
@@ -24,7 +24,7 @@
 |---|---|---|---|
 | P0 準備 | Skill 導入、CLAUDE.md、詳細仕様、計画書 | さつきがレビューし、優先度 A の確認待ちに回答済み | 完了 |
 | P1 基盤 | モノレポ、ツール、CI、デザイントークンとアプリの外枠、Edge Function の import 検証 | `npm run typecheck` / `npm test` / `npm run build` が CI で緑。外枠（ヘッダー・ⓘ・ルーティング・メンテナンス画面）がローカルで表示され、`wwyd-ui-concept` の自己レビューに合格 | 完了 |
-| P2 ポーカーロジック | `packages/core` のロジックと paint / 集計コーデック | 04 章 §10 と 05 章 §5 のテストケースがすべて自動テストで緑。カバレッジ（行）90% 以上 | 完了確認待ち（PR の CI） |
+| P2 ポーカーロジック | `packages/core` のロジックと paint / 集計コーデック | 04 章 §10 と 05 章 §5 のテストケースがすべて自動テストで緑。カバレッジ（行）90% 以上 | 完了 |
 | P3 DB と認証 | マイグレーション、RLS、トリガ、RPC、Google ログイン | 02 章 §5 の DB テスト（pgTAP）がすべて緑。ローカルと本番で Google ログイン → `whoami` が動く | 未着手 |
 | P4 一覧 | スポット一覧 | 06 章 §2 の状態がすべて表示できる。タブ・フィルタ・並び替え・追加読み込み・削除が本番 DB で動く | 未着手 |
 | P5 スポット投稿 | 投稿画面、カードキーボード、Edge Function `create-post` | 03 章 §5 の EF テストが緑。PC とスマホで H-S1 / H-MW / H-S3 を入力して投稿でき、`get_post_detail` で読める | 未着手 |
@@ -193,6 +193,7 @@
 | 2026-09-27 | `runActions` の戻り値は `states[0]` = 初期状態、`states[i+1]` = アクション i の適用直後。検証エラーの順序は street_mismatch → not_your_turn → malformed（to の有無）→ illegal_action → amount_out_of_range | 04 章 §6・§7 に順序の定めが無いため。リプレイ画面でも同じ配列を使う | Claude |
 | 2026-09-27 | CI の単体テストを `npm run test:coverage` に変更（core の行カバレッジ 90% 未満で失敗） | P2 の完了条件を CI で保つため | Claude |
 | 2026-09-27 | Q-24: RAISE-08 は §5 の規則どおり raise なし（推奨 (a)）。04 章の RAISE-08 を修正し RAISE-08b を追加 | さつきの回答（推奨どおり） | さつき |
+| 2026-09-27 | P2 を承認。`phase/02-poker-logic` を push し PR #3 で CI 緑を確認して main へマージ | さつきの指示（マージ） | さつき |
 
 ---
 
@@ -260,3 +261,4 @@
 - **変更したファイル**: `package.json`、`package-lock.json`、`vitest.config.ts`、`.github/workflows/ci.yml`、`packages/core/**`、`docs/detailed-spec/11-open-questions.md`、`docs/plan.md`、`docs/BATON.md`
 - **残課題**: Q-24 の回答、push・PR での CI 確認、P2 の承認。EF-01〜04 の Edge Function 本体での実行は T-501（純関数部分は `post.test.ts` で確認済み）。
 - **追記**: さつきが Q-24 を推奨案 (a) で決定。04 章の RAISE-08 を修正し RAISE-08b を追加、11 章を「決定」に更新。
+- **追記**: さつきの指示で push → [satsuki19980613/WWYD#3](https://github.com/satsuki19980613/WWYD/pull/3) を作成。CI 緑（カバレッジ検査を含む）を確認して main へマージ。
