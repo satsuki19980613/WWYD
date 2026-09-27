@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P2 ポーカーロジック 完了**（2026-09-27、PR #3 をマージ）→ 次は P3 DB と認証 |
-| 直近で完了したこと | P2 の T-201〜T-206（`packages/core` のポーカーロジック・paint／集計・投稿の検証）。テスト 254 件、行カバレッジ 100%。Q-24 を推奨案で決定 |
-| 次にやること | 0. まず [BATON.md](BATON.md) を読む<br>1. main から `phase/03-db-auth` を切り、P3 に着手（T-301 マイグレーション → T-302 RLS・トリガ・RPC → T-303 pgTAP）。ローカルの Supabase で進められる<br>2. さつきの手作業 M-01〜M-03（Supabase 作成・`.env`・CLI）と M-05〜M-07（Google OAuth）が T-304・T-305 の前に必要 |
-| ブロッカー | なし（Docker Desktop は導入済み。使う前に起動しておく必要がある） |
-| さつきの確認待ち | なし |
+| 現在のフェーズ | **P3 DB と認証 — ローカルでできる分は完了**（ブランチ `phase/03-db-auth`、未 push）。本番 DB・Google ログインはさつきの手作業待ち |
+| 直近で完了したこと | T-301 マイグレーション（型・表・インデックス）、T-302 共通関数・RLS・トリガ・RPC、T-303 pgTAP 143 件＋同時回答（DB-01〜19 すべて緑、CI に db ジョブ追加）、T-304 ログイン・認証状態・whoami・利用不可画面（ローカルの Supabase で確認） |
+| 次にやること | 1. **さつきの手作業**: M-01 Supabase プロジェクト作成 → M-02 `.env` → M-03 CLI のログインとリンク、M-05〜M-07 Google OAuth（手順は 10 章）。終わったら Project ref を Claude に伝える<br>2. その後 Claude: T-305 本番 DB へのマイグレーション適用（さつきの承認後）、本番で Google ログイン → whoami を確認（T-304 の完了）、M-09 管理者登録<br>3. 待っている間に進められるもの: P4 一覧（T-401 データ層・T-402 画面）はローカルの Supabase で先行できる（さつきの判断） |
+| ブロッカー | T-305 と T-304 の完了は M-01〜M-03・M-05〜M-07（さつき）待ち |
+| さつきの確認待ち | ① 手作業 M-01〜M-03・M-05〜M-07 の実施 ② 手作業の間に P4 をローカルで先行してよいか ③ `phase/03-db-auth` の push・PR（P3 完了時にまとめてでもよい） |
 
 ---
 
@@ -25,7 +25,7 @@
 | P0 準備 | Skill 導入、CLAUDE.md、詳細仕様、計画書 | さつきがレビューし、優先度 A の確認待ちに回答済み | 完了 |
 | P1 基盤 | モノレポ、ツール、CI、デザイントークンとアプリの外枠、Edge Function の import 検証 | `npm run typecheck` / `npm test` / `npm run build` が CI で緑。外枠（ヘッダー・ⓘ・ルーティング・メンテナンス画面）がローカルで表示され、`wwyd-ui-concept` の自己レビューに合格 | 完了 |
 | P2 ポーカーロジック | `packages/core` のロジックと paint / 集計コーデック | 04 章 §10 と 05 章 §5 のテストケースがすべて自動テストで緑。カバレッジ（行）90% 以上 | 完了 |
-| P3 DB と認証 | マイグレーション、RLS、トリガ、RPC、Google ログイン | 02 章 §5 の DB テスト（pgTAP）がすべて緑。ローカルと本番で Google ログイン → `whoami` が動く | 未着手 |
+| P3 DB と認証 | マイグレーション、RLS、トリガ、RPC、Google ログイン | 02 章 §5 の DB テスト（pgTAP）がすべて緑。ローカルと本番で Google ログイン → `whoami` が動く | 進行中（ローカル分は完了。M-01〜M-03・M-05〜M-07 待ち） |
 | P4 一覧 | スポット一覧 | 06 章 §2 の状態がすべて表示できる。タブ・フィルタ・並び替え・追加読み込み・削除が本番 DB で動く | 未着手 |
 | P5 スポット投稿 | 投稿画面、カードキーボード、Edge Function `create-post` | 03 章 §5 の EF テストが緑。PC とスマホで H-S1 / H-MW / H-S3 を入力して投稿でき、`get_post_detail` で読める | 未着手 |
 | P6 回答 | リプレイ、ブラシ、塗り、サイズ、送信、Hero の予想 | 06 章 §4 の操作を E2E で確認（塗り・なぞり・スポイト・重なったハンドル・元に戻す・送信・再回答の拒否）。スマホ実機で確認 | 未着手 |
@@ -82,13 +82,13 @@
 | M-02 | `.env` の作成 | M-01 | ローカルで接続できる | 未着手 | さつき | 10 M-02 |
 | M-03 | Supabase CLI のログインとリンク | M-01 | `npx supabase link` 済み | 未着手 | さつき | 10 M-03 |
 | M-04 | Docker Desktop のインストール | — | `docker run hello-world` 成功（2026-09-27）。`npx supabase start` は P1 / P3 で確認 | 完了 | さつき | 10 M-04 |
-| T-301 | マイグレーション: 型・表・インデックス | T-006(Q-9,10,20), M-04 | ローカルで `supabase db reset` が通る | 未着手 | | 01 |
-| T-302 | マイグレーション: 共通関数・RLS・トリガ・RPC | T-301 | 同上 | 未着手 | | 02 |
-| T-303 | pgTAP テスト DB-01〜19、共有テストベクタで DB-06 | T-302, T-205 | `supabase test db` が緑 | 未着手 | | 02 §5 |
+| T-301 | マイグレーション: 型・表・インデックス | T-006(Q-9,10,20), M-04 | ローカルで `supabase db reset` が通る | 完了 | | 01 |
+| T-302 | マイグレーション: 共通関数・RLS・トリガ・RPC | T-301 | 同上 | 完了 | | 02 |
+| T-303 | pgTAP テスト DB-01〜19、共有テストベクタで DB-06 | T-302, T-205 | `supabase test db` が緑 | 完了 | | 02 §5 |
 | M-05 | Google Cloud: OAuth 同意画面（テスト状態で開始） | — | 設定済み | 未着手 | さつき | 10 M-05 |
 | M-06 | Google Cloud: OAuth クライアント ID | M-05, M-01 | 作成済み | 未着手 | さつき | 10 M-06 |
 | M-07 | Supabase: Google プロバイダと URL 設定 | M-06 | 有効化済み | 未着手 | さつき | 10 M-07 |
-| T-304 | ログイン画面・認証状態・`whoami`・利用不可画面 | T-105, T-302, M-07 | ローカルで Google ログイン → 一覧（空）まで | 未着手 | | 06 §0.3, §1 |
+| T-304 | ログイン画面・認証状態・`whoami`・利用不可画面 | T-105, T-302, M-07 | ローカルで Google ログイン → 一覧（空）まで | 進行中（ローカルで実装・確認済み。Google ログインの実地確認は M-05〜M-07 の後） | | 06 §0.3, §1 |
 | T-305 | 本番 DB へのマイグレーション適用（承認後） | T-303, M-03 | さつきの承認後に `db push`、本番で DB テストの一部をスモーク | 未着手 | | — |
 | M-09 | 管理者 UID の登録 | T-305 | `app_admins` に 1 行 | 未着手 | さつき | 10 M-09 |
 
@@ -194,6 +194,13 @@
 | 2026-09-27 | CI の単体テストを `npm run test:coverage` に変更（core の行カバレッジ 90% 未満で失敗） | P2 の完了条件を CI で保つため | Claude |
 | 2026-09-27 | Q-24: RAISE-08 は §5 の規則どおり raise なし（推奨 (a)）。04 章の RAISE-08 を修正し RAISE-08b を追加 | さつきの回答（推奨どおり） | さつき |
 | 2026-09-27 | P2 を承認。`phase/02-poker-logic` を push し PR #3 で CI 緑を確認して main へマージ | さつきの指示（マージ） | さつき |
+| 2026-09-27 | 関数の実行権限は「関数を作るたびに PUBLIC・anon・authenticated から取り消し、必要な付与だけ」にする。02 章の SQL のままでは、後から作る関数（insert_post を含む）に PUBLIC の実行権限が残り anon から呼べた | Postgres の関数の既定権限はスキーマ単位では取り消せない。全体の既定権限を変えるとテスト用の一時関数など他へも影響するため、局所的に行う。DB-01 のテストで実行できる関数の一覧を固定して検出する | Claude |
+| 2026-09-27 | validate_paint の判定順を 05 章 §2.3 と TS に合わせる（値域 → 合法キー → 合計 → 空を、それぞれ全マスについて） | 02 章の SQL はマスごとに混ぜて判定しており、違反が複数あると TS と結果が変わるため | Claude |
+| 2026-09-27 | アカウント削除は RPC `delete_my_account` だけで行う（予備の Edge Function `delete-account` は作らない） | ローカル（CLI 2.118.0 / Postgres 17）で postgres 所有の関数から auth.users を削除できた（DB-16）。本番でも T-305 で確認する | Claude |
+| 2026-09-27 | DB-19（同時回答）は pgTAP ではなく `scripts/dbConcurrency.mjs`（10 接続で同時に挿入）で確かめ、CI の db ジョブで実行する | pgTAP は 1 トランザクションで動くため同時実行を作れない | Claude |
+| 2026-09-27 | DB-06 の pgTAP は共有テストベクタ（JSON）から `scripts/genPaintVectorsSql.mjs` で生成し、CI で最新かを検査する | pgTAP から JSON ファイルを直接読むにはスーパーユーザー権限が要るため | Claude |
+| 2026-09-27 | `.env` はリポジトリ直下から読む（Vite の envDir）。開発時はローカルの Supabase につなぐ `.env.development`（CLI の公開デモキー。秘密情報ではない）をコミットし、`.env` より優先する | .env.example と同じ場所に置く手順（CLAUDE.md §5）に合わせ、ローカル開発を既定にするため | Claude |
+| 2026-09-27 | `@supabase/supabase-js` ^2.117.2 を追加 | Q-16 で承認済みの依存 | さつき（Q-16） |
 
 ---
 
@@ -262,3 +269,14 @@
 - **残課題**: Q-24 の回答、push・PR での CI 確認、P2 の承認。EF-01〜04 の Edge Function 本体での実行は T-501（純関数部分は `post.test.ts` で確認済み）。
 - **追記**: さつきが Q-24 を推奨案 (a) で決定。04 章の RAISE-08 を修正し RAISE-08b を追加、11 章を「決定」に更新。
 - **追記**: さつきの指示で push → [satsuki19980613/WWYD#3](https://github.com/satsuki19980613/WWYD/pull/3) を作成。CI 緑（カバレッジ検査を含む）を確認して main へマージ。
+
+### 2026-09-27（セッション 2 の続き・P3）
+
+- **行ったこと**: ブランチ `phase/03-db-auth` で P3 のうちローカルでできる分を実装。
+  - T-301 / T-302: `supabase/migrations/` に 9 本（型・設定表・投稿・回答と集計・インデックス・共通関数・RLS・トリガ・RPC）。
+  - T-303: `supabase/tests/` に pgTAP 7 ファイル 143 件（DB-01〜18。DB-06 は共有テストベクタから生成）。DB-19 は `scripts/dbConcurrency.mjs`。CI に db ジョブを追加。
+  - T-304: `@supabase/supabase-js` を追加。起動時の判定（ヘルスチェック → セッション → whoami）、Google ログイン（PKCE）、ログアウト、利用不可画面。
+- **見つけて直したこと**: 02 章の SQL のままだと insert_post などが anon から実行できた（DB-01 で検出）。validate_paint の判定順が TS と違った。いずれもマイグレーションで修正し、02 章に注記。
+- **確認**: pgTAP 143 件緑、同時回答 10 件で集計一致、Vitest 267 件緑（core の行カバレッジ 100%）、型検査・ビルド緑。ブラウザ（ローカルの Supabase）で、未ログイン → ログイン画面、テスト用アカウントでのログイン → 一覧（whoami の allowed）、許可リスト有効 → 利用不可 → ログアウト、`?error=` で戻る → 「ログインできませんでした」と URL の後始末、API 停止 → メンテナンス中 → 再開後に再読み込みで復帰、を確認（テスト用アカウントは削除済み）。
+- **変更したファイル**: `supabase/migrations/*`、`supabase/tests/*`、`supabase/config.toml`、`scripts/*`、`package.json`、`package-lock.json`、`.github/workflows/ci.yml`、`.env.development`、`packages/app/**`（auth・supabase・App・vite 設定）、`docs/detailed-spec/02-rls-triggers-rpc.md`、`docs/detailed-spec/10-manual-tasks.md`、`docs/plan.md`、`docs/BATON.md`
+- **残課題**: M-01〜M-03・M-05〜M-07（さつき）→ T-305 本番適用（承認後）→ 本番で Google ログイン確認 → M-09。push はまだしていない（CI の db ジョブは初回 push で確認）。

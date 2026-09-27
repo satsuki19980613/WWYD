@@ -1,4 +1,4 @@
-# バトン: P3 DB と認証の着手
+# バトン: P3 の残り（本番 DB・Google ログイン）
 
 **作成 2026-09-27 / セッション 2（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている）**
@@ -7,12 +7,28 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-1. **P2 は完了・main にマージ済み**（[satsuki19980613/WWYD#3](https://github.com/satsuki19980613/WWYD/pull/3)）。main から `phase/03-db-auth` を切る。
-2. **P3 DB と認証**（T-301〜）。01 章・02 章のマイグレーションをローカル（`npx supabase start`、ポート 5532x）で作り、pgTAP で DB-01〜19。DB-06 は `packages/core/test-vectors/paint-validation.json` を読む。
-   - 本番への適用（T-305）と Google ログイン（T-304）には、さつきの手作業 M-01〜M-03・M-05〜M-07 が要る。
-3. P3 の終わりで止まり、完了条件の確認結果を報告して承認を得る。
+P3 のうちローカルでできる分（T-301〜T-304）は完了（ブランチ `phase/03-db-auth`、未 push）。残りはさつきの手作業待ち。
 
-## 0.1 P2 で作ったもの（`packages/core`）
+1. [plan.md](plan.md) の「さつきの確認待ち」を見る。
+2. さつきが M-01〜M-03（Supabase プロジェクト・`.env`・CLI リンク）を終えていれば:
+   - **T-305** 本番 DB へ `npx supabase db push`（**実行前にさつきの承認**）。本番で DB-16（auth.users の削除）などをスモーク。
+3. M-05〜M-07（Google OAuth）が終わっていれば: 本番（または `.env.development.local` で本番につないだ開発サーバー）で Google ログイン → whoami を確認して T-304 を完了にする。続けて M-09（管理者登録）をさつきに依頼。
+4. P3 が終わったら push → PR → CI（**db ジョブは初回。ローカル Supabase を CI で起動する**）→ 承認 → マージ。
+5. さつきの判断があれば、手作業待ちの間に P4 一覧をローカルの Supabase で先行する。
+
+## 0.1 P3 で作ったもの
+
+| ファイル | 内容 |
+|---|---|
+| `supabase/migrations/20260927000001〜09_*.sql` | 型・表・インデックス・共通関数・RLS・トリガ・RPC。**関数を作るたびに `revoke all on function … from public, anon, authenticated` してから付与**（Postgres の既定で PUBLIC に実行権限が付くため） |
+| `supabase/tests/*.test.sql` | pgTAP（`npx supabase test db`）。共通ヘルパーは `helpers/setup.psql`（`\ir` で読む。`pg_temp.login(n)` でユーザー n になる） |
+| `supabase/tests/03_paint_vectors.test.sql` | 共有テストベクタから生成（`npm run gen:db-vectors`。手で編集しない） |
+| `scripts/dbConcurrency.mjs` | DB-19 の同時回答（`npm run test:db-concurrency`。ローカルの DB コンテナにつなぐ） |
+| `packages/app/src/auth/*` | 起動時の判定（純関数 `resolveAppState`）と `useAuth`（ログイン・ログアウト） |
+| `packages/app/src/supabase/client.ts` | supabase-js のクライアント（PKCE） |
+| `.env.development` | 開発時にローカルの Supabase につなぐ値（公開のデモキー） |
+
+## 0.2 P2 で作ったもの（`packages/core`）
 
 | ファイル | 内容 |
 |---|---|
