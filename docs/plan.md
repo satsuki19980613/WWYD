@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P4 一覧 — 実装完了・main へマージ済み（PR #5）、本番での確認は P5 の後**。次は P5（ブランチ `phase/05-post`） |
-| 直近で完了したこと | 一覧画面（T-401・T-402）と削除（T-403 の dev 分）。dev の試験データ（`npm run db:seed -- --branch dev`）で、カード・タブ・ストリート・並び替え・URL のクエリ・追加読み込み（46 件を重複なし）・骨組み・空状態・読み込みエラーと再試行・削除（確認ダイアログ → カスケード）・削除の失敗のトーストを確認 |
-| 次にやること | 1. P5 スポット投稿（T-501〜）<br>2. 本番での一覧・削除の確認（P4 の完了条件）は、本番に投稿ができる P5 の後に行う<br>3. さつき: N-05（CI 用の NEON_API_KEY）、M-09（管理者 UID の登録）、dev の「Sign-up with Email」をオフ |
+| 現在のフェーズ | **P5 スポット投稿 — dev で実装・確認済み、本番への配備待ち**（ブランチ `phase/05-post`。未 push）。P4 は PR #5 でマージ済み（本番確認は P5 の本番配備の後） |
+| 直近で完了したこと | Neon Function `create-post`（T-501。dev に配備）と投稿画面（T-502〜T-506）。dev で H-S1 / H-MW（PC 幅）・H-S3（スマホ幅 375px の 4 ステップ）を画面から投稿し、`get_post_detail` の値が 04 章の期待値と一致。フリック・使用済みトースト・額の範囲外・ボードを押して消す・ロックと「すべて消す」・エラー一覧を確認 |
+| 次にやること | 1. さつきの承認: `create-post` の本番（production）への配備と `.env.production` への URL 追加 → `npm run dev:prod` で本番に投稿 → P4・P5 の本番確認<br>2. `phase/05-post` の push・PR・マージ<br>3. P6 回答（T-601〜）。スマホ実機の確認（T-503・T-506）は M-08（Cloudflare Pages）の後 |
 | ブロッカー | なし |
-| さつきの確認待ち | ① P4 の本番確認を P5 の後に回してよいか ② N-05・M-09 の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
+| さつきの確認待ち | ① `create-post` の本番への配備（許可するオリジンは当面 `http://localhost:5173`。Cloudflare Pages の URL は M-08 の後に足す） ② N-05・M-09 の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） ③ M-08（Cloudflare Pages。スマホ実機の確認に必要） |
 
 ---
 
@@ -115,12 +115,12 @@
 
 | ID | 内容 | 依存 | 完了条件 | 状態 | 担当 | 詳細仕様 |
 |---|---|---|---|---|---|---|
-| T-501 | Edge Function `create-post`（認証・検証・再生・照合・補完・保存） | T-203, T-204, T-206, T-103, T-302 | EF-01〜05 緑 | 未着手 | | 03 §3, §5 |
-| T-502 | 基本設定・プレイヤーとハンド（ロック含む） | T-104, T-201 | 06 §3.3–3.4 のバリデーションを表示確認 | 未着手 | | 06 §3.3–3.4 |
-| T-503 | カードキーボード（フリック・1→0・使用済み・自動スクロール） | T-502 | 06 §3.5 の全入力を単体テスト＋スマホ実機 | 未着手 | | 06 §3.5 |
-| T-504 | アクション入力・ボード・カードピッカー・1つ戻す・すべて消す・終了表示 | T-202, T-502 | H-S1 / H-MW / H-S3 / RUN-01 を入力できる | 未着手 | | 06 §3.6 |
-| T-505 | スポット選択・タイトル・投稿時のバリデーション・送信 | T-204, T-501, T-504 | 投稿 → 一覧の「自分の投稿」に出る。エラー一覧の表示確認 | 未着手 | | 06 §3.7–3.8 |
-| T-506 | スマホの 4 ステップ構成 | T-505 | スマホ実機で投稿まで | 未着手 | | 06 §3.1 |
+| T-501 | Edge Function `create-post`（認証・検証・再生・照合・補完・保存） | T-203, T-204, T-206, T-103, T-302 | EF-01〜05 緑 | 完了（`packages/functions/src/createPost`。依存 pg・@neon/functions を追加。dev に配備し EF-05 を確認。本番配備は承認待ち） | | 03 §3, §5 |
+| T-502 | 基本設定・プレイヤーとハンド（ロック含む） | T-104, T-201 | 06 §3.3–3.4 のバリデーションを表示確認 | 完了 | | 06 §3.3–3.4 |
+| T-503 | カードキーボード（フリック・1→0・使用済み・自動スクロール） | T-502 | 06 §3.5 の全入力を単体テスト＋スマホ実機 | 進行中（単体テスト 34 件・スマホ幅のエミュレーションで確認。実機は M-08 の後） | | 06 §3.5 |
+| T-504 | アクション入力・ボード・カードピッカー・1つ戻す・すべて消す・終了表示 | T-202, T-502 | H-S1 / H-MW / H-S3 / RUN-01 を入力できる | 完了（H-S1 / H-MW / H-S3 を画面から入力。ランアウトで 5 枚を続けて求めることは draft.test.ts で確認） | | 06 §3.6 |
+| T-505 | スポット選択・タイトル・投稿時のバリデーション・送信 | T-204, T-501, T-504 | 投稿 → 一覧の「自分の投稿」に出る。エラー一覧の表示確認 | 完了（dev で投稿 → 「自分の投稿」タブ。本番は配備の後） | | 06 §3.7–3.8 |
+| T-506 | スマホの 4 ステップ構成 | T-505 | スマホ実機で投稿まで | 進行中（スマホ幅 375px で H-S3 を投稿。実機は M-08 の後） | | 06 §3.1 |
 | M-08 | Cloudflare Pages のプロジェクト作成 | T-102, T-106 | プレビュー URL が発行される | 未着手 | さつき | 10 M-08 |
 
 ### P6 回答
@@ -227,6 +227,13 @@
 | 2026-09-28 | 一覧のストリートと並び替えは択一のチップ（`aria-pressed`、選択中は黄）。切り替えは URL のクエリを履歴を増やさず置き換える（`?street=pf` 等、値は DB と同じ）。カードの「回答する」は黄の面取り、「結果を見る」「回答を見る」はシアンの副次ボタン、「削除」は赤の枠線（06 章 §8） | 06 章 §2.1 に部品の指定が無く、モックもチップだったため。ネイティブの select は使わない | Claude |
 | 2026-09-28 | 席名（Hero BTN vs Villain BB）はポジション色（`--bu` 等）で表示する | ポジション色は席の識別用のトークン（wwyd-ui-concept） | Claude |
 | 2026-09-28 | 投稿の削除は Data API の `delete ... select id` で行い、消えた行が 1 件でなければ失敗とする | RLS で弾かれた削除はエラーにならず 0 件になるため | Claude |
+| 2026-09-28 | Neon Function の依存に pg・@types/pg・@neon/functions を追加 | Neon の公式手順が Functions では pg（プール）を推奨し @neondatabase/serverless を使わないよう書いているため | さつき |
+| 2026-09-28 | create-post の構成: HTTP の振る舞いは `createPostHandler`（JWT の検証と DB を引数で受け取る純粋な部分）で単体テストし、入口 `index.ts` は pg のプールと jose だけを持つ。関数名は `createpost`（Neon の slug は英小文字と数字だけ）。許可するオリジンは環境変数 `ALLOWED_ORIGINS`（カンマ区切り、配備時の --env） | 03 章 §3 の仕様を Neon Functions（12 章）で実装するため。配備時の esbuild は createRequire のバナーを付けるので pg の require も動く（手元で同じ設定で確認） | Claude |
+| 2026-09-28 | アプリは create-post の URL を `VITE_NEON_CREATE_POST_URL` で受け取る（公開の住所。dev の分は `.env.development` に記録） | Data API・Auth の URL と同じ扱い（12 章 §7.1） | Claude |
+| 2026-09-28 | H-S1 / H-MW / H-S3 の入力例は `packages/core/src/post/postFixtures.ts`（テスト専用）に置き、core・Function・投稿画面のテストで共有する | 同じ見本を 3 か所で使うため | Claude |
+| 2026-09-28 | 投稿画面の送信前の検査は、06 章 §3.8 の一覧の後に core の validateInput と verifyPost を通す（03 章 §4）。サーバーと同じ判定なので、通れば create-post で拒否されない | 不変条件 7 | Claude |
+| 2026-09-28 | 「T4ハンドヒストリー画像を読み込む」ボタンは P9（OCR）で置く。それまでは投稿画面に出さない | 押しても何もできないボタンを置かないため | Claude |
+| 2026-09-28 | カードキーボードはパソコンのキーでも打てる（2〜9・A K Q J T・1→0・s h d c・Backspace・Delete でクリア） | PC でも同じキーボードを出すため、手で打てると速い。仕様の規則（06 章 §3.5）はそのまま | Claude |
 | 2026-09-28 | 開発用の試験データを `db/seed/dev.sql`（`npm run db:seed -- --branch dev`）で入れる。dev 以外のブランチには実行できない。ハンドは H-S1、派生メタは core の spotView で計算した値 | create-post（P5）ができるまで投稿を作る手段が無く、一覧以降の画面を確かめるため | Claude |
 
 ---
@@ -335,3 +342,13 @@
 - **変更したファイル**: `packages/app/src/list/*`（新規）、`packages/app/src/screens/ListScreen.tsx`（新規）、`packages/app/src/App.tsx`、`packages/app/src/styles/screens.css`、`db/seed/dev.sql`（新規）、`scripts/db.mjs`、`package.json`、`CLAUDE.md`、`docs/plan.md`
 - **残課題**: 本番での一覧・削除の確認（本番に投稿が無いので P5 の後）、管理者の削除の画面確認（M-09 の後）、push・PR（さつきの承認待ち）。
 - **追記（2026-09-28）**: さつきの指示で `phase/04-list` を push → [satsuki19980613/WWYD#5](https://github.com/satsuki19980613/WWYD/pull/5) を作成。CI（check・db）緑を確認して main へマージ。db ジョブは NEON_API_KEY（N-05）が未設定のため DB テストを実行していない。
+
+### 2026-09-28（セッション 3・P5）
+
+- **行ったこと**: ブランチ `phase/05-post` で P5 を実装。
+  - T-501: `packages/functions/src/createPost`（`handler.ts` = CORS・認証・検証・エラーの写し方、`payload.ts` = insert_post の引数、`index.ts` = pg と jose の入口）。依存 pg・@types/pg・@neon/functions（さつき承認）。単体テスト 19 件。dev に配備（さつき承認）し、ブラウザのログイン中のセッションで未認証 401・改ざん 422・投稿 201 → get_post_detail / list_posts で読める（EF-05）を確認。
+  - T-502〜T-506: `packages/app/src/post/`（`cardInput.ts` カードキーボードの規則、`draft.ts` 下書き・進行・ログ・送信前の検査、`draftStore.ts` メモリの下書きと離脱確認、`sendPost.ts`、`errorMessages.ts`、各セクションの部品）と `screens/NewPostScreen.tsx`、`styles/post.css`、`components/PlayingCard.tsx`。単体テスト 74 件。
+- **確認**: dev で H-S1・H-MW（PC 幅）、H-S3（スマホ幅 375px の 4 ステップ）を画面から投稿し、get_post_detail の値（派生メタ・アンティ・レーキ・マック補完）が 04 章と一致。ロックと「すべて消す」、Villain の複数候補の選択と 1 席の自動選択、エラー一覧、使用済みのトースト、額の範囲外のトースト、フリック（上 K・右 ♦・下 ♣・タップ A）、ボードを押してそのストリート以降を消す（ピッカーが自動で開く）を確認。Vitest 388 件、core の行カバレッジ 99.8%、型検査・ビルド緑。
+- **直したこと**: 合成イベントで setPointerCapture が例外を出してフリックが止まったので握りつぶすようにした。
+- **変更したファイル**: `packages/functions/**`、`packages/core/src/post/postFixtures.ts`（新規）・`post.test.ts`、`packages/app/src/post/**`（新規）、`packages/app/src/screens/NewPostScreen.tsx`（新規）、`packages/app/src/components/{PlayingCard,ChipGroup}.tsx`・`posColor.ts`（新規）、`Select.tsx`、`ListScreen.tsx`、`App.tsx`、`main.tsx`、`styles/post.css`（新規）、`backend/neon.ts`、`vite-env.d.ts`、`.env.development`、`.env.example`、`package.json`、`package-lock.json`、`vitest.config.ts`、`docs/plan.md`、`docs/BATON.md`
+- **残課題**: create-post の本番配備（承認待ち）と `.env.production` の URL、本番での P4・P5 の確認、スマホ実機（M-08 の後）、CSP の `_headers`（本番の関数 URL が決まってから）、dev に試験投稿が 4 件（題名「試験」。`npm run db:seed -- --branch dev` で消える）。

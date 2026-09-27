@@ -116,6 +116,22 @@ describe('ハンドの進行（06 章 §3.6）', () => {
     if (ph.kind === 'act') expect(ph.state.street).toBe('flop');
   });
 
+  it('RUN: プリフロップのオールインとコールの後はボード 5 枚を続けて求め、揃うとショーダウン', () => {
+    let d = emptyDraft();
+    for (const pos of ['UTG', 'HJ', 'CO'] as const) d = addAction(d, { street: 'pf', pos, type: 'fold' });
+    d = addAction(d, { street: 'pf', pos: 'BTN', type: 'raise', to: 100000 });
+    d = addAction(d, { street: 'pf', pos: 'SB', type: 'fold' });
+    d = addAction(d, { street: 'pf', pos: 'BB', type: 'call' });
+    const setup = parseSettings(d).setup;
+    expect(phaseOf(setup, d.actions, [])).toMatchObject({ kind: 'board', need: 5 });
+    expect(phaseOf(setup, d.actions, ['Kh', '8d', '3c', '2s'])).toMatchObject({ kind: 'board', need: 5 });
+    expect(phaseOf(setup, d.actions, ['Kh', '8d', '3c', '2s', '7h'])).toMatchObject({
+      kind: 'done',
+      result: { kind: 'showdown', seats: ['BTN', 'BB'] },
+      boardCount: 5,
+    });
+  });
+
   it('H-S1 を入力し終えるとショーダウン', () => {
     const d = enter(hs1());
     const ph = phaseOf(parseSettings(d).setup, d.actions, d.board);
