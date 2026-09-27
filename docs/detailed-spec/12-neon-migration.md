@@ -71,13 +71,13 @@
 | S-6 | Google ログイン（自前のクライアント ID）でログインし、`whoami` まで動く | — |
 | S-7 | ローカルの Docker の Postgres＋pgTAP で、Neon と同じロール・`auth.uid()` を再現して DB-01〜19 が通る | Neon の開発用ブランチに対してテストを流す |
 
-## 6. 確認待ち（さつきの判断）
+## 6. 確認待ち（さつきの判断）→ 2026-09-28 すべて推奨案で決定
 
 | # | 内容 | 推奨 |
 |---|---|---|
 | Q-25 | **地域**: Neon に東京は無い。シンガポールにする（日本からの遅延は Supabase 東京より 60〜80ms ほど増える） | シンガポール |
 | Q-26 | **表示名とメールアドレスの置き場所**: Neon Auth は Google の表示名・メールを `neon_auth.user` に保存する。Supabase でも認証基盤（`auth.users`）が保持しており Q-11 で許容したが、Neon では**同じ DB の別スキーマ**になる。アプリの表・画面・Data API からは読めないようにする（`neon_auth` スキーマは Data API に公開しない・権限を与えない） | 許容する（Q-11 と同じ扱い）。プライバシーポリシーに明記 |
-| Q-27 | **新しい依存**: `@neondatabase/neon-js`（クライアント。`@supabase/supabase-js` と置き換え）、`jose`（Functions での JWT の検証）、Neon CLI（開発用。Functions の配備）。テスト用の Postgres＋pgTAP の Docker イメージ | 追加する（supabase-js と Supabase CLI は外す） |
+| Q-27 | **新しい依存**（注: 2026-09-28 時点で `@neondatabase/neon-js` は `0.7.0-beta` しか無く、`pg`・`prettier` など CLI 向けの依存も引き込む。スパイク S-6 で、安定版の `better-auth` のクライアント＋`@supabase/postgrest-js` の組み合わせ（Neon の移行ガイドの方式）と比べて選ぶ）: `@neondatabase/neon-js`（クライアント。`@supabase/supabase-js` と置き換え）、`jose`（Functions での JWT の検証）、Neon CLI（開発用。Functions の配備）。テスト用の Postgres＋pgTAP の Docker イメージ | 追加する（supabase-js と Supabase CLI は外す） |
 | Q-28 | **投稿の検証の置き場所**: Neon Functions（同じ Neon の中・シンガポール）か、Cloudflare Pages Functions（ホスティングと同じ場所。DB の接続文字列を Cloudflare に置く） | Neon Functions（秘密情報を Neon の外に出さない。03 章の方針と同じ） |
 | Q-29 | **これまでの Supabase 用の作業の扱い**: ブランチ `phase/03-db-auth` の成果（マイグレーション・pgTAP・ログイン画面）は Neon 向けに書き換えて使う。Supabase のローカル環境・設定（`supabase/config.toml`、`.env.development`）は、置き換えが済んだら削除する | 書き換えて使う |
 
