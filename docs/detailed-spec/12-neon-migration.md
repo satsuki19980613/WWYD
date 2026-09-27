@@ -1,6 +1,6 @@
 # 12 バックエンドを Supabase から Neon に移す（設計案）
 
-- 版: 案 0.1（2026-09-28）。**§6 の確認待ちに回答をもらい、§5 のスパイクで確かめてから確定稿にする。**
+- 版: **確定稿 1.0（2026-09-28）**。§6 の Q-25〜Q-29 はすべて推奨案で決定、§5 のスパイクは iPhone でのログイン（M-08 の後）を除き確認済み。
 - きっかけ: Supabase の無料プランは 1 人 2 プロジェクトまでで、さつきの枠は既存の 2 つで埋まっている（どちらも使用中）。
   代替を調べ（plan.md のセッションログ 2026-09-27〜28）、**2026-09-28 にさつきが Neon への変更を決定**した。
 - 調べた日: 2026-09-28。無料枠・提供地域・機能は変わることがあるので、確定前にもう一度確かめる。
@@ -90,7 +90,7 @@
 | クライアント | 公式 SDK（`@neondatabase/neon-js` 0.7.0-beta / `@neondatabase/auth` 0.5.0-beta）は Next.js を必須の依存に持ち、Vite の workspace ではインストールに失敗した。SDK が内部で行う手順（`POST /sign-in/social` → 戻り先 URL の `neon_auth_session_verifier` → `GET /get-session?neon_auth_session_verifier=…` → `GET /token`）を `packages/app/src/backend/neon.ts` で直接行う。Data API は `@supabase/postgrest-js`（安定版・依存なし）に JWT を付けて使う |
 | S-1・S-6（パソコン、完了） | さつきが Chrome（http://localhost:5173）で Google ログイン（dev ブランチ・Neon の共有認証）→ whoami（Data API 経由。`current_uid()` が値を返し allowed = true）→ 一覧まで到達。再読み込み後もログインが保たれた。**注意: verifier は一度しか使えず、React の開発モードは起動処理を 2 回実行するため、2 回目の失敗で未ログインになっていた → 同じ verifier の結果を共有するよう修正** |
 | S-6（iPhone） | 未確認。Cloudflare Pages に置いた後（M-08）に確かめる |
-| S-4 | 未着手（承認済み。次に行う） |
+| S-4（完了） | `packages/functions` から `neonctl functions deploy --src <入口>` で配備（esbuild が `../../core/src` を取り込む）。Node.js 24 で `packages/core` の投稿検証が手元と同じ結果。`NEON_AUTH_JWKS_URL`・`NEON_AUTH_BASE_URL`・`DATABASE_URL` が自動で入る。`jose` の `jwtVerify`（issuer = Auth URL のオリジン）で、さつきのログインの JWT を検証できた（role = authenticated）。偽のトークンは拒否。**ブラウザから呼ぶには CORS（OPTIONS と応答の Access-Control-Allow-Origin。許可するオリジンは一覧で限定）が必要。配備し直した直後の約 1 分は新旧の版が混ざって応答する**。試作の関数は削除済み。DB への接続（`insert_post` の呼び出し）には Postgres のドライバが要る（T-501 で依存の追加をさつきに確認） |
 
 ## 6. 確認待ち（さつきの判断）→ 2026-09-28 すべて推奨案で決定
 

@@ -146,3 +146,13 @@ Claude がマイグレーションの適用と Functions の配備に使う。�
 - 承認済みの JavaScript 生成元に、アプリの URL（`http://localhost:5173` と本番の URL）と Neon Auth の URL を入れる。
 - Neon のコンソール「Settings → Auth → OAuth providers → Add OAuth provider」に、クライアント ID とシークレットを入れる。
 - 同じ画面の「trusted domains」に、アプリの URL（`http://localhost:5173` と本番の URL）を入れる。
+
+## N-05 CI 用の Neon の API キー（GitHub の Secrets）
+
+CI（GitHub Actions）で DB テストを動かすために、Neon の API キーを GitHub に預ける。キーは秘密情報なので、Claude には渡さず、さつきが直接 GitHub に入れる。
+
+1. Neon のコンソールで、組織（Organization）の設定 →「**API keys**」→「**Create new API key**」。種類を選べる場合は **Project-scoped（プロジェクト `wwyd` だけ）** を選ぶ。名前は `wwyd-ci`。
+2. 表示されたキーをコピーする（一度しか表示されない）。
+3. GitHub のリポジトリ `satsuki19980613/WWYD` →「**Settings**」→「**Secrets and variables**」→「**Actions**」→「**New repository secret**」。
+4. Name に `NEON_API_KEY`、Secret にコピーしたキーを貼って「Add secret」。
+5. 終わったら Claude に「入れた」とだけ伝える（キーは伝えない）。

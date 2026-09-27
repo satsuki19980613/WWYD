@@ -2,7 +2,7 @@
 
 このファイルは、このリポジトリで作業するすべてのセッションが**最初に読む**文書である。
 
-> **2026-09-28: バックエンドを Supabase から Neon に移行中**（詳細仕様 [12 章](docs/detailed-spec/12-neon-migration.md)）。§3・§5・§10 の Supabase 固有の記述は、12 章が確定するまで古い情報として扱う。
+> **2026-09-28: バックエンドを Supabase から Neon に変更した**（詳細仕様 [12 章](docs/detailed-spec/12-neon-migration.md)）。01〜03・08・10 章に残る Supabase 固有の記述より 12 章を優先する。
 読んだら次に [docs/plan.md](docs/plan.md) の「現在の状況」を読み、そこから作業を再開する。
 
 ---
@@ -47,11 +47,11 @@
 
 | 区分 | 内容 | 状態 |
 |---|---|---|
-| バックエンド | **Neon**（Postgres、Managed Better Auth の Google ログイン、Data API、RLS、トリガ）。Supabase から変更 | **変更決定（2026-09-28）**。細部は詳細仕様 12 章の確認待ち Q-25〜Q-29 とスパイクの後に確定 |
-| サーバー側のポーカーロジック | Neon Functions（Node.js / TypeScript）で `packages/core` を共有する案（旧: Supabase Edge Functions） | **提案・未確定**（詳細仕様 12 章 Q-28・S-4） |
-| フロントエンド | React 18 + Vite + TypeScript（ICMCLEC と同じ） | **確定** |
+| バックエンド | **Neon**（プロジェクト `patient-leaf-06853495`、シンガポール。Postgres 18、Managed Better Auth の Google ログイン、Data API（PostgREST 互換）、RLS、トリガ）。ブランチ: `production`（本番）・`dev`（開発）・`test-base`（DB テストの元。空のまま保つ） | **確定**（2026-09-28。詳細仕様 12 章） |
+| サーバー側のポーカーロジック | Neon Functions（Node.js 24 / TypeScript、`packages/functions`）。`packages/core` を相対 import で共有し、esbuild でまとめて配備。JWT は `jose` で Neon Auth の JWKS に対して検証 | **確定**（詳細仕様 12 章 S-4） |
+| フロントエンド | React 18 + Vite + TypeScript（ICMCLEC と同じ）。バックエンドとの通信は `packages/app/src/backend/neon.ts`（Neon Auth の REST を直接呼び、Data API は `@supabase/postgrest-js`） | **確定** |
 | モノレポ | npm workspaces（`packages/*`） | **確定** |
-| テスト | Vitest（TS）、pgTAP（Neon 移行後はローカルの Postgres で実行。12 章 S-7）、Playwright（E2E） | **確定**（pgTAP の実行環境は移行中） |
+| テスト | Vitest（TS）、pgTAP（Neon の一時ブランチで実行。`npm run test:db`）、Playwright（E2E） | **確定** |
 | 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ） | **確定**（無料枠は 2026-09-27 に再確認済み。詳細仕様 08 章） |
 | OCR | 流用元 `tenfour_watcher` を TypeScript に移植、本文認識は tesseract.js を自サイトから配信 | **確定**（詳細仕様 07 章） |
 | Node.js | 22（`.node-version`） | **確定** |
@@ -78,10 +78,11 @@ WWYD/
 │   ├── core/                     # ポーカーロジック・paint コーデック（純 TS・依存ゼロ・単一実装）
 │   ├── app/                      # フロントエンド（React + Vite）
 │   └── ocr/                      # 端末内 OCR（P9 で作成）
-├── supabase/                     # config.toml（ローカルのポートは 5532x 系）
-│   ├── migrations/               # DDL・RLS・トリガ・RPC（SQL）
-│   ├── functions/                # Edge Functions（投稿の再生と検証）
-│   └── tests/                    # pgTAP テスト
+├── packages/functions/           # Neon Functions（投稿の再生と検証 create-post。P5 で作成）
+├── db/
+│   ├── migrations/               # DDL・RLS・トリガ・RPC（SQL。scripts/db.mjs で適用）
+│   └── tests/                    # pgTAP テスト（03_paint_vectors は生成物）
+├── scripts/                      # db.mjs（マイグレーション・DB テスト）、genPaintVectorsSql.mjs
 ├── .env.example                  # 環境変数の雛形（実値は .env に。コミットしない）
 └── .gitignore
 ```
@@ -90,34 +91,30 @@ WWYD/
 
 ## 5. よく使うコマンド
 
-P1 で確定したもの（2026-09-27）。「予定」は該当フェーズで作る。
-
 | 目的 | コマンド |
 |---|---|
-| セットアップ | `npm install` → `.env.example` を `.env` に複製して値を入れる（さつき） |
-| 開発サーバー | `npm run dev`（`packages/app` の Vite、http://localhost:5173）。部品一覧は `/_dev/ui`、全画面の状態は `?devstate=maintenance` 等（開発時のみ） |
-| 単体テスト | `npm test`（Vitest。ルートから全パッケージ） |
+| セットアップ | `npm install`。Neon CLI のログイン `npx neonctl auth`（さつき。ブラウザで許可） |
+| 開発サーバー | `npm run dev`（http://localhost:5173。`.env.development` で Neon の `dev` ブランチにつなぐ）。部品一覧は `/_dev/ui`、全画面の状態は `?devstate=maintenance` 等（開発時のみ） |
+| 単体テスト | `npm test`（Vitest）。カバレッジは `npm run test:coverage`（core の行 90% 以上） |
 | 型検査 | `npm run typecheck` |
 | ビルド | `npm run build`（出力 `packages/app/dist`） |
 | E2E | `npm run e2e`（Playwright。予定） |
-| ローカル DB 起動 | `npx supabase start`（Docker Desktop を先に起動。ポートは 5532x 系。API は http://127.0.0.1:55321） |
-| ローカル DB 停止 | `npx supabase stop` |
-| Edge Function をローカルで動かす | `npx supabase functions serve`（`supabase start` 済みであること） |
-| マイグレーション作成 | `npx supabase migration new <名前>` |
-| ローカル DB に適用 | `npx supabase db reset` |
-| DB テスト | `npx supabase test db` |
-| 本番 DB に適用 | `npx supabase db push`（**さつきの確認が必要**） |
-| Edge Function の配備 | `npx supabase functions deploy <名前>`（**さつきの確認が必要**） |
+| DB テスト | `npm run test:db`（空の `test-base` から一時ブランチを作り、全マイグレーション → pgTAP → 同時回答 → 削除。1 時間で自動削除もされる。Docker が必要） |
+| 共有テストベクタの pgTAP を生成 | `npm run gen:db-vectors`（CI は `check:db-vectors` で最新かを検査） |
+| マイグレーションを dev に適用 | `npm run db:migrate -- --branch dev` |
+| マイグレーションを本番に適用 | `npm run db:migrate -- --branch production`（**さつきの確認が必要**） |
+| Function の配備 | `npx neonctl functions deploy <slug> --project-id patient-leaf-06853495 --branch <ブランチ> --src <入口>`（本番は**さつきの確認が必要**）。配備直後の 1 分ほどは新旧の版が混ざって応答する |
 
+- マイグレーションの新規作成は `db/migrations/` に `YYYYMMDDHHMMSS_<目的>.sql` を置く。適用済みは `migrations.applied` 表に記録される。
 - Claude のシェル（Git Bash）で `docker` が見つからないときは `export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"`。
-- Edge Function は関数ごとに `deno.json`（`{ "nodeModulesDir": "none" }`）を置く（詳細仕様 03 章 §2.1 のスパイク結果）。
+- DB の接続文字列（パスワードを含む）は `npx neonctl connection-string <ブランチ> --role-name neondb_owner` でその場で取り、画面・ログ・ファイルに出さない。
 
 ---
 
 ## 6. コーディング規約
 
 - TypeScript は `strict: true`。`any` を使わない（やむを得ない場合は理由をコメントに書く）。
-- **ポーカーロジックと paint コーデックは `packages/core` に 1 つだけ置く**。純粋関数・依存ゼロ・DOM や Supabase を触らない。フロントと Edge Function の両方がこれを import する。
+- **ポーカーロジックと paint コーデックは `packages/core` に 1 つだけ置く**。純粋関数・依存ゼロ・DOM や DB を触らない。フロントと Neon Function の両方がこれを import する。
 - 数値: チップ額は bb 単位。浮動小数の誤差を持ち込まないよう、比較と丸めは `packages/core` の共通関数だけで行う（方式は詳細仕様 04 章）。
 - ミックスは 0〜20 の整数（5% 単位）で持つ。UI での % 表示は表示時に変換する。
 - SQL: スネークケース、1 マイグレーション 1 目的。既に適用済みのマイグレーションは書き換えない（新しいマイグレーションで直す）。
@@ -132,8 +129,8 @@ P1 で確定したもの（2026-09-27）。「予定」は該当フェーズで�
 
 1. **画面上に説明文を出さない。** 説明・操作方法・記号の意味はすべてヘッダーの ⓘ（インフォメーションモーダル）に集約する。例外は入力欄のプレースホルダーとエラー表示のみ。操作を説明するトーストも出さない。
 2. **アプリ内のポーカー用語は専門用語で統一する**（Hero / Villain / to call / % pot / ランアウト / マック など。仕様書 2 章）。
-3. **サーバー代ゼロ。** Supabase・ホスティングとも無料枠の範囲で設計する。有料プランが必要になる選択はしない（必要ならさつきに確認）。
-4. **回答の検証、集計、閲覧制限、カスケード削除、投稿上限はサーバー側で強制する。** クライアントから来た値（派生メタ、answer_count、集計値など）を信用しない。RLS・トリガ・RPC・Edge Function で担保する。
+3. **サーバー代ゼロ。** Neon・ホスティングとも無料枠の範囲で設計する。有料プランが必要になる選択はしない（必要ならさつきに確認）。
+4. **回答の検証、集計、閲覧制限、カスケード削除、投稿上限はサーバー側で強制する。** クライアントから来た値（派生メタ、answer_count、集計値など）を信用しない。RLS・トリガ・RPC・Neon Function で担保する。
 5. **画像を保存しない、外部に送信しない。** OCR は端末内（ブラウザ内）で完結させ、読み取り後ただちに破棄する。
 6. **プレイヤー名、Google の表示名とメールアドレスを保存しない。** DB に置くのは UID・ハンドヒストリー（ポジションのみ）・回答だけ。他ユーザーに UID 以外の識別情報を見せない。
 7. **ポーカーロジック（仕様書 6 章）は単一の実装を正とし、クライアントとサーバーで食い違わせない。** SQL 等で二重実装しない。
@@ -164,10 +161,10 @@ P1 で確定したもの（2026-09-27）。「予定」は該当フェーズで�
 
 ## 10. 秘密情報の扱い
 
-- Supabase の URL・anon キー・service_role キー、Google OAuth のクライアントシークレット等は **`.env`（ローカル）** と各サービスの環境変数設定で管理し、**コミットしない**。
+- DB の接続文字列（パスワードを含む）、Neon の API キー、Google OAuth のクライアントシークレット等は、各サービスの設定と CI の Secrets で管理し、**コミットしない**。Neon Auth の URL と Data API の URL は公開の住所なので `.env.development` に置いてよい（12 章 §7.1）。
 - `.env.example` にキー名と説明だけを書いてコミットする。
 - `.claude/settings.json` で Claude Code から `.env` / `.env.local` / `.env.*.local` の読み書きを禁止している。値が必要な作業はさつきに依頼する。
-- **service_role キーはフロントエンドに絶対に含めない**（Edge Function の環境変数としてのみ使う）。
+- **DB の接続文字列（DB の所有者）はフロントエンドに絶対に含めない**（Neon Functions には Neon が `DATABASE_URL` として自動で入れる）。
 - 誤ってコミットした場合は、ただちにさつきに報告し、キーを再発行する。
 
 ---
@@ -189,9 +186,9 @@ P1 で確定したもの（2026-09-27）。「予定」は該当フェーズで�
 
 次は**実行前に必ず**さつきに確認する。承認は操作ごと・その場限り。
 
-- 破壊的な操作: ファイル・ブランチの削除、`git reset --hard`、force push、本番 DB へのマイグレーション適用、本番データの削除、`supabase db reset` を本番に向けること。
-- 外部への公開: `git push`、Edge Function の配備、ホスティングへのデプロイ。
-- **依存ライブラリの追加**（npm パッケージ、Deno モジュール、Supabase 拡張）。
+- 破壊的な操作: ファイル・ブランチ（git・Neon とも。ただし DB テストの一時ブランチは除く）の削除、`git reset --hard`、force push、本番（`production` ブランチ）へのマイグレーション適用、本番データの削除、Neon の本番の設定変更。
+- 外部への公開: `git push`、Neon Functions の配備（dev への試験配備も含め、その都度）、ホスティングへのデプロイ。
+- **依存ライブラリの追加**（npm パッケージ、Postgres の拡張）。
 - **仕様の解釈が分かれる判断**（plan.md の「確認待ち」に選択肢と推奨を添えて記録する）。
 - **有料プランが必要になる選択**、無料枠を超えるおそれのある設計。
 - `docs/source/` や Skill の変更が必要になったとき。

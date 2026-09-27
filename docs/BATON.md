@@ -1,4 +1,4 @@
-# バトン: P3 — バックエンドを Neon に移行
+# バトン: P3 の仕上げ（Neon の本番適用と本番ログイン）
 
 **作成 2026-09-27 / セッション 2（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている）**
@@ -7,15 +7,24 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**2026-09-28、バックエンドを Supabase から Neon に移すことが決まった**（Supabase の無料枠が埋まっていたため）。設計案は [12 章](detailed-spec/12-neon-migration.md)。
+**バックエンドは Neon に移行済み**（詳細仕様 [12 章](detailed-spec/12-neon-migration.md) が確定稿。CLAUDE.md §3・§5 も Neon に更新済み）。ブランチ `phase/03-db-auth`（未 push）。
 
-1. [plan.md](plan.md) の「さつきの確認待ち」を見る。12 章 §6 の **Q-25〜Q-29** に回答があれば決定ログと 12 章・11 章に記録する。
-2. さつきが **N-01**（Neon のプロジェクト作成）を終えていれば、N-02（Auth・Data API の有効化）を画面に沿って案内し、N-03（CLI ログイン）を依頼する。
-3. **T-306 スパイク**（12 章 §5 の S-1〜S-7）を開発用ブランチで行い、結果で 12 章を確定稿にする。新しい依存（neon-js・jose・Neon CLI）は Q-27 の承認が出てから入れる。
-4. その後 T-307〜T-310（マイグレーション・pgTAP・ログインを Neon 向けに書き換え、Supabase の残骸を外す）。
-5. ブランチ `phase/03-db-auth`（未 push）で続ける。Supabase 向けの成果（下の 0.1）は書き換えて使う。
+1. [plan.md](plan.md) の「さつきの確認待ち」を見る。
+2. さつきの承認があれば **T-311** 本番へのマイグレーション適用: `npm run db:migrate -- --branch production`。
+3. さつきが N-04（本番の Google OAuth を Neon Auth に設定）を終えていれば、本番（`.env.development.local` で production の URL につないだ開発サーバー等）で Google ログイン → whoami を確かめて P3 完了。
+4. N-05（CI 用 NEON_API_KEY）が入っていれば、push → PR → CI（db ジョブが Neon の一時ブランチで動く）→ マージ。
+5. iPhone でのログイン確認は Cloudflare Pages（M-08）の後。
 
-## 0.1 P3 で作ったもの（Supabase 向け。Neon 向けに書き換える）
+## 0.05 Neon の要点（詳しくは 12 章 §5.1・§7.1）
+
+- プロジェクト `patient-leaf-06853495`（シンガポール）。ブランチ `production` / `dev` / `test-base`（DB テストの元。空のまま。マイグレーションを入れない）。
+- 利用者の ID は **`public.current_uid()`**（`request.jwt.claims` の `sub`）。Neon の `auth.uid()` は使わない（authenticated から使えず、SECURITY DEFINER の中で値を返さない）。
+- 関数を作るたびに `revoke all on function … from public, anonymous, authenticated` してから必要な付与だけ。一括の revoke の後は `current_uid` などを付け直す。
+- クライアントは `packages/app/src/backend/neon.ts`（Neon Auth の REST を直接。公式 SDK は Next.js 必須で使えない）。OAuth の戻りの `neon_auth_session_verifier` は一度しか使えない。
+- Functions: `packages/functions`。配備は `npx neonctl functions deploy`（承認が要る）。CORS が必要。配備直後の約 1 分は新旧が混ざる。
+- メール＋パスワードの登録は production・dev とも無効。
+
+## 0.1 P3 で作ったもの（Supabase 向けに作り、Neon 向けに書き換え済み。以下の表の Supabase 固有の記述は古い）
 
 | ファイル | 内容 |
 |---|---|
