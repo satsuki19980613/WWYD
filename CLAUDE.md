@@ -46,11 +46,11 @@
 | 区分 | 内容 | 状態 |
 |---|---|---|
 | バックエンド | **Supabase**（Auth の Google プロバイダ、Postgres、RLS、トリガ） | **確定** |
-| サーバー側のポーカーロジック | Supabase Edge Functions（Deno / TypeScript）で共有ロジックを実行する案 | **確定**（詳細仕様 03 章） |
+| サーバー側のポーカーロジック | Supabase Edge Functions（Deno / TypeScript）。`packages/core` を相対 import で共有 | **確定**（詳細仕様 03 章。T-103 で検証） |
 | フロントエンド | React 18 + Vite + TypeScript（ICMCLEC と同じ） | **確定** |
 | モノレポ | npm workspaces（`packages/*`） | **確定** |
 | テスト | Vitest（TS）、pgTAP（`supabase test db`）、Playwright（E2E） | **確定** |
-| 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ） | **確定**（無料枠は基盤フェーズで再確認。詳細仕様 08 章） |
+| 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ） | **確定**（無料枠は 2026-09-27 に再確認済み。詳細仕様 08 章） |
 | OCR | 流用元 `tenfour_watcher` を TypeScript に移植、本文認識は tesseract.js を自サイトから配信 | **確定**（詳細仕様 07 章） |
 | Node.js | 22（`.node-version`） | **確定** |
 
@@ -72,11 +72,11 @@ WWYD/
 │   ├── source/                   # 正となる資料（編集禁止）
 │   ├── detailed-spec/            # 詳細仕様
 │   └── plan.md                   # 実装計画・進捗・決定ログ・セッションログ
-├── packages/                     # （STEP 4 で作成。構成は提案・未確定）
+├── packages/
 │   ├── core/                     # ポーカーロジック・paint コーデック（純 TS・依存ゼロ・単一実装）
 │   ├── app/                      # フロントエンド（React + Vite）
-│   └── ocr/                      # 端末内 OCR
-├── supabase/                     # （STEP 4 で作成）
+│   └── ocr/                      # 端末内 OCR（P9 で作成）
+├── supabase/                     # config.toml（ローカルのポートは 5532x 系）
 │   ├── migrations/               # DDL・RLS・トリガ・RPC（SQL）
 │   ├── functions/                # Edge Functions（投稿の再生と検証）
 │   └── tests/                    # pgTAP テスト
@@ -88,22 +88,27 @@ WWYD/
 
 ## 5. よく使うコマンド
 
-> STEP 4 の「基盤」フェーズで実装する。確定したらこの節を実際のコマンドに書き換える。
+P1 で確定したもの（2026-09-27）。「予定」は該当フェーズで作る。
 
-| 目的 | コマンド（予定） |
+| 目的 | コマンド |
 |---|---|
 | セットアップ | `npm install` → `.env.example` を `.env` に複製して値を入れる（さつき） |
-| 開発サーバー | `npm run dev`（`packages/app` の Vite） |
-| 単体テスト | `npm test`（Vitest。ポーカーロジックのテスト表を含む） |
+| 開発サーバー | `npm run dev`（`packages/app` の Vite、http://localhost:5173）。部品一覧は `/_dev/ui`、全画面の状態は `?devstate=maintenance` 等（開発時のみ） |
+| 単体テスト | `npm test`（Vitest。ルートから全パッケージ） |
 | 型検査 | `npm run typecheck` |
-| ビルド | `npm run build` |
-| E2E | `npm run e2e`（Playwright） |
-| ローカル DB 起動 | `npx supabase start`（Docker が必要） |
+| ビルド | `npm run build`（出力 `packages/app/dist`） |
+| E2E | `npm run e2e`（Playwright。予定） |
+| ローカル DB 起動 | `npx supabase start`（Docker Desktop を先に起動。ポートは 5532x 系。API は http://127.0.0.1:55321） |
+| ローカル DB 停止 | `npx supabase stop` |
+| Edge Function をローカルで動かす | `npx supabase functions serve`（`supabase start` 済みであること） |
 | マイグレーション作成 | `npx supabase migration new <名前>` |
 | ローカル DB に適用 | `npx supabase db reset` |
 | DB テスト | `npx supabase test db` |
 | 本番 DB に適用 | `npx supabase db push`（**さつきの確認が必要**） |
 | Edge Function の配備 | `npx supabase functions deploy <名前>`（**さつきの確認が必要**） |
+
+- Claude のシェル（Git Bash）で `docker` が見つからないときは `export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"`。
+- Edge Function は関数ごとに `deno.json`（`{ "nodeModulesDir": "none" }`）を置く（詳細仕様 03 章 §2.1 のスパイク結果）。
 
 ---
 
