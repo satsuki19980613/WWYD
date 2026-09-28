@@ -122,7 +122,6 @@ export function NewPostScreen(): JSX.Element {
   if (!mobile) {
     return (
       <section className={`screen pf ${seat ? 'kb-open' : ''}`}>
-        <h1 className="sec-h">スポット投稿</h1>
         {ocr(true)}
         <div className="pf-grid">
           <div className="pf-col">
@@ -145,7 +144,6 @@ export function NewPostScreen(): JSX.Element {
   const last = step === STEPS.length - 1;
   return (
     <section className={`screen pf sp ${seat ? 'kb-open' : ''}`}>
-      <h1 className="sec-h">スポット投稿</h1>
       <nav className="pf-steps" aria-label="ステップ">
         {STEPS.map((name, i) => (
           <button

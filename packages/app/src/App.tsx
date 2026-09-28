@@ -33,6 +33,12 @@ function devStateFrom(search: string): AppState | null {
 
 const reload = (): void => window.location.reload();
 
+/** ヘッダーに出す画面名（06 章 §0.2）。無い画面は左を空ける */
+const SCREEN_TITLE: Partial<Record<Route['name'], string>> = {
+  list: 'スポット一覧',
+  new: 'スポット投稿',
+};
+
 export function App(): JSX.Element {
   const route = useRoute();
   const { pathname, search } = useLocation();
@@ -77,6 +83,7 @@ export function App(): JSX.Element {
   return (
     <>
       <Header
+        title={state === 'ready' ? SCREEN_TITLE[route.name] : undefined}
         showAccount={state === 'ready'}
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}
         onLogout={() => void auth.signOut()}

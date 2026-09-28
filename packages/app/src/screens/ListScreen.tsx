@@ -58,8 +58,9 @@ export function ListScreen(): JSX.Element {
 
   return (
     <section className={`screen list-screen ${mobile ? 'sp' : ''}`}>
+      {/* 画面名はヘッダーに出す。PC は投稿ボタンをタブの右に置く */}
       <div className="list-head">
-        <h1 className="sec-h">スポット一覧</h1>
+        <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
         {!mobile && (
           <Link to="/new" className="btn auto">
             ＋ スポットを投稿
@@ -67,11 +68,15 @@ export function ListScreen(): JSX.Element {
         )}
       </div>
 
-      <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
-
       <div className="list-filters">
-        <ChipGroup label="ストリート" items={STREET_ITEMS} value={query.street} onChange={(street) => setQuery({ street })} />
-        <ChipGroup label="並び替え" items={SORT_ITEMS} value={query.sort} onChange={(sort) => setQuery({ sort })} />
+        <ChipGroup
+          label="ストリート"
+          variant="segment"
+          items={STREET_ITEMS}
+          value={query.street}
+          onChange={(street) => setQuery({ street })}
+        />
+        <ChipGroup label="並び替え" variant="toggle" items={SORT_ITEMS} value={query.sort} onChange={(sort) => setQuery({ sort })} />
       </div>
 
       {list.status === 'loading' && (
