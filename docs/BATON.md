@@ -12,7 +12,8 @@
 
 1. **スマホの画像は検証済み**（Android 24 ハンドで 100%。4♦ の塊を切る処理を追加。07 章 §0・§8.3）。iPhone の画像は保留。
 2. **確認待ちは無し**（Q-P9-1・Q-P9-2 は推奨どおりで決定）。読み取り結果の確認画面（`post/OcrReview.tsx`）を追加済み。
-3. push・PR（さつきの確認後）→ マージ後に **本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復**と OCR を確認（CSP は今回初めて入る。`packages/app/public/_headers`）。
+3. **スポットはフロップ以降だけ**（2026-09-28 の仕様変更。決定ログ）。core は変更済みだが、**Neon Function `create-post` の配備し直しが未了**（dev・本番とも。さつきの確認後）。配備するまでサーバーはプリフロップのスポットも受け付ける。本番に既存のプリフロップの投稿があるかは未確認。OCR は投稿できないハンドを読み込みの時点ではじく（`ocrPostability`）。
+4. push・PR（さつきの確認後）→ マージ後に **本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復**と OCR を確認（CSP は今回初めて入る。`packages/app/public/_headers`）。
 
 ### 0.1 P9 で作ったもの
 

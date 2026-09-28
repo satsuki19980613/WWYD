@@ -112,7 +112,7 @@ OCR は `packages/ocr` の `readHandHistory(image: ImageData): Promise<OcrResult
 | `packages/ocr/src/rankTemplates.ts` | ランクのテンプレート（生成物。`npm run ocr:templates`） |
 | `packages/app/src/ocr/runOcr.ts` | ブラウザの入口（動的 import）。File → ImageBitmap → Canvas → ImageData。tesseract.js の Worker・認識エンジン・学習データはすべて自サイトの `/ocr/` から読む（`workerBlobURL: false`、`cacheMethod: 'none'`）。取り消し（AbortSignal）で Worker を止める |
 | `packages/app/src/post/ocrDraft.ts` | `OcrResult` → 確認画面の状態（`reviewFromOcr`）→ 検証と下書き（`evaluateReview`）。アクションの席とストリートは core で先頭から再生して決め、画像で読んだ席と合わない行を示す。再生できない行で止める（読めたところまで反映） |
-| `packages/app/src/post/OcrImport.tsx`・`OcrReview.tsx`・`t4Games.ts` | 「T4ハンドヒストリー画像を読み込む」→ T4 のゲーム → 読み取り → 確認画面（画像と見比べて直す）→ 反映（06 章 §3.9） |
+| `packages/app/src/post/OcrImport.tsx`・`OcrReview.tsx`・`t4Games.ts` | 「T4ハンドヒストリー画像を読み込む」→ T4 のゲーム → 読み取り → 投稿できないハンドはここではじく（`ocrPostability`。フロップが開いていない、Hero のフロップ以降のアクションに出題できるものが無い）→ 確認画面（画像と見比べて直す）→ 反映（06 章 §3.9） |
 | `scripts/copyOcrAssets.mjs` | 配信ファイルを `node_modules` から `packages/app/public/ocr/`（git 管理外）に写す。`predev`・`prebuild` で自動実行 |
 | `scripts/ocr/accuracy.mts` | 正解データでの精度の測定（`npm run ocr:accuracy`。Node 版 tesseract.js。手元専用） |
 | `packages/app/public/_headers` | CSP ほか（08 章）。`npm run preview` も同じヘッダーを付ける |
