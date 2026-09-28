@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P6 回答 — 実装完了**（ブランチ `phase/06-answer`、未 push）。残りはスマホ実機（M-08 の後）。P5 は本番に配備済み・スマホ実機のみ残り |
+| 現在のフェーズ | **P6 回答 — 実装完了**（PR #7 で main へマージ済み。次の作業ブランチは `phase/07-result`）。残りはスマホ実機（M-08 の後）。P5 は本番に配備済み・スマホ実機のみ残り |
 | 直近で完了したこと | 回答画面（リプレイ・ブラシ・ミックスバー・塗り・スポイト・元に戻す・サイズ・集計バー・送信・Hero の予想・スマホのタブ）。Playwright を導入し E2E 32 件（偽のバックエンド）。dev の実データで、回答の送信 → DB の値、再回答・自分の投稿・不正なキーの拒否、Hero の予想の保存と上書きを確認 |
-| 次にやること | 1. さつき: Q-30（重なったハンドルの書き方）の確認、`phase/06-answer` の push と PR の承認<br>2. P7 集計（T-701〜。`/s/:id/result` は今は見出しだけ。Hero の予想の保存後は `?view=host` で来る）<br>3. さつき: M-08（Cloudflare Pages。スマホ実機の確認と公開に必要）、N-05（CI 用の NEON_API_KEY）、M-09（管理者の登録）、dev の「Sign-up with Email」をオフ |
+| 次にやること | 1. さつき: Q-30（重なったハンドルの書き方）の確認<br>2. P7 集計（T-701〜。`/s/:id/result` は今は見出しだけ。Hero の予想の保存後は `?view=host` で来る）<br>3. さつき: M-08（Cloudflare Pages。スマホ実機の確認と公開に必要）、N-05（CI 用の NEON_API_KEY）、M-09（管理者の登録）、dev の「Sign-up with Email」をオフ |
 | ブロッカー | なし |
-| さつきの確認待ち | Q-30（11 章。推奨案で実装済み）、push・PR の承認、M-08・N-05・M-09 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
+| さつきの確認待ち | Q-30（11 章。推奨案で実装済み）、M-08・N-05・M-09 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
 
 ---
 
@@ -381,3 +381,4 @@
 - **直したこと**: 開発サーバーが依存の追加後に React を 2 つ読み込んで真っ白になった → 開発サーバーを起動し直した（コードの問題ではない）。
 - **変更したファイル**: `packages/core/src/poker/spot.ts`・`spot.test.ts`、`packages/app/src/answer/**`（新規）、`packages/app/src/screens/{SpotScreen,AnswerScreen}.tsx`（新規）、`packages/app/src/styles/answer.css`（新規）、`packages/app/src/{App,main}.tsx`、`packages/app/src/components/Icons.tsx`、`e2e/**`・`playwright.config.ts`（新規）、`package.json`・`package-lock.json`、`.gitignore`、`.github/workflows/ci.yml`、`CLAUDE.md`、`docs/plan.md`、`docs/BATON.md`、`docs/detailed-spec/11-open-questions.md`
 - **残課題**: Q-30 の確認、push・PR（承認待ち）、スマホ実機（M-08 の後）、P7 集計。dev に試験の回答 1 件（「試験 ドライボードでのチェックレイズ頻度」）と Hero の予想 1 件（「試験 画面からの投稿（H-S1 ターン）」）が増えた（`npm run db:seed -- --branch dev` で消える）。`npm audit` の警告 4 件（neonctl の依存。今回の追加とは無関係）。
+- **追記（2026-09-28）**: さつきの指示で `phase/06-answer` を push → [satsuki19980613/WWYD#7](https://github.com/satsuki19980613/WWYD/pull/7) を作成。CI（check・db・e2e）緑を確認して main へマージ。db ジョブは N-05 が未設定のため DB テストを実行していない。次の作業ブランチ `phase/07-result` を作成。
