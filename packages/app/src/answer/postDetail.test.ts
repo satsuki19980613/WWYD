@@ -29,7 +29,7 @@ describe('get_post_detail の読み取り', () => {
     expect(d.myAnswer).toBeNull();
   });
 
-  it('投稿者（Hero のハンド・予想・集計を含む）', () => {
+  it('投稿者（Hero のハンド・想定レンジ・集計を含む）', () => {
     const p = emptyPaint();
     p[0] = { fold: 0, check: 0, call: 10, s1: 10 };
     const d = parsePostDetail(

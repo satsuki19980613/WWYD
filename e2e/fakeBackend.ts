@@ -2,7 +2,7 @@ import type { Page, Route } from '@playwright/test';
 
 /**
  * 偽のバックエンド（Neon Auth・Data API）。ログイン済みの利用者として、アプリの起動（ヘルスチェック →
- * セッション → whoami）と、投稿の読み込み・回答・Hero の予想の保存に答える。受け取った要求は記録する。
+ * セッション → whoami）と、投稿の読み込み・回答・Hero の想定レンジの保存に答える。受け取った要求は記録する。
  */
 
 export const AUTH = 'http://auth.e2e.test';

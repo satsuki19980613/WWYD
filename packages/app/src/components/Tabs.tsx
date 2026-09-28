@@ -1,7 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
 
 /**
- * タブ（一覧の「すべて」「自分の投稿」、集計の「全体」「自分」「Hero の予想」など）。
+ * タブ（一覧の「すべて」「自分の投稿」、集計の「全体」「自分」「Hero の想定レンジ」など）。
  * 選択中は黄の下線（アクティブ）。矢印キー・Home・End で移動する（WAI-ARIA の tablist）。
  */
 export function Tabs<T extends string>(props: {

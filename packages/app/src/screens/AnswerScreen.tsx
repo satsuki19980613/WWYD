@@ -64,7 +64,7 @@ export function metaLine(d: PostDetail): string {
 const paintKey = (p: Paint): string => toHex(encodePaint(p));
 
 /**
- * 回答（レンジ入力）画面（06 章 §4。仕様書 §5.3）。`detail.viewer` は `unanswered`（回答モード）か `author`（Hero の予想モード）。
+ * 回答（レンジ入力）画面（06 章 §4。仕様書 §5.3）。`detail.viewer` は `unanswered`（回答モード）か `author`（Hero の想定レンジモード）。
  * `onDone` は送信（保存）が済んだとき（または既に回答済みだったとき）。
  */
 export function AnswerScreen(props: { detail: PostDetail; onDone: (host: boolean) => void }): JSX.Element {
@@ -213,7 +213,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: (host: boolean
   const bar = <ComboBar keys={post.keys} names={names} ratios={paintBar(editor.paint)} />;
   const submitButton = (
     <button type="button" className="btn" disabled={busy} onClick={submit}>
-      {busy ? (host ? '保存中…' : '送信中…') : host ? '予想を保存' : '回答する'}
+      {busy ? (host ? '保存中…' : '送信中…') : host ? '想定レンジを保存' : '回答する'}
     </button>
   );
   const replayView = <ReplayView detail={d} frames={frames} c={replay} collapsibleLog={mobile} />;

@@ -398,7 +398,7 @@ test.describe('送信（06 章 §4.9）', () => {
   });
 });
 
-test.describe('Hero の予想（06 章 §4.2・§4.9）', () => {
+test.describe('Hero の想定レンジ（06 章 §4.2・§4.9）', () => {
   function authorDetail(withPrediction: boolean): Record<string, unknown> {
     const p = emptyPaint();
     p[0] = { fold: 0, check: 0, call: 10, s1: 10 };
@@ -409,7 +409,7 @@ test.describe('Hero の予想（06 章 §4.2・§4.9）', () => {
     });
   }
 
-  test('既存の予想を読み込み、確認なしで上書き保存 → 集計の「Hero の予想」へ', async ({ page }) => {
+  test('既存の想定レンジを読み込み、確認なしで上書き保存 → 集計の「Hero の想定レンジ」へ', async ({ page }) => {
     const be = await open(page, authorDetail(true));
     // Hero のハンドは表向き。Villain は「あなた」ではない
     await expect(page.getByLabel('ダイヤのA')).toBeVisible();
@@ -419,7 +419,7 @@ test.describe('Hero の予想（06 章 §4.2・§4.9）', () => {
     await expect(page.getByRole('button', { name: /^レイズサイズ/ })).toContainText('30bb');
 
     await cell(page, 'KK').click();
-    await page.getByRole('button', { name: '予想を保存' }).click();
+    await page.getByRole('button', { name: '想定レンジを保存' }).click();
     await expect(page).toHaveURL(`${RESULT}?view=host`);
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     expect(be.hostSaves).toHaveLength(1);
@@ -429,11 +429,11 @@ test.describe('Hero の予想（06 章 §4.2・§4.9）', () => {
     expect(be.hostSaves[0]).toEqual({ p_post_id: ID, p_paint: toHex(encodePaint(p)), p_size: 30 });
   });
 
-  test('予想が無ければ空・サイズは 50%', async ({ page }) => {
+  test('想定レンジが無ければ空・サイズは 50%', async ({ page }) => {
     await open(page, authorDetail(false));
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA レンジ外');
     await expect(page.getByRole('button', { name: /^レイズサイズ/ })).toContainText('17.55bb');
-    await expect(page.getByRole('button', { name: '予想を保存' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '想定レンジを保存' })).toBeVisible();
   });
 });
 

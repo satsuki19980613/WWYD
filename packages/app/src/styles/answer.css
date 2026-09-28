@@ -491,6 +491,9 @@
   background: rgba(0, 0, 0, 0.55);
 }
 .res-agg { display: flex; flex-direction: column; gap: var(--s3); }
+/* 集計のタブは中身の幅に合わせる（「Hero の想定レンジ」をスマホ幅でも 1 行に収める） */
+.res-agg .tab { flex: 1 1 auto; white-space: nowrap; padding: 10px 8px; }
+.res.sp .res-agg .tab { font-size: 13px; letter-spacing: 0; padding: 10px 4px; }
 /* 集計の表は選ぶだけ（なぞらない）ので、スマホで表の上から縦にスクロールできるようにする */
 .rgrid.result { touch-action: manipulation; }
 .rgrid.result .rcell[aria-pressed='true'] { outline: 2px solid var(--yellow); outline-offset: 1px; z-index: 1; }

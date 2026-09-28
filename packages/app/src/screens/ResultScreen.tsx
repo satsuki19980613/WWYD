@@ -76,7 +76,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
           <p className="list-empty-label">{empty}</p>
           {view === 'host' && post.isMine && (
             <Link to={routePath({ name: 'answer', id: post.id })} className="btn auto">
-              予想を入力
+              想定レンジを入力
             </Link>
           )}
         </div>
@@ -187,7 +187,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
   );
 }
 
-/** 操作（06 章 §5.5）: 自分の投稿は「予想を編集」「削除」、他人の投稿は管理者だけ「削除」。 */
+/** 操作（06 章 §5.5）: 自分の投稿は「想定レンジを編集」「削除」、他人の投稿は管理者だけ「削除」。 */
 function Operations(props: { detail: PostDetail }): JSX.Element | null {
   const { post } = props.detail;
   const toast = useToast();
@@ -209,7 +209,7 @@ function Operations(props: { detail: PostDetail }): JSX.Element | null {
     <div className="res-ops">
       {post.isMine && (
         <Link to={routePath({ name: 'answer', id: post.id })} className="btn ghost auto">
-          予想を編集
+          想定レンジを編集
         </Link>
       )}
       {post.canDelete && (

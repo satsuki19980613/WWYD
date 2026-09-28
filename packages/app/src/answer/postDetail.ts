@@ -230,7 +230,7 @@ export function errorCode(err: ApiError): string {
   return 'internal';
 }
 
-/** 回答・予想の送信のエラー文（06 章 §7）。`already_answered` は表示せずに集計へ移る。 */
+/** 回答・想定レンジの送信のエラー文（06 章 §7）。`already_answered` は表示せずに集計へ移る。 */
 export function answerErrorMessage(code: string): string {
   if (code.startsWith('paint_') || code.startsWith('size_')) return '回答の内容が正しくありません';
   switch (code) {
