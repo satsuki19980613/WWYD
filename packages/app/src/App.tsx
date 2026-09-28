@@ -1,9 +1,8 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { APP_STATES, type AppState } from './appState.ts';
 import { useAuth } from './auth/useAuth.ts';
-import { BackLink } from './components/BackLink.tsx';
 import { ConfirmDialog } from './components/ConfirmDialog.tsx';
-import { Header } from './components/Header.tsx';
+import { Header, type HeaderTitle } from './components/Header.tsx';
 import { InfoModal } from './components/InfoModal.tsx';
 import { useToast } from './components/Toast.tsx';
 import { LegalScreen } from './legal/LegalScreen.tsx';
@@ -33,10 +32,17 @@ function devStateFrom(search: string): AppState | null {
 
 const reload = (): void => window.location.reload();
 
-/** ヘッダーに出す画面名（06 章 §0.2）。無い画面は左を空ける */
-const SCREEN_TITLE: Partial<Record<Route['name'], string>> = {
-  list: 'スポット一覧',
-  new: 'スポット投稿',
+/**
+ * ヘッダーに出す画面名（06 章 §0.2）。回答・結果は投稿のタイトルを、規約は文書の題を本文の h1 にするので、
+ * 画面名は見出しにしない。
+ */
+const SCREEN_TITLE: Partial<Record<Route['name'], HeaderTitle>> = {
+  list: { text: 'スポット一覧', heading: true },
+  new: { text: 'スポット投稿', heading: true },
+  answer: { text: '回答', heading: false },
+  result: { text: '結果', heading: false },
+  terms: { text: '利用規約', heading: false },
+  privacy: { text: 'プライバシーポリシー', heading: false },
 };
 
 export function App(): JSX.Element {
@@ -83,7 +89,8 @@ export function App(): JSX.Element {
   return (
     <>
       <Header
-        title={state === 'ready' ? SCREEN_TITLE[route.name] : undefined}
+        title={state === 'ready' || isLegal ? SCREEN_TITLE[route.name] : undefined}
+        back={showBack}
         showAccount={state === 'ready'}
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}
         onLogout={() => void auth.signOut()}
@@ -91,7 +98,6 @@ export function App(): JSX.Element {
       />
       <DraftLeaveGuard />
       <main className="app-main">
-        {showBack && <BackLink />}
         {body}
       </main>
       {deleting && state === 'ready' && (

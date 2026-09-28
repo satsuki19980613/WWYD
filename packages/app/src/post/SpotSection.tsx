@@ -25,25 +25,30 @@ export function SpotSection(props: {
       <h2 id="pf-spot" className="sec-h">
         スポット
       </h2>
-      {list.length === 0 ? (
-        <p className="pf-none">候補なし</p>
-      ) : (
-        <div className="pf-cands" role="radiogroup" aria-label="Hero のアクション">
-          {list.map((c) => (
-            <button
-              key={c.index}
-              type="button"
-              role="radio"
-              aria-checked={c.index === d.spotIndex}
-              className="pf-cand"
-              onClick={() => props.onSelectSpot(c.index)}
-            >
-              <span className="pf-radio-dot" />
-              <span className="num">{c.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="pf-field">
+        <span className="mono-lbl" aria-hidden="true">
+          Hero のアクション
+        </span>
+        {list.length === 0 ? (
+          <p className="pf-none">候補なし</p>
+        ) : (
+          <div className="pf-cands" role="radiogroup" aria-label="Hero のアクション">
+            {list.map((c) => (
+              <button
+                key={c.index}
+                type="button"
+                role="radio"
+                aria-checked={c.index === d.spotIndex}
+                className="pf-cand"
+                onClick={() => props.onSelectSpot(c.index)}
+              >
+                <span className="pf-radio-dot" />
+                <span className="num">{c.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="pf-field">
         <span className="mono-lbl">Villain</span>
         <Select

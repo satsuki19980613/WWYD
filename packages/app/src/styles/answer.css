@@ -491,9 +491,20 @@
   background: rgba(0, 0, 0, 0.55);
 }
 .res-agg { display: flex; flex-direction: column; gap: var(--s3); }
-/* 集計のタブは中身の幅に合わせる */
-.res-agg .tab { flex: 1 1 auto; white-space: nowrap; padding: 10px 8px; }
-.res.sp .res-agg .tab { font-size: 13px; letter-spacing: 0; padding: 10px 4px; }
+/* 集計の表示（全体 / 自分）は、画面のタブと区別するためセグメント（一覧のストリートと同じ形） */
+.res-agg .tab {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 6px 8px;
+  border-bottom: 0;
+  font-family: var(--body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.res-agg .tab + .tab { border-left: 1px solid var(--line); }
+.res-agg .tab[aria-selected='true'] { background: rgba(252, 238, 10, 0.06); box-shadow: inset 0 0 0 1px rgba(252, 238, 10, 0.55); }
 /* 集計の表は選ぶだけ（なぞらない）ので、スマホで表の上から縦にスクロールできるようにする */
 .rgrid.result { touch-action: manipulation; }
 .rgrid.result .rcell[aria-pressed='true'] { outline: 2px solid var(--yellow); outline-offset: 1px; z-index: 1; }

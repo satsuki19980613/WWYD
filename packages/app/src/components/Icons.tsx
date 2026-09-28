@@ -12,6 +12,15 @@ export function AccountIcon(): JSX.Element {
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
 
+/** 戻る（ヘッダーの左。一覧へ） */
+export function BackIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M12.5 4 6.5 10l6 6" {...stroke} strokeWidth={2} />
+    </svg>
+  );
+}
+
 /** ブラシ（レンジ表を塗る道具） */
 export function BrushIcon(): JSX.Element {
   return (

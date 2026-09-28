@@ -70,7 +70,10 @@ a { color: var(--cyan); }
   justify-content: space-between;
   padding: 0 max(var(--s4), var(--safe-r)) 0 max(var(--s4), var(--safe-l));
 }
-/* 画面名 = ハザードティック＋太字（シグネチャー 3） */
+/* 左: 「＜」（一覧以外）＋画面名 */
+.hdr-lead { display: flex; align-items: center; min-width: 0; }
+.hdr-back { margin-left: -12px; color: var(--cyan); }
+.hdr-back:hover { color: var(--cyan); background: rgba(58, 230, 255, 0.08); }
 .hdr-title {
   display: flex;
   align-items: center;
@@ -82,7 +85,8 @@ a { color: var(--cyan); }
   color: var(--fg);
   white-space: nowrap;
 }
-.hdr-title::before {
+/* 一覧（最上位）だけハザードティック（シグネチャー 3）。下の階層は「＜」が先頭に立つ */
+.hdr-title.tick::before {
   content: '';
   width: 16px;
   height: 11px;
