@@ -11,7 +11,14 @@ import { flickDirection, keyFromKeyboard, RANK_FLICK, SUIT_FLICK, SUIT_SYMBOL, t
  * フリックのキーは右端の列なので、右（外側）には割り当てない。キーの面に払う先の文字を小さく出す。
  * 閉じる: 「完了」、キーボード外のタップ（`data-keep-open` の要素は除く）、Esc。パソコンのキーでも打てる。
  */
-export function CardKeyboard(props: { seat: string; onKey: (key: CardKey) => void; onClose: () => void }): JSX.Element {
+export function CardKeyboard(props: {
+  seat: string;
+  onKey: (key: CardKey) => void;
+  onClose: () => void;
+  /** 前の席・次の席へ（座っている席を順に巡る。UTG の前は BB、BB の次は UTG） */
+  onPrev: () => void;
+  onNext: () => void;
+}): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const onKey = useRef(props.onKey);
   onKey.current = props.onKey;
@@ -37,9 +44,29 @@ export function CardKeyboard(props: { seat: string; onKey: (key: CardKey) => voi
     <div ref={ref} className="ckb" role="group" aria-label="カードキーボード">
       <div className="ckb-head">
         <span className="ckb-seat">{props.seat}</span>
-        <button type="button" className="btn ghost auto ckb-done" onClick={props.onClose}>
-          完了
-        </button>
+        <span className="ckb-nav">
+          <button
+            type="button"
+            className="btn ghost auto ckb-move"
+            aria-label="前の席"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={props.onPrev}
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            className="btn ghost auto ckb-move"
+            aria-label="次の席"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={props.onNext}
+          >
+            →
+          </button>
+          <button type="button" className="btn ghost auto ckb-done" onClick={props.onClose}>
+            完了
+          </button>
+        </span>
       </div>
       <div className="ckb-grid">
         {['7', '8', '9', '4', '5', '6', 'A', '2', '3'].map((k) => (

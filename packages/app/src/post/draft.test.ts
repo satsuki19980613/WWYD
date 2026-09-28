@@ -1,4 +1,4 @@
-import { bbToMbb, type Action, type HandSetup, type Pos } from '@wwyd/core';
+import { bbToMbb, playerCountOf, type Action, type HandSetup, type Pos } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
 import { hmw, hs1, hs3, type Raw } from '../../../core/src/post/postFixtures.ts';
 import {
@@ -12,7 +12,10 @@ import {
   emptyDraft,
   isDirty,
   isLocked,
+  neighborSeat,
   parseSettings,
+  PLAYERS_REQUIRED,
+  setPlayers,
   parseSize,
   phaseOf,
   removeBoardFrom,
@@ -24,12 +27,16 @@ import {
 } from './draft.ts';
 import { messageForCode } from './errorMessages.ts';
 
+/** 6 人を選んだ下書き */
+const six = (): Draft => ({ ...emptyDraft(), players: 6 });
+
 /** 見本（03 章 §3.1 の形）を画面の操作どおりに入力した下書き。ボードはストリートが進むたびに足す。 */
 function enter(raw: Raw): Draft {
-  let d: Draft = emptyDraft();
+  let d: Draft = six();
   const stacks = raw.stacks as Record<Pos, number>;
   d = {
     ...d,
+    players: playerCountOf(Object.keys(stacks) as Pos[]),
     fmt: raw.fmt as Draft['fmt'],
     sb: String(raw.sb),
     ante: String(raw.ante),
@@ -66,7 +73,7 @@ function enter(raw: Raw): Draft {
 
 describe('基本設定（06 章 §3.3）', () => {
   it('既定値は有効', () => {
-    const p = parseSettings(emptyDraft());
+    const p = parseSettings(six());
     expect(p.invalid).toEqual([]);
     expect(p.setup).toEqual({ sb: 500, bb: 1000, ante: 0, stacks: { UTG: 100000, HJ: 100000, CO: 100000, BTN: 100000, SB: 100000, BB: 100000 } });
     expect(p.rake).toBeNull();
@@ -80,22 +87,78 @@ describe('基本設定（06 章 §3.3）', () => {
     [{ rake: '5.001' }, 'rake'],
     [{ rake: '101' }, 'rake'],
   ])('%o は %s が不正', (patch, field) => {
-    expect(parseSettings({ ...emptyDraft(), ...patch }).invalid).toEqual([field]);
+    expect(parseSettings({ ...six(), ...patch }).invalid).toEqual([field]);
   });
   it('アンティの空は 0、MTT のレーキは使わない', () => {
-    expect(parseSettings({ ...emptyDraft(), ante: '' }).setup?.ante).toBe(0);
-    expect(parseSettings({ ...emptyDraft(), fmt: 'mtt', rake: '999' }).invalid).toEqual([]);
+    expect(parseSettings({ ...six(), ante: '' }).setup?.ante).toBe(0);
+    expect(parseSettings({ ...six(), fmt: 'mtt', rake: '999' }).invalid).toEqual([]);
   });
   it('スタックの不正', () => {
-    const d = emptyDraft();
+    const d = six();
     expect(parseSettings({ ...d, stacks: { ...d.stacks, CO: '0' } }).invalid).toEqual(['CO']);
     expect(parseSettings({ ...d, stacks: { ...d.stacks, CO: '10000' } }).invalid).toEqual(['CO']);
   });
 });
 
+describe('人数（06 章 §3.4。2026-09-29）', () => {
+  it('選ぶまでは進められず、投稿すると「人数を選択」', () => {
+    const d = emptyDraft();
+    expect(d.players).toBeNull();
+    expect(parseSettings(d).setup).toBeNull();
+    const s = buildSubmission(d);
+    expect(s.ok).toBe(false);
+    if (!s.ok) expect(s.errors).toContain(PLAYERS_REQUIRED);
+  });
+  it('人数を選ぶと早い席から空き、空席のスタックは 0・ハンドは消える', () => {
+    const d = setPlayers({ ...emptyDraft(), hands: { ...emptyDraft().hands, UTG: 'AsKs', BTN: 'QhQd' } }, 4);
+    expect(d.hands.UTG).toBe('');
+    expect(d.hands.BTN).toBe('QhQd');
+    expect(parseSettings(d).setup?.stacks).toEqual({ UTG: 0, HJ: 0, CO: 100000, BTN: 100000, SB: 100000, BB: 100000 });
+  });
+  it('Hero が空席になったら BTN', () => {
+    expect(setPlayers({ ...emptyDraft(), hero: 'UTG' }, 3).hero).toBe('BTN');
+    expect(setPlayers({ ...emptyDraft(), hero: 'SB' }, 3).hero).toBe('SB');
+    expect(setPlayers({ ...emptyDraft(), hero: 'SB' }, 2).hero).toBe('BTN');
+  });
+  it('2 人（BTN・BB）はプリフロップ BTN から', () => {
+    const d = setPlayers(emptyDraft(), 2);
+    const ph = phaseOf(parseSettings(d).setup, d.actions, d.board);
+    expect(ph.kind === 'act' && ph.pos).toBe('BTN');
+  });
+  it('← → は座っている席を巡る（UTG の前は BB、BB の次は UTG）', () => {
+    const six6 = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'] as const;
+    expect(neighborSeat(six6, 'UTG', -1)).toBe('BB');
+    expect(neighborSeat(six6, 'BB', 1)).toBe('UTG');
+    expect(neighborSeat(six6, 'CO', 1)).toBe('BTN');
+    expect(neighborSeat(['BTN', 'BB'], 'BB', 1)).toBe('BTN');
+    expect(neighborSeat(['BTN', 'BB'], 'BTN', -1)).toBe('BB');
+  });
+  it('ヘッズアップの投稿の本文は座っている席だけ', () => {
+    let d = setPlayers(emptyDraft(), 2);
+    d = { ...d, hands: { ...d.hands, BTN: 'AdKd', BB: 'QsQc' } };
+    for (const a of [
+      { street: 'pf', pos: 'BTN', type: 'raise', to: 2500 },
+      { street: 'pf', pos: 'BB', type: 'call' },
+    ] as Action[]) d = addAction(d, a);
+    for (const c of ['Kh', '8d', '3c']) d = addBoardCard(d, c);
+    for (const a of [
+      { street: 'flop', pos: 'BB', type: 'check' },
+      { street: 'flop', pos: 'BTN', type: 'bet', to: 1800 },
+      { street: 'flop', pos: 'BB', type: 'fold' },
+    ] as Action[]) d = addAction(d, a);
+    d = { ...selectSpot(d, 3), title: 'HU' };
+    const s = buildSubmission(d);
+    expect(s.ok).toBe(true);
+    if (s.ok) {
+      expect(s.body.stacks).toEqual({ BTN: 100, BB: 100 });
+      expect(s.body.known_cards).toEqual({ BB: ['Qs', 'Qc'] });
+    }
+  });
+});
+
 describe('ハンドの進行（06 章 §3.6）', () => {
   it('最初は UTG の手番。状況行とロック', () => {
-    const d = emptyDraft();
+    const d = six();
     const ph = phaseOf(parseSettings(d).setup, d.actions, d.board);
     expect(ph.kind).toBe('act');
     if (ph.kind !== 'act') return;
@@ -117,7 +180,7 @@ describe('ハンドの進行（06 章 §3.6）', () => {
   });
 
   it('RUN: プリフロップのオールインとコールの後はボード 5 枚を続けて求め、揃うとショーダウン', () => {
-    let d = emptyDraft();
+    let d = six();
     for (const pos of ['UTG', 'HJ', 'CO'] as const) d = addAction(d, { street: 'pf', pos, type: 'fold' });
     d = addAction(d, { street: 'pf', pos: 'BTN', type: 'raise', to: 100000 });
     d = addAction(d, { street: 'pf', pos: 'SB', type: 'fold' });
@@ -196,7 +259,7 @@ describe('ログ', () => {
     const log = actionLog(parseSettings(d).setup as HandSetup, d.actions);
     expect(log.slice(3, 9).map((l) => l.text)).toEqual(['BTN レイズ 2.5', 'SB フォールド', 'BB コール 1.5', 'BB チェック', 'BTN ベット 1.8', 'BB コール 1.8']);
     expect(log[6]?.street).toBe('flop');
-    const shove = addAction(emptyDraft(), { street: 'pf', pos: 'UTG', type: 'raise', to: 100000 });
+    const shove = addAction(six(), { street: 'pf', pos: 'UTG', type: 'raise', to: 100000 });
     expect(actionLog(parseSettings(shove).setup as HandSetup, shove.actions)[0]?.text).toBe('UTG レイズ 100 オールイン');
   });
 });
@@ -254,7 +317,7 @@ describe('投稿（06 章 §3.8）', () => {
   });
 
   it('エラーの一覧', () => {
-    const d = emptyDraft();
+    const d = six();
     const s = buildSubmission({ ...d, sb: '2', hands: { ...d.hands, CO: 'Ah' } });
     expect(s).toEqual({
       ok: false,

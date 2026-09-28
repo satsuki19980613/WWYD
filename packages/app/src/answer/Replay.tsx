@@ -98,23 +98,42 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
   );
 }
 
-/** 席の配置（手前の中央から時計回り。卓の中の % 座標）とチップの位置（席から中央へ寄せた点） */
-const SLOTS: readonly (readonly [number, number])[] = [
-  [50, 90],
-  [8, 70],
-  [8, 30],
-  [50, 10],
-  [92, 30],
-  [92, 70],
-];
-const CHIPS: readonly (readonly [number, number])[] = [
-  [50, 70],
-  [28, 61],
-  [28, 39],
-  [50, 29],
-  [72, 39],
-  [72, 61],
-];
+type Pt = readonly [number, number];
+/** 席の配置（手前の中央から時計回り。卓の中の % 座標）。人数ごとに卓の周りへ均等に置く（2〜6 人。04 章 §1.1） */
+const SLOTS_BY_COUNT: Record<number, readonly Pt[]> = {
+  2: [
+    [50, 90],
+    [50, 10],
+  ],
+  3: [
+    [50, 90],
+    [8, 30],
+    [92, 30],
+  ],
+  4: [
+    [50, 90],
+    [8, 50],
+    [50, 10],
+    [92, 50],
+  ],
+  5: [
+    [50, 90],
+    [8, 70],
+    [8, 30],
+    [92, 30],
+    [92, 70],
+  ],
+  6: [
+    [50, 90],
+    [8, 70],
+    [8, 30],
+    [50, 10],
+    [92, 30],
+    [92, 70],
+  ],
+};
+/** チップの位置: 席から卓の中央へ半分ほど寄せた点 */
+const chipOf = ([x, y]: Pt): Pt => [50 + (x - 50) * 0.52, 50 + (y - 50) * 0.52];
 
 /**
  * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Villain の席を手前に置く（席の並びは replayModel の seatOrder）。
@@ -145,8 +164,9 @@ export function PokerTable(props: {
         {props.note && <span className="ptable-note">{props.note}</span>}
       </div>
       {props.seats.map((seat, i) => {
-        const [x, y] = SLOTS[i] ?? [50, 50];
-        const [cx, cy] = CHIPS[i] ?? [50, 50];
+        const slot = SLOTS_BY_COUNT[props.seats.length]?.[i] ?? ([50, 50] as const);
+        const [x, y] = slot;
+        const [cx, cy] = chipOf(slot);
         const anchor = x < 20 ? 'l' : x > 80 ? 'r' : 'c';
         return (
           <div key={seat.pos}>

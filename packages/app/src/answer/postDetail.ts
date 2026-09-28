@@ -5,6 +5,7 @@ import {
   decodePaint,
   fromHex,
   isCard,
+  playerCountOf,
   POSITIONS,
   STREETS,
   type Action,
@@ -138,8 +139,11 @@ export function parsePostDetail(raw: unknown): PostDetail {
   const h = obj(r.hand, 'hand');
 
   const stacksRaw = obj(h.stacks, 'hand.stacks');
+  // 席は stacks のキー（2〜6 人。空席は 0。04 章 §1.1）
+  const seats = Object.keys(stacksRaw) as Pos[];
+  if (playerCountOf(seats) === null) bad('hand.stacks の席');
   const stacks = {} as Record<Pos, Mbb>;
-  for (const pos of POSITIONS) stacks[pos] = amount(stacksRaw[pos], `hand.stacks.${pos}`);
+  for (const pos of POSITIONS) stacks[pos] = seats.includes(pos) ? amount(stacksRaw[pos], `hand.stacks.${pos}`) : 0;
 
   if (!Array.isArray(h.actions)) bad('hand.actions');
   if (!Array.isArray(p.keys)) bad('post.keys');

@@ -160,6 +160,9 @@ describe('VAL 投稿の検証', () => {
     ['MTT でレーキ', { fmt: 'mtt', rake: 5 }],
     ['レーキが 100 超', { rake: 100.5 }],
     ['レーキが負', { rake: -1 }],
+    // 2〜6 人の席の組み合わせと一致しない（2026-09-29。04 章 §1.1）
+    ['スタックの席が人数ごとの席と一致しない', { stacks: { UTG: 100 } }],
+    ['空席のスタックが 0（席として送った）', { stacks: { ...STACKS100, UTG: 0 } }],
   ])('VAL-15 %s', (_name, patch) => {
     expect(codeOf({ ...hs1(), ...patch })).toBe('invalid_settings');
   });
@@ -169,7 +172,6 @@ describe('VAL 投稿の検証', () => {
     ['上限超', { stacks: { ...STACKS100, CO: 10000 } }],
     ['金額が文字列', { ante: '0' }],
     ['レーキの小数 3 桁', { rake: 5.001 }],
-    ['スタックの席が足りない', { stacks: { UTG: 100 } }],
     ['スタックに知らない席', { stacks: { ...STACKS100, MP: 100 } }],
     ['fmt', { fmt: 'sng' }],
     ['hero', { hero: 'MP' }],

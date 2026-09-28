@@ -317,7 +317,10 @@
 .ckb-head, .ckb-grid { max-width: 400px; margin: 0 auto; }
 .ckb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2); }
 .ckb-seat { font-family: var(--disp); font-size: 17px; font-weight: 700; letter-spacing: 0.05em; color: var(--cyan); }
-.ckb-done { min-height: 40px; padding: 6px 18px; }
+.ckb-done { min-height: 44px; padding: 6px 18px; }
+/* 前の席・次の席（完了の左） */
+.ckb-nav { display: flex; gap: 6px; }
+.ckb-move { min-width: 52px; min-height: 44px; padding: 6px 12px; font-size: 20px; }
 /*
  * キーの高さは画面の高さに合わせる（低すぎると画面の下の端で打ちにくい。2026-09-29 さつき）。
  * 高さ 900px 前後のスマホで 1 段 68px、小さい画面でも 48px 以上

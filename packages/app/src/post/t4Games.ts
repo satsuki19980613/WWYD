@@ -14,7 +14,7 @@ export const T4_GAMES: Record<T4Game, { label: string; rakePct: number; capBb: n
 
 export const T4_GAME_ORDER: readonly T4Game[] = ['normal', 'expert'];
 
-/** 選んだゲームの基本設定を下書きに入れる（スタック・タイトルは変えない）。 */
+/** 選んだゲームの基本設定を下書きに入れる（T4 は 6 人。スタック・タイトルは変えない）。 */
 export function applyT4Game(d: Draft, game: T4Game): Draft {
-  return { ...d, fmt: 'cash', sb: '0.5', ante: '0', rake: String(T4_GAMES[game].rakePct) };
+  return { ...d, fmt: 'cash', sb: '0.5', ante: '0', rake: String(T4_GAMES[game].rakePct), players: 6 };
 }

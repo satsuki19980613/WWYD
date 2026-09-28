@@ -11,9 +11,20 @@ export type ActionType = 'fold' | 'check' | 'call' | 'bet' | 'raise';
 /** `to` は bet / raise のみ（そのストリートでの合計額）。 */
 export type Action = { street: Street; pos: Pos; type: ActionType; to?: Mbb };
 
+/**
+ * `stacks` が 0 の席は空席（2〜6 人。04 章 §1.1）。空席は最初からフォールド扱いで、アンティもブラインドも払わない。
+ * SB の席が空いていればボタン（BTN）が SB を払う（ヘッズアップ）。
+ */
 export type HandSetup = { sb: Mbb; bb: Mbb; ante: Mbb; stacks: Record<Pos, Mbb> };
 
+/** 座っている席（スタックが 0 より大きい席。プリフロップのアクション順）。 */
+export function seatedOf(setup: HandSetup): Pos[] {
+  return POSITIONS.filter((p) => setup.stacks[p] > 0);
+}
+
 export type State = {
+  /** 座っている席（空席を除く。表示用） */
+  seated: readonly Pos[];
   street: Street;
   /** 回収済みポット（前のストリートまでのベットとアンティ）。 */
   pot: Mbb;
@@ -53,15 +64,20 @@ export function initialState(setup: HandSetup): State {
   const stacks = { ...setup.stacks };
   const bets = zeroes();
   const allin = new Set<Pos>();
+  const seated = seatedOf(setup);
+  // 空席は最初からフォールド扱い（アクション順・残っている席の判定から外れる）
+  const folded = new Set<Pos>(POSITIONS.filter((p) => !seated.includes(p)));
   let pot = 0;
-  for (const p of POSITIONS) {
+  for (const p of seated) {
     const a = Math.min(setup.ante, stacks[p]);
     stacks[p] -= a;
     pot += a;
     if (stacks[p] === 0) allin.add(p);
   }
+  // ヘッズアップ（SB の席が空き）はボタンが SB を払う
+  const sbSeat: Pos = seated.includes('SB') ? 'SB' : 'BTN';
   for (const [p, blind] of [
-    ['SB', setup.sb],
+    [sbSeat, setup.sb],
     ['BB', setup.bb],
   ] as const) {
     const b = Math.min(blind, stacks[p]);
@@ -70,11 +86,12 @@ export function initialState(setup: HandSetup): State {
     if (stacks[p] === 0) allin.add(p);
   }
   return {
+    seated,
     street: 'pf',
     pot,
     bets,
     stacks,
-    folded: new Set(),
+    folded,
     allin,
     currentBet: setup.bb,
     minRaise: setup.bb,

@@ -10,11 +10,14 @@ import {
   addBoardCard,
   buildSubmission,
   clearActions,
+  neighborSeat,
   normalizeSpot,
   parseSettings,
   phaseOf,
   removeBoardFrom,
+  seatsOf,
   selectSpot,
+  setPlayers,
   undoAction,
   usedCards,
   type Draft,
@@ -89,7 +92,14 @@ export function NewPostScreen(): JSX.Element {
 
   const settings = <SettingsSection draft={d} invalid={invalid} onChange={patch} />;
   const players = (
-    <PlayersSection draft={d} invalid={invalid} activeSeat={seat} onChange={patch} onOpenHand={(p) => setSeat(p)} />
+    <PlayersSection
+      draft={d}
+      invalid={invalid}
+      activeSeat={seat}
+      onChange={patch}
+      onPlayers={(n) => update((x) => setPlayers(x, n))}
+      onOpenHand={(p) => setSeat(p)}
+    />
   );
   const actions = (
     <ActionSection
@@ -116,7 +126,15 @@ export function NewPostScreen(): JSX.Element {
       {busy ? '投稿中…' : '投稿する'}
     </button>
   );
-  const keyboard = seat && <CardKeyboard seat={seat} onKey={onKey} onClose={() => setSeat(null)} />;
+  const keyboard = seat && (
+    <CardKeyboard
+      seat={seat}
+      onKey={onKey}
+      onClose={() => setSeat(null)}
+      onPrev={() => setSeat(neighborSeat(seatsOf(d), seat, -1))}
+      onNext={() => setSeat(neighborSeat(seatsOf(d), seat, 1))}
+    />
+  );
   // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ。
   // 反映したらスマホはアクションのステップへ（読み込んだアクションとスポットの確認に進む。2026-09-29）
   const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => setStep(ACTION_STEP)} />;
@@ -195,6 +213,6 @@ function submissionErrors(d: Draft): string[] {
 /** ステップの完了（シアン）: 設定が正しい / ハンドが揃っている / ハンドが最後まで / スポットとタイトル */
 function stepDone(d: Draft, handDone: boolean): boolean[] {
   const settingsOk = parseSettings(d).invalid.length === 0;
-  const handsOk = Object.values(d.hands).every(isHandComplete) && d.hands[d.hero].length === 4;
+  const handsOk = d.players !== null && seatsOf(d).every((p) => isHandComplete(d.hands[p])) && d.hands[d.hero].length === 4;
   return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.villain !== null && d.title.trim() !== ''];
 }

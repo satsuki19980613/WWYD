@@ -9,7 +9,7 @@ describe('T4 のゲームの種類', () => {
     const base = { ...emptyDraft(), fmt: 'mtt' as const, sb: '0.4', ante: '0.2', rake: '', title: '残る' };
     for (const g of ['normal', 'expert'] as const) {
       const d = applyT4Game(base, g);
-      expect([d.fmt, d.sb, d.ante, d.rake, d.title, d.stacks]).toEqual(['cash', '0.5', '0', '5', '残る', base.stacks]);
+      expect([d.fmt, d.sb, d.ante, d.rake, d.title, d.stacks, d.players]).toEqual(['cash', '0.5', '0', '5', '残る', base.stacks, 6]);
     }
   });
 });

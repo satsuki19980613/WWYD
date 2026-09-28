@@ -7,6 +7,7 @@ import {
   mbbToBb,
   POSITIONS,
   runActions,
+  SEATS_BY_COUNT,
   spotCandidates,
   spotView,
   status,
@@ -24,6 +25,7 @@ import {
   type HandSetup,
   type Legal,
   type Mbb,
+  type PlayerCount,
   type Pos,
   type State,
   type Street,
@@ -42,6 +44,9 @@ export type Draft = {
   sb: string;
   ante: string;
   rake: string;
+  /** 人数（2〜6）。選ぶまでは null（必須。06 章 §3.4） */
+  players: PlayerCount | null;
+  /** 席ごとのスタック（空席の値は使わない） */
   stacks: Record<Pos, string>;
   hero: Pos;
   /** 席ごとのハンド（cardInput の形式） */
@@ -60,6 +65,7 @@ export function emptyDraft(): Draft {
     sb: '0.5',
     ante: '0',
     rake: '',
+    players: null,
     stacks: each('100'),
     hero: 'BTN',
     hands: each(''),
@@ -76,9 +82,32 @@ export function isDirty(d: Draft): boolean {
   return JSON.stringify(d) !== JSON.stringify(emptyDraft());
 }
 
-/** アクションを 1 つでも入れたら、基本設定・スタック・Hero の席はロック（06 章 §3.3）。 */
+/** アクションを 1 つでも入れたら、基本設定・人数・スタック・Hero の席はロック（06 章 §3.3）。 */
 export function isLocked(d: Draft): boolean {
   return d.actions.length > 0;
+}
+
+/** 座っている席（人数を選ぶまでは空）。プリフロップのアクション順 */
+export function seatsOf(d: Draft): readonly Pos[] {
+  return d.players === null ? [] : SEATS_BY_COUNT[d.players];
+}
+
+/** カードキーボードの ← → で移る席（座っている席を巡る。UTG の前は BB、BB の次は UTG） */
+export function neighborSeat(seats: readonly Pos[], seat: Pos, dir: 1 | -1): Pos {
+  const i = seats.indexOf(seat);
+  if (i < 0 || seats.length === 0) return seat;
+  return seats[(i + dir + seats.length) % seats.length] as Pos;
+}
+
+/**
+ * 人数を選ぶ（06 章 §3.4）。席は早い席から削る（04 章 §1.1）。空席になった席のハンドは消し、
+ * Hero が空席になったら BTN（どの人数にもある席）にする。
+ */
+export function setPlayers(d: Draft, n: PlayerCount): Draft {
+  const seats = SEATS_BY_COUNT[n];
+  const hands = { ...d.hands };
+  for (const p of POSITIONS) if (!seats.includes(p)) hands[p] = '';
+  return { ...d, players: n, hands, hero: seats.includes(d.hero) ? d.hero : 'BTN' };
 }
 
 // ---- 基本設定（06 章 §3.3・§3.4） ----
@@ -113,7 +142,9 @@ export const FIELD_LABEL: Record<SettingField, string> = {
   BB: 'BB のスタック',
 };
 
-export type ParsedSettings = { setup: HandSetup | null; rake: number | null; invalid: SettingField[] };
+export const PLAYERS_REQUIRED = 'プレイヤーの人数を選択してください';
+
+export type ParsedSettings ={ setup: HandSetup | null; rake: number | null; invalid: SettingField[] };
 
 export function parseSettings(d: Draft): ParsedSettings {
   const invalid: SettingField[] = [];
@@ -128,13 +159,19 @@ export function parseSettings(d: Draft): ParsedSettings {
     if (!/^\d+(\.\d{1,2})?$/.test(t) || r > 100) invalid.push('rake');
     else rake = r;
   }
+  // 空席はスタック 0（core の空席の表し方）。人数を選ぶまではハンドを進められない（setup は null）
+  const seats = seatsOf(d);
   const stacks = {} as Record<Pos, Mbb>;
   for (const p of POSITIONS) {
+    if (!seats.includes(p)) {
+      stacks[p] = 0;
+      continue;
+    }
     const s = parseAmount(d.stacks[p], null);
     if (s === null || s <= 0) invalid.push(p);
     else stacks[p] = s;
   }
-  if (invalid.some((f) => f !== 'rake')) return { setup: null, rake, invalid };
+  if (invalid.some((f) => f !== 'rake') || seats.length === 0) return { setup: null, rake, invalid };
   return { setup: { sb: sb as Mbb, bb: 1000, ante: ante as Mbb, stacks }, rake, invalid };
 }
 
@@ -285,16 +322,18 @@ export function titleLength(title: string): number {
 export function buildSubmission(d: Draft): Submission {
   const errors: string[] = [];
   const { setup, rake, invalid } = parseSettings(d);
+  const seats = seatsOf(d);
+  if (d.players === null) errors.push(PLAYERS_REQUIRED);
   for (const f of invalid) errors.push(`${FIELD_LABEL[f]} の値が正しくありません`);
 
   const heroCards = handCards(d.hands[d.hero]);
   if (heroCards.length !== 2 || !isHandComplete(d.hands[d.hero])) errors.push(`Hero（${d.hero}）のハンドを入力してください`);
-  for (const p of POSITIONS) {
+  for (const p of seats) {
     if (p !== d.hero && !isHandComplete(d.hands[p])) errors.push(`${p} のハンドが途中です`);
   }
 
   const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
-  if (phase.kind !== 'done' && invalid.length === 0) errors.push('ハンドを最後まで入力してください');
+  if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('ハンドを最後まで入力してください');
   if (d.spotIndex === null) errors.push('スポットを選択してください');
   else if (d.villain === null) errors.push('Villain を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
@@ -303,7 +342,7 @@ export function buildSubmission(d: Draft): Submission {
   }
 
   const known: Record<string, Card[]> = {};
-  for (const p of POSITIONS) {
+  for (const p of seats) {
     const cards = handCards(d.hands[p]);
     if (p !== d.hero && cards.length === 2) known[p] = cards;
   }
@@ -311,8 +350,9 @@ export function buildSubmission(d: Draft): Submission {
 
   try {
     const view = spotView(setup, d.actions, d.hero, d.spotIndex, d.villain);
+    // 席は stacks のキーで表す（空席は送らない。04 章 §1.1）
     const stacks: Record<string, number> = {};
-    for (const p of POSITIONS) stacks[p] = mbbToBb(setup.stacks[p]);
+    for (const p of seats) stacks[p] = mbbToBb(setup.stacks[p]);
     const body: Record<string, unknown> = {
       title: d.title.trim(),
       fmt: d.fmt,

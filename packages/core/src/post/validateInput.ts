@@ -3,7 +3,7 @@
  * JSON（金額は bb の数値）を受け取り、金額を mbb にした型付きの入力を返す。違反は ValidationError。
  * クライアント（送信前）と Edge Function `create-post` の両方がこの関数を使う。
  */
-import { ANSWER_KEYS, POSITIONS, STREETS, type AnswerKey, type Pos, type Street } from '../constants.ts';
+import { ANSWER_KEYS, playerCountOf, POSITIONS, STREETS, type AnswerKey, type Pos, type Street } from '../constants.ts';
 import { isCard, type Card } from '../cards.ts';
 import { fail } from '../errors.ts';
 import { bbToMbb, type Mbb } from '../money.ts';
@@ -84,8 +84,11 @@ export function validateInput(raw: unknown): PostInput {
   if (!isObj(raw.stacks)) fail('malformed', undefined, 'stacks');
   const rawStacks = raw.stacks;
   if (Object.keys(rawStacks).some((k) => !isPos(k))) fail('malformed', undefined, 'stacks の席');
+  // 席は stacks のキーで決まる（2〜6 人。人数ごとの席のどれかと一致すること。04 章 §1.1）。空席は 0
+  const seats = Object.keys(rawStacks) as Pos[];
+  if (playerCountOf(seats) === null) fail('invalid_settings');
   const stacks = {} as Record<Pos, Mbb>;
-  for (const p of POSITIONS) stacks[p] = amount(rawStacks[p], `stacks.${p}`);
+  for (const p of POSITIONS) stacks[p] = seats.includes(p) ? amount(rawStacks[p], `stacks.${p}`) : 0;
 
   let rake: number | null = null;
   if (raw.rake !== null && raw.rake !== undefined) {
@@ -98,13 +101,14 @@ export function validateInput(raw: unknown): PostInput {
   }
 
   // BB は 1bb 固定（Q-4）。SB は 0 より大きく BB 以下。アンティは 0 以上。スタックは 0 より大きい
-  if (bb !== 1000 || sb <= 0 || sb > bb || ante < 0 || POSITIONS.some((p) => stacks[p] <= 0)) fail('invalid_settings');
+  if (bb !== 1000 || sb <= 0 || sb > bb || ante < 0 || seats.some((p) => stacks[p] <= 0)) fail('invalid_settings');
   if (fmt === 'mtt' && rake !== null) fail('invalid_settings');
   if (rake !== null && (rake < 0 || rake > 100)) fail('invalid_settings');
 
   // Hero とカード
   if (!isPos(raw.hero)) fail('malformed', undefined, 'hero');
   const hero = raw.hero;
+  if (!seats.includes(hero)) fail('invalid_settings');
   const heroCards = cardPair(raw.hero_cards);
   if (!heroCards) fail('hero_cards_required');
 
@@ -112,7 +116,7 @@ export function validateInput(raw: unknown): PostInput {
   if (raw.known_cards !== undefined) {
     if (!isObj(raw.known_cards)) fail('malformed', undefined, 'known_cards');
     for (const [k, v] of Object.entries(raw.known_cards)) {
-      if (!isPos(k) || k === hero) fail('malformed', undefined, `known_cards.${k}`);
+      if (!isPos(k) || k === hero || !seats.includes(k)) fail('malformed', undefined, `known_cards.${k}`);
       const pair = cardPair(v);
       if (!pair) fail('malformed', undefined, `known_cards.${k}`);
       knownCards[k] = pair;

@@ -35,10 +35,10 @@ export function boardCountOf(s: State): number {
   return BOARD_COUNT[s.street];
 }
 
-/** 手前（下中央）の席から時計回りの席の並び。 */
-export function seatOrder(bottom: Pos): Pos[] {
-  const i = POSITIONS.indexOf(bottom);
-  return POSITIONS.map((_, k) => POSITIONS[(i + k) % POSITIONS.length] as Pos);
+/** 手前（下中央）の席から時計回りの席の並び。`seated` は座っている席（空席は卓に出さない。既定は 6 席） */
+export function seatOrder(bottom: Pos, seated: readonly Pos[] = POSITIONS): Pos[] {
+  const i = seated.indexOf(bottom);
+  return seated.map((_, k) => seated[(i + k) % seated.length] as Pos);
 }
 
 export type SeatView = {
@@ -63,7 +63,7 @@ export function lastActionText(s: State, p: Pos): string | null {
 }
 
 export function seatViews(s: State, o: { hero: Pos; villain: Pos; actor: Pos | null }): SeatView[] {
-  return seatOrder(o.villain).map((pos) => ({
+  return seatOrder(o.villain, s.seated).map((pos) => ({
     pos,
     stack: s.stacks[pos],
     // フォールドした席のベットも回収まではその席の前に残す（ポットは回収済みの額を出すため、消すと額が合わない）

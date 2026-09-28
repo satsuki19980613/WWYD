@@ -11,7 +11,7 @@ import { useIsMobile } from '../useMediaQuery.ts';
 import { applyCardKey, handCards, type CardKey } from './cardInput.ts';
 import { CardKeyboard } from './CardKeyboard.tsx';
 import { CardPicker } from './CardPicker.tsx';
-import { STREET_NAME, type Draft } from './draft.ts';
+import { neighborSeat, STREET_NAME, type Draft } from './draft.ts';
 import { evaluateReview, type Review, type ReviewRow } from './ocrDraft.ts';
 import { HandButton } from './SetupSections.tsx';
 import { ErrorList } from './SpotSection.tsx';
@@ -250,7 +250,15 @@ export function OcrReview(props: {
         {(!mobile || tab === 'image') && image}
         {(!mobile || tab === 'result') && result}
       </div>
-      {seat && <CardKeyboard seat={seat} onKey={onKey} onClose={() => setSeat(null)} />}
+      {seat && (
+        <CardKeyboard
+          seat={seat}
+          onKey={onKey}
+          onClose={() => setSeat(null)}
+          onPrev={() => setSeat(neighborSeat(POSITIONS, seat, -1))}
+          onNext={() => setSeat(neighborSeat(POSITIONS, seat, 1))}
+        />
+      )}
       {slot !== null && (
         <CardPicker
           title={`ボード ${slot + 1}枚目`}

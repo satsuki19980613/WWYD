@@ -5,7 +5,17 @@ import { POS_VAR } from '../components/posColor.ts';
 import { useToast } from '../components/Toast.tsx';
 import { handCards } from './cardInput.ts';
 import { CardPicker } from './CardPicker.tsx';
-import { actionLog, defaultAmount, parseSize, STREET_NAME, statusLine, usedCards, type Draft, type Phase } from './draft.ts';
+import {
+  actionLog,
+  defaultAmount,
+  parseSize,
+  PLAYERS_REQUIRED,
+  STREET_NAME,
+  statusLine,
+  usedCards,
+  type Draft,
+  type Phase,
+} from './draft.ts';
 
 /**
  * アクション入力（06 章 §3.6）: 状況行・ボタン・額・ボード・1つ戻す / すべて消す・ログ・終了表示。
@@ -26,7 +36,9 @@ export function ActionSection(props: {
       <h2 id="pf-actions" className="sec-h">
         アクション入力
       </h2>
-      {phase.kind === 'invalid' && <p className="form-err">基本設定の値が正しくありません</p>}
+      {phase.kind === 'invalid' && (
+        <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
+      )}
       {phase.kind === 'act' && <ActPanel key={d.actions.length} phase={phase} onAction={props.onAction} />}
       <Board draft={d} phase={phase} onAdd={props.onBoardAdd} onRemoveFrom={props.onBoardRemoveFrom} />
       <div className="btn-row pf-undo">

@@ -10,6 +10,32 @@
 export const POSITIONS = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'] as const;
 export type Pos = (typeof POSITIONS)[number];
 
+/** 1 ハンドの人数（2〜6。2026-09-29 さつきの決定。04 章 §1.1）。 */
+export const PLAYER_COUNTS = [2, 3, 4, 5, 6] as const;
+export type PlayerCount = (typeof PLAYER_COUNTS)[number];
+
+/**
+ * 人数ごとの席（早い席から削る）。2 人は BTN と BB で、BTN が SB を払う（ヘッズアップ）。
+ * 空いた席はスタック 0 として扱い、最初からハンドに参加しない。
+ */
+export const SEATS_BY_COUNT: Record<PlayerCount, readonly Pos[]> = {
+  6: POSITIONS,
+  5: ['HJ', 'CO', 'BTN', 'SB', 'BB'],
+  4: ['CO', 'BTN', 'SB', 'BB'],
+  3: ['BTN', 'SB', 'BB'],
+  2: ['BTN', 'BB'],
+};
+
+/** 席の並びが人数ごとの席のどれかと一致すれば、その人数。一致しなければ null。 */
+export function playerCountOf(seats: readonly Pos[]): PlayerCount | null {
+  const set = new Set(seats);
+  for (const n of PLAYER_COUNTS) {
+    const s = SEATS_BY_COUNT[n];
+    if (s.length === set.size && s.every((p) => set.has(p))) return n;
+  }
+  return null;
+}
+
 export const STREETS = ['pf', 'flop', 'turn', 'river'] as const;
 export type Street = (typeof STREETS)[number];
 

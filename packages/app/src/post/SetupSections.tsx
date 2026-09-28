@@ -1,10 +1,10 @@
-import { POSITIONS, type Pos } from '@wwyd/core';
+import { PLAYER_COUNTS, type PlayerCount, type Pos } from '@wwyd/core';
 import { useId } from 'react';
 import { ChipGroup } from '../components/ChipGroup.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { handSlots } from './cardInput.ts';
-import { isLocked, type Draft, type SettingField } from './draft.ts';
+import { isLocked, seatsOf, type Draft, type SettingField } from './draft.ts';
 
 const FMT_ITEMS = [
   { value: 'cash', label: 'キャッシュ' },
@@ -89,21 +89,43 @@ export function SettingsSection(props: {
   );
 }
 
-/** プレイヤーとハンド（06 章 §3.4）。スタックと Hero はロック対象、ハンドはいつでも入力できる。 */
+const COUNT_ITEMS = PLAYER_COUNTS.map((n) => ({ value: String(n) as `${PlayerCount}`, label: String(n) }));
+
+/**
+ * プレイヤーとハンド（06 章 §3.4）。人数（2〜6）を選ぶまで席の表は出さない（必須）。
+ * 人数・スタック・Hero はロック対象、ハンドはいつでも入力できる。
+ */
 export function PlayersSection(props: {
   draft: Draft;
   invalid: readonly SettingField[];
   activeSeat: Pos | null;
   onChange: (patch: Partial<Draft>) => void;
+  onPlayers: (n: PlayerCount) => void;
   onOpenHand: (seat: Pos) => void;
 }): JSX.Element {
   const { draft: d } = props;
   const locked = isLocked(d);
+  const seats = seatsOf(d);
   return (
     <section className="pf-sec" aria-labelledby="pf-players">
       <h2 id="pf-players" className="sec-h">
         プレイヤーとハンド
       </h2>
+      <fieldset className="pf-fieldset" disabled={locked}>
+        <div className="pf-field">
+          <span className="mono-lbl" aria-hidden="true">
+            人数
+          </span>
+          <ChipGroup
+            label="人数"
+            variant="segment"
+            items={COUNT_ITEMS}
+            value={(d.players === null ? '' : String(d.players)) as `${PlayerCount}`}
+            onChange={(v) => props.onPlayers(Number(v) as PlayerCount)}
+          />
+        </div>
+      </fieldset>
+      {seats.length > 0 && (
       <div className="pf-players" role="table" aria-label="プレイヤーとハンド">
         <div className="pf-prow head" role="row">
           <span className="mono-lbl" role="columnheader">
@@ -119,7 +141,7 @@ export function PlayersSection(props: {
             Hero
           </span>
         </div>
-        {POSITIONS.map((p) => {
+        {seats.map((p) => {
           const hero = d.hero === p;
           return (
             <div key={p} className={`pf-prow ${hero ? 'hero' : ''}`} role="row">
@@ -158,6 +180,7 @@ export function PlayersSection(props: {
           );
         })}
       </div>
+      )}
     </section>
   );
 }
