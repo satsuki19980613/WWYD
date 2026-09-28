@@ -115,7 +115,7 @@ Google から受け取った情報は、上記の目的以外には使いませ�
 
 ## 8. 問い合わせ先
 
-【要記入: 問い合わせ先（専用のメールアドレス）】
+[baudouiniv5853@gmail.com](mailto:baudouiniv5853@gmail.com)
 
 ## 9. 改定
 
