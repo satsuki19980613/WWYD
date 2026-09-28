@@ -6,10 +6,16 @@ import { ValidationError } from '../errors.ts';
 import { mbbToBb } from '../money.ts';
 import { runActions } from './replay.ts';
 import { pctFromSize, potBaseOf, sizeFromPct, spotCandidates, spotView, stopState, type SpotView } from './spot.ts';
-import { advance, legal, nextActor, status, type State } from './state.ts';
+import { advance, legal, nextActor, status, type Action, type State } from './state.ts';
 import { acts, mbb, setup } from './testHelpers.ts';
 
 const S100 = setup();
+
+/** アクション `0..n-1` を適用した状態。 */
+function stateAt(su: typeof S100, actions: readonly Action[], n: number): State {
+  const states = runActions(su, actions.slice(0, n));
+  return states[states.length - 1] as State;
+}
 
 /** 派生メタを bb で比較しやすい形にする。 */
 function derivedBb(v: SpotView) {
@@ -50,7 +56,6 @@ describe('MW マルチウェイ', () => {
 
   it('MW-02 候補', () => {
     expect(spotCandidates(H_MW, 'CO')).toEqual([
-      { index: 2, villains: ['BTN', 'SB', 'BB'] },
       { index: 7, villains: ['BTN', 'BB'] },
       { index: 10, villains: ['BTN', 'BB'] },
       { index: 13, villains: ['BB'] },
@@ -117,7 +122,6 @@ const H_S1 = acts({
 describe('SPOT スポット候補', () => {
   it('SPOT-01 候補', () => {
     expect(spotCandidates(H_S1, 'BTN')).toEqual([
-      { index: 3, villains: ['SB', 'BB'] },
       { index: 7, villains: ['BB'] },
       { index: 10, villains: ['BB'] },
       { index: 13, villains: ['BB'] },
@@ -142,16 +146,17 @@ describe('SPOT スポット候補', () => {
     expect(sizeAt(v, 50)).toBe(17.55);
   });
 
-  it('SPOT-03 スポット 3 / SB', () => {
-    const v = spotView(S100, H_S1, 'BTN', 3, 'SB');
-    expect(mbbToBb(v.state.currentBet - v.state.bets.SB)).toBe(2);
-    expect(derivedBb(v)).toMatchObject({ stopIndex: 4, minTo: 4, maxTo: 100, potBase: 6 });
+  it('SPOT-03 H-S1 の BTN r2.5 の後の SB の局面（ポット基準）', () => {
+    const s = stateAt(S100, H_S1, 4);
+    expect(mbbToBb(s.currentBet - s.bets.SB)).toBe(2);
+    expect(mbbToBb(potBaseOf(s, 'SB'))).toBe(6);
+    expect(legal(s, 'SB').raise).toEqual({ min: mbb(4), max: mbb(100) });
   });
 
-  it('SPOT-04 スポット 3 / BB（フォールドした SB の 0.5 を含む）', () => {
-    const v = spotView(S100, H_S1, 'BTN', 3, 'BB');
-    expect(mbbToBb(v.state.currentBet - v.state.bets.BB)).toBe(1.5);
-    expect(derivedBb(v)).toMatchObject({ stopIndex: 5, minTo: 4, maxTo: 100, potBase: 5.5 });
+  it('SPOT-04 H-S1 の BB の局面（フォールドした SB の 0.5 を含む）', () => {
+    const s = stateAt(S100, H_S1, 5);
+    expect(mbbToBb(s.currentBet - s.bets.BB)).toBe(1.5);
+    expect(mbbToBb(potBaseOf(s, 'BB'))).toBe(5.5);
   });
 
   it('SPOT-05 スポット 13 / BB', () => {
@@ -172,9 +177,9 @@ describe('SPOT スポット候補', () => {
   });
 
   it('SPOT-08 Hero のオールイン（区間はハンドの最後まで）', () => {
-    const actions = acts({ pf: 'UTG..CO f, BTN r100, SB f, BB c' });
-    expect(spotCandidates(actions, 'BTN')).toEqual([{ index: 3, villains: ['SB', 'BB'] }]);
-    const v = spotView(S100, actions, 'BTN', 3, 'BB');
+    const actions = acts({ pf: 'UTG..CO f, BTN r2.5, SB f, BB c', flop: 'BB x, BTN b97.5, BB c' });
+    expect(spotCandidates(actions, 'BTN')).toEqual([{ index: 7, villains: ['BB'] }]);
+    const v = spotView(S100, actions, 'BTN', 7, 'BB');
     expect(derivedBb(v)).toMatchObject({ keys: ['fold', 'call'], s1Label: null, minTo: null, maxTo: null, potBase: 200.5 });
   });
 
@@ -200,8 +205,20 @@ describe('SPOT スポット候補', () => {
   });
 
   it('SPOT-10 区間に 2 回現れる Villain は最初の 1 回で止める', () => {
-    // H-S1 スポット 3 の区間は `SB f, BB c, BB x`（BB が 2 回）
-    expect(spotView(S100, H_S1, 'BTN', 3, 'BB').derived.stopIndex).toBe(5);
+    // BTN b3（8）の区間は `SB c, BB c, SB x, BB x`（SB・BB が 2 回ずつ）
+    const actions = acts({
+      pf: 'UTG..CO f, BTN r2.5, SB c, BB c',
+      flop: 'SB x, BB x, BTN b3, SB c, BB c',
+      turn: 'SB x, BB x, BTN x',
+    });
+    expect(spotCandidates(actions, 'BTN')).toEqual([{ index: 8, villains: ['SB', 'BB'] }]);
+    expect(spotView(S100, actions, 'BTN', 8, 'SB').derived.stopIndex).toBe(9);
+    expect(spotView(S100, actions, 'BTN', 8, 'BB').derived.stopIndex).toBe(10);
+  });
+
+  it('SPOT-11 プリフロップの Hero のアクションは候補外（フロップ以降だけを出題する）', () => {
+    expect(spotCandidates(acts({ pf: 'UTG..CO f, BTN r100, SB f, BB c' }), 'BTN')).toEqual([]);
+    expect(() => spotView(S100, H_S1, 'BTN', 3, 'BB')).toThrow(ValidationError);
   });
 
   it('候補でないスポット・席', () => {
@@ -225,19 +242,31 @@ describe('SPOT スポット候補', () => {
 });
 
 describe('BBOPT のスポットと PCT', () => {
+  /** BB オプションの局面で % pot から to（bb）を求める（プリフロップは出題しないが、% pot の計算は同じ）。 */
+  const bbOption = (pf: string) => {
+    const s = stateAt(S100, acts({ pf }), acts({ pf }).length);
+    const raise = legal(s, 'BB').raise;
+    if (!raise) throw new Error('raise が無い');
+    const base = potBaseOf(s, 'BB');
+    return { s, base, raise, size: (p: number) => mbbToBb(sizeFromPct(s.currentBet, base, p, raise.min, raise.max)) };
+  };
+
   it('BBOPT-01 / PCT-05', () => {
-    const v = spotView(S100, acts({ pf: 'UTG..BTN f, SB c, BB x' }), 'SB', 4, 'BB');
-    expect(derivedBb(v)).toMatchObject({ keys: ['check', 's1'], s1Label: 'raise', potBase: 2, minTo: 2 });
-    expect([33, 50, 75, 125].map((p) => sizeAt(v, p))).toEqual([2, 2, 2.5, 3.5]);
+    const o = bbOption('UTG..BTN f, SB c');
+    expect(legal(o.s, 'BB').check).toBe(true);
+    expect(mbbToBb(o.base)).toBe(2);
+    expect(mbbToBb(o.raise.min)).toBe(2);
+    expect([33, 50, 75, 125].map(o.size)).toEqual([2, 2, 2.5, 3.5]);
   });
 
   it('BBOPT-02 / PCT-02（§6.6 例 2）', () => {
-    const v = spotView(S100, acts({ pf: 'UTG c, HJ c, CO f, BTN f, SB c, BB x' }), 'SB', 4, 'BB');
-    expect(mbbToBb(v.state.currentBet)).toBe(1);
-    expect(derivedBb(v)).toMatchObject({ potBase: 4, minTo: 2 });
-    expect(sizeAt(v, 50)).toBe(3);
-    expect(sizeAt(v, 33)).toBe(2.32);
-    expect(sizeAt(v, 125)).toBe(6);
+    const o = bbOption('UTG c, HJ c, CO f, BTN f, SB c');
+    expect(mbbToBb(o.s.currentBet)).toBe(1);
+    expect(mbbToBb(o.base)).toBe(4);
+    expect(mbbToBb(o.raise.min)).toBe(2);
+    expect(o.size(50)).toBe(3);
+    expect(o.size(33)).toBe(2.32);
+    expect(o.size(125)).toBe(6);
   });
 });
 

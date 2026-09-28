@@ -1,7 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["vitest.config.ts"]
+  "include": [
+    "vitest.config.ts",
+    "scripts/ocr/*.mts"
+  ]
 }

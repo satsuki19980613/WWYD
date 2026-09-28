@@ -21,6 +21,7 @@ import {
 } from '../post/draft.ts';
 import { getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
 import { messageForCode } from '../post/errorMessages.ts';
+import { OcrImport } from '../post/OcrImport.tsx';
 import { sendPost } from '../post/sendPost.ts';
 import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
 import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
@@ -115,11 +116,14 @@ export function NewPostScreen(): JSX.Element {
     </button>
   );
   const keyboard = seat && <CardKeyboard seat={seat} onKey={onKey} onClose={() => setSeat(null)} />;
+  // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ
+  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} />;
 
   if (!mobile) {
     return (
       <section className={`screen pf ${seat ? 'kb-open' : ''}`}>
         <h1 className="sec-h">スポット投稿</h1>
+        {ocr(true)}
         <div className="pf-grid">
           <div className="pf-col">
             {settings}
@@ -156,6 +160,7 @@ export function NewPostScreen(): JSX.Element {
           </button>
         ))}
       </nav>
+      {ocr(step === 0)}
       {step === 0 && settings}
       {step === 1 && players}
       {step === 2 && actions}

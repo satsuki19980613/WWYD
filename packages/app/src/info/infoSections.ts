@@ -31,7 +31,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     title: 'スポット一覧',
     items: [
       { term: 'タブ', desc: '「すべて」と「自分の投稿」。' },
-      { term: 'フィルタ', desc: 'スポットのストリート（プリフロップ〜リバー）で絞り込み、新着順または回答数順に並び替え。' },
+      { term: 'フィルタ', desc: 'スポットのストリート（フロップ〜リバー）で絞り込み、新着順または回答数順に並び替え。' },
       {
         term: '遷移',
         desc: '未回答のスポットは回答画面へ、回答済みと自分の投稿は集計画面へ。他人の投稿の集計は回答するまで見られない。',
@@ -96,7 +96,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     items: [
       {
         term: '画像読み込み',
-        desc: 'T4 のハンドヒストリー画像を端末内で OCR する。画像は読み取り後に削除され、保存も送信もされない。',
+        desc: 'T4 のハンドヒストリー画像を端末内で OCR する。読み取り結果は画像と見比べて直してから反映する。フロップ以降に Hero のアクションがないハンドは読み込めない。画像は読み取り後に削除され、保存も送信もされない。',
       },
       {
         term: '基本設定',
@@ -117,7 +117,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       {
         term: 'スポット',
-        desc: 'Hero のアクションを 1 つと Villain を 1 つ選ぶ。回答対象はその後の Villain の最初のアクション。フォールドした席も Villain に選べる。',
+        desc: 'Hero のフロップ以降のアクションを 1 つと Villain を 1 つ選ぶ（プリフロップは出題できない）。回答対象はその後の Villain の最初のアクション。フォールドした席も Villain に選べる。',
       },
     ],
   },

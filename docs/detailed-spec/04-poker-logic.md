@@ -148,9 +148,13 @@ fold 以外で `stacks[p] = 0` になったら `allin += p`。
 
 ### 8.1 候補
 
-Hero のアクション `i`（`type ≠ fold`）ごとに、区間 `S(i)` = `i+1` から「次に Hero がアクションする直前」
+Hero の**フロップ以降**のアクション `i`（`street ≠ pf` かつ `type ≠ fold`）ごとに、区間 `S(i)` = `i+1` から「次に Hero がアクションする直前」
 （無ければハンドの最後）までのアクション。`S(i)` が空でなければ候補。
 Villain の候補 = `S(i)` に現れる席（重複を除き、現れた順）。フォールドした席も含む。
+
+**プリフロップは出題しない**（2026-09-28 さつきの決定。仕様書 v0.2 の「プリフロップを対象に含める」を改める）。
+Hero がフロップ以降にアクションする場面だけを投稿できる。サーバー（create-post）も同じ `spotCandidates` で検証するので、
+プリフロップの `spot_index` は `invalid_spot` になる。
 
 ### 8.2 停止位置と派生メタ
 
@@ -246,7 +250,7 @@ raise (currentBet > 0): to = currentBet + potBase × p
 
 | ID | 設定・アクション列 | 期待 |
 |---|---|---|
-| BBOPT-01 | S100。`UTG..BTN f, SB c` | BB 合法 = check, raise[2, 100]。スポットにすると keys = `check, s1`、s1_label = `raise`、pot_base 2。% pot: 33% → 1.66 → **2**（min に丸め）、50% → 2、75% → 2.5、125% → 3.5 |
+| BBOPT-01 | S100。`UTG..BTN f, SB c` | BB 合法 = check, raise[2, 100]。pot_base 2（プリフロップはスポットにしないが、% pot の計算は同じ）。% pot: 33% → 1.66 → **2**（min に丸め）、50% → 2、75% → 2.5、125% → 3.5 |
 | BBOPT-02 | S100。`UTG c, HJ c, CO f, BTN f, SB c`（§6.6 例 2） | BB: pot_base 4、currentBet 1、min to 2。50% → **3**、33% → 2.32、125% → 6 |
 | BBOPT-03 | BBOPT-01 の局面で BB が `b3` | エラー `illegal_action`（BB オプションは raise） |
 | BBOPT-04 | S100、SB **1**。`UTG..BTN f, SB c`（オールイン） | canAct = {BB} で BB の bets 1 = currentBet → **`runout`**（BB はアクションしない） |
@@ -298,7 +302,7 @@ river: 14 BB x   15 CO x   → showdown（BB, CO）
 | ID | 対象 | 期待 |
 |---|---|---|
 | MW-01 | H-MW のフロップ開始 | 次 BB（SB はフォールド済み。順序 SB→BB→UTG→HJ→CO→BTN） |
-| MW-02 | 候補 | `2:[BTN, SB, BB]`、`7:[BTN, BB]`、`10:[BTN, BB]`、`13:[BB]`。15 は後続なしで候補外 |
+| MW-02 | 候補 | `7:[BTN, BB]`、`10:[BTN, BB]`、`13:[BB]`。2 はプリフロップ、15 は後続なしで候補外 |
 | MW-03 | スポット 7 / Villain BB | stop = 9（間の `8 BTN c` をリプレイに含む）。フロップ、pot 8、bets CO 3 / BTN 3、BB toCall 3。keys `fold, call, s1`、raise、min 6、max 97.5、pot_base 17、実際 = s1（r12） |
 | MW-04 | スポット 7 / Villain BTN | stop = 8。pot_base 14、min 6、max 97.5、実際 = call |
 | MW-05 | スポット 10 / Villain BTN | stop = 11。currentBet 12、minRaise 9、BTN toCall 9、BTN は再オープン済み（BB の r12 が有効）→ keys `fold, call, s1`、min 21、max 97.5、pot_base 44、実際 = fold |
@@ -317,16 +321,17 @@ river: 12 BB x  13 BTN b15  14 BB c   → showdown
 
 | ID | 対象 | 期待 |
 |---|---|---|
-| SPOT-01 | H-S1 の候補 | `3:[SB, BB]`、`7:[BB]`、`10:[BB]`、`13:[BB]` |
+| SPOT-01 | H-S1 の候補 | `7:[BB]`、`10:[BB]`、`13:[BB]`（3 はプリフロップで候補外） |
 | SPOT-02 | H-S1 スポット 10 / BB（§6.6 例 1） | stop 11。ターン、pot 9.1、BTN bets 6.5、BB 残り 95.7。keys `fold, call, s1`、raise、min 13、max 95.7、pot_base 22.1、50% → **17.55**、effective 100 |
-| SPOT-03 | H-S1 スポット 3 / SB | stop 4。SB toCall 2、min 4、max 100、pot_base 6 |
-| SPOT-04 | H-S1 スポット 3 / BB | stop 5（`4 SB f` を含む）。BB toCall 1.5、min 4、max 100、pot_base 5.5（フォールドした SB の 0.5 を含む） |
+| SPOT-03 | H-S1 の `BTN r2.5` の後の SB の局面（アクション 0..3 の後） | SB toCall 2、raise [4, 100]、pot_base 6 |
+| SPOT-04 | H-S1 の BB の局面（アクション 0..4 の後。`4 SB f` を含む） | BB toCall 1.5、pot_base 5.5（フォールドした SB の 0.5 を含む） |
 | SPOT-05 | H-S1 スポット 13 / BB | リバー、pot 22.1、BTN bets 15、BB 残り 89.2。min 30、max 89.2、pot_base 52.1 |
 | SPOT-06 | Hero = SB で `SB f` のみ | 候補なし（フォールドは候補外） |
 | SPOT-07 | S100、Hero = BB。`UTG..HJ f, CO r2.5, BTN f, SB f, BB c`、フロップ `BB x, CO b3, BB f` | `BB c`（5）は候補外（直後が Hero 自身の `BB x`）。`BB x`（6）は候補 `[CO]` |
-| SPOT-08 | S100、Hero = BTN。`UTG..CO f, BTN r100`（オールイン）`, SB f, BB c` | 候補 `3:[SB, BB]`（区間はハンドの最後まで）。Villain BB: toCall 99、stack 99 → keys `fold, call`、s1_label null、min / max null、pot_base 200.5 |
+| SPOT-08 | S100、Hero = BTN。`UTG..CO f, BTN r2.5, SB f, BB c`、フロップ `BB x, BTN b97.5`（オールイン）`, BB c` | 候補 `7:[BB]`（区間はハンドの最後まで）。Villain BB: toCall 97.5、stack 97.5 → keys `fold, call`、s1_label null、min / max null、pot_base 200.5 |
 | SPOT-09 | MTT の見本（H-S3）: アンティ 0.125、stacks UTG 30 / HJ 22 / CO 45 / BTN 18 / SB 26 / BB 24、Hero = BB。`UTG f, HJ r2.1, CO f, BTN f, SB f, BB c`、フロップ `BB b3, HJ c`、ターン `BB x, HJ x`、リバー `BB x, HJ x` | スポット（BB b3）/ HJ: pot 5.45、HJ toCall 3、残り 19.775。keys `fold, call, s1`、min 6、max 19.775、pot_base 11.45、effective **22**（開始スタックの小さいほう） |
-| SPOT-10 | 候補の区間に Villain が 2 回現れるハンド | stop は最初の 1 回（MW-03 と同じ規則。テストでは `…, BB c, BTN r, BB c` のような 2 回目を含む列で確認） |
+| SPOT-10 | 候補の区間に Villain が 2 回現れるハンド: `UTG..CO f, BTN r2.5, SB c, BB c`、フロップ `SB x, BB x, BTN b3, SB c, BB c`、ターン `SB x, BB x, BTN x` | 候補 `8:[SB, BB]`。stop は最初の 1 回（SB 9、BB 10） |
+| SPOT-11 | プリフロップの Hero のアクション（`UTG..CO f, BTN r100, SB f, BB c`、H-S1 のスポット 3） | 候補なし。`spotView` は `invalid_spot` |
 
 ### 10.11 % pot の計算（PCT）
 

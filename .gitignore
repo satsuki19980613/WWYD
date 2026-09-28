@@ -17,6 +17,10 @@ coverage/
 .claude/skills/wwyd-ui-concept/references/icmclec-*
 # OCR の正解画像（個人の対戦画像）
 packages/ocr/fixtures-local/
+# OCR の配信ファイル（scripts/copyOcrAssets.mjs が node_modules から写す生成物）
+packages/app/public/ocr/
+# さつきが置く確認用の T4 画像（実在のプレイヤー名が写っている）
+sample/
 
 # Playwright の結果（E2E）
 test-results/

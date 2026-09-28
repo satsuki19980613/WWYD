@@ -18,7 +18,7 @@ export default function DevUiScreen(): JSX.Element {
   const toast = useToast();
   const mobile = useIsMobile();
   const [tab, setTab] = useState<'all' | 'mine'>('all');
-  const [street, setStreet] = useState<'all' | 'pf' | 'flop' | 'turn' | 'river'>('all');
+  const [street, setStreet] = useState<'all' | 'flop' | 'turn' | 'river'>('all');
   const [sort, setSort] = useState<'new' | 'many'>('new');
   const [confirm, setConfirm] = useState<null | 'normal' | 'danger'>(null);
   const [busy, setBusy] = useState(false);
@@ -56,7 +56,6 @@ export default function DevUiScreen(): JSX.Element {
           label="ストリート"
           options={[
             { value: 'all', label: 'すべてのストリート' },
-            { value: 'pf', label: 'プリフロップ' },
             { value: 'flop', label: 'フロップ' },
             { value: 'turn', label: 'ターン' },
             { value: 'river', label: 'リバー' },

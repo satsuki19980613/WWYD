@@ -1,0 +1,13 @@
+{
+  "name": "@wwyd/ocr",
+  "version": "0.0.0",
+  "private": true,
+  "description": "T4 のハンドヒストリー画像の端末内 OCR（純 TS。画像処理と本文の解釈。文字認識のエンジンは呼び出し側が渡す）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@wwyd/core": "*"
+  }
+}

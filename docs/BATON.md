@@ -1,21 +1,44 @@
-# バトン: P8 完了（本番公開済み）→ P9 OCR へ
+# バトン: P9 OCR 実装完了（確認画面つき）→ push・本番反映
 
-**更新 2026-09-28 / セッション 5（Opus 5.5）から次セッションへの引き継ぎ**
+**更新 2026-09-28 / セッション 6（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている。操作をお願いするときは非エンジニアにも分かる言葉で説明する）**
 
 ---
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**P8 は PR #9 で main へマージ・本番に公開済み**（規約ページ・アカウント削除・書体の自サイト配信・「Hero の想定レンジ」）。次の作業ブランチは `phase/09-ocr`（作成済み）。
-- 規約の文面は `packages/app/src/legal/{terms,privacy}.md`。直すときはさつきの確認後に。プライバシーポリシー 1.3（OCR）は P9 の実装と一致させる（T-1001 で確認）。
-- **このプロジェクトは非営利**（広告・寄付・有料機能など一切なし。CLAUDE.md §1）。
+**P9 OCR は実装完了**（ブランチ `phase/09-ocr`）。詳細は [07 章 §8](detailed-spec/07-ocr.md)。
+**P8 までは完了・本番公開済み**（https://wwyd.pages.dev ）。さつきの手作業は iPhone 実機の確認（保留）とスマホの画像の用意。
 
-1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
-   - PR の「Workers Builds: wwyd」の失敗は無視してよい（削除済みの Worker のビルドの設定が Cloudflare に残っているだけ。公開サイトにもマージにも影響しない）。
-   - E2E で応答を途中で差し替えるときは、画面の読み込みが終わってから差し替える（`open()` は読み込みを待たない）。
-2. 残りの P8: T-802 の本番の検証用アカウントでの確認（さつきが用意）、T-803 の文面と M-11。
-3. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、dev の「Sign-up with Email」をオフ。iPhone 実機は保留。
+1. **スマホの画像は検証済み**（Android 24 ハンドで 100%。4♦ の塊を切る処理を追加。07 章 §0・§8.3）。iPhone の画像は保留。
+2. **確認待ちは無し**（Q-P9-1・Q-P9-2 は推奨どおりで決定）。読み取り結果の確認画面（`post/OcrReview.tsx`）を追加済み。
+3. **スポットはフロップ以降だけ**（2026-09-28 の仕様変更。決定ログ）。create-post は dev・本番に配備済み（さつきが実行。dev でプリフロップのスポットが `invalid_spot` になることを確認）。本番の既存のプリフロップの投稿は残す。OCR は投稿できないハンドを読み込みの時点ではじく（`ocrPostability`）。
+4. PR（push 済み。PR の作成は安全機能で止められたので、さつきが作る）→ マージ後に **本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復**と OCR を確認（CSP は今回初めて入る。`packages/app/public/_headers`）。
+
+### 0.1 P9 で作ったもの
+
+| 場所 | 内容 |
+|---|---|
+| `packages/ocr` | 純 TS。`readHandHistory(image, reader)` → `OcrResult`（名前を含まない）。`vision.ts`（カード・スート・ボード・Hero の行）、`bodyText.ts`（本文。バッジ優先、名前は受け皿）、`rankTemplates.ts`（生成物） |
+| `packages/app/src/ocr/runOcr.ts` | ブラウザの入口（動的 import）。tesseract.js を自サイトの `/ocr/` から（`scripts/copyOcrAssets.mjs` が predev・prebuild で配置。git 管理外） |
+| `packages/app/src/post/OcrImport.tsx`・`OcrReview.tsx`・`t4Games.ts`・`ocrDraft.ts` | T4 のゲーム（通常 / エキスパート）を選ぶ → 画像 → 確認画面（画像と並べて直す。席とストリートは再生で決まる）→ 反映 |
+| `packages/app/public/_headers` | CSP ほか。`npm run preview` も同じ（`vite.config.ts`）。launch.json の `app-preview` で本番ビルドを 5173 で動かせる |
+| `scripts/ocr/` | `accuracy.mts`（精度。`--drafts` で正解の無い画像の下書き `*.ocr.json`）、`genRankTemplates.mts`（テンプレート）、`png.mts`（Node 標準だけの PNG の読み書き） |
+| `e2e/ocr.spec.ts` | 外部通信 0 件（Worker を含む）・ゲームの選択・キャンセル |
+| `sample/pc/`（122 枚）・`sample/sp/`（Android 26 枚。正解は同じハンドの PC 版を写したもの） | 画像と `*.expected.json`（git 管理外。公開リポジトリに入れない） |
+
+- アプリで画像を読ませる確認は、`HTMLInputElement.prototype.click` をファイル欄だけ何もしないように差し替えてからゲームのボタンを押し、開発サーバーの `/@fs/<リポジトリの絶対パス>/sample/...` を fetch → `DataTransfer` で `[data-testid=ocr-file]` に入れて change を送る（OS のファイル選択の窓は操作できないため）。
+- dev に試験投稿「試験 OCR 読み込み（AKs 3bet）」が 1 件増えた（`npm run db:seed -- --branch dev` で消える）。
+- 流用元 `tenfour_watcher` は読み取り専用で使った（変更していない）。`data/tenfour_hands/` の 21 枚は未使用。
+
+### いつもの注意
+
+- [plan.md](plan.md) の「現在の状況」と「確認待ち」を見てから始める。
+- Neon の URL を変えたら `.env.production` と `_headers` の connect-src を両方直す。
+- 規約の文面は `packages/app/src/legal/{terms,privacy}.md`（さつきの文面そのまま）。直すときはさつきの確認後に。
+- **このプロジェクトは非営利**（広告・寄付・有料機能など一切なし。CLAUDE.md §1）。
+- PR の「Workers Builds: wwyd」の失敗は無視してよい（削除済みの Worker のビルドの設定が Cloudflare に残っているだけ）。
+- E2E で応答を途中で差し替えるときは、画面の読み込みが終わってから差し替える（`open()` は読み込みを待たない）。
 
 ## 0.00001 P7 で作ったもの
 
@@ -118,13 +141,12 @@
 | Docker | Claude の Git Bash では PATH に `docker` が無い。`export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"` |
 | heredoc | Git Bash の heredoc で長い CSS を書くと途中で壊れたことがある。長いファイルは Write ツールで書く |
 | ブラウザ確認 | `.claude/launch.json` の `app`（dev につなぐ）/ `app-production`（本番につなぐ）。どちらも 5173。スクリーンショットはペインの大きさが変わると乱れるので、DOM（`javascript_tool`）で確かめるのが確実 |
-| CSP | `public/_headers` は未作成（遅くとも P5。Neon Auth と Data API の URL を許可） |
+| CSP | `packages/app/public/_headers` は未作成。P9 で作る（§0 の 6.） |
 | ICMCLEC の資料 | 非公開。`.claude/skills/wwyd-ui-concept/references/icmclec-*` はコミットしない |
 | push | 毎回さつきの確認。force push しない |
 
 ## 3. さつきの手作業（担当: さつき）
 
-- N-05 CI 用 NEON_API_KEY、M-09 管理者 UID の登録（本番の `app_admins` に自分の UID）
-- M-08 Cloudflare Pages（P5 まで）、M-05b 同意画面の公開（P10）
+- 残りは iPhone 実機の確認（保留）と M-12 運用手順の確認（P10）。N-05・M-05b・M-08・M-09 は済み。
 
 手順は [10-manual-tasks.md](detailed-spec/10-manual-tasks.md)。

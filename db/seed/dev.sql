@@ -4,7 +4,7 @@
 -- - 試験用ユーザー 8 人（UUID が 00000000-0000-0000-5eed-…、メールは @example.test）が 5 件ずつ投稿（計 40 件、過去 12 日に散らす）
 -- - dev に実在するユーザー（さつきのログイン）には「自分の投稿」を 3 件ずつ作り、試験用の投稿のいくつかに回答させる
 -- - 回答は試験用ユーザー同士でも入れ、回答数を 0〜7 にばらつかせる
--- ハンドはすべて H-S1（04 章）。スポットは BTN のアクション 3 / 7 / 10 / 13（プリフロップ〜リバー）、Villain は BB。
+-- ハンドはすべて H-S1（04 章）。スポットは BTN のアクション 7 / 10 / 13（フロップ〜リバー。プリフロップは出題しない）、Villain は BB。
 -- 派生メタは packages/core の spotView で計算した値（create-post が保存する値と同じ）。
 begin;
 
@@ -20,7 +20,6 @@ from generate_series(1, 8) as n;
 -- ---- 投稿 ----
 create temp table seed_spot (street text, spot_index int, stop_index int, min_to numeric, max_to numeric, pot_base numeric);
 insert into seed_spot values
-  ('pf',    3,  5,  4,   100,  5.5),
   ('flop',  7,  8,  3.6, 97.5, 9.1),
   ('turn',  10, 11, 13,  95.7, 22.1),
   ('river', 13, 14, 30,  89.2, 52.1);
@@ -71,7 +70,7 @@ declare
 begin
   for u in 1..8 loop
     for j in 0..4 loop
-      select * into sp from seed_spot order by spot_index offset ((u + j) % 4) limit 1;
+      select * into sp from seed_spot order by spot_index offset ((u + j) % 3) limit 1;
       pid := pg_temp.seed_post(('00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'))::uuid,
                                (select title from seed_title where i = j), sp, case when (u + j) % 3 = 0 then 'mtt' else 'cash' end);
       insert into seed_posts values (pid, ('00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'))::uuid, u * 5 + j);
@@ -80,7 +79,7 @@ begin
 
   for real_user in select id from neon_auth."user" where id::text not like '00000000-0000-0000-%' loop
     for j in 1..3 loop
-      select * into sp from seed_spot order by spot_index offset (j % 4) limit 1;
+      select * into sp from seed_spot order by spot_index offset (j % 3) limit 1;
       pid := pg_temp.seed_post(real_user.id, '試験 自分の投稿 ' || j, sp, 'cash');
       insert into seed_posts values (pid, real_user.id, 100 + j);
     end loop;

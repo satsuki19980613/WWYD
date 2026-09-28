@@ -156,7 +156,7 @@ export function PlayersSection(props: {
 }
 
 /** ハンド欄（2 枠）。押すとカードキーボードを開く。入力中はシアンの枠。 */
-function HandButton(props: { seat: Pos; hand: string; active: boolean; onOpen: () => void }): JSX.Element {
+export function HandButton(props: { seat: Pos; hand: string; active: boolean; onOpen: () => void }): JSX.Element {
   const slots = handSlots(props.hand);
   return (
     <button

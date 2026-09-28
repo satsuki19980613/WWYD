@@ -78,13 +78,14 @@ WWYD/
 ├── packages/
 │   ├── core/                     # ポーカーロジック・paint コーデック（純 TS・依存ゼロ・単一実装）
 │   ├── app/                      # フロントエンド（React + Vite）
-│   └── ocr/                      # 端末内 OCR（P9 で作成）
+│   └── ocr/                      # 端末内 OCR（純 TS。画像処理と本文の解釈。文字認識は tesseract.js をアプリが渡す）
 ├── packages/functions/           # Neon Functions（投稿の再生と検証 create-post。P5 で作成）
 ├── db/
 │   ├── migrations/               # DDL・RLS・トリガ・RPC（SQL。scripts/db.mjs で適用）
 │   └── tests/                    # pgTAP テスト（03_paint_vectors は生成物）
 ├── e2e/                          # E2E（Playwright。Neon への通信は fakeBackend.ts の偽の応答）
-├── scripts/                      # db.mjs（マイグレーション・DB テスト）、genPaintVectorsSql.mjs
+├── scripts/                      # db.mjs（マイグレーション・DB テスト）、genPaintVectorsSql.mjs、copyOcrAssets.mjs、ocr/（OCR の精度測定・テンプレート生成）
+├── sample/                       # OCR の確認用の T4 画像と正解（pc/・sp/。git 管理外。個人の対戦画像）
 ├── .env.example                  # 環境変数の雛形（実値は .env に。コミットしない）
 └── .gitignore
 ```
@@ -102,6 +103,9 @@ WWYD/
 | 型検査 | `npm run typecheck` |
 | ビルド | `npm run build`（出力 `packages/app/dist`） |
 | E2E | `npm run e2e`（Playwright。Neon への通信は偽の応答に差し替え、本物にはつながない。初回だけ `npx playwright install chromium`。スマホの試験はテスト名に `@sp`） |
+| OCR の精度 | `npm run ocr:accuracy`（`sample/pc`・`sample/sp` の画像を正解 `*.expected.json` と比べる。手元専用。合格はボード 100%・プレイヤー・アクション 95% 以上） |
+| OCR のテンプレートを作り直す | `npm run ocr:templates`（`sample/pc` の正解から `packages/ocr/src/rankTemplates.ts` を生成。`-- --check sample/sp` で照合だけ） |
+| 本番のビルドを CSP 付きで確かめる | `npm run build` → `npm run preview -w @wwyd/app -- --port 5173`（launch.json の `app-preview`。`public/_headers` と同じヘッダー） |
 | DB テスト | `npm run test:db`（空の `test-base` から一時ブランチを作り、全マイグレーション → pgTAP → 同時回答 → 削除。1 時間で自動削除もされる。Docker が必要） |
 | 共有テストベクタの pgTAP を生成 | `npm run gen:db-vectors`（CI は `check:db-vectors` で最新かを検査） |
 | マイグレーションを dev に適用 | `npm run db:migrate -- --branch dev` |
