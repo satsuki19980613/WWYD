@@ -9,7 +9,7 @@
 
 **P6（回答）は PR #7 で main へマージ済み**。次の作業ブランチは `phase/07-result`（作成済み）。P5 は本番に配備済み。
 
-1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。Q-30（重なったハンドルの書き方。11 章）に回答があれば決定ログと 06 章 §4.4 に反映。
+1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る（Q-30 は決定済み・反映済み）。
 2. P7 集計（T-701〜）。`/s/:id/result` は今は見出しだけ（`SpotScreen.tsx` の最後）。Hero の予想の保存後は `?view=host` で来るので「Hero の予想」タブを選ぶ。卓・ログは P6 の `answer/Replay.tsx`（`PokerTable`・`HandLog` の `actual`）、上部バーは `answer/ComboBar.tsx`、マスの色は `RangeGrid.tsx` の `CellFill` を使い回せる。集計は `PostDetail.aggregate`（デコード済み）。
 3. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ、M-08（Cloudflare Pages。スマホ実機の確認に必要）。
 

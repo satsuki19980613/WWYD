@@ -12,9 +12,9 @@
 |---|---|
 | 現在のフェーズ | **P6 回答 — 実装完了**（PR #7 で main へマージ済み。次の作業ブランチは `phase/07-result`）。残りはスマホ実機（M-08 の後）。P5 は本番に配備済み・スマホ実機のみ残り |
 | 直近で完了したこと | 回答画面（リプレイ・ブラシ・ミックスバー・塗り・スポイト・元に戻す・サイズ・集計バー・送信・Hero の予想・スマホのタブ）。Playwright を導入し E2E 32 件（偽のバックエンド）。dev の実データで、回答の送信 → DB の値、再回答・自分の投稿・不正なキーの拒否、Hero の予想の保存と上書きを確認 |
-| 次にやること | 1. さつき: Q-30（重なったハンドルの書き方）の確認<br>2. P7 集計（T-701〜。`/s/:id/result` は今は見出しだけ。Hero の予想の保存後は `?view=host` で来る）<br>3. さつき: M-08（Cloudflare Pages。スマホ実機の確認と公開に必要）、N-05（CI 用の NEON_API_KEY）、M-09（管理者の登録）、dev の「Sign-up with Email」をオフ |
+| 次にやること | 1. P7 集計（T-701〜。`/s/:id/result` は今は見出しだけ。Hero の予想の保存後は `?view=host` で来る）<br>2. さつき: M-08（Cloudflare Pages。スマホ実機の確認と公開に必要）、N-05（CI 用の NEON_API_KEY）、M-09（管理者の登録）、dev の「Sign-up with Email」をオフ |
 | ブロッカー | なし |
-| さつきの確認待ち | Q-30（11 章。推奨案で実装済み）、M-08・N-05・M-09 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
+| さつきの確認待ち | M-08・N-05・M-09 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
 
 ---
 
@@ -239,7 +239,7 @@
 | 2026-09-28 | 秘密の値（API キー等）は手元のファイルに置かず、各サービスの設定（GitHub Secrets 等）に直接入れる運用を基本にする。`.claude/settings.json` の禁止は Claude のファイル読み書きの機能にだけ効き、シェルのコマンドは塞いでいないため | さつきの質問への回答（推奨どおり） | さつき |
 | 2026-09-28 | 開発用の試験データを `db/seed/dev.sql`（`npm run db:seed -- --branch dev`）で入れる。dev 以外のブランチには実行できない。ハンドは H-S1、派生メタは core の spotView で計算した値 | create-post（P5）ができるまで投稿を作る手段が無く、一覧以降の画面を確かめるため | Claude |
 | 2026-09-28 | **E2E に Playwright（`@playwright/test`、開発用の依存）を追加する**。Neon Auth・Data API への通信は偽の応答に差し替え（`e2e/fakeBackend.ts`）、本物のバックエンドにはつながない。PC（1280px）とスマホ（Pixel 7、テスト名に `@sp`）で実行。CI に e2e ジョブを追加 | P6 の完了条件（E2E）。Google ログインは自動化できないため。実データとの結合は dev で手動確認する | さつき |
-| 2026-09-28 | 重なったハンドルは「その方向へ動けるもの」を掴む（右へは添字の大きい方、左へは小さい方）。06 章 §4.4 の括弧内の書き方は Q-30 で確認中 | 仕様書 §5.3.3 の原則。括弧内の字面どおりだと動かないことがある | Claude（Q-30 で確認待ち） |
+| 2026-09-28 | 重なったハンドルは「その方向へ動けるもの」を掴む（右へは添字の大きい方、左へは小さい方）。06 章 §4.4 の書き方もこれに合わせて直した（Q-30） | 仕様書 §5.3.3 の原則。括弧内の字面どおりだと動かないことがある | さつき（Q-30、推奨案） |
 | 2026-09-28 | 回答画面のメタ行のアンティは 0 のとき出さない | モックと同じ。キャッシュでは常に 0 なので | Claude |
 | 2026-09-28 | Hero の予想モードでは Villain の席のラベルを「Villain」にする（「（あなた）」を付けない） | 入力しているのは Hero 本人なので | Claude |
 | 2026-09-28 | 卓のポットは回収済みの額を出し、このストリートのベットは各席のチップで出す（フォールドした席のチップも回収まで残す） | モックと同じ。額が合うように | Claude |
@@ -382,3 +382,4 @@
 - **変更したファイル**: `packages/core/src/poker/spot.ts`・`spot.test.ts`、`packages/app/src/answer/**`（新規）、`packages/app/src/screens/{SpotScreen,AnswerScreen}.tsx`（新規）、`packages/app/src/styles/answer.css`（新規）、`packages/app/src/{App,main}.tsx`、`packages/app/src/components/Icons.tsx`、`e2e/**`・`playwright.config.ts`（新規）、`package.json`・`package-lock.json`、`.gitignore`、`.github/workflows/ci.yml`、`CLAUDE.md`、`docs/plan.md`、`docs/BATON.md`、`docs/detailed-spec/11-open-questions.md`
 - **残課題**: Q-30 の確認、push・PR（承認待ち）、スマホ実機（M-08 の後）、P7 集計。dev に試験の回答 1 件（「試験 ドライボードでのチェックレイズ頻度」）と Hero の予想 1 件（「試験 画面からの投稿（H-S1 ターン）」）が増えた（`npm run db:seed -- --branch dev` で消える）。`npm audit` の警告 4 件（neonctl の依存。今回の追加とは無関係）。
 - **追記（2026-09-28）**: さつきの指示で `phase/06-answer` を push → [satsuki19980613/WWYD#7](https://github.com/satsuki19980613/WWYD/pull/7) を作成。CI（check・db・e2e）緑を確認して main へマージ。db ジョブは N-05 が未設定のため DB テストを実行していない。次の作業ブランチ `phase/07-result` を作成。
+- **追記（2026-09-28）**: Q-30 をさつきが推奨案で承認。11 章を「決定」に、06 章 §4.4 の重なったハンドルの書き方を「その方向へ動けるハンドルを掴む」に直した。
