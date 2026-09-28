@@ -36,8 +36,9 @@
   line-height: 1;
   color: var(--yellow);
   text-shadow: 0 0 24px rgba(252, 238, 10, 0.35);
-  margin-bottom: var(--s5);
+  margin-bottom: var(--s1);
 }
+.login-tagline { margin: 0 0 var(--s5); font-size: 13px; line-height: 1.7; color: var(--dim); word-break: auto-phrase; text-wrap: balance; }
 .login-links { display: flex; justify-content: center; gap: var(--s4); }
 .login-links a {
   display: inline-flex;
