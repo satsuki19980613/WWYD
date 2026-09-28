@@ -1,7 +1,7 @@
-import { bbToMbb, POSITIONS, type Action, type Card, type Legal, type Mbb, type Pos, type State, type Street } from '@wwyd/core';
+import { bbToMbb, POSITIONS, spotCandidates, type Action, type Card, type Legal, type Mbb, type Pos, type State, type Street } from '@wwyd/core';
 import type { OcrAction, OcrResult, OcrVerb } from '@wwyd/ocr';
 import { handCards, isHandComplete } from './cardInput.ts';
-import { emptyDraft, normalizeSpot, parseSettings, phaseOf, type Draft } from './draft.ts';
+import { candidates, emptyDraft, normalizeSpot, parseSettings, phaseOf, type Draft } from './draft.ts';
 import { applyT4Game, type T4Game } from './t4Games.ts';
 
 /**
@@ -40,6 +40,30 @@ export type Review = {
 export type RowView = { pos: Pos | null; street: Street | null; ok: boolean; mismatch: boolean };
 
 export type ReviewEval = { draft: Draft; rows: RowView[]; issues: string[] };
+
+/** 投稿できないハンド（Hero のフロップ以降のアクションが無い）を読み込んだときの表示 */
+export const NO_SPOT_MESSAGE = 'フロップ以降の Hero のアクションがないハンドです';
+
+/**
+ * 読み込んだ時点で、投稿できるハンドかを判定する（06 章 §3.9）。スポットは Hero のフロップ以降のアクション
+ * だけ（04 章 §8.1）なので、そうでないハンドは確認画面を開かずにはじく。
+ * 画像で読んだ席とストリートのまま判定する（再生はしない。席のバッジ・ストリートの区切り・ボードはほぼ確実に読める）。
+ * - `unreadable`: フロップ以降のアクションがあるのにフロップが読めない（スクリーンショットなど。あきらめてもらう）
+ * - `no_spot`: プリフロップで終わった、または Hero に出題できるフロップ以降のアクションが無い
+ * Hero の席や、どこかの行の席が読めなければ、はじかずに確認画面で直してもらう。
+ */
+export function ocrPostability(r: OcrResult): 'ok' | 'unreadable' | 'no_spot' {
+  const postflop = r.actions.some((a) => a.street !== 'pf');
+  if (r.board.length < 3) return postflop ? 'unreadable' : 'no_spot';
+  if (r.hero === null) return 'ok';
+  const actions: Action[] = [];
+  for (const a of r.actions) {
+    if (a.pos === null) return 'ok';
+    // 候補の判定は、席・ストリートとフォールドかどうかしか見ない
+    actions.push({ street: a.street, pos: a.pos, type: a.verb === 'allin' ? 'raise' : a.verb });
+  }
+  return spotCandidates(actions, r.hero).length > 0 ? 'ok' : 'no_spot';
+}
 
 /** 読み取り結果から確認画面の初期状態を作る。Hero が読めなければ下書きの Hero のまま。 */
 export function reviewFromOcr(r: OcrResult, game: T4Game, fallbackHero: Pos): Review {
@@ -114,6 +138,8 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
   else if (phaseOf(setup, actions, board).kind !== 'done') issues.push(`${actions.length + 1}手目以降のアクションが足りません`);
 
   draft = normalizeSpot({ ...draft, actions });
+  // 最後まで再生できたのに出題できるアクションが無い（Hero の席の直し間違いなど）
+  if (issues.length === 0 && candidates(draft).length === 0) issues.push(NO_SPOT_MESSAGE);
   return { draft, rows: views, issues };
 }
 

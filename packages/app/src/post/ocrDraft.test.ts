@@ -1,7 +1,7 @@
 import type { OcrAction, OcrResult } from '@wwyd/ocr';
 import { describe, expect, it } from 'vitest';
 import { emptyDraft, parseSettings, phaseOf, type Draft } from './draft.ts';
-import { evaluateReview, reviewFromOcr, type Review, type ReviewRow } from './ocrDraft.ts';
+import { evaluateReview, NO_SPOT_MESSAGE, ocrPostability, reviewFromOcr, type Review, type ReviewRow } from './ocrDraft.ts';
 
 const act = (street: OcrAction['street'], pos: OcrAction['pos'], verb: OcrAction['verb'], amount: number | null = null): OcrAction => ({
   street,
@@ -30,9 +30,55 @@ const allin: OcrResult = {
   problems: [],
 };
 
+/** Hero = BTN がフロップでベットし、BB がフォールドして終わる */
+const hs1: OcrResult = {
+  hero: 'BTN',
+  hands: {},
+  board: ['Qh', '8c', '2h'],
+  actions: [
+    act('pf', 'UTG', 'fold'),
+    act('pf', 'HJ', 'fold'),
+    act('pf', 'CO', 'fold'),
+    act('pf', 'BTN', 'raise', 2.5),
+    act('pf', 'SB', 'fold'),
+    act('pf', 'BB', 'call'),
+    act('flop', 'BB', 'check'),
+    act('flop', 'BTN', 'bet', 1.8),
+    act('flop', 'BB', 'fold'),
+  ],
+  problems: [],
+};
+
 const done = (d: Draft): boolean => phaseOf(parseSettings(d).setup, d.actions, d.board).kind === 'done';
 const row = (verb: ReviewRow['verb'], amount: number | null = null): ReviewRow => ({ verb, amount, readPos: null, readStreet: null });
 const summary = (d: Draft): string[] => d.actions.map((a) => `${a.street} ${a.pos} ${a.type} ${a.to ?? ''}`.trim());
+
+describe('ocrPostability（読み込みの時点ではじく）', () => {
+  it('Hero のフロップ以降のアクションに出題できるものがあれば読み込む', () => {
+    expect(ocrPostability(hs1)).toBe('ok');
+  });
+
+  it('プリフロップで終わったハンド・Hero がフロップ以降にアクションしていないハンドははじく', () => {
+    const pfOnly: OcrResult = { ...hs1, board: [], actions: hs1.actions.slice(0, 5).concat(act('pf', 'BB', 'fold')) };
+    expect(ocrPostability(pfOnly)).toBe('no_spot');
+    // プリフロップのオールインでボードが開いても、Hero のフロップ以降のアクションは無い
+    expect(ocrPostability(allin)).toBe('no_spot');
+    // Hero が先にフォールドし、他の席でフロップ以降が続いた
+    expect(ocrPostability({ ...hs1, hero: 'UTG' })).toBe('no_spot');
+    // フロップの Hero のベットが最後のアクション（後に誰もアクションしない）
+    expect(ocrPostability({ ...hs1, actions: hs1.actions.slice(0, 8) })).toBe('no_spot');
+  });
+
+  it('フロップ以降のアクションがあるのにフロップが読めなければ、読み取れない', () => {
+    expect(ocrPostability({ ...hs1, board: [] })).toBe('unreadable');
+    expect(ocrPostability({ ...hs1, board: ['Qh', '8c'] })).toBe('unreadable');
+  });
+
+  it('Hero やどこかの席が読めなければ、はじかずに確認画面で直してもらう', () => {
+    expect(ocrPostability({ ...hs1, hero: null })).toBe('ok');
+    expect(ocrPostability({ ...hs1, hero: 'UTG', actions: [act('pf', null, 'fold'), ...hs1.actions.slice(1)] })).toBe('ok');
+  });
+});
 
 describe('reviewFromOcr', () => {
   it('読み取り結果を確認画面の状態にする（Hero が読めなければ下書きの Hero）', () => {
@@ -49,7 +95,8 @@ describe('evaluateReview', () => {
   it('そのまま反映すると、Hero・全席のハンド・ボード・アクションと T4 のゲームの設定が入り、最後まで再生できる', () => {
     const base: Draft = { ...emptyDraft(), fmt: 'mtt', sb: '0.4', ante: '0.2', title: '残る', spotIndex: 3, villain: 'BB' };
     const ev = evaluateReview(base, reviewFromOcr(allin, 'normal', 'BTN'));
-    expect(ev.issues).toEqual([]);
+    // プリフロップのオールインで終わったので、出題できるアクションは無い（読み込みの時点ではじく種類）
+    expect(ev.issues).toEqual([NO_SPOT_MESSAGE]);
     expect(ev.rows.every((r) => r.ok && !r.mismatch)).toBe(true);
     const d = ev.draft;
     expect([d.fmt, d.sb, d.ante, d.rake, d.title, d.spotIndex, d.villain, d.hero]).toEqual(['cash', '0.5', '0', '5', '残る', null, null, 'SB']);
@@ -114,6 +161,12 @@ describe('evaluateReview', () => {
 
     const short = evaluateReview(emptyDraft(), { ...reviewFromOcr(allin, 'normal', 'BTN'), rows: [row('fold'), row('fold')] });
     expect(short.issues).toEqual(['3手目以降のアクションが足りません']);
+  });
+
+  it('最後まで再生できて、Hero のフロップ以降のアクションに出題できるものがあれば問題なし', () => {
+    const ev = evaluateReview(emptyDraft(), reviewFromOcr({ ...hs1, hands: allin.hands }, 'normal', 'BTN'));
+    expect(ev.issues).toEqual([]);
+    expect(done(ev.draft)).toBe(true);
   });
 
   it('無いハンド・途中のハンド・重複したカード・欠けたフロップを知らせ、使わない', () => {

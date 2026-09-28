@@ -11,6 +11,7 @@ import {
   listSearch,
   PAGE_SIZE,
   parseListQuery,
+  STREET_ITEMS,
   type ListQuery,
   type PostRow,
   type RpcCaller,
@@ -46,8 +47,9 @@ describe('parseListQuery / listSearch', () => {
     expect(q).toEqual({ tab: 'mine', street: 'flop', sort: 'many' });
     expect(listSearch(q)).toBe('?tab=mine&street=flop&sort=many');
   });
-  it('プリフロップは pf', () => {
-    expect(parseListQuery('?street=pf').street).toBe('pf');
+  it('プリフロップは出題しないので絞り込めない（既定値にする）', () => {
+    expect(parseListQuery('?street=pf').street).toBe('all');
+    expect(STREET_ITEMS.map((i) => i.value)).toEqual(['all', 'flop', 'turn', 'river']);
   });
   it('知らない値は既定値にする', () => {
     expect(parseListQuery('?tab=x&street=preflop&sort=old&devstate=offline')).toEqual(ALL);

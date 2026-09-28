@@ -7,7 +7,10 @@ import { bbToMbb, formatBb, STREETS, type Pos, type Street } from '@wwyd/core';
  */
 
 export type ListTab = 'all' | 'mine';
-export type StreetFilter = 'all' | Street;
+/** スポットのストリート（フロップ以降。プリフロップは出題しない。04 章 §8.1） */
+export type SpotStreet = Exclude<Street, 'pf'>;
+export const SPOT_STREETS: readonly SpotStreet[] = STREETS.filter((s): s is SpotStreet => s !== 'pf');
+export type StreetFilter = 'all' | SpotStreet;
 export type ListSort = 'new' | 'many';
 export type ListQuery = { tab: ListTab; street: StreetFilter; sort: ListSort };
 
@@ -47,7 +50,7 @@ export const STREET_LABEL: Record<Street, string> = {
 
 export const STREET_ITEMS: readonly { value: StreetFilter; label: string }[] = [
   { value: 'all', label: 'すべて' },
-  ...STREETS.map((s) => ({ value: s, label: STREET_LABEL[s] })),
+  ...SPOT_STREETS.map((s) => ({ value: s, label: STREET_LABEL[s] })),
 ];
 
 export const SORT_ITEMS: readonly { value: ListSort; label: string }[] = [
@@ -65,7 +68,7 @@ export function parseListQuery(search: string): ListQuery {
   const sort = p.get('sort');
   return {
     tab: tab === 'mine' ? 'mine' : 'all',
-    street: STREETS.find((s) => s === street) ?? 'all',
+    street: SPOT_STREETS.find((s) => s === street) ?? 'all',
     sort: sort === 'many' ? 'many' : 'new',
   };
 }

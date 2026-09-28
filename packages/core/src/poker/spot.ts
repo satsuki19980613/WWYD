@@ -20,11 +20,14 @@ function segmentEnd(actions: readonly Action[], hero: Pos, i: number): number {
   return actions.length;
 }
 
-/** スポットの候補（§8.1）。Hero のフォールドと、後続のアクションが無いものは候補外。 */
+/**
+ * スポットの候補（§8.1）。Hero のフロップ以降のアクションだけが対象（2026-09-28 さつき。プリフロップは出題しない）。
+ * Hero のフォールドと、後続のアクションが無いものは候補外。
+ */
 export function spotCandidates(actions: readonly Action[], hero: Pos): SpotCandidate[] {
   const out: SpotCandidate[] = [];
   actions.forEach((a, i) => {
-    if (a.pos !== hero || a.type === 'fold') return;
+    if (a.pos !== hero || a.type === 'fold' || a.street === 'pf') return;
     const villains: Pos[] = [];
     for (let j = i + 1; j < segmentEnd(actions, hero, i); j++) {
       const p = (actions[j] as Action).pos;

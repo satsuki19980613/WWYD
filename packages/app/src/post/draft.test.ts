@@ -204,8 +204,8 @@ describe('ログ', () => {
 describe('スポット（06 章 §3.7）', () => {
   it('候補の表示', () => {
     const d = enter(hs1());
+    // プリフロップ（BTN レイズ 2.5）は出題しない
     expect(candidates(d).map((c) => c.label)).toEqual([
-      'プリフロップ / BTN レイズ 2.5',
       'フロップ / BTN ベット 1.8',
       'ターン / BTN ベット 6.5',
       'リバー / BTN ベット 15',
@@ -215,7 +215,8 @@ describe('スポット（06 章 §3.7）', () => {
   it('Villain が 1 席なら自動で選ぶ。複数なら未選択', () => {
     const d = { ...enter(hs1()), spotIndex: null, villain: null };
     expect(selectSpot(d, 10).villain).toBe('BB');
-    expect(selectSpot(d, 3)).toMatchObject({ spotIndex: 3, villain: null });
+    const mw = { ...enter(hmw()), spotIndex: null, villain: null }; // CO b3 の区間は BTN・BB
+    expect(selectSpot(mw, 7)).toMatchObject({ spotIndex: 7, villain: null });
   });
 
   it('アクションを戻して候補が消えたら選択を解除', () => {
