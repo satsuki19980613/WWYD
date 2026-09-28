@@ -65,12 +65,30 @@ export type CellView = {
   opacity: number;
 };
 
-/** 全体表示のマス（§4.1）。`total` は回答者数 N。 */
+/** 濃さの段階の数（§4.1）。レンジに入れた人の割合を 20% 刻みで区切る。 */
+export const OPACITY_LEVELS = 5;
+
+/**
+ * レンジに入れた人の割合 `n / total` の段階（1〜5）。0% は 0。
+ * 1: 〜20%、2: 〜40%、3: 〜60%、4: 〜80%、5: 〜100%（境目は下の段に含める）。整数だけで計算する。
+ */
+export function opacityLevel(n: number, total: number): number {
+  if (n <= 0 || total <= 0) return 0;
+  return Math.min(OPACITY_LEVELS, Math.floor((OPACITY_LEVELS * n + total - 1) / total));
+}
+
+/** 段階 → 濃さ（不透明度）。1 段目 0.3 から 5 段目 1.0 まで等間隔（0.3 / 0.475 / 0.65 / 0.825 / 1）。 */
+export function levelOpacity(level: number): number {
+  if (level <= 0) return 0;
+  return Math.round((300 + (700 * (level - 1)) / (OPACITY_LEVELS - 1)) * 1000) / 1000000;
+}
+
+/** 全体表示のマス（§4.1）。`total` は回答者数 N。濃さはレンジに入れた人の割合の段階で決める。 */
 export function aggregateCellView(cell: AggCell, total: number): CellView {
   if (cell.n === 0 || total === 0) return { ratio: null, opacity: 0 };
   const ratio = zeroMix();
   for (const k of ANSWER_KEYS) ratio[k] = cell.sum[k] / (cell.n * MIX_TOTAL);
-  return { ratio, opacity: 0.3 + (0.7 * cell.n) / total };
+  return { ratio, opacity: levelOpacity(opacityLevel(cell.n, total)) };
 }
 
 /** 自分・Hero の想定レンジの表示のマス（§4.2）。 */
