@@ -18,7 +18,7 @@ const seatsSetup = (n: 2 | 3 | 4 | 5, opts: { ante?: number } = {}) => {
 };
 const last = (xs: State[]): State => xs[xs.length - 1] as State;
 
-describe('人数ごとの席（04 章 §1.1）', () => {
+describe('人数ごとの席（04 章 §2.1）', () => {
   it('早い席から削る。2 人は BTN と BB', () => {
     expect(SEATS_BY_COUNT[5]).toEqual(['HJ', 'CO', 'BTN', 'SB', 'BB']);
     expect(SEATS_BY_COUNT[4]).toEqual(['CO', 'BTN', 'SB', 'BB']);

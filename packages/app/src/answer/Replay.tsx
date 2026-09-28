@@ -99,7 +99,7 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
 }
 
 type Pt = readonly [number, number];
-/** 席の配置（手前の中央から時計回り。卓の中の % 座標）。人数ごとに卓の周りへ均等に置く（2〜6 人。04 章 §1.1） */
+/** 席の配置（手前の中央から時計回り。卓の中の % 座標）。人数ごとに卓の周りへ均等に置く（2〜6 人。04 章 §2.1） */
 const SLOTS_BY_COUNT: Record<number, readonly Pt[]> = {
   2: [
     [50, 90],

@@ -1,5 +1,6 @@
-import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Street } from '@wwyd/core';
+import { BOARD_COUNT, formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Street } from '@wwyd/core';
 import { useState } from 'react';
+import { UndoIcon } from '../components/Icons.tsx';
 import { PlayingCard, cardText } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { useToast } from '../components/Toast.tsx';
@@ -7,138 +8,268 @@ import { handCards } from './cardInput.ts';
 import { CardPicker } from './CardPicker.tsx';
 import {
   actionLog,
-  defaultAmount,
+  defaultPreset,
   parseSize,
   PLAYERS_REQUIRED,
+  sizePresets,
+  skipTargets,
   STREET_NAME,
-  statusLine,
+  turnInfo,
   usedCards,
   type Draft,
   type Phase,
 } from './draft.ts';
 
+type ActPhase = Extract<Phase, { kind: 'act' }>;
+
 /**
- * アクション入力（06 章 §3.6）: 状況行・ボタン・額・ボード・1つ戻す / すべて消す・ログ・終了表示。
+ * アクション入力（06 章 §3.6、13 章）。
+ * 手番の操作はまとめて「アクションの台」（act-dock）に置く: 手番の見出し（席・ストリート・ポット・to call・残り）と
+ * 1つ戻す、よく使う額、Fold to / Check to、3 つのボタン（フォールド / チェック・コール / ベット・レイズ）。
+ * スマホは台を画面の下に固定し（親指の届く所。ボタンの位置が手番ごとに動かない）、上にボード・ログ・終了表示。
  */
 export function ActionSection(props: {
   draft: Draft;
   setup: HandSetup | null;
   phase: Phase;
+  mobile: boolean;
   onAction: (a: Action) => void;
+  onActions: (a: readonly Action[]) => void;
   onUndo: () => void;
   onClear: () => void;
   onBoardAdd: (card: Card) => void;
   onBoardRemoveFrom: (i: number) => void;
 }): JSX.Element {
   const { draft: d, phase } = props;
+
+  // ボードのカードピッカー（ストリートが終わったら自動で開き、揃うまで続けて開く。閉じたら「＋」で開き直す）
+  const needKey = phase.kind === 'board' ? `${d.actions.length}:${phase.need}` : null;
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const [manual, setManual] = useState(false);
+  const pickerOpen = needKey !== null && (manual || dismissed !== needKey);
+  const openPicker = (): void => setManual(true);
+  const closePicker = (): void => {
+    setManual(false);
+    setDismissed(needKey);
+  };
+
+  const undo = (
+    <button type="button" className="icon-btn ad-undo" aria-label="1つ戻す" disabled={d.actions.length === 0} onClick={props.onUndo}>
+      <UndoIcon />
+    </button>
+  );
+  const dock =
+    phase.kind === 'act' ? (
+      <ActDock key={d.actions.length} phase={phase} undo={undo} onAction={props.onAction} onActions={props.onActions} />
+    ) : phase.kind === 'board' ? (
+      <BoardDock draft={d} undo={undo} onOpen={openPicker} />
+    ) : null;
+
   return (
-    <section className="pf-sec" aria-labelledby="pf-actions">
+    <section className={`pf-sec pf-actsec ${dock && props.mobile ? 'has-dock' : ''}`} aria-labelledby="pf-actions">
       <h2 id="pf-actions" className="sec-h">
         アクション入力
       </h2>
       {phase.kind === 'invalid' && (
         <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
       )}
-      {phase.kind === 'act' && <ActPanel key={d.actions.length} phase={phase} onAction={props.onAction} />}
-      <Board draft={d} phase={phase} onAdd={props.onBoardAdd} onRemoveFrom={props.onBoardRemoveFrom} />
+      {/* PC は台をボードの上に置く（スマホは下に固定） */}
+      {!props.mobile && dock}
+      <Board draft={d} phase={phase} onOpen={openPicker} onRemoveFrom={props.onBoardRemoveFrom} />
+      {props.setup && d.actions.length > 0 && <Log setup={props.setup} draft={d} />}
+      {phase.kind === 'done' && <EndDisplay draft={d} phase={phase} />}
+      {/* 1つ戻すは台の見出し（手番を入れている間）。終わった後もここから戻せるように置く */}
       <div className="btn-row pf-undo">
-        <button type="button" className="btn ghost" disabled={d.actions.length === 0} onClick={props.onUndo}>
-          1つ戻す
-        </button>
+        {!dock && (
+          <button type="button" className="btn ghost" disabled={d.actions.length === 0} onClick={props.onUndo}>
+            1つ戻す
+          </button>
+        )}
         <button type="button" className="btn red" disabled={d.actions.length === 0 && d.board.length === 0} onClick={props.onClear}>
           すべて消す
         </button>
       </div>
-      {props.setup && d.actions.length > 0 && <Log setup={props.setup} draft={d} />}
-      {phase.kind === 'done' && <EndDisplay draft={d} phase={phase} />}
+      {props.mobile && dock}
+      {pickerOpen && phase.kind === 'board' && (
+        <CardPicker
+          title={`${STREET_NAME[cardStreet(d.board.length)]} ${cardStreet(d.board.length) === 'flop' ? `${d.board.length + 1}/3` : ''}`.trim()}
+          used={usedCards(d)}
+          onPick={props.onBoardAdd}
+          onClose={closePicker}
+        />
+      )}
     </section>
   );
 }
 
-function ActPanel(props: { phase: Extract<Phase, { kind: 'act' }>; onAction: (a: Action) => void }): JSX.Element {
+/** 手番の見出し（席・ストリート・ポット・残り）と 1つ戻す。to call はコールのボタンに出す */
+function DockHead(props: { pos?: Action['pos']; title: string; nums?: { pot: Mbb; stack: Mbb }; undo: JSX.Element }): JSX.Element {
+  return (
+    <div className="ad-head">
+      <p className="ad-turn">
+        {props.pos && (
+          <b className="ad-pos" style={{ color: POS_VAR[props.pos] }}>
+            {props.pos}
+          </b>
+        )}
+        <span className="ad-street">{props.title}</span>
+      </p>
+      {props.nums && (
+        <p className="ad-nums num">
+          <span>
+            <i className="mono-lbl">POT</i> {formatBb(props.nums.pot)}
+          </span>
+          <span>
+            <i className="mono-lbl">残り</i> {formatBb(props.nums.stack)}
+          </span>
+        </p>
+      )}
+      {props.undo}
+    </div>
+  );
+}
+
+function ActDock(props: {
+  phase: ActPhase;
+  undo: JSX.Element;
+  onAction: (a: Action) => void;
+  onActions: (a: readonly Action[]) => void;
+}): JSX.Element {
   const { state, pos, legal } = props.phase;
   const toast = useToast();
   const range = legal.bet ?? legal.raise;
-  const [size, setSize] = useState(() => (range ? formatBb(defaultAmount(state, pos, range)) : ''));
+  const presets = sizePresets(state, legal);
+  const [size, setSize] = useState(() => {
+    const m = defaultPreset(state, legal);
+    return m === null ? '' : formatBb(m);
+  });
+  const skip = skipTargets(state, pos, legal);
+  // 1 手で回る席は「フォールド」「チェック」と同じなので出さない
+  const shortcuts = skip.targets.filter((t) => t.actions.length >= 2);
+  const info = turnInfo(state, pos);
+
   const act = (type: Action['type'], to?: Mbb): void =>
     props.onAction(to === undefined ? { street: state.street, pos, type } : { street: state.street, pos, type, to });
-
-  const sized = (type: 'bet' | 'raise'): void => {
+  const to = range ? parseSize(size, range) : null;
+  const aggressive = (): void => {
     if (!range) return;
-    const to = parseSize(size, range);
     if (to === null) {
       toast(`${formatBb(range.min)}〜${formatBb(range.max)}bb`);
       return;
     }
-    act(type, to);
+    act(legal.bet ? 'bet' : 'raise', to);
   };
+  const callAllin = legal.call !== null && legal.call >= state.stacks[pos];
+  // ベットがある（または BB のオプション）ならレイズ。レイズできないとき（相手がオールイン）もレイズと出して押せなくする
+  const raiseLabel = state.currentBet > 0 || (legal.raise !== null && legal.bet === null);
 
   return (
-    <div className="pf-act">
-      <p className="pf-status num">
-        <b style={{ color: POS_VAR[pos] }}>{pos}</b>
-        {statusLine(state, pos).slice(pos.length)}
-      </p>
-      <div className="pf-act-btns">
+    <div className="act-dock" role="group" aria-label="アクション">
+      <DockHead pos={pos} title={STREET_NAME[state.street]} nums={info} undo={props.undo} />
+      {range && (
+        <div className="ad-chips" role="group" aria-label={raiseLabel ? 'レイズの額' : 'ベットの額'}>
+          {presets.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              className={`ad-chip ${p.allin ? 'allin' : ''}`}
+              aria-pressed={to === p.to}
+              onClick={() => setSize(formatBb(p.to))}
+            >
+              {p.allin ? (
+                // 7 つ並んでも収まるよう 2 行に
+                <b aria-label="オールイン">
+                  オール
+                  <br />
+                  イン
+                </b>
+              ) : (
+                <b>{p.label}</b>
+              )}
+              {!p.allin && p.label !== p.sub && <span className="num">{p.sub}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {(shortcuts.length > 0 || range) && (
+        <div className="ad-row">
+          {shortcuts.length > 0 && (
+            <div className="ad-skip" role="group" aria-label={skip.kind === 'fold' ? 'Fold to' : 'Check to'}>
+              <span className="mono-lbl">{skip.kind === 'fold' ? 'Fold to' : 'Check to'}</span>
+              {shortcuts.map((t) => (
+                <button key={t.pos} type="button" className="ad-skip-btn" onClick={() => props.onActions(t.actions)}>
+                  <b style={{ color: POS_VAR[t.pos] }}>{t.pos}</b>
+                </button>
+              ))}
+            </div>
+          )}
+          {range && (
+            <label className="ad-size">
+              <span className="mono-lbl">{raiseLabel ? 'to' : 'bet'}</span>
+              <input
+                className="inp num"
+                inputMode="decimal"
+                autoComplete="off"
+                aria-label={raiseLabel ? 'レイズの額（to。bb）' : 'ベットの額（bb）'}
+                value={size}
+                onChange={(e) => setSize(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') aggressive();
+                }}
+              />
+            </label>
+          )}
+        </div>
+      )}
+      <div className="ad-btns">
         <button type="button" className="act-btn fold" disabled={!legal.fold} onClick={() => act('fold')}>
           フォールド
         </button>
-        <button type="button" className="act-btn check" disabled={!legal.check} onClick={() => act('check')}>
-          チェック
-        </button>
-        <button type="button" className="act-btn call" disabled={legal.call === null} onClick={() => act('call')}>
-          コール{legal.call !== null && <span className="num"> {formatBb(legal.call)}</span>}
-        </button>
-        <button type="button" className="act-btn s1" disabled={!legal.bet} onClick={() => sized('bet')}>
-          ベット
-        </button>
-        <button type="button" className="act-btn s1" disabled={!legal.raise} onClick={() => sized('raise')}>
-          レイズ
+        {legal.check ? (
+          <button type="button" className="act-btn check" onClick={() => act('check')}>
+            チェック
+          </button>
+        ) : (
+          <button type="button" className="act-btn call" disabled={legal.call === null} onClick={() => act('call')}>
+            コール{legal.call !== null && <span className="num"> {formatBb(legal.call)}</span>}
+            {callAllin && <small>オールイン</small>}
+          </button>
+        )}
+        <button type="button" className="act-btn s1" disabled={!range} onClick={aggressive}>
+          {raiseLabel ? 'レイズ' : 'ベット'}
+          {to !== null && <span className="num"> {formatBb(to)}</span>}
+          {to !== null && range && to === range.max && <small>オールイン</small>}
         </button>
       </div>
-      {range && (
-        <div className="pf-size">
-          <label className="mono-lbl" htmlFor="pf-size-inp">
-            {legal.bet ? 'ベット' : 'レイズ to'}
-          </label>
-          <input
-            id="pf-size-inp"
-            className="inp num"
-            inputMode="decimal"
-            autoComplete="off"
-            value={size}
-            onChange={(e) => setSize(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') sized(legal.bet ? 'bet' : 'raise');
-            }}
-          />
-          <span className="pf-range num">
-            {formatBb(range.min)}〜{formatBb(range.max)}bb
-          </span>
-        </div>
-      )}
+    </div>
+  );
+}
+
+/** ボードを待つ間の台: 「フロップのカード」＋開き直すボタン */
+function BoardDock(props: { draft: Draft; undo: JSX.Element; onOpen: () => void }): JSX.Element {
+  const street = cardStreet(props.draft.board.length);
+  return (
+    <div className="act-dock" role="group" aria-label="ボード">
+      <DockHead title={`${STREET_NAME[street]}のカード`} undo={props.undo} />
+      <div className="ad-btns one">
+        <button type="button" className="btn ghost" onClick={props.onOpen}>
+          {STREET_NAME[street]}のカードを選ぶ
+        </button>
+      </div>
     </div>
   );
 }
 
 const cardStreet = (i: number): Street => (i < 3 ? 'flop' : i === 3 ? 'turn' : 'river');
 
-/** ボード 5 枠。必要になった枠の「＋」でピッカー（ストリートが終わったら自動で開き、揃うまで続けて開く）。 */
-function Board(props: {
-  draft: Draft;
-  phase: Phase;
-  onAdd: (card: Card) => void;
-  onRemoveFrom: (i: number) => void;
-}): JSX.Element {
+/** ボード 5 枠。必要になった枠の「＋」でピッカーを開く。カードを押すとそのカード以降を消す。 */
+function Board(props: { draft: Draft; phase: Phase; onOpen: () => void; onRemoveFrom: (i: number) => void }): JSX.Element {
   const { draft: d, phase } = props;
-  const needKey = phase.kind === 'board' ? `${d.actions.length}:${phase.need}` : null;
-  const [dismissed, setDismissed] = useState<string | null>(null);
-  const [manual, setManual] = useState(false);
-  const open = needKey !== null && (manual || dismissed !== needKey);
   const next = d.board.length;
   const street = cardStreet(next);
-  const nth = street === 'flop' ? `${next + 1}/3` : '';
-
+  // まだ来ていないストリートのカード（1つ戻すで残ったもの）は薄く出す
+  const reached =
+    phase.kind === 'act' ? BOARD_COUNT[phase.state.street] : phase.kind === 'board' ? phase.need : phase.kind === 'done' ? phase.boardCount : 5;
   return (
     <div className="pf-board" role="group" aria-label="ボード">
       {[0, 1, 2, 3, 4].map((i) => {
@@ -148,7 +279,7 @@ function Board(props: {
             <button
               key={i}
               type="button"
-              className="pf-bslot filled"
+              className={`pf-bslot filled ${i >= reached ? 'ahead' : ''}`}
               aria-label={`${cardText(card)}（このカード以降を消す）`}
               onClick={() => props.onRemoveFrom(i)}
             >
@@ -164,23 +295,12 @@ function Board(props: {
             className="pf-bslot"
             disabled={!addable}
             aria-label={addable ? `${STREET_NAME[street]}のカードを選ぶ` : '空き'}
-            onClick={() => setManual(true)}
+            onClick={props.onOpen}
           >
             {addable ? '＋' : ''}
           </button>
         );
       })}
-      {open && (
-        <CardPicker
-          title={`${STREET_NAME[street]} ${nth}`.trim()}
-          used={usedCards(d)}
-          onPick={props.onAdd}
-          onClose={() => {
-            setManual(false);
-            setDismissed(needKey);
-          }}
-        />
-      )}
     </div>
   );
 }

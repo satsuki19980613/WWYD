@@ -1,5 +1,6 @@
 import {
   advance,
+  apply,
   BOARD_COUNT,
   bbToMbb,
   formatBb,
@@ -100,7 +101,7 @@ export function neighborSeat(seats: readonly Pos[], seat: Pos, dir: 1 | -1): Pos
 }
 
 /**
- * 人数を選ぶ（06 章 §3.4）。席は早い席から削る（04 章 §1.1）。空席になった席のハンドは消し、
+ * 人数を選ぶ（06 章 §3.4）。席は早い席から削る（04 章 §2.1）。空席になった席のハンドは消し、
  * Hero が空席になったら BTN（どの人数にもある席）にする。
  */
 export function setPlayers(d: Draft, n: PlayerCount): Draft {
@@ -228,6 +229,88 @@ export function defaultAmount(state: State, pos: Pos, range: { min: Mbb; max: Mb
   return Math.min(range.max, Math.max(range.min, target));
 }
 
+// ---- アクション入力の補助（13 章。2026-09-29） ----
+
+/** 手番の見出し: ポット（このストリートのベットを含む）・to call・残りスタック */
+export function turnInfo(state: State, pos: Pos): { pot: Mbb; toCall: Mbb; stack: Mbb } {
+  const toCall = Math.min(state.currentBet - state.bets[pos], state.stacks[pos]);
+  return { pot: totalPot(state), toCall, stack: state.stacks[pos] };
+}
+
+/** 額のボタン。`label` は考え方の単位（bb・×倍率・% pot）、`sub` は to の額（bb） */
+export type SizePreset = { label: string; sub: string; to: Mbb; allin: boolean };
+
+/**
+ * よく使う額（13 章 §2）。プレイヤーが考える単位で出す。
+ * - プリフロップのオープン: 2 / 2.2 / 2.5 / 3bb（リンプがあれば 3 / 4 / 5bb＋リンプ 1 人につき 1bb）
+ * - プリフロップの 3bet 以降: 直前のレイズ（to）の ×2.2 / ×2.5 / ×3 / ×4
+ * - フロップ以降のベット: ポットの 25 / 33 / 50 / 75 / 100 / 150%
+ * - フロップ以降のレイズ: 直前のベット（to）の ×2.5 / ×3 / ×4
+ * 最小に満たない額と、オールイン以上の額は出さない（オールインは最後に必ず出す）。
+ */
+export function sizePresets(state: State, legal: Legal): SizePreset[] {
+  const range = legal.bet ?? legal.raise;
+  if (!range) return [];
+  const bb = state.bb;
+  const pot = totalPot(state);
+  // % pot は 0.1bb に丸める（ログ・集計の表示で 1.82 のような額にしない）。倍率は 0.01bb
+  const raw: { label: string; to: number; unit: number }[] = [];
+  if (state.street === 'pf' && state.currentBet <= bb) {
+    // リンプ（BB と同額を出した BB 以外の席）
+    const limpers = state.seated.filter((p) => p !== 'BB' && state.bets[p] === bb && !state.folded.has(p)).length;
+    const opens = limpers === 0 ? [2, 2.2, 2.5, 3] : [3, 4, 5].map((x) => x + limpers);
+    for (const x of opens) raw.push({ label: formatBb(x * bb), to: x * bb, unit: 10 });
+  } else if (state.street === 'pf') {
+    for (const k of [2.2, 2.5, 3, 4]) raw.push({ label: `×${k}`, to: state.currentBet * k, unit: 10 });
+  } else if (state.currentBet === 0) {
+    for (const pct of [25, 33, 50, 75, 100, 150]) raw.push({ label: `${pct}%`, to: (pot * pct) / 100, unit: 100 });
+  } else {
+    for (const k of [2.5, 3, 4]) raw.push({ label: `×${k}`, to: state.currentBet * k, unit: 10 });
+  }
+  const out: SizePreset[] = [];
+  for (const r of raw) {
+    const to = Math.round(r.to / r.unit) * r.unit;
+    if (to < range.min || to >= range.max || out.some((o) => o.to === to)) continue;
+    out.push({ label: r.label, sub: formatBb(to), to, allin: false });
+  }
+  out.push({ label: 'オールイン', sub: formatBb(range.max), to: range.max, allin: true });
+  return out;
+}
+
+/** 最初に選んでおく額: オープン 2.5bb・3bet ×3・ベット 33%・レイズ ×3（無ければ最小） */
+export function defaultPreset(state: State, legal: Legal): Mbb | null {
+  const range = legal.bet ?? legal.raise;
+  if (!range) return null;
+  const ps = sizePresets(state, legal);
+  const want = state.street === 'pf' ? (state.currentBet <= state.bb ? '2.5' : '×3') : state.currentBet === 0 ? '33%' : '×3';
+  return ps.find((p) => p.label === want)?.to ?? ps.find((p) => !p.allin)?.to ?? range.min;
+}
+
+/**
+ * 「Fold to」「Check to」（13 章 §2。途中の席のフォールド・チェックを 1 回で入れる）。
+ * 手番の席から、フォールド（ベットがあるとき）またはチェック（ないとき）を続けて、そのストリートのうちに
+ * 手番が回る席と、そこまでに入れるアクションを返す。すぐ次の手番（1 手で回る席）も含む。
+ */
+export function skipTargets(state: State, pos: Pos, legalNow: Legal): { kind: 'fold' | 'check'; targets: { pos: Pos; actions: Action[] }[] } {
+  const kind = legalNow.check ? 'check' : 'fold';
+  const targets: { pos: Pos; actions: Action[] }[] = [];
+  let s = state;
+  let p = pos;
+  const actions: Action[] = [];
+  for (let guard = 0; guard < 6; guard++) {
+    const lg = legal(s, p);
+    if (kind === 'fold' ? !lg.fold : !lg.check) break;
+    const a: Action = { street: s.street, pos: p, type: kind };
+    actions.push(a);
+    s = apply(s, a);
+    const st = status(s);
+    if (st.kind !== 'act') break;
+    p = st.pos;
+    targets.push({ pos: p, actions: [...actions] });
+  }
+  return { kind, targets };
+}
+
 /** 額の入力を検査する。範囲外・小数第 4 位以下・数でなければ null。 */
 export function parseSize(text: string, range: { min: Mbb; max: Mbb }): Mbb | null {
   const m = parseAmount(text, null);
@@ -276,6 +359,11 @@ export function selectSpot(d: Draft, index: number): Draft {
 
 export function addAction(d: Draft, action: Action): Draft {
   return normalizeSpot({ ...d, actions: [...d.actions, action] });
+}
+
+/** 続けて入れる（Fold to / Check to） */
+export function addActions(d: Draft, actions: readonly Action[]): Draft {
+  return normalizeSpot({ ...d, actions: [...d.actions, ...actions] });
 }
 
 /** 「1つ戻す」: 最後のアクションだけ取り消す（ボードは残す） */
@@ -350,7 +438,7 @@ export function buildSubmission(d: Draft): Submission {
 
   try {
     const view = spotView(setup, d.actions, d.hero, d.spotIndex, d.villain);
-    // 席は stacks のキーで表す（空席は送らない。04 章 §1.1）
+    // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
     const stacks: Record<string, number> = {};
     for (const p of seats) stacks[p] = mbbToBb(setup.stacks[p]);
     const body: Record<string, unknown> = {

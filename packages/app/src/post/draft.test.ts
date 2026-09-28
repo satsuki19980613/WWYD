@@ -9,6 +9,7 @@ import {
   candidates,
   clearActions,
   defaultAmount,
+  defaultPreset,
   emptyDraft,
   isDirty,
   isLocked,
@@ -20,7 +21,10 @@ import {
   phaseOf,
   removeBoardFrom,
   selectSpot,
+  sizePresets,
+  skipTargets,
   statusLine,
+  turnInfo,
   undoAction,
   usedCards,
   type Draft,
@@ -153,6 +157,65 @@ describe('人数（06 章 §3.4。2026-09-29）', () => {
       expect(s.body.stacks).toEqual({ BTN: 100, BB: 100 });
       expect(s.body.known_cards).toEqual({ BB: ['Qs', 'Qc'] });
     }
+  });
+});
+
+describe('アクション入力の補助（13 章）', () => {
+  /** 6 人の下書きにアクションを入れて、手番の状態を取る */
+  const actAt = (acts: Action[], board: string[] = []) => {
+    const d = { ...six(), actions: acts, board };
+    const ph = phaseOf(parseSettings(d).setup, d.actions, d.board);
+    if (ph.kind !== 'act') throw new Error(`act でない: ${ph.kind}`);
+    return ph;
+  };
+  const labels = (ph: ReturnType<typeof actAt>) => sizePresets(ph.state, ph.legal).map((p) => `${p.label}:${p.sub}`);
+  const pf = (pos: Pos, type: Action['type'], to?: number): Action =>
+    to === undefined ? { street: 'pf', pos, type } : { street: 'pf', pos, type, to: to * 1000 };
+  const fl = (pos: Pos, type: Action['type'], to?: number): Action =>
+    to === undefined ? { street: 'flop', pos, type } : { street: 'flop', pos, type, to: to * 1000 };
+
+  it('オープンは 2 / 2.2 / 2.5 / 3bb とオールイン。最初は 2.5', () => {
+    const ph = actAt([]);
+    expect(labels(ph)).toEqual(['2:2', '2.2:2.2', '2.5:2.5', '3:3', 'オールイン:100']);
+    expect(defaultPreset(ph.state, ph.legal)).toBe(2500);
+  });
+  it('リンプが 1 人いればアイソレートは 4 / 5 / 6bb', () => {
+    const ph = actAt([pf('UTG', 'call')]);
+    expect(labels(ph)).toEqual(['4:4', '5:5', '6:6', 'オールイン:100']);
+  });
+  it('3bet は直前のレイズの倍率。最初は ×3', () => {
+    const ph = actAt([pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'raise', 2.5)]);
+    expect(labels(ph)).toEqual(['×2.2:5.5', '×2.5:6.25', '×3:7.5', '×4:10', 'オールイン:100']);
+    expect(defaultPreset(ph.state, ph.legal)).toBe(7500);
+  });
+  it('フロップのベットは % pot（ポット 5.5）。最初は 33%', () => {
+    const base = [pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'fold'), pf('BTN', 'raise', 2.5), pf('SB', 'fold'), pf('BB', 'call')];
+    const ph = actAt([...base, fl('BB', 'check')], ['Kh', '8d', '3c']);
+    // % pot は 0.1bb に丸める
+    expect(labels(ph)).toEqual(['25%:1.4', '33%:1.8', '50%:2.8', '75%:4.1', '100%:5.5', '150%:8.3', 'オールイン:97.5']);
+    expect(defaultPreset(ph.state, ph.legal)).toBe(1800);
+    expect(turnInfo(ph.state, ph.pos)).toEqual({ pot: 5500, toCall: 0, stack: 97500 });
+  });
+  it('フロップのレイズは直前のベットの倍率。最小に満たない額は出さない', () => {
+    const base = [pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'fold'), pf('BTN', 'raise', 2.5), pf('SB', 'fold'), pf('BB', 'call')];
+    const ph = actAt([...base, fl('BB', 'check'), fl('BTN', 'bet', 2)], ['Kh', '8d', '3c']);
+    expect(labels(ph)).toEqual(['×2.5:5', '×3:6', '×4:8', 'オールイン:97.5']);
+    expect(turnInfo(ph.state, ph.pos)).toEqual({ pot: 7500, toCall: 2000, stack: 97500 });
+  });
+  it('Fold to: UTG から、フォールドで回る席（BB は回らない。SB までで終わる）', () => {
+    const ph = actAt([]);
+    const sk = skipTargets(ph.state, ph.pos, ph.legal);
+    expect(sk.kind).toBe('fold');
+    expect(sk.targets.map((t) => t.pos)).toEqual(['HJ', 'CO', 'BTN', 'SB']);
+    expect(sk.targets[2]?.actions.map((a) => `${a.pos} ${a.type}`)).toEqual(['UTG fold', 'HJ fold', 'CO fold']);
+  });
+  it('Check to: フロップのマルチウェイ。最後の席のチェックで終わる席は出さない', () => {
+    const base = [pf('UTG', 'fold'), pf('HJ', 'call'), pf('CO', 'fold'), pf('BTN', 'call'), pf('SB', 'call'), pf('BB', 'check')];
+    const ph = actAt(base, ['Kh', '8d', '3c']);
+    const sk = skipTargets(ph.state, ph.pos, ph.legal);
+    expect(ph.pos).toBe('SB');
+    expect(sk.kind).toBe('check');
+    expect(sk.targets.map((t) => t.pos)).toEqual(['BB', 'HJ', 'BTN']);
   });
 });
 

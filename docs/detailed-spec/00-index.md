@@ -31,7 +31,7 @@
 
 | 表記 | 意味 |
 |---|---|
-| ポジション | `UTG, HJ, CO, BTN, SB, BB`（6max 固定） |
+| ポジション | `UTG, HJ, CO, BTN, SB, BB`（2〜6 人。人数を減らすと早い席から空く。04 章 §2.1。2026-09-29 に 6max 固定から変更） |
 | ストリート | `pf, flop, turn, river` |
 | カード | ランク `AKQJT98765432` + スート `s h d c`（例 `Ad`） |
 | アクション種別 | `fold, check, call, bet, raise` |

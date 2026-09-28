@@ -12,7 +12,7 @@ export type ActionType = 'fold' | 'check' | 'call' | 'bet' | 'raise';
 export type Action = { street: Street; pos: Pos; type: ActionType; to?: Mbb };
 
 /**
- * `stacks` が 0 の席は空席（2〜6 人。04 章 §1.1）。空席は最初からフォールド扱いで、アンティもブラインドも払わない。
+ * `stacks` が 0 の席は空席（2〜6 人。04 章 §2.1）。空席は最初からフォールド扱いで、アンティもブラインドも払わない。
  * SB の席が空いていればボタン（BTN）が SB を払う（ヘッズアップ）。
  */
 export type HandSetup = { sb: Mbb; bb: Mbb; ante: Mbb; stacks: Record<Pos, Mbb> };

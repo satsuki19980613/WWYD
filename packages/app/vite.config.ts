@@ -28,6 +28,8 @@ export default defineConfig({
   // .env はリポジトリ直下に置く（.env.example と同じ場所。CLAUDE.md §5）
   envDir: '../..',
   plugins: [react()],
-  server: { port: 5173, strictPort: true },
+  // OneDrive 上のフォルダではファイルの変更の通知を取りこぼし、古い版のまま真っ白になることがあるので、
+  // 開発サーバーはポーリングで変更を見る（2026-09-29。本番のビルドには関係しない）
+  server: { port: 5173, strictPort: true, watch: { usePolling: true, interval: 300 } },
   preview: { port: 4173, strictPort: true, headers: pagesHeaders() },
 });

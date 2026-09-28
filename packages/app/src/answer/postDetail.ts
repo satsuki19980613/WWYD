@@ -139,7 +139,7 @@ export function parsePostDetail(raw: unknown): PostDetail {
   const h = obj(r.hand, 'hand');
 
   const stacksRaw = obj(h.stacks, 'hand.stacks');
-  // 席は stacks のキー（2〜6 人。空席は 0。04 章 §1.1）
+  // 席は stacks のキー（2〜6 人。空席は 0。04 章 §2.1）
   const seats = Object.keys(stacksRaw) as Pos[];
   if (playerCountOf(seats) === null) bad('hand.stacks の席');
   const stacks = {} as Record<Pos, Mbb>;

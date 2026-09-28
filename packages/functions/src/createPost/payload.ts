@@ -34,7 +34,7 @@ const bbOrNull = (mbb: number | null): number | null => (mbb === null ? null : m
 export function toInsertPayload(v: VerifiedPost): InsertPayload {
   const d = v.derived;
   const stacks: Record<string, number> = {};
-  // 空席（スタック 0）は保存しない。席は stacks のキーで表す（2〜6 人。04 章 §1.1）
+  // 空席（スタック 0）は保存しない。席は stacks のキーで表す（2〜6 人。04 章 §2.1）
   for (const p of seatedOf(v.setup)) stacks[p] = mbbToBb(v.setup.stacks[p]);
   const known: Record<string, string[] | 'muck'> = {};
   for (const [pos, cards] of Object.entries(v.knownCards)) {

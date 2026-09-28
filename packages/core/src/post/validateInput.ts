@@ -84,7 +84,7 @@ export function validateInput(raw: unknown): PostInput {
   if (!isObj(raw.stacks)) fail('malformed', undefined, 'stacks');
   const rawStacks = raw.stacks;
   if (Object.keys(rawStacks).some((k) => !isPos(k))) fail('malformed', undefined, 'stacks の席');
-  // 席は stacks のキーで決まる（2〜6 人。人数ごとの席のどれかと一致すること。04 章 §1.1）。空席は 0
+  // 席は stacks のキーで決まる（2〜6 人。人数ごとの席のどれかと一致すること。04 章 §2.1）。空席は 0
   const seats = Object.keys(rawStacks) as Pos[];
   if (playerCountOf(seats) === null) fail('invalid_settings');
   const stacks = {} as Record<Pos, Mbb>;

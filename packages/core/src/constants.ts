@@ -10,7 +10,7 @@
 export const POSITIONS = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'] as const;
 export type Pos = (typeof POSITIONS)[number];
 
-/** 1 ハンドの人数（2〜6。2026-09-29 さつきの決定。04 章 §1.1）。 */
+/** 1 ハンドの人数（2〜6。2026-09-29 さつきの決定。04 章 §2.1）。 */
 export const PLAYER_COUNTS = [2, 3, 4, 5, 6] as const;
 export type PlayerCount = (typeof PLAYER_COUNTS)[number];
 

@@ -7,6 +7,7 @@ import { applyCardKey, isHandComplete, type CardKey } from '../post/cardInput.ts
 import { CardKeyboard } from '../post/CardKeyboard.tsx';
 import {
   addAction,
+  addActions,
   addBoardCard,
   buildSubmission,
   clearActions,
@@ -106,7 +107,9 @@ export function NewPostScreen(): JSX.Element {
       draft={d}
       setup={setup}
       phase={phase}
+      mobile={mobile}
       onAction={(a: Action) => update((x) => addAction(x, a))}
+      onActions={(as) => update((x) => addActions(x, as))}
       onUndo={() => update(undoAction)}
       onClear={() => update(clearActions)}
       onBoardAdd={(c: Card) => update((x) => addBoardCard(x, c))}
@@ -183,7 +186,8 @@ export function NewPostScreen(): JSX.Element {
       {step === 1 && players}
       {step === 2 && actions}
       {step === 3 && spot}
-      {!seat && (
+      {/* アクションのステップでハンドを入れている間は、下にアクションの台を出すので戻る・次へを隠す（13 章） */}
+      {!seat && !(step === ACTION_STEP && (phase.kind === 'act' || phase.kind === 'board')) && (
         <div className="pf-bar">
           <ErrorList errors={errors} />
           <div className="btn-row">
