@@ -1,4 +1,4 @@
-# バトン: P9 OCR 実装完了 → スマホの画像の検証・確認待ち・本番反映
+# バトン: P9 OCR 実装完了（確認画面つき）→ push・本番反映
 
 **更新 2026-09-28 / セッション 6（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている。操作をお願いするときは非エンジニアにも分かる言葉で説明する）**
@@ -11,8 +11,8 @@
 **P8 までは完了・本番公開済み**（https://wwyd.pages.dev ）。さつきの手作業は iPhone 実機の確認（保留）とスマホの画像の用意。
 
 1. **スマホの画像は検証済み**（Android 24 ハンドで 100%。4♦ の塊を切る処理を追加。07 章 §0・§8.3）。iPhone の画像は保留。
-2. **確認待ち**: Q-P9-1（フォールドした席のハンドも入れてよいか。推奨: 入れる）、Q-P9-2（レーキの cap を保存・表示するか。推奨: しない）。
-3. 回答を反映 → push・PR（さつきの確認後）→ マージ後に **本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復**と OCR を確認（CSP は今回初めて入る。`packages/app/public/_headers`）。
+2. **確認待ちは無し**（Q-P9-1・Q-P9-2 は推奨どおりで決定）。読み取り結果の確認画面（`post/OcrReview.tsx`）を追加済み。
+3. push・PR（さつきの確認後）→ マージ後に **本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復**と OCR を確認（CSP は今回初めて入る。`packages/app/public/_headers`）。
 
 ### 0.1 P9 で作ったもの
 
@@ -20,7 +20,7 @@
 |---|---|
 | `packages/ocr` | 純 TS。`readHandHistory(image, reader)` → `OcrResult`（名前を含まない）。`vision.ts`（カード・スート・ボード・Hero の行）、`bodyText.ts`（本文。バッジ優先、名前は受け皿）、`rankTemplates.ts`（生成物） |
 | `packages/app/src/ocr/runOcr.ts` | ブラウザの入口（動的 import）。tesseract.js を自サイトの `/ocr/` から（`scripts/copyOcrAssets.mjs` が predev・prebuild で配置。git 管理外） |
-| `packages/app/src/post/OcrImport.tsx`・`t4Games.ts`・`ocrDraft.ts` | T4 のゲーム（通常 / エキスパート）を選ぶ → 画像 → 下書き（core で再生して確かめ、読めたところまで） |
+| `packages/app/src/post/OcrImport.tsx`・`OcrReview.tsx`・`t4Games.ts`・`ocrDraft.ts` | T4 のゲーム（通常 / エキスパート）を選ぶ → 画像 → 確認画面（画像と並べて直す。席とストリートは再生で決まる）→ 反映 |
 | `packages/app/public/_headers` | CSP ほか。`npm run preview` も同じ（`vite.config.ts`）。launch.json の `app-preview` で本番ビルドを 5173 で動かせる |
 | `scripts/ocr/` | `accuracy.mts`（精度。`--drafts` で正解の無い画像の下書き `*.ocr.json`）、`genRankTemplates.mts`（テンプレート）、`png.mts`（Node 標準だけの PNG の読み書き） |
 | `e2e/ocr.spec.ts` | 外部通信 0 件（Worker を含む）・ゲームの選択・キャンセル |

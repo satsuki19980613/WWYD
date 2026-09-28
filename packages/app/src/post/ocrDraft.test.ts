@@ -1,7 +1,7 @@
 import type { OcrAction, OcrResult } from '@wwyd/ocr';
 import { describe, expect, it } from 'vitest';
-import { emptyDraft, phaseOf, parseSettings, type Draft } from './draft.ts';
-import { applyOcr } from './ocrDraft.ts';
+import { emptyDraft, parseSettings, phaseOf, type Draft } from './draft.ts';
+import { evaluateReview, reviewFromOcr, type Review, type ReviewRow } from './ocrDraft.ts';
 
 const act = (street: OcrAction['street'], pos: OcrAction['pos'], verb: OcrAction['verb'], amount: number | null = null): OcrAction => ({
   street,
@@ -31,118 +31,107 @@ const allin: OcrResult = {
 };
 
 const done = (d: Draft): boolean => phaseOf(parseSettings(d).setup, d.actions, d.board).kind === 'done';
+const row = (verb: ReviewRow['verb'], amount: number | null = null): ReviewRow => ({ verb, amount, readPos: null, readStreet: null });
+const summary = (d: Draft): string[] => d.actions.map((a) => `${a.street} ${a.pos} ${a.type} ${a.to ?? ''}`.trim());
 
-describe('applyOcr', () => {
-  it('Hero・全席のハンド・ボード・アクションを反映し、最後まで再生できる', () => {
-    const r = applyOcr(emptyDraft(), allin);
-    if (!r.ok) throw new Error('反映できない');
-    expect(r.issues).toEqual([]);
-    expect(r.draft.hero).toBe('SB');
-    expect(r.draft.hands).toEqual({ UTG: 'AhAd', HJ: 'JsTd', CO: '9d4h', BTN: 'Jc3s', SB: 'AsKs', BB: '7d2c' });
-    expect(r.draft.board).toEqual(allin.board);
-    expect(r.draft.actions.map((a) => `${a.pos} ${a.type} ${a.to ?? ''}`.trim())).toEqual([
-      'UTG raise 2000',
-      'HJ call',
-      'CO fold',
-      'BTN fold',
-      'SB raise 10000',
-      'BB fold',
-      'UTG raise 19000',
-      'HJ fold',
-      'SB raise 100000',
-      'UTG call',
-    ]);
-    expect(done(r.draft)).toBe(true);
+describe('reviewFromOcr', () => {
+  it('読み取り結果を確認画面の状態にする（Hero が読めなければ下書きの Hero）', () => {
+    const rv = reviewFromOcr(allin, 'expert', 'BTN');
+    expect(rv.game).toBe('expert');
+    expect(rv.hero).toBe('SB');
+    expect(rv.hands).toEqual({ UTG: 'AhAd', HJ: 'JsTd', CO: '9d4h', BTN: 'Jc3s', SB: 'AsKs', BB: '7d2c' });
+    expect(rv.rows[0]).toEqual({ verb: 'raise', amount: 2, readPos: 'UTG', readStreet: 'pf' });
+    expect(reviewFromOcr({ ...allin, hero: null, hands: {} }, 'normal', 'BTN')).toMatchObject({ hero: 'BTN', hands: { UTG: '', BB: '' } });
   });
+});
 
-  it('画像に無い基本設定・スタック・タイトルは利用者の入力のまま。スポットの選択は解除する', () => {
-    const base: Draft = { ...emptyDraft(), fmt: 'mtt', sb: '0.4', ante: '0.1', title: 'そのまま', spotIndex: 3, villain: 'BB' };
-    const r = applyOcr(base, { ...allin, actions: [act('pf', 'UTG', 'fold')] });
-    if (!r.ok) throw new Error('反映できない');
-    expect([r.draft.fmt, r.draft.sb, r.draft.ante, r.draft.title, r.draft.spotIndex, r.draft.villain]).toEqual([
-      'mtt',
-      '0.4',
-      '0.1',
-      'そのまま',
-      null,
-      null,
-    ]);
-  });
-
-  it('ポストフロップの Bet・All-in・席の読めない行を、その時点の状態で直す', () => {
-    const r = applyOcr(emptyDraft(), {
-      ...allin,
-      hero: 'BB',
-      actions: [
-        act('pf', 'UTG', 'raise', 2.5),
-        act('pf', 'HJ', 'fold'),
-        act('pf', 'CO', 'fold'),
-        act('pf', null, 'fold'), // BTN のバッジが読めなかった
-        act('pf', 'SB', 'fold'),
-        act('pf', 'BB', 'call', 2.5),
-        act('flop', 'BB', 'check'),
-        act('flop', 'UTG', 'bet', 3),
-        act('flop', 'BB', 'allin', 97.5),
-        act('flop', 'UTG', 'allin'),
-      ],
-    });
-    if (!r.ok) throw new Error('反映できない');
-    expect(r.issues).toEqual([]);
-    expect(r.draft.actions.slice(3).map((a) => `${a.street} ${a.pos} ${a.type} ${a.to ?? ''}`.trim())).toEqual([
+describe('evaluateReview', () => {
+  it('そのまま反映すると、Hero・全席のハンド・ボード・アクションと T4 のゲームの設定が入り、最後まで再生できる', () => {
+    const base: Draft = { ...emptyDraft(), fmt: 'mtt', sb: '0.4', ante: '0.2', title: '残る', spotIndex: 3, villain: 'BB' };
+    const ev = evaluateReview(base, reviewFromOcr(allin, 'normal', 'BTN'));
+    expect(ev.issues).toEqual([]);
+    expect(ev.rows.every((r) => r.ok && !r.mismatch)).toBe(true);
+    const d = ev.draft;
+    expect([d.fmt, d.sb, d.ante, d.rake, d.title, d.spotIndex, d.villain, d.hero]).toEqual(['cash', '0.5', '0', '5', '残る', null, null, 'SB']);
+    expect(d.hands).toEqual({ UTG: 'AhAd', HJ: 'JsTd', CO: '9d4h', BTN: 'Jc3s', SB: 'AsKs', BB: '7d2c' });
+    expect(d.board).toEqual(allin.board);
+    expect(summary(d)).toEqual([
+      'pf UTG raise 2000',
+      'pf HJ call',
+      'pf CO fold',
       'pf BTN fold',
-      'pf SB fold',
-      'pf BB call',
-      'flop BB check',
-      'flop UTG bet 3000',
-      'flop BB raise 97500',
-      'flop UTG call',
+      'pf SB raise 10000',
+      'pf BB fold',
+      'pf UTG raise 19000',
+      'pf HJ fold',
+      'pf SB raise 100000',
+      'pf UTG call',
     ]);
-    expect(done(r.draft)).toBe(true);
+    expect(done(d)).toBe(true);
   });
 
-  it('手番と違う席・合わない額・スタックを超えるオールインで止め、読めたところまで反映する', () => {
-    const wrongSeat = applyOcr(emptyDraft(), { ...allin, actions: [act('pf', 'UTG', 'fold'), act('pf', 'CO', 'fold')] });
-    expect(wrongSeat.ok && wrongSeat.draft.actions).toHaveLength(1);
-    expect(wrongSeat.ok && wrongSeat.issues).toEqual(['2手目のアクションを読み取れませんでした']);
-
-    const badAmount = applyOcr(emptyDraft(), { ...allin, actions: [act('pf', 'UTG', 'raise', 1.5)] });
-    expect(badAmount.ok && badAmount.issues).toEqual(['1手目のアクションを読み取れませんでした']);
-
-    const tooDeep = applyOcr(emptyDraft(), { ...allin, actions: [act('pf', 'UTG', 'allin', 150)] });
-    expect(tooDeep.ok && tooDeep.issues).toEqual(['1手目のアクションを読み取れませんでした']);
+  it('席とストリートは再生で決まる。ポストフロップの Bet・All-in も直す', () => {
+    const rv: Review = {
+      ...reviewFromOcr(allin, 'normal', 'BTN'),
+      hero: 'BB',
+      rows: [row('raise', 2.5), row('fold'), row('fold'), row('fold'), row('fold'), row('call'), row('check'), row('bet', 3), row('allin', 97.5), row('allin')],
+    };
+    const ev = evaluateReview(emptyDraft(), rv);
+    expect(ev.issues).toEqual([]);
+    expect(ev.rows.map((r) => `${r.street} ${r.pos}`)).toEqual([
+      'pf UTG',
+      'pf HJ',
+      'pf CO',
+      'pf BTN',
+      'pf SB',
+      'pf BB',
+      'flop BB',
+      'flop UTG',
+      'flop BB',
+      'flop UTG',
+    ]);
+    expect(summary(ev.draft).slice(6)).toEqual(['flop BB check', 'flop UTG bet 3000', 'flop BB raise 97500', 'flop UTG call']);
+    expect(done(ev.draft)).toBe(true);
   });
 
-  it('最後まで読めなかったハンドは、続きの手目を知らせる', () => {
-    const r = applyOcr(emptyDraft(), { ...allin, actions: allin.actions.slice(0, 4) });
-    expect(r.ok && r.issues).toEqual(['5手目以降のアクションを読み取れませんでした']);
+  it('画像で読んだ席と再生の席が違う行は「合わない」として示す（行の読み落としの目印）', () => {
+    // HJ の Call の行が読み落とされた
+    const rv = reviewFromOcr({ ...allin, actions: allin.actions.filter((_, i) => i !== 1) }, 'normal', 'BTN');
+    const ev = evaluateReview(emptyDraft(), rv);
+    expect(ev.rows[1]).toMatchObject({ pos: 'HJ', ok: true, mismatch: true });
+    expect(ev.issues[0]).toBe('2手目から席が画像の読み取りと合いません');
+    expect(ev.issues.filter((m) => m.includes('合いません'))).toHaveLength(1);
   });
 
-  it('読めなかったハンド・重複したカード・欠けたフロップ・Hero の席', () => {
-    const r = applyOcr(emptyDraft(), {
-      hero: null,
-      hands: { UTG: ['Ah', 'Ad'], HJ: ['Ah', 'Kd'], SB: ['As', 'Ks'] },
+  it('合法でない行で止め、そこまでを反映する。最後まで無ければ続きを知らせる', () => {
+    const bad = evaluateReview(emptyDraft(), { ...reviewFromOcr(allin, 'normal', 'BTN'), rows: [row('fold'), row('raise', 1.5), row('fold')] });
+    expect(bad.draft.actions).toHaveLength(1);
+    expect(bad.rows.map((r) => r.ok)).toEqual([true, false, false]);
+    expect(bad.issues).toEqual(['2手目のアクションが正しくありません']);
+
+    const tooDeep = evaluateReview(emptyDraft(), { ...reviewFromOcr(allin, 'normal', 'BTN'), rows: [row('allin', 150)] });
+    expect(tooDeep.issues).toEqual(['1手目のアクションが正しくありません']);
+
+    const short = evaluateReview(emptyDraft(), { ...reviewFromOcr(allin, 'normal', 'BTN'), rows: [row('fold'), row('fold')] });
+    expect(short.issues).toEqual(['3手目以降のアクションが足りません']);
+  });
+
+  it('無いハンド・途中のハンド・重複したカード・欠けたフロップを知らせ、使わない', () => {
+    const rv: Review = {
+      ...reviewFromOcr(allin, 'normal', 'BTN'),
+      hands: { UTG: 'AhAd', HJ: 'AhKd', CO: 'Kc', BTN: '', SB: 'AsKs', BB: '7d2c' },
       board: ['Qc', 'Jc'],
-      actions: [],
-      problems: [{ code: 'hero_unknown' }, { code: 'board_unread', street: 'flop' }],
-    });
-    if (!r.ok) throw new Error('反映できない');
-    expect(r.draft.hero).toBe('BTN'); // 読めなければ利用者の選択のまま
-    expect(r.draft.hands).toEqual({ UTG: 'AhAd', HJ: '', CO: '', BTN: '', SB: 'AsKs', BB: '' });
-    expect(r.draft.board).toEqual([]);
-    expect(r.issues).toEqual([
-      'Hero の席を読み取れませんでした',
-      'HJ のハンドを読み取れませんでした',
-      'CO のハンドを読み取れませんでした',
-      'BTN のハンドを読み取れませんでした',
-      'BB のハンドを読み取れませんでした',
-      'ボードを読み取れませんでした',
-      '1手目以降のアクションを読み取れませんでした',
+      rows: [],
+    };
+    const ev = evaluateReview(emptyDraft(), rv);
+    expect(ev.draft.hands).toEqual({ UTG: 'AhAd', HJ: '', CO: '', BTN: '', SB: 'AsKs', BB: '7d2c' });
+    expect(ev.draft.board).toEqual([]);
+    expect(ev.issues).toEqual([
+      'HJ のハンドが正しくありません',
+      'CO のハンドが正しくありません',
+      'BTN のハンドがありません',
+      'ボードが正しくありません',
+      '1手目以降のアクションが足りません',
     ]);
-  });
-
-  it('6 人の卓として読めなければ何も反映しない', () => {
-    expect(applyOcr(emptyDraft(), { hero: null, hands: {}, board: [], actions: [], problems: [{ code: 'not_six_players', rows: 3 }] })).toEqual({
-      ok: false,
-    });
   });
 });

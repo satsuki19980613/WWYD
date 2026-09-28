@@ -116,12 +116,14 @@ export function NewPostScreen(): JSX.Element {
     </button>
   );
   const keyboard = seat && <CardKeyboard seat={seat} onKey={onKey} onClose={() => setSeat(null)} />;
+  // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ
+  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} />;
 
   if (!mobile) {
     return (
       <section className={`screen pf ${seat ? 'kb-open' : ''}`}>
         <h1 className="sec-h">スポット投稿</h1>
-        <OcrImport />
+        {ocr(true)}
         <div className="pf-grid">
           <div className="pf-col">
             {settings}
@@ -158,12 +160,8 @@ export function NewPostScreen(): JSX.Element {
           </button>
         ))}
       </nav>
-      {step === 0 && (
-        <>
-          <OcrImport />
-          {settings}
-        </>
-      )}
+      {ocr(step === 0)}
+      {step === 0 && settings}
       {step === 1 && players}
       {step === 2 && actions}
       {step === 3 && spot}

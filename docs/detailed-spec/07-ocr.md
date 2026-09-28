@@ -111,8 +111,8 @@ OCR は `packages/ocr` の `readHandHistory(image: ImageData): Promise<OcrResult
 | `packages/ocr/src/bodyText.ts` | 本文の解釈。席は**行頭のバッジ**を先に見て、読めなければ名前（メモリの中だけ）で探す。動詞は行でいちばん右のもの、額は動詞の後ろだけを見る（名前の中の数字・動詞を拾わない） |
 | `packages/ocr/src/rankTemplates.ts` | ランクのテンプレート（生成物。`npm run ocr:templates`） |
 | `packages/app/src/ocr/runOcr.ts` | ブラウザの入口（動的 import）。File → ImageBitmap → Canvas → ImageData。tesseract.js の Worker・認識エンジン・学習データはすべて自サイトの `/ocr/` から読む（`workerBlobURL: false`、`cacheMethod: 'none'`）。取り消し（AbortSignal）で Worker を止める |
-| `packages/app/src/post/ocrDraft.ts` | `OcrResult` → 下書き。§3 のとおり画像に無い項目は利用者の入力のまま。アクションは core で先頭から再生して確かめ、合わない所で止める（読めたところまで反映）。手番の席は再生で決まるので、バッジが読めなかった行も補える |
-| `packages/app/src/post/OcrImport.tsx` | 「T4ハンドヒストリー画像を読み込む」（06 章 §3.9） |
+| `packages/app/src/post/ocrDraft.ts` | `OcrResult` → 確認画面の状態（`reviewFromOcr`）→ 検証と下書き（`evaluateReview`）。アクションの席とストリートは core で先頭から再生して決め、画像で読んだ席と合わない行を示す。再生できない行で止める（読めたところまで反映） |
+| `packages/app/src/post/OcrImport.tsx`・`OcrReview.tsx`・`t4Games.ts` | 「T4ハンドヒストリー画像を読み込む」→ T4 のゲーム → 読み取り → 確認画面（画像と見比べて直す）→ 反映（06 章 §3.9） |
 | `scripts/copyOcrAssets.mjs` | 配信ファイルを `node_modules` から `packages/app/public/ocr/`（git 管理外）に写す。`predev`・`prebuild` で自動実行 |
 | `scripts/ocr/accuracy.mts` | 正解データでの精度の測定（`npm run ocr:accuracy`。Node 版 tesseract.js。手元専用） |
 | `packages/app/public/_headers` | CSP ほか（08 章）。`npm run preview` も同じヘッダーを付ける |
@@ -154,7 +154,7 @@ Android の画像 12 枚は、正しいラベルまでの距離 6〜25、次に�
 
 ### 8.4 T4 の画像の性質（実装で分かったこと）
 
-- **T4 は全員のハンドを載せる**（フォールドした席も）。OCR は全席のハンドを下書きに入れる（known_cards として保存される）。扱いはさつきに確認中（plan.md の確認待ち）。
+- **T4 は全員のハンドを載せる**（フォールドした席も）。OCR は全席のハンドを下書きに入れる（known_cards として保存される）。2026-09-28 さつきの決定（Q-P9-1、推奨どおり）。
 - オールインは `Raise 100bb` / `Call 100bb` のように書かれる（`All-in` の語が出ない画像もある）。額は「そのストリートでいくらまで」。
 - 開始スタックは画像に無い。流用元の正解データはすべて 100bb で整合する。スタックが 100bb でない卓では、利用者がスタックを直してから読み込み直す
   （スタックを超える額の行で止まり、「n手目のアクションを読み取れませんでした」を出す）。

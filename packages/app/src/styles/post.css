@@ -387,3 +387,79 @@
 .pf-ocr-games { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); min-width: min(360px, 80vw); }
 .pf-ocr-game { flex-direction: column; gap: 2px; min-height: 64px; }
 .pf-ocr-rake { font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* ---- 読み取り結果の確認（06 章 §3.9）。全面。PC は左に画像・右に結果、スマホはタブ ---- */
+.ocr-rv {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--sat);
+  background: var(--bg);
+}
+.ocr-rv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) max(var(--s4), var(--sar)) var(--s3) max(var(--s4), var(--sal));
+  border-bottom: 1px solid var(--line);
+}
+.ocr-rv-title { margin: 0; font-family: var(--disp); font-size: 18px; letter-spacing: 0.04em; }
+.ocr-rv-head .btn-row { flex: none; }
+.ocr-rv-head .btn-row .btn { min-width: 96px; white-space: nowrap; }
+.ocr-rv > .tabs { padding: 0 var(--s4); }
+.ocr-rv-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: var(--s5);
+  padding: var(--s4) max(var(--s4), var(--sar)) 0 max(var(--s4), var(--sal));
+}
+.ocr-rv-img { overflow: auto; border: 1px solid var(--line); background: var(--surface); }
+.ocr-rv-img img { display: block; width: 100%; height: auto; }
+/* 下にカードキーボードが開いても最後の行が隠れないよう、下に余白 */
+.ocr-rv-form { overflow: auto; display: flex; flex-direction: column; gap: var(--s5); padding-bottom: 320px; }
+.ocr-rv-hands { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s2) var(--s4); }
+.ocr-rv-seat { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--s2); }
+.ocr-rv-pos, .ocr-rv-actor, .ocr-rv-no { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.ocr-rv-no { color: var(--dim2); text-align: right; }
+.ocr-rv-hero {
+  min-height: 44px;
+  padding: 0 var(--s2);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim2);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.ocr-rv-hero.on { border-color: var(--yellow); color: var(--yellow); }
+.ocr-rv-x { align-self: center; }
+.ocr-rv-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.ocr-rv-row {
+  display: grid;
+  grid-template-columns: 24px 40px minmax(120px, 200px) 120px 36px 36px;
+  align-items: center;
+  gap: var(--s2);
+  padding-left: var(--s1);
+  border-left: 2px solid transparent;
+}
+.ocr-rv-street { grid-column: 1 / -1; margin-top: var(--s2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--dim); }
+/* 再生できない行・画像の読み取りと席が合わない行は赤 */
+.ocr-rv-row.ng, .ocr-rv-row.mm { border-left-color: var(--red); }
+.ocr-rv-row.ng .ocr-rv-no, .ocr-rv-row.ng .ocr-rv-actor, .ocr-rv-row.mm .ocr-rv-actor { color: var(--red); }
+.ocr-rv-amt { display: flex; align-items: center; gap: var(--s1); }
+.ocr-rv-amt .inp { width: 100%; min-width: 0; }
+.ocr-rv > .ckb { z-index: 1; }
+@media (max-width: 767px) {
+  .ocr-rv-head { padding-left: var(--s3); padding-right: var(--s3); }
+  .ocr-rv-head .btn-row .btn { min-width: 0; padding: 0 var(--s3); }
+  .ocr-rv > .tabs { padding: 0 var(--s3); }
+  .ocr-rv-body { display: block; overflow: auto; padding: var(--s3); }
+  .ocr-rv-img { overflow: visible; }
+  .ocr-rv-form { overflow: visible; }
+  .ocr-rv-row { grid-template-columns: 20px 32px minmax(0, 1fr) 84px 32px 32px; gap: var(--s1); }
+}

@@ -1,89 +1,127 @@
-import { bbToMbb, POSITIONS, type Action, type Card, type Legal, type Mbb, type Pos, type State } from '@wwyd/core';
-import type { OcrAction, OcrResult } from '@wwyd/ocr';
+import { bbToMbb, POSITIONS, type Action, type Card, type Legal, type Mbb, type Pos, type State, type Street } from '@wwyd/core';
+import type { OcrAction, OcrResult, OcrVerb } from '@wwyd/ocr';
+import { handCards, isHandComplete } from './cardInput.ts';
 import { emptyDraft, normalizeSpot, parseSettings, phaseOf, type Draft } from './draft.ts';
+import { applyT4Game, type T4Game } from './t4Games.ts';
 
 /**
- * OCR の結果を投稿の下書きに反映する（詳細仕様 06 章 §3.9・07 章 §3）。
+ * OCR の結果の確認と、投稿の下書きへの反映（詳細仕様 06 章 §3.9・07 章 §3）。
  *
- * - 置き換えるのは画像から読める所（Hero の席・各席のハンド・ボード・アクション）だけ。ゲーム形式・SB・アンティ・
- *   レーキ・スタック・タイトルは画像に無いので、利用者の入力のまま残す。
- * - アクションは packages/core で**先頭から 1 つずつ再生して確かめ**、合わない所で止める（読めたところまで反映）。
- *   手番の席は再生で決まるので、行頭のバッジが読めなかった行も席が分かる。読めたバッジが手番と違えば止める。
+ * 読み取った結果はそのままフォームに入れず、確認画面（OcrReview）で画像と見比べて直してから反映する。
+ * 確認画面で直せるのは Hero の席・各席のハンド・ボード・アクション（動詞と額）・T4 のゲーム。
+ *
+ * - アクションの席とストリートは **core で先頭から再生して決める**（行の順番だけが意味を持つ）。
+ *   画像で読んだ席・ストリートと違う行は「合わない」として示す（行の読み落とし・読み違いの目印）。
+ * - 再生できない行（その時点で合法でない）で止め、そこから先は反映しない（読めたところまで）。
  * - `All-in` と、額の付いた `Raise` / `Bet` は、その時点の状態でベット・レイズ・コールに直す（T4 の額は
  *   そのストリートで「いくらまで」出したか。core の `to` と同じ）。
+ * - ゲーム形式・SB・アンティ・レーキは選んだ T4 のゲームで決まる。スタック・タイトルは利用者の入力のまま。
  */
 
-export type OcrApply =
-  | { ok: true; draft: Draft; issues: string[] }
-  /** 何も反映できない（6 人の卓として読めない） */
-  | { ok: false };
+export type ReviewRow = {
+  verb: OcrVerb;
+  /** 画像に書かれた額（bb）。無ければ null */
+  amount: number | null;
+  /** 画像で読んだ席・ストリート（確認画面で足した行は null） */
+  readPos: Pos | null;
+  readStreet: Street | null;
+};
 
-export function applyOcr(base: Draft, r: OcrResult): OcrApply {
-  if (r.problems.some((p) => p.code === 'not_six_players')) return { ok: false };
+export type Review = {
+  game: T4Game;
+  hero: Pos;
+  /** 席ごとのハンド（cardInput の形式。例 `AhKd`） */
+  hands: Record<Pos, string>;
+  board: Card[];
+  rows: ReviewRow[];
+};
+
+/** 行ごとの再生の結果。`ok: false` の行から先は反映されない */
+export type RowView = { pos: Pos | null; street: Street | null; ok: boolean; mismatch: boolean };
+
+export type ReviewEval = { draft: Draft; rows: RowView[]; issues: string[] };
+
+/** 読み取り結果から確認画面の初期状態を作る。Hero が読めなければ下書きの Hero のまま。 */
+export function reviewFromOcr(r: OcrResult, game: T4Game, fallbackHero: Pos): Review {
+  const hands = { ...emptyDraft().hands };
+  for (const p of POSITIONS) hands[p] = r.hands[p]?.join('') ?? '';
+  return {
+    game,
+    hero: r.hero ?? fallbackHero,
+    hands,
+    board: [...r.board],
+    rows: r.actions.map((a: OcrAction) => ({ verb: a.verb, amount: a.amount, readPos: a.pos, readStreet: a.street })),
+  };
+}
+
+/** 確認画面の状態を検証し、反映する下書きと、行ごとの結果・問題の一覧を返す。 */
+export function evaluateReview(base: Draft, rv: Review): ReviewEval {
   const issues: string[] = [];
-  const blank = emptyDraft();
-  const hero = r.hero ?? base.hero;
-  if (r.hero === null) issues.push('Hero の席を読み取れませんでした');
 
-  // ハンドとボード（同じカードが 2 度出たら、後のほうを捨てる）
+  // ハンドとボード（途中のハンド・同じカードの 2 度目は使わない）
   const used = new Set<Card>();
   const take = (cards: readonly Card[]): boolean => {
     if (cards.some((c) => used.has(c)) || new Set(cards).size !== cards.length) return false;
     for (const c of cards) used.add(c);
     return true;
   };
-  const hands = { ...blank.hands };
+  const hands = { ...emptyDraft().hands };
   for (const p of POSITIONS) {
-    const cards = r.hands[p];
-    if (cards && take(cards)) hands[p] = cards.join('');
-    else issues.push(`${p} のハンドを読み取れませんでした`);
+    const h = rv.hands[p];
+    if (h === '') issues.push(`${p} のハンドがありません`);
+    else if (!isHandComplete(h) || !take(handCards(h))) issues.push(`${p} のハンドが正しくありません`);
+    else hands[p] = h;
   }
   const board: Card[] = [];
-  for (const c of r.board) {
+  for (const c of rv.board) {
     if (!take([c])) break;
     board.push(c);
   }
-  // フロップは 3 枚そろって初めて使える
+  if (board.length < rv.board.length || (board.length > 0 && board.length < 3)) issues.push('ボードが正しくありません');
   if (board.length > 0 && board.length < 3) board.length = 0;
-  if (board.length < r.board.length || r.problems.some((p) => p.code === 'board_unread' || p.code === 'board_mismatch')) {
-    issues.push('ボードを読み取れませんでした');
-  }
 
-  let draft: Draft = { ...base, hero, hands, board, actions: [], spotIndex: null, villain: null };
-
-  // アクション（先頭から再生して確かめる）
+  let draft: Draft = applyT4Game({ ...base, hero: rv.hero, hands, board, actions: [], spotIndex: null, villain: null }, rv.game);
   const { setup } = parseSettings(draft);
+  const views: RowView[] = rv.rows.map(() => ({ pos: null, street: null, ok: false, mismatch: false }));
   if (!setup) {
-    issues.push('基本設定を確認してから読み込み直してください');
-    return { ok: true, draft, issues };
+    issues.push('基本設定を確認してください');
+    return { draft, rows: views, issues };
   }
+
+  // アクション（先頭から再生。席とストリートは再生で決まる）
   const actions: Action[] = [];
-  for (let i = 0; i < r.actions.length; i++) {
+  let stopped = -1;
+  rv.rows.forEach((row, i) => {
+    if (stopped >= 0) return;
     const phase = phaseOf(setup, actions, board);
-    const a = r.actions[i] as OcrAction;
-    const next =
-      phase.kind === 'act' && phase.state.street === a.street && (a.pos === null || a.pos === phase.pos)
-        ? toAction(phase.state, phase.pos, phase.legal, a)
-        : null;
-    if (!next) {
-      issues.push(`${i + 1}手目のアクションを読み取れませんでした`);
-      break;
+    const next = phase.kind === 'act' ? toAction(phase.state, phase.pos, phase.legal, row) : null;
+    if (phase.kind !== 'act' || !next) {
+      stopped = i;
+      return;
     }
     actions.push(next);
-  }
+    views[i] = {
+      pos: phase.pos,
+      street: phase.state.street,
+      ok: true,
+      mismatch: (row.readPos !== null && row.readPos !== phase.pos) || (row.readStreet !== null && row.readStreet !== phase.state.street),
+    };
+  });
+  // 1 行の読み落としで以降がすべてずれるので、最初の 1 か所だけ知らせる（行は赤で示す）
+  const firstMismatch = views.findIndex((v) => v.ok && v.mismatch);
+  if (firstMismatch >= 0) issues.push(`${firstMismatch + 1}手目から席が画像の読み取りと合いません`);
+  if (stopped >= 0) issues.push(`${stopped + 1}手目のアクションが正しくありません`);
+  else if (phaseOf(setup, actions, board).kind !== 'done') issues.push(`${actions.length + 1}手目以降のアクションが足りません`);
+
   draft = normalizeSpot({ ...draft, actions });
-  const end = phaseOf(setup, actions, board);
-  if (end.kind !== 'done' && actions.length === r.actions.length) {
-    issues.push(`${actions.length + 1}手目以降のアクションを読み取れませんでした`);
-  }
-  return { ok: true, draft, issues };
+  return { draft, rows: views, issues };
 }
 
 const inRange = (m: Mbb | null, range: { min: Mbb; max: Mbb } | null): m is Mbb =>
   m !== null && range !== null && m >= range.min && m <= range.max;
 
-/** 画像の 1 アクションを、その時点で合法なアクションに直す。直せなければ null。 */
-export function toAction(state: State, pos: Pos, legal: Legal, a: OcrAction): Action | null {
+/** 1 行を、その時点で合法なアクションに直す。直せなければ null。 */
+export function toAction(state: State, pos: Pos, legal: Legal, a: { verb: OcrVerb; amount: number | null }): Action | null {
   const base = { street: state.street, pos };
   const amount = a.amount === null ? null : bbToMbb(a.amount);
   const allInTo = state.bets[pos] + state.stacks[pos];

@@ -2,24 +2,34 @@ import { useRef, useState } from 'react';
 import { Modal } from '../components/Modal.tsx';
 import { isDirty } from './draft.ts';
 import { getDraft, setDraft } from './draftStore.ts';
-import { applyOcr } from './ocrDraft.ts';
+import { reviewFromOcr, type Review } from './ocrDraft.ts';
+import { OcrReview } from './OcrReview.tsx';
 import { ErrorList } from './SpotSection.tsx';
-import { applyT4Game, T4_GAME_ORDER, T4_GAMES, type T4Game } from './t4Games.ts';
+import { T4_GAME_ORDER, T4_GAMES, type T4Game } from './t4Games.ts';
 
 /**
  * 「T4ハンドヒストリー画像を読み込む」（06 章 §3.9）。
- * ゲームの種類（通常 / エキスパート）を選ぶ → ファイル選択 → 「読み取り中…」（キャンセルできる）→ 反映。
+ * ゲームの種類（通常 / エキスパート）を選ぶ → ファイル選択 → 「読み取り中…」（キャンセルできる）
+ * → 確認画面（OcrReview。画像と見比べて直す）→ 反映。
  * 入力中の内容があれば、ゲームを選ぶダイアログで置き換わることを示す。
  * 読めなかった所はエラーとして並べ、読めたところまでフォームに入れる。
  * OCR の本体（tesseract.js）はここで初めて読み込む。画像はメモリの中だけで扱う（runOcr.ts）。
  */
-export function OcrImport(): JSX.Element {
+export function OcrImport(props: { button?: boolean }): JSX.Element {
+  const showButton = props.button ?? true;
   const input = useRef<HTMLInputElement>(null);
   const abort = useRef<AbortController | null>(null);
   const game = useRef<T4Game>('normal');
   const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [review, setReview] = useState<{ initial: Review; imageUrl: string } | null>(null);
+
+  // 確認画面を閉じたら画像の Object URL を破棄する（画像の参照を残さない）
+  const closeReview = (): void => {
+    if (review) URL.revokeObjectURL(review.imageUrl);
+    setReview(null);
+  };
 
   const pick = (g: T4Game): void => {
     game.current = g;
@@ -40,12 +50,8 @@ export function OcrImport(): JSX.Element {
         const { runOcr } = await import('../ocr/runOcr.ts');
         const result = await runOcr(file, controller.signal);
         if (controller.signal.aborted) return;
-        const applied = applyOcr(applyT4Game(getDraft(), chosen), result);
-        if (!applied.ok) setErrors(['読み取れませんでした']);
-        else {
-          setDraft(applied.draft);
-          setErrors(applied.issues);
-        }
+        if (result.problems.some((p) => p.code === 'not_six_players')) setErrors(['読み取れませんでした']);
+        else setReview({ initial: reviewFromOcr(result, chosen, getDraft().hero), imageUrl: URL.createObjectURL(file) });
       } catch {
         if (!controller.signal.aborted) setErrors(['読み取れませんでした']);
       } finally {
@@ -65,10 +71,15 @@ export function OcrImport(): JSX.Element {
   };
 
   return (
-    <div className="pf-ocr">
-      <button type="button" className="btn ghost" disabled={busy} onClick={() => setChoosing(true)}>
-        T4ハンドヒストリー画像を読み込む
-      </button>
+    <>
+      {showButton && (
+        <div className="pf-ocr">
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => setChoosing(true)}>
+            T4ハンドヒストリー画像を読み込む
+          </button>
+          <ErrorList errors={errors} />
+        </div>
+      )}
       <input
         ref={input}
         type="file"
@@ -77,7 +88,6 @@ export function OcrImport(): JSX.Element {
         data-testid="ocr-file"
         onChange={(e) => onFile(e.currentTarget.files?.[0])}
       />
-      <ErrorList errors={errors} />
       {choosing && (
         <Modal title="T4 のゲーム" tone="confirm" onClose={() => setChoosing(false)}>
           {isDirty(getDraft()) && <p className="confirm-body">入力中の内容は画像の内容に置き換わります。</p>}
@@ -92,6 +102,18 @@ export function OcrImport(): JSX.Element {
             ))}
           </div>
         </Modal>
+      )}
+      {review && (
+        <OcrReview
+          initial={review.initial}
+          imageUrl={review.imageUrl}
+          base={getDraft()}
+          onApply={(draft) => {
+            setDraft(draft);
+            closeReview();
+          }}
+          onCancel={closeReview}
+        />
       )}
       {busy && (
         <Modal
@@ -110,6 +132,6 @@ export function OcrImport(): JSX.Element {
           <div className="pf-ocr-progress" aria-hidden="true" />
         </Modal>
       )}
-    </div>
+    </>
   );
 }
