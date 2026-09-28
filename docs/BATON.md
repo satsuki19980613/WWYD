@@ -1,28 +1,39 @@
-# バトン: P8 完了（本番公開済み）→ 次は P9 OCR を始める
+# バトン: P9 OCR 実装完了 → スマホの画像の検証・確認待ち・本番反映
 
-**更新 2026-09-28 / セッション 5（Opus 5.5）から次セッションへの引き継ぎ**
+**更新 2026-09-28 / セッション 6（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている。操作をお願いするときは非エンジニアにも分かる言葉で説明する）**
 
 ---
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**P9 OCR を始める**（さつきの指示: 次のセッションで開始）。ブランチ `phase/09-ocr`（main に追いつかせ済み。記録のコミットが未 push で数件ある）。
-**P8 までは完了・本番公開済み**（https://wwyd.pages.dev 。M-05b 済みで誰でも Google でログインできる）。**さつきの手作業は iPhone 実機の確認（保留）だけ**。N-05（CI の DB テストが実際に動いている）・dev の Sign-up with Email のオフ・M-08・M-09 は済み。
+**P9 OCR は実装完了**（ブランチ `phase/09-ocr`）。詳細は [07 章 §8](detailed-spec/07-ocr.md)。
+**P8 までは完了・本番公開済み**（https://wwyd.pages.dev ）。さつきの手作業は iPhone 実機の確認（保留）とスマホの画像の用意。
 
-### P9 の進め方（詳細仕様 [07 章](detailed-spec/07-ocr.md)。決定済み: 流用元 tenfour_watcher、方式 (a) tesseract.js を自サイトから配信【Q-17】）
+1. **スマホの画像**（さつきが後で `sample/sp/` に入れる。10〜20 枚）: スマホ用に OCR を組まない（さつきの方針）。サンプルでは (a) カードの文字の PC とのずれが画像をまたいで一定か、(b) 今の OCR で全部読めるか、を確かめる。正解は画像を目視して `<同じ名前>.expected.json` を作る（`npm run ocr:accuracy -- sample/sp --drafts` で下書き → 目視。量が多ければ Sonnet のサブエージェントに分担）。
+2. **確認待ち**: Q-P9-1（フォールドした席のハンドも入れてよいか。推奨: 入れる）。
+3. 回答を反映 → push・PR（さつきの確認後）→ マージ後に **本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復**と OCR を確認（CSP は今回初めて入る。`packages/app/public/_headers`）。
 
-1. **流用元を読む**（読み取り専用）: `C:\Users\sa641.SATSUKIPC\OneDrive\ドキュメント\一時ツール\tenfour_watcher`。本体は `src/ocr.py`（約 1,500 行、入口 `TenfourImageParser.parse()`）・`src/models.py`・`src/rank_templates.py`。正解データは `samples/<種類>/*.png` と `*.expected.json` の組（6max_3bet・6max_allin・6max_flop・6max_preflop_end・6max_river_showdown・6max_turn・edge_cases。9max は対象外）。流用元の `CLAUDE.md`・`tests/test_no_personal_data.py` も参考。**流用元のリポジトリは変更しない**。
-2. **T-901 正解データ**: 名前を除いた期待値に変換し、`packages/ocr/fixtures-local/`（**git 管理外**。`.gitignore` 済み）に置く。**画像も期待値も公開リポジトリにコミットしない**（個人の対戦画像）。CI は画像を使わない単体テストだけ。
-3. **T-902 カード・スート・ボード・行検出**を純 TS に移植（`packages/ocr` を新設。ワークスペースの追加）。ICMCLEC の `packages/ocr`（非公開・コミットしない）の画像処理部品（グレースケール・切り出し・NCC）も参考にできる。合格: ボード 100%。
-4. **T-903 本文認識**: tesseract.js（**依存の追加なので、入れる前にさつきの承認が要る**。版とサイズを添えて聞く）。WASM・`eng` の学習データは**自サイトから配信**し、CDN の既定の読み込みを必ず上書きする。OCR ボタンを押したときだけ遅延読み込み。席の結び付けは名前ではなく**ポジションバッジ基準**。`All-in` は再生の文脈で bet / raise / call に正規化。合格: プレイヤー・アクション 95% 以上。
-5. **T-904 投稿画面への組み込み**（06 章 §3.9）: 「T4ハンドヒストリー画像を読み込む」ボタン（今は出していない）、上書き確認、読めたところまで反映して再生検証、画像は使い終わったら参照を捨てる。開始スタック・SB・アンティ・ゲーム形式は画像に無いので利用者の入力のまま。
-6. **外部通信が無いことの確認**: DevTools のネットワークで 0 件。**CSP（`packages/app/public/_headers`）はまだ無い**ので P9 で作る（08 章の案。Supabase の行は Neon Auth・Data API・create-post の URL に置き換え、`script-src 'self' 'wasm-unsafe-eval'`・`worker-src 'self' blob:`）。本番の Google ログインの戻りを壊さないこと。
-7. **不変条件**: 画像を保存・送信しない（5）、プレイヤー名を保存しない（6）。`OcrResult` に名前が含まれないことをテストする。**プライバシーポリシー 1 の「画像の読み取りは端末の中だけ。送信も保存もしない」と実装が一致すること**（T-1001 で最終確認）。
+### 0.1 P9 で作ったもの
+
+| 場所 | 内容 |
+|---|---|
+| `packages/ocr` | 純 TS。`readHandHistory(image, reader)` → `OcrResult`（名前を含まない）。`vision.ts`（カード・スート・ボード・Hero の行）、`bodyText.ts`（本文。バッジ優先、名前は受け皿）、`rankTemplates.ts`（生成物） |
+| `packages/app/src/ocr/runOcr.ts` | ブラウザの入口（動的 import）。tesseract.js を自サイトの `/ocr/` から（`scripts/copyOcrAssets.mjs` が predev・prebuild で配置。git 管理外） |
+| `packages/app/src/post/OcrImport.tsx`・`t4Games.ts`・`ocrDraft.ts` | T4 のゲーム（通常 / エキスパート）を選ぶ → 画像 → 下書き（core で再生して確かめ、読めたところまで） |
+| `packages/app/public/_headers` | CSP ほか。`npm run preview` も同じ（`vite.config.ts`）。launch.json の `app-preview` で本番ビルドを 5173 で動かせる |
+| `scripts/ocr/` | `accuracy.mts`（精度。`--drafts` で正解の無い画像の下書き `*.ocr.json`）、`genRankTemplates.mts`（テンプレート）、`png.mts`（Node 標準だけの PNG の読み書き） |
+| `e2e/ocr.spec.ts` | 外部通信 0 件（Worker を含む）・ゲームの選択・キャンセル |
+| `sample/pc/`（122 枚）・`sample/sp/` | 画像と `*.expected.json`（git 管理外。公開リポジトリに入れない） |
+
+- アプリで画像を読ませる確認は、`HTMLInputElement.prototype.click` をファイル欄だけ何もしないように差し替えてからゲームのボタンを押し、開発サーバーの `/@fs/<リポジトリの絶対パス>/sample/...` を fetch → `DataTransfer` で `[data-testid=ocr-file]` に入れて change を送る（OS のファイル選択の窓は操作できないため）。
+- dev に試験投稿「試験 OCR 読み込み（AKs 3bet）」が 1 件増えた（`npm run db:seed -- --branch dev` で消える）。
+- 流用元 `tenfour_watcher` は読み取り専用で使った（変更していない）。`data/tenfour_hands/` の 21 枚は未使用。
 
 ### いつもの注意
 
-- [plan.md](plan.md) の「現在の状況」と「確認待ち」を見てから始める。P9 の着手時にタスクの状態を「進行中」にする。
+- [plan.md](plan.md) の「現在の状況」と「確認待ち」を見てから始める。
+- Neon の URL を変えたら `.env.production` と `_headers` の connect-src を両方直す。
 - 規約の文面は `packages/app/src/legal/{terms,privacy}.md`（さつきの文面そのまま）。直すときはさつきの確認後に。
 - **このプロジェクトは非営利**（広告・寄付・有料機能など一切なし。CLAUDE.md §1）。
 - PR の「Workers Builds: wwyd」の失敗は無視してよい（削除済みの Worker のビルドの設定が Cloudflare に残っているだけ）。

@@ -42,7 +42,9 @@
 
 - ビルド: `npm run build`（`packages/app`）、出力 `packages/app/dist`。
 - 環境変数（Pages のプロジェクト設定）: `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`。
-- `public/_headers`: CSP（`default-src 'self'; connect-src 'self' https://<project>.supabase.co; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval'`）ほか。
+- `public/_headers`: CSP（`default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' <Neon Auth> <Data API> <create-post>; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`）、`X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`。
+  **2026-09-28 に作成（P9）**。connect-src は本番の Neon の 3 つの URL（`.env.production` と同じ。変えたら両方直す）。OCR の Worker は Blob URL を使わないので `worker-src 'self'`。
+  `font-src data:` はビルドが小さな書体を CSS に埋め込むため。`npm run preview` も同じヘッダーを付ける（`vite.config.ts`）ので、手元で CSP の違反を確かめられる。
 - メンテナンス表示（§8 休止時）は同じ静的サイト内の画面で出す（06 章 §0.3）。
 
 ## 4. Supabase の休止への対応【Q-12】
