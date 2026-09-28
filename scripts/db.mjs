@@ -4,6 +4,8 @@
 //   node scripts/db.mjs test                   … 一時ブランチで DB テスト（下記）
 //   node scripts/db.mjs test --keep            … 一時ブランチを消さずに残す（調べるとき。1 時間で自動削除）
 //   node scripts/db.mjs seed --branch dev      … 開発用の試験データ（db/seed/dev.sql）を dev ブランチに入れ直す
+//   node scripts/db.mjs sample --branch <b>    … 本番でも使える試験データ（db/seed/sample.sql。試験用ユーザーの分だけ）を入れ直す
+//   node scripts/db.mjs sample-clean --branch <b> … 上の試験データを消す（db/seed/sample-clean.sql）
 //
 // DB テスト: 空のブランチ test-base から一時ブランチを作り（1 時間で自動削除）、全マイグレーションを適用して
 // pgTAP（db/tests/*.test.sql）と同時回答のテスト（DB-19）を実行し、最後に一時ブランチを消す。
@@ -167,8 +169,12 @@ try {
     // 開発用の試験データ（db/seed/dev.sql）。本番のデータを消さないよう dev ブランチだけに限る
     if (branchArg !== 'dev') throw new Error('seed は --branch dev にだけ実行できます');
     process.stdout.write(await psql(await connectionString(branchArg), '-f /db/seed/dev.sql'));
+  } else if (cmd === 'sample' || cmd === 'sample-clean') {
+    // 本番でも使える試験データ（db/seed/sample.sql）と、その削除。試験用ユーザーの分だけを作る・消す（実在するユーザーには触れない）
+    if (!branchArg) throw new Error('--branch を指定してください（例: --branch production）');
+    process.stdout.write(await psql(await connectionString(branchArg), `-f /db/seed/${cmd}.sql`));
   } else {
-    console.log('使い方: node scripts/db.mjs migrate --branch <ブランチ> | test [--keep] | seed --branch dev');
+    console.log('使い方: node scripts/db.mjs migrate --branch <ブランチ> | test [--keep] | seed --branch dev | sample --branch <ブランチ> | sample-clean --branch <ブランチ>');
     process.exitCode = 1;
   }
 } catch (e) {

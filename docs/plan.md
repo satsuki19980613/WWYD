@@ -12,9 +12,9 @@
 |---|---|
 | 現在のフェーズ | **P9 OCR 実装完了**（ブランチ `phase/09-ocr`。さつきのスマホの画像での追加検証待ち）。P8 まで完了・本番公開中。P5〜P8 はスマホ実機のみ残り |
 | 直近で完了したこと | P9: 端末内 OCR（`packages/ocr`・tesseract.js を自サイトから配信）、投稿画面の「T4ハンドヒストリー画像を読み込む」、CSP（`_headers`）。正解データ（PC 122 枚・Android 24 枚）でボード 146/146・プレイヤー 1,022/1,022・アクション 1,339/1,339（100%）。T4 のゲーム（通常 / エキスパート）の選択。アプリで画像を目視して照合し、dev に投稿まで確認。外部通信 0 件（E2E）。単体 489 件・E2E 52 件。P8: アカウント削除、規約ページ（利用規約 6 条・プライバシーポリシー。Fable の起草をさつきと整理して確定）、書体の自サイト配信（Google への通信なし）、「Hero の予想」→「Hero の想定レンジ」、ⓘ のログインの文言の修正。E2E 50 件 |
-| 次にやること | 1. PR（`phase/09-ocr` は push 済み。PR の作成は Claude Code の安全機能で止められたので、さつきが作るか許可する）→ マージ後に本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復と OCR を確認<br>2. iPhone 実機の確認（保留） |
+| 次にやること | 1. さつきがスマホで本番を確認（本番に試験データ 40 件あり。終わったら `npm run db:sample-clean -- --branch production` で消す）。本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復と OCR を確認<br>2. iPhone 実機の確認（保留） |
 | ブロッカー | なし |
-| さつきの確認待ち | PR の作成。iPhone 実機の確認（保留）。iPhone でダウンロードした T4 画像の確認（保留） |
+| さつきの確認待ち | 本番の試験データを消す時期。iPhone 実機の確認（保留）。iPhone でダウンロードした T4 画像の確認（保留） |
 
 ---
 
@@ -541,3 +541,13 @@
 - **変更したファイル**: `packages/core/src/poker/{spot.ts,spot.test.ts}`、`packages/app/src/list/{spotList.ts,spotList.test.ts}`、`packages/app/src/post/{ocrDraft.ts,ocrDraft.test.ts,OcrImport.tsx,draft.test.ts}`、`info/infoSections.ts`、`dev/DevUiScreen.tsx`、`db/seed/dev.sql`、詳細仕様 04・06・07・09 章、`docs/plan.md`、`docs/BATON.md`
 - **残課題**: PR。
 - **追記**: さつきの回答（すべて推奨どおり）で、本番の既存のプリフロップの投稿は残す。`phase/09-ocr` を push。create-post の配備は安全機能で止められたので、さつきが dev・本番に配備。dev で、プリフロップのスポット（H-S1 のスポット 3）が 6/6 で `invalid_spot`、フロップ以降のスポット（H-S1 のスポット 10）は投稿できることを確認。本番は書き込みを避けるため、Claude は確かめていない。PR の作成・既存の PR の確認は安全機能で止められた。
+
+### 2026-09-28（セッション 6・マージと本番の試験データ）
+
+- **行ったこと**:
+  - PR #11（P9 OCR とスポットのフロップ以降への限定）を作成し、CI（check・db・e2e・Cloudflare Pages）が通ってからマージ（985faaa）。本番の応答に CSP が付いたことをヘッダーで確認。本番の画面の確認（ログインの往復・OCR）はブラウザの操作が安全機能で止められたので、さつきに依頼。
+  - さつきの指示で dev の試験データを入れ直した（投稿 46 件・回答 180 件）。
+  - さつきの指示（スマホで確かめたい）で、本番に試験データを入れた。`dev.sql` は実在するユーザー全員の投稿・回答を作るので本番には使えず、試験用ユーザーだけで完結する `db/seed/sample.sql` と削除の `sample-clean.sql`（作成者で選ぶ）を新設（`npm run db:sample` / `db:sample-clean`）。dev で入れる→消す→`db:seed` で戻すを確かめてから、本番に投稿 40 件・回答 148 件を入れた。
+- **変更したファイル**: `db/seed/{sample.sql,sample-clean.sql}`、`scripts/db.mjs`、`package.json`、`CLAUDE.md`、`docs/plan.md`
+- **残課題**: スマホでの本番の確認が終わったら、本番の試験データを消す。
+
