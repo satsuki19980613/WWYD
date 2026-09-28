@@ -20,12 +20,12 @@ test.describe('アカウントメニュー（06 章 §0.2）', () => {
     await page.getByRole('button', { name: 'アカウント' }).click();
     await menuItem(page, '利用規約').click();
     await expect(page).toHaveURL('/terms');
-    await expect(page.getByRole('heading', { level: 1, name: '利用規約' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /利用規約/ })).toBeVisible();
 
     await page.getByRole('button', { name: 'アカウント' }).click();
     await menuItem(page, 'プライバシーポリシー').click();
     await expect(page).toHaveURL('/privacy');
-    await expect(page.getByRole('heading', { level: 1, name: 'プライバシーポリシー' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /プライバシーポリシー/ })).toBeVisible();
   });
 
   test('ログアウト → ログイン画面', async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe('規約ページ（06 章 §6.2）', () => {
   test('ログインしていなくても開ける', async ({ page }) => {
     await fakeBackend(page, null, { signedIn: false });
     await page.goto('/privacy');
-    await expect(page.getByRole('heading', { level: 1, name: 'プライバシーポリシー' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /プライバシーポリシー/ })).toBeVisible();
     await expect(page.getByRole('button', { name: 'アカウント' })).toHaveCount(0);
   });
 });

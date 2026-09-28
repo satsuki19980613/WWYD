@@ -1,10 +1,16 @@
 /**
  * 規約ページ用の小さな Markdown の解釈（06 章 §6.2。同梱の Markdown だけを読む）。
- * 対応: 見出し（# 〜 ####）、段落、箇条書き・番号付きリスト（2 段まで）、表、区切り線、太字、リンク。
+ * 対応: 見出し（# 〜 ####）、段落、箇条書き・番号付きリスト（2 段まで）、表、区切り線、太字、リンク、`コード`。
+ * 段落の中の改行はそのまま改行にする（「施行日:」「運営者:」のような行を 1 行に詰めない）。
  * HTML は解釈しない（文字としてそのまま出す）。描画は React の要素で行う（LegalScreen）。
  */
 
-export type Inline = { t: 'text'; v: string } | { t: 'strong'; c: Inline[] } | { t: 'link'; href: string; c: Inline[] };
+export type Inline =
+  | { t: 'text'; v: string }
+  | { t: 'code'; v: string }
+  | { t: 'br' }
+  | { t: 'strong'; c: Inline[] }
+  | { t: 'link'; href: string; c: Inline[] };
 
 export type ListItem = { c: Inline[]; sub: Block | null };
 
@@ -15,7 +21,7 @@ export type Block =
   | { t: 'table'; head: Inline[][]; rows: Inline[][][] }
   | { t: 'hr' };
 
-/** 行内: `**太字**` と `[文字](URL)`。閉じていない記号は文字のまま。 */
+/** 行内: `**太字**`・`[文字](URL)`・`` `コード` ``。閉じていない記号は文字のまま。 */
 export function parseInline(s: string): Inline[] {
   const out: Inline[] = [];
   let text = '';
@@ -31,6 +37,15 @@ export function parseInline(s: string): Inline[] {
         flush();
         out.push({ t: 'strong', c: parseInline(s.slice(i + 2, end)) });
         i = end + 2;
+        continue;
+      }
+    }
+    if (s[i] === '`') {
+      const end = s.indexOf('`', i + 1);
+      if (end > i + 1) {
+        flush();
+        out.push({ t: 'code', v: s.slice(i + 1, end) });
+        i = end + 1;
         continue;
       }
     }
@@ -95,7 +110,7 @@ export function parseMarkdown(src: string): Block[] {
       i = next;
       continue;
     }
-    // 段落: 空行・見出し・リスト・表・区切り線の手前まで。改行は詰める（日本語なので空白を入れない）
+    // 段落: 空行・見出し・リスト・表・区切り線の手前まで。行の区切りは改行にする
     const para: string[] = [];
     while (i < lines.length) {
       const l = lines[i] as string;
@@ -103,7 +118,7 @@ export function parseMarkdown(src: string): Block[] {
       para.push(l.trim());
       i++;
     }
-    blocks.push({ t: 'para', c: parseInline(para.join('')) });
+    blocks.push({ t: 'para', c: para.flatMap((l, k) => (k === 0 ? parseInline(l) : [{ t: 'br' } as const, ...parseInline(l)])) });
   }
   return blocks;
 }

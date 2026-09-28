@@ -13,6 +13,10 @@ describe('行内', () => {
     ]);
   });
 
+  it('コード', () => {
+    expect(parseInline('`neon_auth` スキーマ')).toEqual([{ t: 'code', v: 'neon_auth' }, text(' スキーマ')]);
+  });
+
   it('閉じていない記号と HTML は文字のまま', () => {
     expect(parseInline('**閉じない [x](')).toEqual([text('**閉じない [x](')]);
     expect(parseInline('<script>alert(1)</script>')).toEqual([text('<script>alert(1)</script>')]);
@@ -20,10 +24,10 @@ describe('行内', () => {
 });
 
 describe('ブロック', () => {
-  it('見出し・段落（改行は詰める）・区切り線', () => {
-    expect(parseMarkdown('# 利用規約\n\n本規約は、\nWWYD の利用条件を定める。\n\n---\n## 第1条')).toEqual([
+  it('見出し・段落（行の区切りは改行）・区切り線', () => {
+    expect(parseMarkdown('# 利用規約\n\n施行日: 未定\n運営者: 未定\n\n---\n## 第1条')).toEqual([
       { t: 'heading', level: 1, c: [text('利用規約')] },
-      { t: 'para', c: [text('本規約は、WWYD の利用条件を定める。')] },
+      { t: 'para', c: [text('施行日: 未定'), { t: 'br' }, text('運営者: 未定')] },
       { t: 'hr' },
       { t: 'heading', level: 2, c: [text('第1条')] },
     ]);

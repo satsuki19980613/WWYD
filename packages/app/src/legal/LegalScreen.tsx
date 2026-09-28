@@ -105,6 +105,10 @@ function inline(x: Inline): JSX.Element | string {
   switch (x.t) {
     case 'text':
       return x.v;
+    case 'code':
+      return <code>{x.v}</code>;
+    case 'br':
+      return <br />;
     case 'strong':
       return (
         <strong>
