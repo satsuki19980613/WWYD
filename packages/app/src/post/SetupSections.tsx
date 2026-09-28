@@ -56,12 +56,19 @@ export function SettingsSection(props: {
         基本設定
       </h2>
       <fieldset className="pf-fieldset" disabled={locked}>
-        <ChipGroup
-          label="ゲーム形式"
-          items={FMT_ITEMS}
-          value={d.fmt}
-          onChange={(fmt) => props.onChange(fmt === 'mtt' ? { fmt, rake: '' } : { fmt })}
-        />
+        {/* 見出しは他の欄と同じく上に置く（横に置くと欄の左端が揃わない） */}
+        <div className="pf-field">
+          <span className="mono-lbl" aria-hidden="true">
+            ゲーム形式
+          </span>
+          <ChipGroup
+            label="ゲーム形式"
+            variant="segment"
+            items={FMT_ITEMS}
+            value={d.fmt}
+            onChange={(fmt) => props.onChange(fmt === 'mtt' ? { fmt, rake: '' } : { fmt })}
+          />
+        </div>
         <div className="pf-fields">
           <NumField label="SB（bb）" value={d.sb} invalid={bad('sb')} onChange={(sb) => props.onChange({ sb })} />
           <div className="pf-field">
@@ -105,10 +112,10 @@ export function PlayersSection(props: {
           <span className="mono-lbl" role="columnheader">
             スタック（bb）
           </span>
-          <span className="mono-lbl" role="columnheader">
+          <span className="mono-lbl pf-ch" role="columnheader">
             ハンド
           </span>
-          <span className="mono-lbl" role="columnheader">
+          <span className="mono-lbl pf-ch" role="columnheader">
             Hero
           </span>
         </div>

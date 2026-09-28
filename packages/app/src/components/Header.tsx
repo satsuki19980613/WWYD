@@ -1,13 +1,18 @@
 import { useRef, useState } from 'react';
 import { AccountIcon } from './Icons.tsx';
 import { AccountMenu } from './AccountMenu.tsx';
+import { BackLink } from './BackLink.tsx';
+
+/** ヘッダーの左に出す画面名。`heading` は画面の h1 にするか（本文に h1 を持つ画面は false） */
+export type HeaderTitle = { text: string; heading: boolean };
 
 /**
- * ヘッダー（06 章 §0.2）。左に画面名（ある画面だけ）、右に ⓘ とアカウントアイコン。
+ * ヘッダー（06 章 §0.2）。左に「＜」（一覧へ。一覧以外）と画面名、右に ⓘ とアカウントアイコン。
  * ⓘ は `data-keep-open` を付けて、アカウントメニューを開いたまま押せるようにする（開いていればアカウントの節を出す）。
  */
 export function Header(props: {
-  title?: string;
+  title?: HeaderTitle;
+  back: boolean;
   showAccount: boolean;
   onInfo: (accountMenuOpen: boolean) => void;
   onLogout?: () => void;
@@ -15,11 +20,16 @@ export function Header(props: {
 }): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const accountRef = useRef<HTMLButtonElement>(null);
+  const { title } = props;
+  const Title = title?.heading ? 'h1' : 'span';
 
   return (
     <header className="hdr">
       <div className="hdr-inner">
-        {props.title ? <h1 className="hdr-title">{props.title}</h1> : <span />}
+        <div className="hdr-lead">
+          {props.back && <BackLink />}
+          {title && <Title className={`hdr-title ${props.back ? '' : 'tick'}`}>{title.text}</Title>}
+        </div>
         <div className="hdr-actions">
           <button
             type="button"

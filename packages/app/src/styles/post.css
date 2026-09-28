@@ -59,6 +59,8 @@
   color: var(--dim);
 }
 .pf-fieldset:disabled .chip { opacity: 0.45; cursor: default; }
+/* 単位の bb や「Hero」「to」を大文字にしない（BB は席の名前と紛れる） */
+.pf .mono-lbl { text-transform: none; }
 
 /* ---- プレイヤーとハンド ---- */
 .pf-players { display: flex; flex-direction: column; }
@@ -71,6 +73,8 @@
   border-bottom: 1px solid var(--line);
 }
 .pf-prow.head { border-bottom-color: var(--line-2); padding-bottom: var(--s2); }
+/* ハンドと Hero の見出しは、下の欄（中央寄せ）に合わせる */
+.pf-ch { text-align: center; }
 .pf-prow.hero { background: linear-gradient(90deg, rgba(252, 238, 10, 0.06), transparent 70%); }
 .pf-pos { font-family: var(--disp); font-size: 15px; letter-spacing: 0.04em; }
 .pf-stack { min-height: 40px; padding: 8px 10px; }
@@ -120,7 +124,8 @@
 
 /* ---- アクション入力 ---- */
 .pf-act { display: flex; flex-direction: column; gap: var(--s3); }
-.pf-status { font-size: 13px; color: var(--dim); }
+/* 折り返しは「 · 」の区切りで（語の途中で切らない） */
+.pf-status { font-size: 13px; color: var(--dim); word-break: keep-all; overflow-wrap: anywhere; }
 .pf-status b { font-family: var(--disp); font-size: 15px; }
 .pf-act-btns { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s1); }
 .act-btn {
@@ -185,7 +190,16 @@
 .pf-muck { font-size: 12px; color: var(--dim); }
 
 /* ---- スポット ---- */
-.pf-none { font-size: 13px; color: var(--dim); }
+/* 候補が無いときも欄の形を保つ（下の Villain・タイトルと揃える） */
+.pf-none {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px dashed var(--line-2);
+  font-size: 13px;
+  color: var(--dim);
+}
 .pf-cands { display: flex; flex-direction: column; border: 1px solid var(--line); }
 .pf-cand {
   display: flex;
@@ -254,7 +268,18 @@
   border-top: 1px solid var(--line);
 }
 .pf-bar .pf-errors { max-height: 30vh; overflow-y: auto; }
-.pf.sp .pf-act-btns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* 「戻る」は細く、「次へ：〇〇」を 1 行に収める */
+.pf-bar .btn-row .btn.ghost { flex: 0 0 30%; }
+.pf-bar .btn-row .btn { white-space: nowrap; letter-spacing: 0.02em; }
+/* スマホはステップのタブが節の名前を示すので、節の見出しは読み上げにだけ残す */
+.pf.sp .pf-sec > .sec-h {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+/* スマホは 1 行目にフォールド・チェック・コール、2 行目にベット・レイズ（空きのマスを作らない） */
+.pf.sp .pf-act-btns { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.pf.sp .pf-act-btns .act-btn { grid-column: span 2; }
+.pf.sp .pf-act-btns .act-btn.s1 { grid-column: span 3; }
 .pf.sp .pf-bslot { width: 100%; max-width: 56px; }
 
 /* キーボードを開いている間は、下に隠れないよう余白を足す */

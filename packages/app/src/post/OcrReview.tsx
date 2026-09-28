@@ -93,7 +93,8 @@ export function OcrReview(props: {
       <section className="pf-sec">
         <h3 className="sec-h">T4 のゲーム</h3>
         <ChipGroup
-          label="ゲーム"
+          label="T4 のゲーム"
+          variant="segment"
           items={T4_GAME_ORDER.map((g) => ({ value: g, label: `${T4_GAMES[g].label}（${T4_GAMES[g].capBb}bb cap）` }))}
           value={game}
           onChange={setGame}
