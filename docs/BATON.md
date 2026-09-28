@@ -118,7 +118,6 @@
 | Docker | Claude の Git Bash では PATH に `docker` が無い。`export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"` |
 | heredoc | Git Bash の heredoc で長い CSS を書くと途中で壊れたことがある。長いファイルは Write ツールで書く |
 | ブラウザ確認 | `.claude/launch.json` の `app`（dev につなぐ）/ `app-production`（本番につなぐ）。どちらも 5173。スクリーンショットはペインの大きさが変わると乱れるので、DOM（`javascript_tool`）で確かめるのが確実 |
-| 未実装画面 | 一覧・投稿・回答・集計・規約は見出しだけの器（`ScreenStub`） |
 | CSP | `public/_headers` は未作成（遅くとも P5。Neon Auth と Data API の URL を許可） |
 | ICMCLEC の資料 | 非公開。`.claude/skills/wwyd-ui-concept/references/icmclec-*` はコミットしない |
 | push | 毎回さつきの確認。force push しない |
