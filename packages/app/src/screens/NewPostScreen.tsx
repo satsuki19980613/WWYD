@@ -21,6 +21,7 @@ import {
 } from '../post/draft.ts';
 import { getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
 import { messageForCode } from '../post/errorMessages.ts';
+import { OcrImport } from '../post/OcrImport.tsx';
 import { sendPost } from '../post/sendPost.ts';
 import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
 import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
@@ -120,6 +121,7 @@ export function NewPostScreen(): JSX.Element {
     return (
       <section className={`screen pf ${seat ? 'kb-open' : ''}`}>
         <h1 className="sec-h">スポット投稿</h1>
+        <OcrImport />
         <div className="pf-grid">
           <div className="pf-col">
             {settings}
@@ -156,7 +158,12 @@ export function NewPostScreen(): JSX.Element {
           </button>
         ))}
       </nav>
-      {step === 0 && settings}
+      {step === 0 && (
+        <>
+          <OcrImport />
+          {settings}
+        </>
+      )}
       {step === 1 && players}
       {step === 2 && actions}
       {step === 3 && spot}
