@@ -10,8 +10,8 @@
 **P9 OCR は実装完了**（ブランチ `phase/09-ocr`）。詳細は [07 章 §8](detailed-spec/07-ocr.md)。
 **P8 までは完了・本番公開済み**（https://wwyd.pages.dev ）。さつきの手作業は iPhone 実機の確認（保留）とスマホの画像の用意。
 
-1. **スマホの画像**（さつきが後で `sample/sp/` に入れる。10〜20 枚）: スマホ用に OCR を組まない（さつきの方針）。サンプルでは (a) カードの文字の PC とのずれが画像をまたいで一定か、(b) 今の OCR で全部読めるか、を確かめる。正解は画像を目視して `<同じ名前>.expected.json` を作る（`npm run ocr:accuracy -- sample/sp --drafts` で下書き → 目視。量が多ければ Sonnet のサブエージェントに分担）。
-2. **確認待ち**: Q-P9-1（フォールドした席のハンドも入れてよいか。推奨: 入れる）。
+1. **スマホの画像は検証済み**（Android 24 ハンドで 100%。4♦ の塊を切る処理を追加。07 章 §0・§8.3）。iPhone の画像は保留。
+2. **確認待ち**: Q-P9-1（フォールドした席のハンドも入れてよいか。推奨: 入れる）、Q-P9-2（レーキの cap を保存・表示するか。推奨: しない）。
 3. 回答を反映 → push・PR（さつきの確認後）→ マージ後に **本番（wwyd.pages.dev）で CSP 付きの Google ログインの往復**と OCR を確認（CSP は今回初めて入る。`packages/app/public/_headers`）。
 
 ### 0.1 P9 で作ったもの
@@ -24,7 +24,7 @@
 | `packages/app/public/_headers` | CSP ほか。`npm run preview` も同じ（`vite.config.ts`）。launch.json の `app-preview` で本番ビルドを 5173 で動かせる |
 | `scripts/ocr/` | `accuracy.mts`（精度。`--drafts` で正解の無い画像の下書き `*.ocr.json`）、`genRankTemplates.mts`（テンプレート）、`png.mts`（Node 標準だけの PNG の読み書き） |
 | `e2e/ocr.spec.ts` | 外部通信 0 件（Worker を含む）・ゲームの選択・キャンセル |
-| `sample/pc/`（122 枚）・`sample/sp/` | 画像と `*.expected.json`（git 管理外。公開リポジトリに入れない） |
+| `sample/pc/`（122 枚）・`sample/sp/`（Android 26 枚。正解は同じハンドの PC 版を写したもの） | 画像と `*.expected.json`（git 管理外。公開リポジトリに入れない） |
 
 - アプリで画像を読ませる確認は、`HTMLInputElement.prototype.click` をファイル欄だけ何もしないように差し替えてからゲームのボタンを押し、開発サーバーの `/@fs/<リポジトリの絶対パス>/sample/...` を fetch → `DataTransfer` で `[data-testid=ocr-file]` に入れて change を送る（OS のファイル選択の窓は操作できないため）。
 - dev に試験投稿「試験 OCR 読み込み（AKs 3bet）」が 1 件増えた（`npm run db:seed -- --branch dev` で消える）。

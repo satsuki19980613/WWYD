@@ -58,6 +58,8 @@ const BOARD_PROBE_DX = [4, 11] as const;
 const BOARD_COLOUR_TOLERANCE = 900;
 /** テンプレートとの不一致の画素数の上限（320 画素中）。テンプレートを作り直したら別ラベル間の最小距離と比べて見直す */
 export const MAX_GLYPH_DISTANCE = 40;
+/** ランク文字の幅の上限（実測 13〜21px）。これより広い塊はスートとつながっている */
+const MAX_RANK_W = 24;
 /** ランク文字とみなす塊の最小の画素数（アンチエイリアスの点を除く） */
 const MIN_GLYPH_PIXELS = 20;
 
@@ -151,7 +153,40 @@ export function extractGlyph(chip: RgbaImage): Uint8Array | null {
     }
   }
   if (!best) return null;
-  const [bx0, by0, bx1, by1] = best.box;
+  const id = best.id;
+  let [bx0, by0, bx1, by1] = best.box;
+
+  // ランクとスートがつながっている（Android の 4♦ は 4 の横棒が ♦ の左端に 1 画素触れる）。
+  // ランクの幅（実測 13〜21px）を超えていたら、インクがいちばん少ない列で切り、左だけをランクにする
+  if (bx1 - bx0 + 1 > MAX_RANK_W) {
+    const count = (x: number): number => {
+      let n = 0;
+      for (let y = by0; y <= by1; y++) if (label[y * w + x] === id) n++;
+      return n;
+    };
+    let cut = -1;
+    let least = Infinity;
+    for (let x = bx0 + 12; x <= Math.min(bx1 - 3, bx0 + MAX_RANK_W - 1); x++) {
+      const n = count(x);
+      if (n < least) {
+        least = n;
+        cut = x;
+      }
+    }
+    if (cut < 0) return null;
+    bx1 = cut - 1;
+    by0 = h;
+    by1 = -1;
+    for (let y = 0; y < h; y++) {
+      for (let x = bx0; x <= bx1; x++) {
+        if (label[y * w + x] === id) {
+          if (y < by0) by0 = y;
+          if (y > by1) by1 = y;
+        }
+      }
+    }
+    if (by1 < by0) return null;
+  }
   const subW = bx1 - bx0 + 1;
   const subH = by1 - by0 + 1;
   // 出力の画素の中心を入力に写して切り捨てる（PIL の NEAREST と同じ標本点）
@@ -160,7 +195,7 @@ export function extractGlyph(chip: RgbaImage): Uint8Array | null {
     const yIn = by0 + Math.trunc(((gy + 0.5) * subH) / GLYPH_H);
     for (let gx = 0; gx < GLYPH_W; gx++) {
       const xIn = bx0 + Math.trunc(((gx + 0.5) * subW) / GLYPH_W);
-      glyph[gy * GLYPH_W + gx] = label[yIn * w + xIn] === best.id ? 1 : 0;
+      glyph[gy * GLYPH_W + gx] = label[yIn * w + xIn] === id ? 1 : 0;
     }
   }
   return glyph;

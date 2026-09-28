@@ -19,13 +19,16 @@ function drawGlyph(img: RgbaImage, bits: Uint8Array, x: number, y: number, scale
   return fill(img, boxes, WHITE);
 }
 
-/** 色のチップにランクの字形と、すぐ右（隙間 1px）にスートに見立てた塊を描く。 */
+/**
+ * 色のチップに、実物と同じ大きさ（16×20）でランクの字形を描き、すぐ右（隙間 2px）にスートに見立てた塊を描く。
+ * 文字はチップの左端から 12px 以上離す（ボードの在否を見る帯に文字を入れない）。
+ */
 function chip(label: string, color: readonly [number, number, number], shiftX = 0): RgbaImage {
   const i = LABELS.indexOf(label);
+  const x = 14 + shiftX;
   let img = fill(blank(66, 46, BG), [[1, 1, 65, 45]], color);
-  // 実物と同じく、文字はチップの左端から 12px 以上離す（ボードの在否を見る帯に文字を入れない）
-  img = drawGlyph(img, templates()[i] as Uint8Array, 14 + shiftX, 3, 2);
-  return fill(img, [[14 + shiftX + 33, 12, 14 + shiftX + 50, 30]], WHITE);
+  img = drawGlyph(img, templates()[i] as Uint8Array, x, 12, 1);
+  return fill(img, [[x + 18, 16, x + 32, 32]], WHITE);
 }
 
 describe('ランク（テンプレート照合）', () => {
@@ -33,6 +36,13 @@ describe('ランク（テンプレート照合）', () => {
     for (const label of new Set(LABELS)) {
       expect(matchRank(chip(label, RED))).toBe(label);
       expect(matchRank(chip(label, BLUE, 4))).toBe(label);
+    }
+  });
+  it('ランクとスートが 1 画素でつながっていても（Android の 4♦）、細い所で切ってランクを読む', () => {
+    for (const label of new Set(LABELS)) {
+      // 字形の右寄り（x = 26〜29）からスートの塊（x = 32〜）まで、高さ 1 画素の橋でつなぐ
+      const img = fill(chip(label, BLUE), [[26, 22, 33, 23]], WHITE);
+      expect(matchRank(img)).toBe(label);
     }
   });
   it('インクが無ければ null', () => {
