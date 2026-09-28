@@ -59,6 +59,19 @@
   color: var(--dim);
 }
 .pf-fieldset:disabled .chip { opacity: 0.45; cursor: default; }
+/*
+ * ロック中（アクションを入れた後・画像を反映した後）は「決まった値」として読めるようにする。
+ * 薄くすると入っていないように見える（2026-09-29 さつきの指摘）。枠を消して、値と選んだものは通常の濃さ。
+ */
+.pf-fieldset:disabled .chip[aria-pressed='true'] { opacity: 1; }
+.pf .inp:disabled:not(:placeholder-shown), .pf-stack:disabled {
+  opacity: 1;
+  color: var(--fg);
+  background: transparent;
+  border-color: var(--line);
+  border-style: dashed;
+}
+.pf-radio:disabled[aria-checked='true'] { opacity: 1; }
 /* 単位の bb や「Hero」「to」を大文字にしない（BB は席の名前と紛れる） */
 .pf .mono-lbl { text-transform: none; }
 
@@ -324,22 +337,52 @@
   touch-action: none;
 }
 .ckb-key:active { background: var(--surface-3); }
+/* 下の段: C と ⌫ で 3 列ぶんを等分に埋める */
+.ckb-edit { grid-column: 1 / span 3; display: flex; gap: 6px; }
+.ckb-edit .ckb-key { flex: 1; }
+/* 右端の列: 絵札（上 2 段）とスート（下 2 段） */
 .ckb-flick { position: relative; grid-column: 4; }
-.ckb-tall { grid-row: span 2; }
-.ckb-flick .ckb-key { color: var(--yellow); border-color: rgba(252, 238, 10, 0.45); }
-.ckb-flick.suit .ckb-key { color: var(--fg); font-size: 26px; }
-/* ポップアップ（十字）。右端のキーなので右寄せ、A は上端・♠ は下端に合わせてキーボードからはみ出さない */
+.ckb-flick.rank { grid-row: 1 / span 2; }
+.ckb-flick.suit { grid-row: 3 / span 2; }
+.ckb-flick .ckb-key { position: relative; border-color: rgba(252, 238, 10, 0.45); }
+/* キーの面: 中央にタップの値、払う方向（上・左・下）に小さく */
+.ckb-face { position: absolute; line-height: 1; pointer-events: none; }
+.ckb-face-tap { left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 26px; }
+.ckb-face-up { left: 50%; top: 8px; transform: translateX(-50%); }
+.ckb-face-down { left: 50%; bottom: 8px; transform: translateX(-50%); }
+.ckb-face-left { left: 8px; top: 50%; transform: translateY(-50%); }
+.ckb-flick.rank .ckb-face { color: var(--yellow); }
+.ckb-flick.rank .ckb-face:not(.ckb-face-tap) { font-size: 15px; color: rgba(252, 238, 10, 0.6); }
+.ckb-flick.suit .ckb-face-tap { color: var(--fg); font-size: 28px; }
+/* スートの小さな札（4 色デッキ。ポップアップと同じ札の面） */
+.ckb-flick.suit .ckb-face:not(.ckb-face-tap) {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 20px;
+  border-radius: 2px;
+  background: #f5f4ea;
+  color: #16150d;
+  font-size: 13px;
+}
+.ckb-flick.suit .ckb-face.s-h { color: #d81f2f; }
+.ckb-flick.suit .ckb-face.s-d { color: #2b6be0; }
+.ckb-flick.suit .ckb-face.s-c { color: #199a4d; }
+/*
+ * ポップアップ（十字）。右（外側）は使わないので左と中央の 2 列。中央の列をキーの中央に合わせる。
+ * 絵札はキーの中央の高さ、スートは下端に合わせてキーボードからはみ出さない
+ */
 .ckb-pop {
   position: absolute;
-  right: 0;
+  right: calc(50% - 22px);
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(3, 44px);
+  grid-template-columns: repeat(2, 44px);
   grid-template-rows: repeat(3, 44px);
   gap: 2px;
   pointer-events: none;
 }
-.ckb-flick:not(.suit) .ckb-pop { top: -46px; }
+.ckb-flick.rank .ckb-pop { top: calc(50% - 68px); }
 .ckb-flick.suit .ckb-pop { bottom: -8px; }
 .ckb-pop span {
   display: grid;
@@ -354,7 +397,6 @@
 .ckb-pop span.on { background: var(--yellow); color: var(--yellow-ink); border-color: var(--yellow); }
 .ckb-pop-tap { grid-area: 2 / 2; }
 .ckb-pop-up { grid-area: 1 / 2; }
-.ckb-pop-right { grid-area: 2 / 3; }
 .ckb-pop-down { grid-area: 3 / 2; }
 .ckb-pop-left { grid-area: 2 / 1; }
 /* スートのポップアップは札の面（4 色デッキ）。選択中は黄の枠 */

@@ -29,6 +29,7 @@ import { navigate } from '../router.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 
 const STEPS = ['基本設定', 'プレイヤー', 'アクション', 'スポット'] as const;
+const ACTION_STEP = STEPS.indexOf('アクション');
 
 /**
  * スポット投稿（06 章 §3。仕様書 §5.2）。
@@ -116,8 +117,9 @@ export function NewPostScreen(): JSX.Element {
     </button>
   );
   const keyboard = seat && <CardKeyboard seat={seat} onKey={onKey} onClose={() => setSeat(null)} />;
-  // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ
-  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} />;
+  // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ。
+  // 反映したらスマホはアクションのステップへ（読み込んだアクションとスポットの確認に進む。2026-09-29）
+  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => setStep(ACTION_STEP)} />;
 
   if (!mobile) {
     return (

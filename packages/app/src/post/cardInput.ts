@@ -88,10 +88,13 @@ export function flickDirection(dx: number, dy: number): FlickDir {
   return 'left';
 }
 
-/** A キー（タップ / 上 / 右 / 下 / 左 = A / K / Q / J / T）。 */
-export const ACE_FLICK: Record<FlickDir, string> = { tap: 'A', up: 'K', right: 'Q', down: 'J', left: 'T' };
-/** スートキー（タップ / 上 / 右 / 下 = ♠ / ♥ / ♦ / ♣。左は割り当てなし）。 */
-export const SUIT_FLICK: Record<FlickDir, string | null> = { tap: 's', up: 'h', right: 'd', down: 'c', left: null };
+/*
+ * フリックのキーはキーボードの右端の列にあるので、右（画面の外側）には割り当てない。指を内側へ払う（2026-09-29）。
+ */
+/** 絵札のキー（タップ / 上 / 左 / 下 = Q / K / T / J）。A は単独のキー。 */
+export const RANK_FLICK: Record<FlickDir, string | null> = { tap: 'Q', up: 'K', right: null, down: 'J', left: 'T' };
+/** スートのキー（タップ / 上 / 左 / 下 = ♠ / ♥ / ♦ / ♣）。 */
+export const SUIT_FLICK: Record<FlickDir, string | null> = { tap: 's', up: 'h', right: null, down: 'c', left: 'd' };
 
 /** パソコンのキーボードから打つとき（`c` はクラブ。ハンドを消すのは Delete）。 */
 export function keyFromKeyboard(key: string): CardKey | null {

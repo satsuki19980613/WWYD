@@ -16,7 +16,7 @@ import { T4_GAME_ORDER, T4_GAMES, type T4Game } from './t4Games.ts';
  * 読めなかった所はエラーとして並べ、読めたところまでフォームに入れる。
  * OCR の本体（tesseract.js）はここで初めて読み込む。画像はメモリの中だけで扱う（runOcr.ts）。
  */
-export function OcrImport(props: { button?: boolean }): JSX.Element {
+export function OcrImport(props: { button?: boolean; onApplied?: () => void }): JSX.Element {
   const showButton = props.button ?? true;
   const input = useRef<HTMLInputElement>(null);
   const abort = useRef<AbortController | null>(null);
@@ -114,6 +114,7 @@ export function OcrImport(props: { button?: boolean }): JSX.Element {
           onApply={(draft) => {
             setDraft(draft);
             closeReview();
+            props.onApplied?.();
           }}
           onCancel={closeReview}
         />

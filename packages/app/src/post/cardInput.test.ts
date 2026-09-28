@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { applyCardKey, flickDirection, handCards, handSlots, isHandComplete, keyFromKeyboard } from './cardInput.ts';
+import {
+  applyCardKey,
+  flickDirection,
+  handCards,
+  handSlots,
+  isHandComplete,
+  keyFromKeyboard,
+  RANK_FLICK,
+  SUIT_FLICK,
+} from './cardInput.ts';
 
 const NONE = new Set<string>();
 
@@ -79,6 +88,19 @@ describe('フリックの方向', () => {
     [-31, 30, 'left'], // 136°
   ])('(%i, %i) → %s', (dx, dy, dir) => {
     expect(flickDirection(dx, dy)).toBe(dir);
+  });
+});
+
+describe('フリックの割り当て（2026-09-29）', () => {
+  it('絵札のキーは タップ / 上 / 左 / 下 = Q / K / T / J。A は単独のキー', () => {
+    expect(RANK_FLICK).toEqual({ tap: 'Q', up: 'K', right: null, down: 'J', left: 'T' });
+  });
+  it('スートのキーは タップ / 上 / 左 / 下 = ♠ / ♥ / ♦ / ♣', () => {
+    expect(SUIT_FLICK).toEqual({ tap: 's', up: 'h', right: null, down: 'c', left: 'd' });
+  });
+  it('どちらも右（画面の外側）には割り当てない', () => {
+    expect(RANK_FLICK.right).toBeNull();
+    expect(SUIT_FLICK.right).toBeNull();
   });
 });
 
