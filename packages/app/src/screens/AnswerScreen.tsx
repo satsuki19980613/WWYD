@@ -346,7 +346,7 @@ function ReplayView(props: {
         seats={seatViews(state, { hero: post.hero, villain: post.villain, actor })}
         pot={state.pot}
         board={board}
-        heroCards={host ? (d.secrets?.heroCards ?? null) : null}
+        holes={state.folded.has(post.hero) ? {} : { [post.hero]: (host ? d.secrets?.heroCards : null) ?? 'back' }}
         villainLabel={host ? 'Villain' : 'Villain（あなた）'}
       />
       <ReplayControls c={c} />

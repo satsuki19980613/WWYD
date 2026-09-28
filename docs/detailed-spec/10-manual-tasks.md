@@ -73,11 +73,14 @@
 ## M-08 Cloudflare Pages のプロジェクト作成（Neon 版。2026-09-28 に書き直し）
 
 1. Cloudflare ダッシュボード「Workers & Pages → 作成 → Pages → Git に接続」で `satsuki19980613/WWYD` を選ぶ。本番のブランチは `main`。
+   - **注意**: 作成画面の最初の大きなボタンは Workers 用。Workers で作ると「Deploy command（`npx wrangler deploy`）」の欄があり、ビルドは通っても公開で失敗する（2026-09-28 に発生）。Pages の設定画面には Deploy command の欄が無い。
 2. ビルドコマンド `npm run build`、出力ディレクトリ `packages/app/dist`、環境変数 `NODE_VERSION` = `22`。
 3. アプリが使う住所（Neon Auth・Data API・create-post の URL）はリポジトリの `.env.production` に入っていてビルドが自動で読むので、Cloudflare に秘密の値を入れる必要はない。
 4. 発行された URL（`https://<名前>.pages.dev`）を Claude に伝える。その後、次の 2 つを行う:
    - Neon のコンソール（production ブランチ）「Auth」の **trusted domains** にその URL を足す（さつき）。
    - create-post の許可するオリジンにその URL を足して配備し直す（Claude がコマンドを用意し、止められたらさつきが実行）。
+
+実施結果（2026-09-28）: プロジェクト `wwyd`、URL は **https://wwyd.pages.dev** 。フレームワークは None。枝ごとのプレビュー（`<ブランチ>.wwyd.pages.dev`）も本番の Neon を向くが、trusted domains に無いのでログインできない（使わない）。
 
 ## M-09 管理者の登録（Neon 版。本番で一度ログインした後）
 
