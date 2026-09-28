@@ -22,6 +22,8 @@ export type Backend = {
   insertError: { status: number; body: Record<string, unknown> } | null;
   /** insert を受け付けたら、get_post_detail の応答をこれに差し替える（回答済みの状態） */
   afterInsert: Json;
+  /** posts の delete で消した ID */
+  deletes: string[];
 };
 
 /** 回答済み（answers の主キーの重複） */
@@ -52,7 +54,7 @@ async function json(route: Route, status: number, body: Json): Promise<void> {
 }
 
 export async function fakeBackend(page: Page, detail: Json): Promise<Backend> {
-  const be: Backend = { detail, inserts: [], hostSaves: [], insertError: null, afterInsert: null };
+  const be: Backend = { detail, inserts: [], hostSaves: [], insertError: null, afterInsert: null, deletes: [] };
 
   await page.route(`${AUTH}/**`, async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors(route) });
@@ -79,6 +81,13 @@ export async function fakeBackend(page: Page, detail: Json): Promise<Backend> {
       if (be.afterInsert) be.detail = be.afterInsert;
       return route.fulfill({ status: 201, headers: cors(route), body: '' });
     }
+    if (path === '/posts' && req.method() === 'DELETE') {
+      // `delete ... eq('id', …) select('id')`: 消した行を返す
+      const id = (new URL(req.url()).searchParams.get('id') ?? '').replace(/^eq\./, '');
+      be.deletes.push(id);
+      return json(route, 200, [{ id }]);
+    }
+    if (path === '/rpc/list_posts') return json(route, 200, []);
     if (path === '/rpc/save_host_answer') {
       be.hostSaves.push(body);
       return route.fulfill({ status: 204, headers: cors(route), body: '' });

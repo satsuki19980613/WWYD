@@ -1,10 +1,11 @@
-import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Street } from '@wwyd/core';
+import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
 import { useEffect, useState } from 'react';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { actionLog, STREET_NAME } from '../post/draft.ts';
 import { useMediaQuery } from '../useMediaQuery.ts';
 import type { SeatView } from './replayModel.ts';
+import type { Hole } from './resultModel.ts';
 
 /** リプレイの 1 手の間隔（06 章 §4.3） */
 export const REPLAY_STEP_MS = 650;
@@ -22,11 +23,13 @@ export type ReplayControl = {
 /**
  * リプレイの再生状態。開くと 0 手目から `max` 手目まで自動再生する。
  * 視差効果を減らす設定では自動再生せず、最初から `max` 手目を出す。
+ * `atEnd`（集計画面）は自動再生せずに `max` 手目から始める（06 章 §5.4）。
  */
-export function useReplay(max: number): ReplayControl {
+export function useReplay(max: number, opts: { atEnd?: boolean } = {}): ReplayControl {
   const reduce = useMediaQuery('(prefers-reduced-motion: reduce)');
-  const [step, setStep] = useState(() => (reduce ? max : 0));
-  const [playing, setPlaying] = useState(() => !reduce && max > 0);
+  const still = reduce || opts.atEnd === true;
+  const [step, setStep] = useState(() => (still ? max : 0));
+  const [playing, setPlaying] = useState(() => !still && max > 0);
 
   useEffect(() => {
     if (!playing) return;
@@ -115,14 +118,15 @@ const CHIPS: readonly (readonly [number, number])[] = [
 
 /**
  * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Villain の席を手前に置く（席の並びは replayModel の seatOrder）。
- * `heroCards` が null なら Hero のハンドは裏向き。
+ * `holes` は席ごとに見せるホールカード（表向き・裏向き・マック）。`note` は終了時の「ショーダウン」など。
  */
 export function PokerTable(props: {
   seats: readonly SeatView[];
   pot: Mbb;
   board: readonly Card[];
-  heroCards: readonly Card[] | null;
+  holes: Partial<Record<Pos, Hole>>;
   villainLabel: string;
+  note?: string | null;
 }): JSX.Element {
   return (
     <div className="ptable" role="img" aria-label="テーブル">
@@ -138,6 +142,7 @@ export function PokerTable(props: {
             return c ? <PlayingCard key={c} card={c} /> : <span key={i} className="ptable-slot" />;
           })}
         </div>
+        {props.note && <span className="ptable-note">{props.note}</span>}
       </div>
       {props.seats.map((seat, i) => {
         const [x, y] = SLOTS[i] ?? [50, 50];
@@ -149,18 +154,7 @@ export function PokerTable(props: {
               className={`pseat a-${anchor}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
               style={{ top: `${y}%`, ...(anchor === 'c' ? { left: `${x}%` } : {}) }}
             >
-              {seat.hero && !seat.folded && (
-                <div className="pseat-cards">
-                  {props.heroCards ? (
-                    props.heroCards.map((c) => <PlayingCard key={c} card={c} size="sm" />)
-                  ) : (
-                    <>
-                      <span className="pback" />
-                      <span className="pback" />
-                    </>
-                  )}
-                </div>
-              )}
+              <HoleCards hole={props.holes[seat.pos]} />
               <div className="pseat-plate">
                 <span className="pseat-top">
                   <b className="pseat-pos" style={{ color: POS_VAR[seat.pos] }}>
@@ -181,6 +175,24 @@ export function PokerTable(props: {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
+  const { hole } = props;
+  if (!hole) return null;
+  if (hole === 'muck') return <span className="pseat-muck">マック</span>;
+  return (
+    <div className="pseat-cards">
+      {hole === 'back' ? (
+        <>
+          <span className="pback" />
+          <span className="pback" />
+        </>
+      ) : (
+        hole.map((c) => <PlayingCard key={c} card={c} size="sm" />)
+      )}
     </div>
   );
 }

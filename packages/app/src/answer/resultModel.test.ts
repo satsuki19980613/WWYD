@@ -1,0 +1,169 @@
+import { idxOf, mbbToBb, type Action } from '@wwyd/core';
+import { describe, expect, it } from 'vitest';
+import { hmw, hs1 } from '../../../core/src/post/postFixtures.ts';
+import { acts } from '../../../core/src/poker/testHelpers.ts';
+import { aggregateHex, detailJson, paintHexOf, paintOf, type DetailOpts } from './detailFixtures.ts';
+import { parsePostDetail, type PostDetail } from './postDetail.ts';
+import {
+  actionText,
+  actualAction,
+  actualCell,
+  breakdown,
+  cellViews,
+  emptyLabel,
+  initialCell,
+  initialView,
+  resultFrames,
+  resultTabs,
+  villainHand,
+} from './resultModel.ts';
+
+/** 05 章 PAINT-12 の 2 件（A: AA call 20、B: AA call 10 / s1 10、KK fold 20） */
+const PAINT_A = paintOf({ AA: { call: 20 } });
+const PAINT_B = paintOf({ AA: { call: 10, s1: 10 }, KK: { fold: 20 } });
+
+function detail(o: Partial<DetailOpts> = {}, raw = hs1()): PostDetail {
+  return parsePostDetail(
+    detailJson(raw, {
+      viewer: 'answered',
+      answerCount: 2,
+      aggregate: aggregateHex([PAINT_A, PAINT_B]),
+      myAnswer: { paint: paintHexOf({ AA: { call: 20 } }), size: null },
+      ...o,
+    }),
+  );
+}
+
+describe('タブと初期表示（06 章 §5.2）', () => {
+  it('他人の投稿は 全体（N人）/ 自分 / Hero の予想、自分の投稿は 全体 / Hero の予想', () => {
+    expect(resultTabs(detail()).map((t) => t.label)).toEqual(['全体（2人）', '自分', 'Hero の予想']);
+    expect(resultTabs(detail({ viewer: 'author', myAnswer: null })).map((t) => t.value)).toEqual(['all', 'host']);
+  });
+
+  it('?view=host なら Hero の予想、それ以外は全体', () => {
+    expect(initialView('?view=host')).toBe('host');
+    expect(initialView('')).toBe('all');
+    expect(initialView('?view=mine')).toBe('all');
+  });
+
+  it('初期選択マスは Villain の実際のハンド（白枠）、無ければ AA', () => {
+    const d = detail();
+    expect(villainHand(d)).toEqual(['Ks', 'Js']);
+    expect(actualCell(d)).toBe(idxOf('KJs'));
+    expect(initialCell(d)).toBe(idxOf('KJs'));
+    const unknown = detail({}, hmw());
+    expect(villainHand(unknown)).toBeNull();
+    expect(actualCell(unknown)).toBeNull();
+    expect(initialCell(unknown)).toBe(idxOf('AA'));
+  });
+
+  it('マックは白枠なし', () => {
+    const d = detail({}, { ...hs1(), known_cards: { BB: 'muck' } });
+    expect(villainHand(d)).toBe('muck');
+    expect(actualCell(d)).toBeNull();
+  });
+});
+
+describe('マスと内訳（05 章 §4）', () => {
+  it('全体: AA は call 75% / s1 25%・濃さ 1、KK は濃さ 0.65、他は無色（PAINT-12）', () => {
+    const v = cellViews(detail(), 'all');
+    expect(v[idxOf('AA')]).toEqual({ ratio: { fold: 0, check: 0, call: 0.75, s1: 0.25 }, opacity: 1 });
+    expect(v[idxOf('KK')]?.opacity).toBeCloseTo(0.65);
+    expect(v[idxOf('QQ')]).toEqual({ ratio: null, opacity: 0 });
+  });
+
+  it('自分 / Hero の予想はミックスをそのまま（濃さ 1）', () => {
+    const d = detail({ hostAnswer: { paint: paintHexOf({ QQ: { fold: 5, call: 15 } }), size: null } });
+    expect(cellViews(d, 'mine')[idxOf('AA')]).toEqual({ ratio: { fold: 0, check: 0, call: 1, s1: 0 }, opacity: 1 });
+    expect(cellViews(d, 'host')[idxOf('QQ')]).toEqual({ ratio: { fold: 0.25, check: 0, call: 0.75, s1: 0 }, opacity: 1 });
+    expect(cellViews(d, 'host')[idxOf('AA')]).toEqual({ ratio: null, opacity: 0 });
+  });
+
+  it('全体の内訳: レンジ内 n / N、キーごとの平均（小数第 1 位）と重み付けの人数、自分のミックス', () => {
+    expect(breakdown(detail(), 'all', idxOf('AA'))).toEqual({
+      kind: 'all',
+      label: 'AA',
+      n: 2,
+      total: 2,
+      rows: [
+        { key: 'fold', name: 'フォールド', pct: '0.0', count: 0 },
+        { key: 'call', name: 'コール', pct: '75.0', count: 2 },
+        { key: 's1', name: 'レイズ', pct: '25.0', count: 1 },
+      ],
+      mine: 'コール 100%',
+    });
+  });
+
+  it('レンジ内 0 人のマスは行なし・自分はレンジ外。自分の投稿では自分の行を出さない', () => {
+    const b = breakdown(detail(), 'all', idxOf('72o'));
+    expect(b).toMatchObject({ n: 0, total: 2, rows: [], mine: 'レンジ外' });
+    expect(breakdown(detail({ viewer: 'author', myAnswer: null }), 'all', idxOf('AA'))).toMatchObject({ mine: null });
+  });
+
+  it('自分 / Hero の予想の内訳は「{名前} {%} / …」か「レンジ外」', () => {
+    const d = detail({ hostAnswer: { paint: paintHexOf({ QQ: { fold: 5, s1: 15 } }), size: 20 } });
+    expect(breakdown(d, 'host', idxOf('QQ'))).toEqual({ kind: 'single', label: 'QQ', text: 'フォールド 25% / レイズ 75%' });
+    expect(breakdown(d, 'mine', idxOf('QQ'))).toEqual({ kind: 'single', label: 'QQ', text: 'レンジ外' });
+  });
+
+  it('空状態: 回答 0 件は「回答なし」、予想が無ければ「予想なし」', () => {
+    const none = detail({ answerCount: 0, aggregate: undefined });
+    expect(emptyLabel(none, 'all')).toBe('回答なし');
+    expect(emptyLabel(detail(), 'all')).toBeNull();
+    expect(emptyLabel(detail(), 'mine')).toBeNull();
+    expect(emptyLabel(detail(), 'host')).toBe('予想なし');
+  });
+});
+
+describe('実際のアクション（06 章 §5.3）', () => {
+  it('H-S1 の BB はコール', () => {
+    const a = actualAction(detail());
+    expect(a).toEqual({ street: 'turn', pos: 'BB', type: 'call' });
+    expect(actionText(a as Action)).toBe('コール');
+  });
+
+  it('額のあるアクションは「レイズ 12bb」', () => {
+    expect(actionText({ street: 'flop', pos: 'BB', type: 'raise', to: 12000 })).toBe('レイズ 12bb');
+    expect(actionText({ street: 'flop', pos: 'BB', type: 'bet', to: 2750 })).toBe('ベット 2.75bb');
+  });
+});
+
+describe('ハンドヒストリーの再生（06 章 §5.4）', () => {
+  it('最初は Hero のハンドだけ表向き、終了時はショーダウンで判明しているハンドを公開・ベットを回収', () => {
+    const d = detail();
+    const frames = resultFrames(d);
+    expect(frames).toHaveLength(d.hand.actions.length + 1);
+    expect(frames[0]).toMatchObject({ holes: { BTN: ['Ad', 'Kd'] }, board: [], actor: 'UTG', note: null });
+    const end = frames[frames.length - 1];
+    expect(end?.note).toBe('ショーダウン');
+    expect(end?.holes).toEqual({ BTN: ['Ad', 'Kd'], BB: ['Ks', 'Js'] });
+    expect(end?.board).toEqual(['Kh', '8d', '3c', '2s', '7h']);
+    expect(end?.actor).toBeNull();
+    expect(Object.values(end?.state.bets ?? {})).toEqual([0, 0, 0, 0, 0, 0]);
+    // 2.5 + 0.5（SB）+ 2.5 + 1.8×2 + 6.5×2 + 15×2 = 52.1bb
+    expect(end?.state.pot).toBe(52100);
+  });
+
+  it('途中のボードは到達したストリートの分だけ', () => {
+    const frames = resultFrames(detail());
+    // 6 手目（プリフロップの最後のコールの後）はまだフロップを出さない、7 手目（フロップの BB チェック後）は 3 枚
+    expect(frames[6]?.board).toEqual([]);
+    expect(frames[7]?.board).toEqual(['Kh', '8d', '3c']);
+  });
+
+  it('フォールドで終わったハンドは「{席} ポット獲得」', () => {
+    const actions = acts({
+      pf: 'UTG f, HJ f, CO f, BTN r2.5, SB f, BB c',
+      flop: 'BB x, BTN b1.8, BB c',
+      turn: 'BB x, BTN b6.5, BB r20, BTN f',
+    }).map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) }));
+    const raw = { ...hs1(), actions, board: ['Kh', '8d', '3c', '2s'], known_cards: {} };
+    const frames = resultFrames(detail({}, raw));
+    const end = frames[frames.length - 1];
+    expect(end?.note).toBe('BB ポット獲得');
+    // Hero はフォールドしていても終了時は公開する。ボードは到達したターンまで
+    expect(end?.holes).toEqual({ BTN: ['Ad', 'Kd'] });
+    expect(end?.board).toHaveLength(4);
+    expect(actionText(actualAction(detail({}, raw)) as Action)).toBe('レイズ 20bb');
+  });
+});

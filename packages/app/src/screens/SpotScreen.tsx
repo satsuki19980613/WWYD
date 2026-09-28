@@ -4,7 +4,7 @@ import { usePostDetail } from '../answer/answerApi.ts';
 import type { Viewer } from '../answer/postDetail.ts';
 import { navigate, routePath } from '../router.ts';
 import { AnswerScreen } from './AnswerScreen.tsx';
-import { ScreenStub } from './ScreenStub.tsx';
+import { ResultScreen } from './ResultScreen.tsx';
 
 export type SpotView = 'spot' | 'answer' | 'result';
 
@@ -72,8 +72,7 @@ export function SpotScreen(props: { id: string; view: SpotView }): JSX.Element {
       />
     );
   }
-  // 集計画面は P7（T-701〜）で作る
-  return <ScreenStub title="集計" />;
+  return <ResultScreen detail={state.detail} />;
 }
 
 /** 表示すべき画面。 */

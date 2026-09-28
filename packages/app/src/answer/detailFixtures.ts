@@ -2,6 +2,17 @@
  * `get_post_detail` の応答の見本（DB が返すのと同じ JSON の形）。テストと E2E の偽のバックエンド専用
  * （本番コードからは使わない）。投稿は core の投稿入力の見本（H-S1 など）から作る。
  */
+import {
+  addAnswer,
+  emptyAggregate,
+  emptyPaint,
+  encodeAggregate,
+  encodePaint,
+  idxOf,
+  toHex,
+  type Mix,
+  type Paint,
+} from '../../../core/src/index.ts';
 import { hs1, type Raw } from '../../../core/src/post/postFixtures.ts';
 
 export type DetailOpts = {
@@ -11,6 +22,10 @@ export type DetailOpts = {
   /** `\x…` の paint と bb のサイズ */
   myAnswer?: { paint: string; size: number | null } | null;
   hostAnswer?: { paint: string; size: number | null } | null;
+  /** 集計（`\x…` の 1690 バイト）。省略時はすべて 0 */
+  aggregate?: string;
+  /** 管理者として見る（他人の投稿を削除できる） */
+  admin?: boolean;
 };
 
 const BOARD_BY_STREET: Record<string, number> = { pf: 0, flop: 3, turn: 4, river: 5 };
@@ -43,7 +58,7 @@ export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unkn
       pot_base: d.pot_base,
       answer_count: o.answerCount ?? 0,
       is_mine: o.viewer === 'author',
-      can_delete: o.viewer === 'author',
+      can_delete: o.viewer === 'author' || o.admin === true,
     },
     hand: {
       sb: raw.sb,
@@ -60,6 +75,22 @@ export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unkn
     secrets: canView ? { hero_cards: raw.hero_cards, known_cards: raw.known_cards } : null,
     my_answer: o.myAnswer ? { ...o.myAnswer, created_at: '2026-09-28T00:00:00+00:00' } : null,
     host_answer: canView && o.hostAnswer ? { ...o.hostAnswer, updated_at: '2026-09-28T00:00:00+00:00' } : null,
-    aggregate: canView ? { n: o.answerCount ?? 0, cells: EMPTY_AGG_HEX } : null,
+    aggregate: canView ? { n: o.answerCount ?? 0, cells: o.aggregate ?? EMPTY_AGG_HEX } : null,
   };
+}
+
+/** 回答の paint から集計（`\x…`）を作る（DB のトリガと同じ差分更新）。 */
+export function aggregateHex(paints: readonly Paint[]): string {
+  return toHex(encodeAggregate(paints.reduce(addAnswer, emptyAggregate())));
+}
+
+/** マスのラベル → ミックス の paint（`\x…`）。 */
+export function paintHexOf(cells: Record<string, Partial<Mix>>): string {
+  return toHex(encodePaint(paintOf(cells)));
+}
+
+export function paintOf(cells: Record<string, Partial<Mix>>): Paint {
+  const p = emptyPaint();
+  for (const [label, mix] of Object.entries(cells)) p[idxOf(label)] = { fold: 0, check: 0, call: 0, s1: 0, ...mix };
+  return p;
 }
