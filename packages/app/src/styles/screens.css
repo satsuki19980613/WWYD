@@ -206,3 +206,20 @@ a.btn { text-decoration: none; }
   border-top: 1px solid var(--line);
 }
 .list-fab .btn { max-width: calc(var(--app-w) - 2 * var(--s4)); margin: 0 auto; display: flex; }
+
+/* ---- 利用規約・プライバシーポリシー（06 章 §6.2。同梱の Markdown） ---- */
+.legal { display: flex; flex-direction: column; gap: var(--s3); max-width: 720px; font-size: 14px; line-height: 1.8; color: var(--fg); }
+.legal .legal-title { margin: 0 0 var(--s2); }
+.legal p { margin: 0; overflow-wrap: anywhere; }
+.legal-h2 { margin: var(--s4) 0 0; padding-bottom: var(--s1); font-family: var(--body); font-size: 17px; font-weight: 700; border-bottom: 1px solid var(--line); }
+.legal-h3 { margin: var(--s2) 0 0; font-family: var(--body); font-size: 15px; font-weight: 700; }
+.legal-h4 { margin: var(--s1) 0 0; font-family: var(--body); font-size: 14px; font-weight: 700; color: var(--dim); }
+.legal ul, .legal ol { margin: 0; padding-left: 1.5em; display: flex; flex-direction: column; gap: var(--s1); }
+.legal li > ul, .legal li > ol { margin-top: var(--s1); }
+.legal strong { font-weight: 700; }
+.legal a { color: var(--cyan); overflow-wrap: anywhere; }
+.legal hr { width: 100%; border: 0; border-top: 1px solid var(--line); margin: var(--s2) 0; }
+.legal-table { overflow-x: auto; }
+.legal table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.legal th, .legal td { padding: var(--s2); border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.legal th { background: var(--surface); color: var(--dim); font-weight: 500; }

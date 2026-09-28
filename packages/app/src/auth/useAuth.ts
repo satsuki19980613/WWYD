@@ -12,6 +12,8 @@ export type Auth = {
   signingIn: boolean;
   signIn: () => void;
   signOut: () => Promise<void>;
+  /** アカウントを削除してログアウトする（06 章 §6.1）。失敗したら false（ログインしたまま） */
+  deleteAccount: () => Promise<boolean>;
 };
 
 async function callWhoami(): Promise<Whoami | Reachability> {
@@ -91,5 +93,19 @@ export function useAuth(): Auth {
     setAdmin(false);
   }, []);
 
-  return { state, admin, loginFailed, signingIn, signIn, signOut };
+  const deleteAccount = useCallback(async () => {
+    try {
+      // 回答（集計の減算）→ 投稿 → 認証の利用者（セッションごと）の順にサーバーで消す（02 章 §4.6）
+      const { error } = await db.rpc('delete_my_account');
+      if (error) return false;
+    } catch {
+      return false;
+    }
+    // セッションはサーバーで消えているので、sign-out が失敗しても signOut の中で握りつぶす
+    await signOut();
+    navigate('/', { replace: true });
+    return true;
+  }, [signOut]);
+
+  return { state, admin, loginFailed, signingIn, signIn, signOut, deleteAccount };
 }
