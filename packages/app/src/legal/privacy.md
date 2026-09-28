@@ -53,9 +53,6 @@
 | `wwyd.pages.dev` | 画面の配信 | Cloudflare, Inc.（米国） |
 | Neon の認証・データベース・関数 | ログイン、投稿・回答の読み書き | Neon, LLC（米国。サーバーはシンガポール） |
 | Google のログイン画面 | Google アカウントでのログイン | Google LLC（米国） |
-| `fonts.googleapis.com` / `fonts.gstatic.com` | 画面のフォントの読み込み（Cookie は使われません） | Google LLC（米国） |
-
-【要確認: フォントを自サイトから配信することにした場合は、表の最後の行を削除する】
 
 ## 2. 利用目的
 
@@ -88,7 +85,7 @@ Google から受け取った情報は、上記の目的以外には使いませ�
 |---|---|---|---|
 | Neon, LLC（Databricks, Inc. の系列会社） | 米国 | データベース、認証基盤、投稿を検証するサーバー側処理 | シンガポール |
 | Cloudflare, Inc. | 米国 | 画面（静的ファイル）の配信。利用者の投稿や回答は保存しません | 世界各地の配信拠点。通信記録は主に米国と欧州 |
-| Google LLC | 米国 | Google アカウントでのログイン、フォントの配信 | Google の各拠点 |
+| Google LLC | 米国 | Google アカウントでのログイン | Google の各拠点 |
 
 ## 5. 保存期間と削除
 
