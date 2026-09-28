@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P7 集計 — 実装完了**（ブランチ `phase/07-result`。push・PR はさつきの承認待ち）。残りはスマホ実機。P5・P6 もスマホ実機のみ残り |
+| 現在のフェーズ | **P7 集計 — 実装完了**（PR #8 で main へマージ済み。次の作業ブランチは `phase/08-account`）。残りはスマホ実機。P5・P6 もスマホ実機のみ残り |
 | 直近で完了したこと | 集計画面（全体 / 自分 / Hero の予想のタブ、濃さ、白枠、内訳、上部バー、空状態、実際のアクション、最後まで再生できるハンドヒストリー、予想を編集・削除、スマホのタブ）。単体テスト 15 件・E2E 12 件を追加（E2E は計 44 件）。dev の実データで他人の投稿・自分の投稿（`?view=host`）を表示し、未回答者に集計・secrets・予想が返らないことを確認 |
-| 次にやること | 1. さつき: `phase/07-result` の push・PR・main へのマージの承認<br>2. P8 アカウントと管理者（T-801〜。アカウントメニュー、アカウント削除、規約ページの起案）<br>3. iPhone 実機の確認は**保留**（知り合いに依頼。Google の同意画面のテストユーザーへの追加が必要）。さつき: N-05（CI 用の NEON_API_KEY）、dev の「Sign-up with Email」をオフ |
+| 次にやること | 1. P8 アカウントと管理者（T-801〜。アカウントメニュー、アカウント削除、規約ページの起案）<br>2. iPhone 実機の確認は**保留**（知り合いに依頼。Google の同意画面のテストユーザーへの追加が必要）<br>3. さつき: N-05（CI 用の NEON_API_KEY）、dev の「Sign-up with Email」をオフ |
 | ブロッカー | なし |
-| さつきの確認待ち | `phase/07-result` の push・PR・マージ、iPhone 実機の確認（保留）、N-05 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
+| さつきの確認待ち | iPhone 実機の確認（保留）、N-05 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
 
 ---
 
@@ -405,3 +405,4 @@
 - **確認**: 単体テスト 454 件・型検査・ビルド・E2E 44 件（PC 40・スマホ 4）がすべて緑。dev の実データで、他人の投稿（全体 / 自分 / Hero の予想の空状態・白枠・内訳・最初から再生）と自分の投稿（`?view=host` で Hero の予想のタブ）を表示し、375px でスマホのタブを確認。未回答の投稿の get_post_detail は aggregate・secrets・host_answer が null（DB-12・13 と同じ）。
 - **変更したファイル**: `packages/app/src/answer/{resultModel.ts,resultModel.test.ts,ResultGrid.tsx}`（新規）、`packages/app/src/screens/ResultScreen.tsx`（新規）、`packages/app/src/answer/{Replay.tsx,detailFixtures.ts}`、`packages/app/src/screens/{SpotScreen,AnswerScreen}.tsx`、`packages/app/src/styles/answer.css`、`e2e/result.spec.ts`（新規）、`e2e/fakeBackend.ts`、`docs/plan.md`、`docs/BATON.md`
 - **残課題**: push・PR（承認待ち）、スマホ実機（保留）、P8。dev の試験データの回答は AA・22 だけのものが多く、濃さの違いは E2E（KK 0.65）で確認した。
+- **追記（2026-09-28）**: さつきの指示で `phase/07-result` を push → [satsuki19980613/WWYD#8](https://github.com/satsuki19980613/WWYD/pull/8) を作成。最初の CI で e2e の「既に回答済み（2 回目）」が失敗した（試験が読み込みの完了を待たずに応答を回答済みへ差し替えていたため、最初から集計へ移った。アプリの不具合ではない）。回答画面が出てから差し替えるように直し（20 回続けて緑）、CI（check・db・e2e・Cloudflare Pages）緑を確認して main へマージ。「Workers Builds: wwyd」の失敗は、削除済みの Worker のビルドの設定が Cloudflare に残っているためで、公開サイトとマージには影響しない。次の作業ブランチ `phase/08-account` を作成。
