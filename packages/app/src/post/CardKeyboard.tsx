@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useLayer, useOutsidePress } from '../components/useLayer.ts';
-import { ACE_FLICK, flickDirection, keyFromKeyboard, SUIT_FLICK, SUIT_SYMBOL, type CardKey, type FlickDir } from './cardInput.ts';
+import { flickDirection, keyFromKeyboard, RANK_FLICK, SUIT_FLICK, SUIT_SYMBOL, type CardKey, type FlickDir } from './cardInput.ts';
 
 /**
  * カードキーボード（06 章 §3.5）。画面下部に固定して出す。
- *   7 8 9 [A]      A は タップ / 上 / 右 / 下 / 左 = A / K / Q / J / T
- *   4 5 6 [A]
- *   1 2 3 [♠]      ♠ は タップ / 上 / 右 / 下 = ♠ / ♥ / ♦ / ♣
- *   C 0 ⌫ [♠]
+ *   7 8 9 [Q]      絵札は タップ / 上 / 左 / 下 = Q / K / T / J
+ *   4 5 6 [Q]
+ *   A 2 3 [♠]      ♠ は タップ / 上 / 左 / 下 = ♠ / ♥ / ♦ / ♣
+ *   [C ][ ⌫ ] [♠]
+ * フリックのキーは右端の列なので、右（外側）には割り当てない。キーの面に払う先の文字を小さく出す。
  * 閉じる: 「完了」、キーボード外のタップ（`data-keep-open` の要素は除く）、Esc。パソコンのキーでも打てる。
  */
 export function CardKeyboard(props: { seat: string; onKey: (key: CardKey) => void; onClose: () => void }): JSX.Element {
@@ -41,23 +42,21 @@ export function CardKeyboard(props: { seat: string; onKey: (key: CardKey) => voi
         </button>
       </div>
       <div className="ckb-grid">
-        {['7', '8', '9'].map((k) => (
+        {['7', '8', '9', '4', '5', '6', 'A', '2', '3'].map((k) => (
           <KeyButton key={k} label={k} onPress={press(k)} />
         ))}
-        <FlickKey className="ckb-tall" map={ACE_FLICK} render={(v) => v} label="A（フリックで K Q J T）" onKey={props.onKey} />
-        {['4', '5', '6', '1', '2', '3'].map((k) => (
-          <KeyButton key={k} label={k} onPress={press(k)} />
-        ))}
+        <div className="ckb-edit">
+          <KeyButton label="C" aria="ハンドを消す" onPress={press('C')} />
+          <KeyButton label="⌫" aria="1 文字消す" onPress={press('BS')} />
+        </div>
+        <FlickKey className="rank" map={RANK_FLICK} render={(v) => v} label="Q（フリックで K T J）" onKey={props.onKey} />
         <FlickKey
-          className="ckb-tall suit"
+          className="suit"
           map={SUIT_FLICK}
           render={(v) => SUIT_SYMBOL[v] ?? ''}
           label="スート（フリックで ♥ ♦ ♣）"
           onKey={props.onKey}
         />
-        <KeyButton label="C" aria="ハンドを消す" onPress={press('C')} />
-        <KeyButton label="0" onPress={press('0')} />
-        <KeyButton label="⌫" aria="1 文字消す" onPress={press('BS')} />
       </div>
     </div>
   );
@@ -153,7 +152,16 @@ function FlickKey(props: {
           }
         }}
       >
-        {props.render(props.map.tap ?? '')}
+        {/* 面: 中央にタップの値、払う方向に小さく（上・左・下） */}
+        {ORDER.map((d) => {
+          const v = props.map[d];
+          if (!v) return null;
+          return (
+            <span key={d} className={`ckb-face ckb-face-${d} s-${v}`} aria-hidden="true">
+              {props.render(v)}
+            </span>
+          );
+        })}
       </button>
       {popup && (
         <div className="ckb-pop" aria-hidden="true">
@@ -161,7 +169,7 @@ function FlickKey(props: {
             const v = props.map[d];
             if (!v) return null;
             return (
-              <span key={d} className={`ckb-pop-${d} ${d === dir ? 'on' : ''} ${props.className.includes('suit') ? `s-${v}` : ''}`}>
+              <span key={d} className={`ckb-pop-${d} ${d === dir ? 'on' : ''} s-${v}`}>
                 {props.render(v)}
               </span>
             );
