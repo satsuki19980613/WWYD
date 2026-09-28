@@ -70,14 +70,24 @@ a { color: var(--cyan); }
   justify-content: space-between;
   padding: 0 max(var(--s4), var(--safe-r)) 0 max(var(--s4), var(--safe-l));
 }
-.hdr-brand {
-  font-family: var(--disp);
-  font-size: 21px;
+/* 画面名 = ハザードティック＋太字（シグネチャー 3） */
+.hdr-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: var(--fg);
-  text-decoration: none;
-  padding: var(--s2) 0;
+  white-space: nowrap;
+}
+.hdr-title::before {
+  content: '';
+  width: 16px;
+  height: 11px;
+  flex: none;
+  background: repeating-linear-gradient(-45deg, var(--yellow) 0 3px, var(--bg) 3px 6px);
 }
 .hdr-actions { display: flex; align-items: center; gap: var(--s1); }
 

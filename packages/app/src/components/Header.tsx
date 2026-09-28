@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react';
 import { AccountIcon } from './Icons.tsx';
 import { AccountMenu } from './AccountMenu.tsx';
-import { Link } from './Link.tsx';
 
 /**
- * ヘッダー（06 章 §0.2）。左にアプリ名「WWYD」（一覧へのリンク）、右に ⓘ とアカウントアイコン。
+ * ヘッダー（06 章 §0.2）。左に画面名（ある画面だけ）、右に ⓘ とアカウントアイコン。
  * ⓘ は `data-keep-open` を付けて、アカウントメニューを開いたまま押せるようにする（開いていればアカウントの節を出す）。
  */
 export function Header(props: {
+  title?: string;
   showAccount: boolean;
   onInfo: (accountMenuOpen: boolean) => void;
   onLogout?: () => void;
@@ -19,9 +19,7 @@ export function Header(props: {
   return (
     <header className="hdr">
       <div className="hdr-inner">
-        <Link to="/" className="hdr-brand">
-          WWYD
-        </Link>
+        {props.title ? <h1 className="hdr-title">{props.title}</h1> : <span />}
         <div className="hdr-actions">
           <button
             type="button"

@@ -67,27 +67,17 @@
 .screen { display: flex; flex-direction: column; gap: var(--s4); }
 
 /* ---- スポット一覧（06 章 §2） ---- */
-.list-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-  min-height: 44px;
-}
-.list-head .sec-h { margin: 0; }
-.list-filters { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); }
+/* タブ（＋PC は投稿ボタン） */
+.list-head { display: flex; align-items: center; gap: var(--s3); }
+.list-head .tabs { flex: 1; min-width: 0; }
+/* ストリート（等分の列）と並び替え（右寄せの小さい切り替え）を上下に */
+.list-filters { display: flex; flex-direction: column; gap: 0; }
+/* PC は 1 行に並べる（ストリートは幅を抑える） */
+.list-screen:not(.sp) .list-filters { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--s4); }
+.list-screen:not(.sp) .chip-row.segment { flex: 0 1 480px; }
 .chip-row { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
 .chip-lbl { flex: none; }
 .chips { display: flex; gap: var(--s1); }
-/* スマホはチップの列を横スクロール（06 章 §2.1） */
-.list-screen.sp .list-filters { flex-direction: column; gap: var(--s1); }
-.list-screen.sp .chips {
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin-right: calc(-1 * var(--s4));
-  padding-right: var(--s4);
-}
-.list-screen.sp .chips::-webkit-scrollbar { display: none; }
 .chip {
   flex: none;
   min-height: 44px;
@@ -102,6 +92,56 @@
 }
 .chip:hover { color: var(--fg); border-color: var(--line-2); }
 .chip[aria-pressed='true'] { color: var(--yellow); border-color: rgba(252, 238, 10, 0.55); background: rgba(252, 238, 10, 0.06); }
+
+/* 等分のセグメント: 1 本の枠を区切り線で分ける */
+.chip-row.segment .chips {
+  flex: 1;
+  gap: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.chip-row.segment .chip {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 4px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.chip-row.segment .chip:first-child { border-left: 0; }
+.chip-row.segment .chip:hover { color: var(--fg); }
+.chip-row.segment .chip[aria-pressed='true'] {
+  color: var(--yellow);
+  background: rgba(252, 238, 10, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(252, 238, 10, 0.55);
+}
+.chip-row.segment .chip:focus-visible { outline-offset: -2px; }
+
+/* 並び替え: 枠のない小さな文字。選択中は黄 */
+.chip-row.toggle { justify-content: flex-end; }
+.chip-row.toggle .chips { gap: 0; }
+.chip-row.toggle .chip {
+  position: relative;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: var(--dim2);
+}
+.chip-row.toggle .chip + .chip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 12px;
+  margin-top: -6px;
+  background: var(--line-2);
+}
+.chip-row.toggle .chip:last-child { padding-right: 0; }
+.chip-row.toggle .chip:hover { color: var(--fg); }
+.chip-row.toggle .chip[aria-pressed='true'] { color: var(--yellow); background: none; }
 
 .spot-grid {
   display: grid;
