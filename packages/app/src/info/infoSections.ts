@@ -22,7 +22,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       {
         term: 'ログイン',
-        desc: 'Google アカウントでログインする。表示名とメールアドレスは他のユーザーに表示されず、アプリのデータベースにも保存されない。',
+        desc: 'Google アカウントでログインする。表示名とメールアドレスは他のユーザーに表示されず、投稿や回答と一緒には保存されない。',
       },
     ],
   },
