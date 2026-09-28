@@ -23,6 +23,7 @@
 | `packages/app/src/screens/AnswerScreen.tsx` | PC 2 列 / スマホのタブ（下部固定バーの高さを測って余白に使う） |
 | `e2e/`・`playwright.config.ts` | Playwright。`fakeBackend.ts` が Neon Auth・Data API を偽の応答に差し替える（ログイン不要）。開発サーバーは 5174 番で起動。スマホの試験はテスト名に `@sp` |
 
+- 公開サイトは https://wwyd.pages.dev （Cloudflare Pages、main の push で自動ビルド、本番の Neon）。create-post の本番の許可するオリジンは `http://localhost:5173,https://wwyd.pages.dev`（配備し直すときも両方を渡す。新旧の混在は 2 分ほど続くことがある）。iPhone 実機の確認はさつきの知り合いに依頼中（保留）。
 - dev のブラウザ（アプリ内ブラウザ）はさつきのログインが残っている。開発時は `await import('/src/backend/neon.ts')` で `db` を取り出し、get_post_detail を読んで確かめられる（書き込みは dev だけ）。
 - 依存を追加した後は開発サーバーを起動し直す（React が 2 つ読み込まれて真っ白になったことがある）。
 
