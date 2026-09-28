@@ -85,9 +85,7 @@ export function spotView(
   while ((actions[stop] as Action).pos !== villain) stop++;
   const stopAction = actions[stop] as Action;
 
-  const states = runActions(setup, actions.slice(0, stop));
-  let s = states[states.length - 1] as State;
-  while (s.street !== stopAction.street && status(s).kind === 'streetEnd') s = advance(s);
+  const s = stopState(setup, actions, stop, stopAction.street);
 
   const lg = legal(s, villain);
   const toCall = s.currentBet - s.bets[villain];
@@ -109,6 +107,19 @@ export function spotView(
     state: s,
     actual: answerKeyOf(stopAction.type),
   };
+}
+
+/**
+ * 停止位置の状態（Villain の手番）。アクション `0..stopIndex-1` を適用し、ストリートをまたぐ場合は
+ * スポットのストリート `street` まで advance する。
+ * 回答画面では、未回答者に返るアクション列が停止位置までに切り詰められている（02 章 §4.3）ので、
+ * 停止位置のアクションそのものは見ずに、投稿の `street` で到達先を決める。
+ */
+export function stopState(setup: HandSetup, actions: readonly Action[], stopIndex: number, street: Street): State {
+  const states = runActions(setup, actions.slice(0, stopIndex));
+  let s = states[states.length - 1] as State;
+  while (s.street !== street && status(s).kind === 'streetEnd') s = advance(s);
+  return s;
 }
 
 /** % pot のプリセット（§9）。初期値は 50%。 */
