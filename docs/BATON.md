@@ -1,18 +1,31 @@
-# バトン: P5 の本番配備 → P6 回答へ
+# バトン: P6 回答 → P7 集計へ
 
-**更新 2026-09-28 / セッション 3（Opus 5.5）から次セッションへの引き継ぎ**
-**発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている）**
+**更新 2026-09-28 / セッション 4（Opus 5.5）から次セッションへの引き継ぎ**
+**発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている。操作をお願いするときは非エンジニアにも分かる言葉で説明する）**
 
 ---
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**P5（投稿）は dev で実装・確認済みで、PR #6 で main へマージ済み**。次の作業ブランチは `phase/06-answer`（作成済み）。Neon Function `create-post` は dev にだけ配備してある。
+**P6（回答）は `phase/06-answer` で実装・確認済み（未 push）**。P5 は本番に配備済み。
 
-1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
-2. さつきの承認があれば `create-post` を本番に配備（下のコマンド）→ Invocation URL を `.env.production` の `VITE_NEON_CREATE_POST_URL` に → `npm run dev:prod` で本番に投稿し、P4（一覧・削除）と P5 を本番で確認。
-4. P6 回答（T-601〜）。
-5. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ、M-08（Cloudflare Pages。スマホ実機の確認に必要）。
+1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。Q-30（重なったハンドルの書き方。11 章）に回答があれば決定ログと 06 章 §4.4 に反映。
+2. さつきの承認があれば `phase/06-answer` を push → PR → CI（check・db・**e2e**）緑を確かめて main へマージ。
+3. P7 集計（T-701〜）。`/s/:id/result` は今は見出しだけ（`SpotScreen.tsx` の最後）。Hero の予想の保存後は `?view=host` で来るので「Hero の予想」タブを選ぶ。卓・ログは P6 の `answer/Replay.tsx`（`PokerTable`・`HandLog` の `actual`）、上部バーは `answer/ComboBar.tsx`、マスの色は `RangeGrid.tsx` の `CellFill` を使い回せる。集計は `PostDetail.aggregate`（デコード済み）。
+4. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、M-09（管理者 UID）、dev の「Sign-up with Email」をオフ、M-08（Cloudflare Pages。スマホ実機の確認に必要）。
+
+## 0.0001 P6 で作ったもの
+
+| ファイル | 内容 |
+|---|---|
+| `packages/core/src/poker/spot.ts` | `stopState`（停止位置までに切り詰めたアクション列から停止位置の状態） |
+| `packages/app/src/answer/` | `postDetail.ts`（get_post_detail の読み取りと Data API のエラーコード）、`answerApi.ts`（`usePostDetail`・`insertAnswer`・`saveHostAnswer`）、`brush.ts`・`paintEditor.ts`・`answerForm.ts`・`replayModel.ts`（純関数。単体テストあり）、部品（`Replay.tsx`・`BrushPanel.tsx`・`RangeGrid.tsx`・`SizeControl.tsx`・`ComboBar.tsx`）、`detailFixtures.ts`（テストと E2E 用の応答） |
+| `packages/app/src/screens/SpotScreen.tsx` | `/s/:id`・answer・result を 1 つの器で読み、viewer に合わせて置き換え遷移。送信後は reload |
+| `packages/app/src/screens/AnswerScreen.tsx` | PC 2 列 / スマホのタブ（下部固定バーの高さを測って余白に使う） |
+| `e2e/`・`playwright.config.ts` | Playwright。`fakeBackend.ts` が Neon Auth・Data API を偽の応答に差し替える（ログイン不要）。開発サーバーは 5174 番で起動。スマホの試験はテスト名に `@sp` |
+
+- dev のブラウザ（アプリ内ブラウザ）はさつきのログインが残っている。開発時は `await import('/src/backend/neon.ts')` で `db` を取り出し、get_post_detail を読んで確かめられる（書き込みは dev だけ）。
+- 依存を追加した後は開発サーバーを起動し直す（React が 2 つ読み込まれて真っ白になったことがある）。
 
 ## 0.001 P5 で作ったもの
 
