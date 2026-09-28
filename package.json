@@ -14,15 +14,17 @@
     "preview": "npm run preview -w @wwyd/app",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/app && tsc --noEmit -p packages/functions && tsc --noEmit -p tsconfig.tools.json",
+    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/app && tsc --noEmit -p packages/functions && tsc --noEmit -p tsconfig.tools.json && tsc --noEmit -p e2e",
     "test:coverage": "vitest run --coverage",
     "gen:db-vectors": "node scripts/genPaintVectorsSql.mjs",
     "check:db-vectors": "node scripts/genPaintVectorsSql.mjs --check",
     "test:db": "node scripts/db.mjs test",
     "db:migrate": "node scripts/db.mjs migrate",
-    "db:seed": "node scripts/db.mjs seed"
+    "db:seed": "node scripts/db.mjs seed",
+    "e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.19.0",
     "@vitest/coverage-v8": "^5.0.2",
     "neonctl": "^6.2.3",
