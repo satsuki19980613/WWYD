@@ -365,7 +365,9 @@ test.describe('送信（06 章 §4.9）', () => {
 
   test('既に回答済み（2 回目）はエラーを出さずに集計へ', async ({ page }) => {
     const be = await open(page);
-    // 画面を開いた後に別のタブで回答した（サーバーでは回答済み）
+    // 画面を開いた後に別のタブで回答した（サーバーでは回答済み）。
+    // 読み込みが終わる前に差し替えると最初から集計へ移ってしまうので、回答画面が出てから差し替える
+    await expect(page.getByRole('button', { name: '回答する' })).toBeVisible();
     be.insertError = DUPLICATE;
     be.detail = answered();
     await cell(page, 'AA').click();
