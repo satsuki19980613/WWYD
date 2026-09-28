@@ -144,7 +144,7 @@ export function formatAgo(createdAt: string, now: number): string {
 
 export type CardStatus = 'mine' | 'answered' | null;
 
-/** 右上の状態（自分の投稿が優先。自分の投稿には回答できない）。 */
+/** 右上の状態（自分の投稿が優先）。 */
 export function cardStatus(row: Pick<PostRow, 'is_mine' | 'answered_by_me'>): CardStatus {
   if (row.is_mine) return 'mine';
   if (row.answered_by_me) return 'answered';
@@ -152,7 +152,7 @@ export function cardStatus(row: Pick<PostRow, 'is_mine' | 'answered_by_me'>): Ca
 }
 
 /**
- * カードの主操作。未回答は回答画面、回答済みと自分の投稿は集計画面へ（09 章「遷移」）。
+ * カードの主操作。未回答は回答画面、回答済みは集計画面へ（09 章「遷移」）。投稿者も自分の投稿に回答してから集計を見る。
  * 遷移先は `/s/:id` の振り分けを通さず直接指す（振り分けはサーバー側でも行う）。
  */
 export function cardAction(row: Pick<PostRow, 'id' | 'is_mine' | 'answered_by_me'>): {
@@ -161,7 +161,7 @@ export function cardAction(row: Pick<PostRow, 'id' | 'is_mine' | 'answered_by_me
   to: string;
 } {
   const id = encodeURIComponent(row.id);
-  if (row.is_mine) return { primary: false, label: '回答を見る', to: `/s/${id}/result` };
+  if (row.is_mine && row.answered_by_me) return { primary: false, label: '回答を見る', to: `/s/${id}/result` };
   if (row.answered_by_me) return { primary: false, label: '結果を見る', to: `/s/${id}/result` };
   return { primary: true, label: '回答する', to: `/s/${id}/answer` };
 }

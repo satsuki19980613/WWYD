@@ -6,8 +6,7 @@ import { errorCode, parsePostDetail, type PostDetail } from './postDetail.ts';
 /**
  * 回答・集計画面の通信（詳細仕様 06 章 §4.2・§4.9）。
  * - 読み込み: `get_post_detail`
- * - 回答: `answers` への insert（検証・集計はトリガ。02 章 §4.5）
- * - Hero の想定レンジ: `save_host_answer`
+ * - 回答: `answers` への insert（検証・集計はトリガ。02 章 §4.5）。投稿者も自分の投稿に同じ方法で回答する
  */
 
 export type DetailState =
@@ -56,16 +55,6 @@ const sizeBb = (size: Mbb | null): number | null => (size === null ? null : mbbT
 export async function insertAnswer(postId: string, paint: Paint, size: Mbb | null): Promise<SendResult> {
   try {
     const { error } = await db.from('answers').insert({ post_id: postId, paint: paintHex(paint), size: sizeBb(size) });
-    return error ? { ok: false, code: errorCode(error) } : { ok: true };
-  } catch {
-    return { ok: false, code: 'network' };
-  }
-}
-
-/** Hero の想定レンジを保存する（何度でも上書き）。 */
-export async function saveHostAnswer(postId: string, paint: Paint, size: Mbb | null): Promise<SendResult> {
-  try {
-    const { error } = await db.rpc('save_host_answer', { p_post_id: postId, p_paint: paintHex(paint), p_size: sizeBb(size) });
     return error ? { ok: false, code: errorCode(error) } : { ok: true };
   } catch {
     return { ok: false, code: 'network' };

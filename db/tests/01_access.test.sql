@@ -1,7 +1,7 @@
 -- DB-01〜04・11・12: 権限と閲覧制限（詳細仕様 02 章 §5）
 begin;
 \ir helpers/setup.psql
-select plan(38);
+select plan(36);
 
 select pg_temp.create_user(1);  -- 投稿者
 select pg_temp.create_user(2);  -- 回答者
@@ -14,7 +14,6 @@ select pg_temp.login(0);
 select throws_ok($$ select * from public.posts $$, '42501', null, 'DB-01 未ログイン（anonymous）は posts を読めない');
 select throws_ok($$ select * from public.post_hands $$, '42501', null, 'DB-01 未ログイン（anonymous）は post_hands を読めない');
 select throws_ok($$ select * from public.post_secrets $$, '42501', null, 'DB-01 未ログイン（anonymous）は post_secrets を読めない');
-select throws_ok($$ select * from public.host_answers $$, '42501', null, 'DB-01 未ログイン（anonymous）は host_answers を読めない');
 select throws_ok($$ select * from public.answers $$, '42501', null, 'DB-01 未ログイン（anonymous）は answers を読めない');
 select throws_ok($$ select * from public.post_aggregates $$, '42501', null, 'DB-01 未ログイン（anonymous）は post_aggregates を読めない');
 select throws_ok($$ select * from public.app_settings $$, '42501', null, 'DB-01 未ログイン（anonymous）は app_settings を読めない');
@@ -38,8 +37,8 @@ select is(
 select is(
   (select array_agg(p.proname::text order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and has_function_privilege('authenticated', p.oid, 'execute')),
-  array['admin_delete_unanswered_posts', 'can_view_results', 'current_uid', 'delete_my_account', 'get_post_detail',
-        'is_admin', 'is_allowed', 'list_posts', 'save_host_answer', 'whoami'],
+  array['admin_delete_unanswered_posts', 'can_view_aggregate', 'can_view_results', 'current_uid', 'delete_my_account',
+        'get_post_detail', 'is_admin', 'is_allowed', 'list_posts', 'whoami'],
   'DB-01 authenticated が実行できる関数は決めたものだけ');
 
 -- ---- DB-03 / DB-04 authenticated は posts に直接書けない・insert_post を実行できない ----
@@ -53,7 +52,7 @@ select throws_ok($$ select * from public.post_hands $$, '42501', null, 'post_han
 select is((select public.whoami()), '{"admin": false, "allowed": true}'::jsonb, 'whoami（許可リスト無効）');
 select pg_temp.logout();
 
--- ---- DB-12 閲覧制限: 未回答者は読めない、回答後は読める、投稿者は常に読める ----
+-- ---- DB-12 閲覧制限: 未回答者は読めない、回答後は読める。投稿者は Hero のハンドは常に、集計は回答してから ----
 select pg_temp.login(3);
 select is((select count(*)::int from public.posts), 1, 'DB-12 未回答者も posts は読める');
 select is((select count(*)::int from public.post_secrets), 0, 'DB-12 未回答者は post_secrets を読めない');
@@ -61,20 +60,16 @@ select is((select count(*)::int from public.post_aggregates), 0, 'DB-12 未回�
 select pg_temp.logout();
 
 select pg_temp.login(1);
-select public.save_host_answer(:'post', pg_temp.paint('[[0,20,0,0,0]]'), null);
-select is((select count(*)::int from public.post_secrets), 1, 'DB-12 投稿者は post_secrets を読める');
-select is((select count(*)::int from public.host_answers), 1, 'DB-12 投稿者は host_answers を読める');
-select is((select count(*)::int from public.post_aggregates), 1, 'DB-12 投稿者は post_aggregates を読める');
-select pg_temp.logout();
-
-select pg_temp.login(3);
-select is((select count(*)::int from public.host_answers), 0, 'DB-12 未回答者は host_answers を読めない');
+select is((select count(*)::int from public.post_secrets), 1, 'DB-12 投稿者は回答前でも post_secrets を読める');
+select is((select count(*)::int from public.post_aggregates), 0, 'DB-12 投稿者も回答前は post_aggregates を読めない');
+insert into public.answers (post_id, paint) values (:'post', pg_temp.paint('[[0,20,0,0,0]]'));
+select is((select count(*)::int from public.post_aggregates), 1, 'DB-12 投稿者は回答後に post_aggregates を読める');
 select pg_temp.logout();
 
 select pg_temp.login(2);
 insert into public.answers (post_id, paint) values (:'post', :'aa_call');
 select is((select count(*)::int from public.post_secrets), 1, 'DB-12 回答後は post_secrets を読める');
-select is((select count(*)::int from public.host_answers), 1, 'DB-12 回答後は host_answers を読める');
+select is((select count(*)::int from public.post_aggregates), 1, 'DB-12 回答後は post_aggregates を読める');
 select pg_temp.logout();
 
 -- ---- DB-11 他人の回答は見えない ----

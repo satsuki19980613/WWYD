@@ -13,7 +13,6 @@ import {
   cellViews,
   emptyLabel,
   initialCell,
-  initialView,
   keyNames,
   resultFrames,
   resultTabs,
@@ -22,12 +21,11 @@ import {
   type ResultView,
 } from '../answer/resultModel.ts';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
-import { Link } from '../components/Link.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
 import { deletePost } from '../list/useSpotList.ts';
-import { navigate, routePath, useLocation } from '../router.ts';
+import { navigate } from '../router.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 import { metaLine } from './AnswerScreen.tsx';
 
@@ -38,16 +36,15 @@ const MOBILE_TABS: readonly { value: MobileTab; label: string }[] = [
 ];
 
 /**
- * 集計画面（06 章 §5。仕様書 §5.4）。`detail.viewer` は `answered` か `author`（未回答は SpotScreen が回答画面へ移す）。
+ * 集計画面（06 章 §5。仕様書 §5.4）。回答済みの人が開く（投稿者も回答してから。未回答は SpotScreen が回答画面へ移す）。
  * PC は左にハンドヒストリーの再生、右に集計。スマホは上部固定のタブ「集計 / ハンドヒストリー」。
  */
 export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   const { detail: d } = props;
   const { post } = d;
   const mobile = useIsMobile();
-  const { search } = useLocation();
 
-  const [view, setView] = useState<ResultView>(() => initialView(search));
+  const [view, setView] = useState<ResultView>('all');
   const [selected, setSelected] = useState(() => initialCell(d));
   const [tab, setTab] = useState<MobileTab>('agg');
 
@@ -57,8 +54,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   const empty = emptyLabel(d, view);
   const ratios: BarRatios | null = useMemo(() => {
     if (view === 'all') return d.aggregate ? aggregateBar(d.aggregate.cells, d.aggregate.n) : null;
-    const saved = view === 'mine' ? d.myAnswer : d.hostAnswer;
-    return saved ? paintBar(saved.paint) : null;
+    return d.myAnswer ? paintBar(d.myAnswer.paint) : null;
   }, [d, view]);
 
   const head = (
@@ -74,11 +70,6 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
       {empty ? (
         <div className="list-empty">
           <p className="list-empty-label">{empty}</p>
-          {view === 'host' && post.isMine && (
-            <Link to={routePath({ name: 'answer', id: post.id })} className="btn auto">
-              想定レンジを入力
-            </Link>
-          )}
         </div>
       ) : (
         <>
@@ -153,7 +144,7 @@ function BreakdownPanel(props: { detail: PostDetail; view: ResultView; idx: numb
           ))}
         </ul>
       )}
-      {b.kind === 'all' && b.mine !== null && <p className="res-mine num">自分：{b.mine}</p>}
+      {b.kind === 'all' && <p className="res-mine num">自分：{b.mine}</p>}
     </div>
   );
 }
@@ -187,12 +178,12 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
   );
 }
 
-/** 操作（06 章 §5.5）: 自分の投稿は「想定レンジを編集」「削除」、他人の投稿は管理者だけ「削除」。 */
+/** 操作（06 章 §5.5）: 自分の投稿は「削除」、他人の投稿は管理者だけ「削除」。 */
 function Operations(props: { detail: PostDetail }): JSX.Element | null {
   const { post } = props.detail;
   const toast = useToast();
   const [deleting, setDeleting] = useState<{ busy: boolean } | null>(null);
-  if (!post.isMine && !post.canDelete) return null;
+  if (!post.canDelete) return null;
 
   const confirmDelete = (): void => {
     setDeleting({ busy: true });
@@ -207,11 +198,6 @@ function Operations(props: { detail: PostDetail }): JSX.Element | null {
 
   return (
     <div className="res-ops">
-      {post.isMine && (
-        <Link to={routePath({ name: 'answer', id: post.id })} className="btn ghost auto">
-          想定レンジを編集
-        </Link>
-      )}
       {post.canDelete && (
         <button type="button" className="btn red auto" onClick={() => setDeleting({ busy: false })}>
           削除

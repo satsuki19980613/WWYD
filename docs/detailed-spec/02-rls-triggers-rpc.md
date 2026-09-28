@@ -7,6 +7,16 @@
 HTTP 400 と `message` にコードを載せて返すので、フロントエンドは 06 章のエラーコード表で日本語にする。
 主キー違反（SQLSTATE `23505`）は `already_answered` として扱う。
 
+> **2026-09-28 の変更（さつきの決定。マイグレーション `20260928000000_author_answers.sql`）**: Hero の想定レンジを廃止し、
+> **投稿者も自分の投稿に `answers` で回答する**（集計に入る。1 回だけ・変更不可）。この章の DDL に残る `host_answers`・
+> `save_host_answer`・`own_post`（投稿者の回答の拒否）は廃止。変更点:
+> - `answers_before_insert` から `own_post` を外し、`answers_insert` のポリシーから投稿者の除外を外した。
+> - 集計（`post_aggregates` と `get_post_detail` の `aggregate`）は**回答済みの人だけ**（投稿者も回答してから）。新しい関数 `can_view_aggregate`。
+>   Hero のハンド・known_cards・全アクションは、これまでどおり投稿者本人か回答済み（`can_view_results`）。
+> - `get_post_detail` に `answered`（自分が回答済みか）を足し、`host_answer` を外した。
+> - `admin_delete_unanswered_posts` は「投稿者本人以外の回答が無い投稿」を消す。
+> - 既存の `host_answers` の行は、投稿者の回答として `answers` に移した（集計にも加わる）。
+
 ---
 
 ## 1. 共通関数（`0005_helpers.sql`）
@@ -556,16 +566,16 @@ grant execute on function public.whoami() to authenticated;
 | DB-04 | `insert_post` は authenticated から実行できない（service_role のみ） |
 | DB-05 | 投稿上限: 同じ日に 5 件成功、6 件目は `daily_limit`。削除しても枠は戻らない【Q-10】。UTC の日付が変われば戻る |
 | DB-06 | 回答の検証: 05 章の共有テストベクタをすべて通す（TS と同じ結果） |
-| DB-07 | 投稿者本人の回答は `own_post`（または RLS 違反）で拒否 |
+| DB-07 | 投稿者も自分の投稿に回答でき、集計と回答数に入る。2 回目は 23505（2026-09-28 に変更） |
 | DB-08 | 2 回目の回答は `23505` |
 | DB-09 | 回答の挿入で `post_aggregates` と `answer_count` が 05 章 PAINT-12 のとおりに増える |
 | DB-10 | 回答後に update しようとすると拒否 |
 | DB-11 | 他人の回答は select で見えない |
-| DB-12 | 未回答者は post_secrets / host_answers / post_aggregates を読めない。回答後は読める。投稿者は常に読める |
-| DB-13 | 未回答者の `get_post_detail`: secrets / host_answer / aggregate が null、actions が `stop_index` 件、board がスポットのストリートまで【Q-9】 |
-| DB-14 | 投稿削除（本人）で post_hands / post_secrets / host_answers / answers / post_aggregates が消える |
+| DB-12 | 未回答者は post_secrets / post_aggregates を読めない。回答後は読める。投稿者は post_secrets を常に読め、post_aggregates は回答してから |
+| DB-13 | 未回答者の `get_post_detail`: secrets / aggregate が null、actions が `stop_index` 件、board がスポットのストリートまで【Q-9】 |
+| DB-14 | 投稿削除（本人）で post_hands / post_secrets / answers / post_aggregates が消える |
 | DB-15 | 他人の投稿は削除できない。管理者は削除できる |
 | DB-16 | `delete_my_account`: 本人の回答が消え、回答していた他人の投稿の `answer_count` と集計が元に戻る。本人の投稿が消える。`auth.users` の行が消える |
-| DB-17 | `save_host_answer`: 投稿者のみ・何度でも上書き・集計に入らない |
+| DB-17 | （廃止。2026-09-28 に Hero の想定レンジをやめた。投稿者の回答は DB-07） |
 | DB-18 | `list_posts`: タブ・ストリート・並び順・ページングが正しい。`answered_by_me` / `can_delete` が正しい |
 | DB-19 | 同じ投稿への同時回答 10 件で集計の合計が一致する（ロックの確認）。pgTAP は 1 トランザクションで同時実行できないため、`scripts/dbConcurrency.mjs`（10 接続で同時に挿入）で確かめる |

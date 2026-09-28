@@ -12,6 +12,8 @@ import {
   decodeAggregate,
   emptyAggregate,
   encodeAggregate,
+  levelOpacity,
+  opacityLevel,
   paintBar,
   paintCellView,
   weightedCount,
@@ -167,6 +169,17 @@ describe('PAINT 集計', () => {
     expect(aggregateCellView(agg[idxOf('QQ')] as (typeof agg)[number], 2)).toEqual({ ratio: null, opacity: 0 });
     expect(weightedCount(AA, 'call')).toBe(2); // 30 / 20 = 1.5 → 2
     expect(weightedCount(AA, 's1')).toBe(1); // 10 / 20 = 0.5 → 1
+  });
+
+  it('PAINT-15 濃さはレンジに入れた人の割合の 5 段（20% 刻み。境目は下の段）', () => {
+    expect([0, 1, 20, 21, 40, 41, 60, 61, 80, 81, 100].map((n) => opacityLevel(n, 100))).toEqual([0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+    expect([1, 2, 3].map((n) => opacityLevel(n, 3))).toEqual([2, 4, 5]); // 33% → 2、67% → 4
+    expect(opacityLevel(1, 2000)).toBe(1); // 0.05% でも無色にしない
+    expect([1, 2, 3, 4, 5].map(levelOpacity)).toEqual([0.3, 0.475, 0.65, 0.825, 1]);
+    expect(levelOpacity(0)).toBe(0);
+    const cell = { n: 399, sum: mix({ call: 399 * 20 }) };
+    expect(aggregateCellView(cell, 2000).opacity).toBe(0.3); // 19.95% → 1 段目
+    expect(aggregateCellView({ ...cell, n: 401 }, 2000).opacity).toBe(0.475); // 20.05% → 2 段目
   });
 
   it('PAINT-13 上部バー', () => {

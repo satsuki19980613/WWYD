@@ -1,7 +1,7 @@
--- DB-07〜10・17・19: 回答・集計・Hero の予想
+-- DB-07〜10・19: 回答・集計（投稿者も自分の投稿に回答する）
 begin;
 \ir helpers/setup.psql
-select plan(28);
+select plan(24);
 
 select pg_temp.create_user(n) from generate_series(1, 13) as n;
 select pg_temp.make_post(1) as post \gset
@@ -10,11 +10,15 @@ select pg_temp.make_post(1) as post \gset
 select pg_temp.paint('[[0,0,0,20,0]]') as pa \gset
 select pg_temp.paint('[[0,0,0,10,10],[14,20,0,0,0]]') as pb \gset
 
--- ---- DB-07 投稿者本人の回答は拒否 ----
+-- ---- DB-07 投稿者も自分の投稿に回答でき、集計に入る。2 回目は拒否 ----
+select pg_temp.make_post(1, pg_temp.hs1('DB-07')) as post7 \gset
 select pg_temp.login(1);
-select throws_ok(format($$ insert into public.answers (post_id, paint) values (%L, %L) $$, :'post', :'pa'),
-  'P0001', 'own_post', 'DB-07 投稿者本人の回答は own_post');
+select lives_ok(format($$ insert into public.answers (post_id, paint) values (%L, %L) $$, :'post7', :'pa'), 'DB-07 投稿者は自分の投稿に回答できる');
+select throws_ok(format($$ insert into public.answers (post_id, paint) values (%L, %L) $$, :'post7', :'pa'),
+  '23505', null, 'DB-07 投稿者も 2 回目の回答は 23505');
 select pg_temp.logout();
+select is((select n from public.post_aggregates where post_id = :'post7'), 1, 'DB-07 投稿者の回答は集計に入る');
+select is((select answer_count from public.posts where id = :'post7'), 1, 'DB-07 投稿者の回答は回答数に入る');
 
 -- ---- 回答の検証（トリガ） ----
 select pg_temp.login(2);
@@ -56,21 +60,6 @@ select is(pg_temp.agg(:'post', 0, 1), 0, 'DB-09 AA の sum_fold = 0');
 select is(pg_temp.agg(:'post', 14, 0), 1, 'DB-09 KK の n_cell = 1');
 select is(pg_temp.agg(:'post', 14, 1), 20, 'DB-09 KK の sum_fold = 20');
 select is(pg_temp.agg(:'post', 13, 0), 0, 'DB-09 塗っていないマスは 0');
-
--- ---- DB-17 Hero の予想: 投稿者のみ・上書き可・集計に入らない ----
-select pg_temp.login(2);
-select throws_ok(format($$ select public.save_host_answer(%L, %L, null) $$, :'post', :'pa'),
-  'P0001', 'not_author', 'DB-17 投稿者以外は not_author');
-select pg_temp.logout();
-select pg_temp.login(1);
-select lives_ok(format($$ select public.save_host_answer(%L, %L, null) $$, :'post', :'pa'), 'DB-17 投稿者は保存できる');
-select lives_ok(format($$ select public.save_host_answer(%L, %L, 20) $$, :'post', :'pb'), 'DB-17 何度でも上書きできる');
-select throws_ok(format($$ select public.save_host_answer(%L, %L, null) $$, :'post', :'pb'),
-  'P0001', 'size_out_of_range', 'DB-17 回答と同じ検証（Q-21）');
-select is((select size::numeric from public.host_answers where post_id = :'post'), 20.000::numeric, 'DB-17 上書き後の値');
-select pg_temp.logout();
-select is((select n from public.post_aggregates where post_id = :'post'), 2, 'DB-17 集計に入らない');
-select is((select answer_count from public.posts where id = :'post'), 2, 'DB-17 回答数に入らない');
 
 -- ---- DB-19 同じ投稿への 10 件の回答で集計の合計が一致する ----
 -- （本当の同時実行は scripts/db-concurrency.mjs で確かめる。ここでは 10 件の逐次加算の合計）

@@ -32,19 +32,15 @@ import type { PostDetail } from './postDetail.ts';
  * 集計画面（詳細仕様 06 章 §5。仕様書 §5.4）の表示の計算。計算の本体は core の aggregate（05 章 §4）。
  */
 
-export type ResultView = 'all' | 'mine' | 'host';
+export type ResultView = 'all' | 'mine';
 
-/** 集計のタブ（§5.2）。自分の投稿には「自分」が無い。 */
+/** 集計のタブ（§5.2）。投稿者も回答者の 1 人なので、自分の投稿でも「全体」「自分」。 */
 export function resultTabs(d: PostDetail): { value: ResultView; label: string }[] {
   const n = d.aggregate?.n ?? 0;
-  const all = { value: 'all' as const, label: `全体（${n}人）` };
-  const host = { value: 'host' as const, label: 'Hero の想定レンジ' };
-  return d.post.isMine ? [all, host] : [all, { value: 'mine', label: '自分' }, host];
-}
-
-/** 最初のタブ。Hero の想定レンジの保存後は `?view=host` で来る（06 章 §4.9）。 */
-export function initialView(search: string): ResultView {
-  return new URLSearchParams(search).get('view') === 'host' ? 'host' : 'all';
+  return [
+    { value: 'all', label: `全体（${n}人）` },
+    { value: 'mine', label: '自分' },
+  ];
 }
 
 /** Villain のハンド（判明していればカード、マック、不明は null）。 */
@@ -81,7 +77,7 @@ export function actionText(a: Action): string {
 
 // ---- レンジ表 ----
 
-/** 表示中のタブのマス（全体 = 05 章 §4.1、自分 / Hero の想定レンジ = §4.2）。 */
+/** 表示中のタブのマス（全体 = 05 章 §4.1、自分 = §4.2）。 */
 export function cellViews(d: PostDetail, view: ResultView): CellView[] {
   if (view === 'all') {
     const agg = d.aggregate;
@@ -89,15 +85,13 @@ export function cellViews(d: PostDetail, view: ResultView): CellView[] {
       agg ? aggregateCellView(agg.cells[i] as (typeof agg.cells)[number], agg.n) : { ratio: null, opacity: 0 },
     );
   }
-  const saved = view === 'mine' ? d.myAnswer : d.hostAnswer;
-  return Array.from({ length: CELL_COUNT }, (_, i) => paintCellView(saved?.paint[i] ?? null));
+  return Array.from({ length: CELL_COUNT }, (_, i) => paintCellView(d.myAnswer?.paint[i] ?? null));
 }
 
-/** 空状態（§5.2）: 全体で回答 0 件 →「回答なし」、想定レンジなし →「想定レンジなし」。空でなければ null。 */
+/** 空状態（§5.2）: 回答 0 件 →「回答なし」。空でなければ null。 */
 export function emptyLabel(d: PostDetail, view: ResultView): string | null {
   if (view === 'all') return (d.aggregate?.n ?? 0) === 0 ? '回答なし' : null;
-  if (view === 'mine') return d.myAnswer ? null : '回答なし';
-  return d.hostAnswer ? null : '想定レンジなし';
+  return d.myAnswer ? null : '回答なし';
 }
 
 /** ミックスの文字列「コール 50% / レイズ 50%」。レンジ外は「レンジ外」。 */
@@ -116,8 +110,8 @@ export type Breakdown =
       total: number;
       /** キーごとの平均（小数第 1 位の %）と、頻度で重み付けした人数。レンジ内 0 人なら空。 */
       rows: { key: AnswerKey; name: string; pct: string; count: number }[];
-      /** 他人の投稿では自分のミックス（自分の投稿では null）。 */
-      mine: string | null;
+      /** 自分のミックス。 */
+      mine: string;
     }
   | { kind: 'single'; label: string; text: string };
 
@@ -125,10 +119,7 @@ export type Breakdown =
 export function breakdown(d: PostDetail, view: ResultView, idx: number): Breakdown {
   const names = keyNames(d);
   const label = labelOf(idx);
-  if (view !== 'all') {
-    const saved = view === 'mine' ? d.myAnswer : d.hostAnswer;
-    return { kind: 'single', label, text: mixText(saved?.paint[idx] ?? null, names) };
-  }
+  if (view !== 'all') return { kind: 'single', label, text: mixText(d.myAnswer?.paint[idx] ?? null, names) };
   const total = d.aggregate?.n ?? 0;
   const cell = d.aggregate?.cells[idx] ?? { n: 0, sum: { fold: 0, check: 0, call: 0, s1: 0 } };
   const rows =
@@ -140,7 +131,7 @@ export function breakdown(d: PostDetail, view: ResultView, idx: number): Breakdo
           pct: pct1(cell.sum[k] / (cell.n * MIX_TOTAL)),
           count: weightedCount(cell, k),
         }));
-  const mine = d.post.isMine ? null : mixText(d.myAnswer?.paint[idx] ?? null, names);
+  const mine = mixText(d.myAnswer?.paint[idx] ?? null, names);
   return { kind: 'all', label, n: cell.n, total, rows, mine };
 }
 

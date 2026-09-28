@@ -58,8 +58,8 @@ export type PostDetail = {
   };
   /** Hero のハンドと判明しているハンド。未回答者には返らない。 */
   secrets: { heroCards: Card[]; knownCards: Partial<Record<Pos, Card[] | 'muck'>> } | null;
+  /** 自分の回答（投稿者も自分の投稿に回答する）。無ければ未回答。 */
   myAnswer: SavedAnswer | null;
-  hostAnswer: SavedAnswer | null;
   aggregate: { n: number; cells: AggCell[] } | null;
 };
 
@@ -201,7 +201,6 @@ export function parsePostDetail(raw: unknown): PostDetail {
     },
     secrets,
     myAnswer: parseSaved(r.my_answer, 'my_answer'),
-    hostAnswer: parseSaved(r.host_answer, 'host_answer'),
     aggregate,
   };
 }
@@ -216,28 +215,27 @@ export type ApiError = { code?: string; message?: string } | null;
  * - `public.fail()` は SQLSTATE P0001 で message にコードを入れる（02 章）。
  * - 回答の主キー重複（23505）は `already_answered`。
  * - URL の ID が UUID の形でない（22P02）は、存在しない投稿と同じ扱い。
- * - RLS の拒否（42501）は「この操作はできません」。
+ * - RLS の拒否（42501）は「この操作はできません」（`forbidden`）。
  * - 通信の失敗は `network`。
  */
 export function errorCode(err: ApiError): string {
   if (!err) return 'internal';
   if (err.code === '23505') return 'already_answered';
   if (err.code === '22P02') return 'post_not_found';
-  if (err.code === '42501') return 'own_post';
+  if (err.code === '42501') return 'forbidden';
   if (err.code === 'P0001' && err.message) return err.message;
   // postgrest-js は fetch の失敗を例外にせず、コードの無いエラーとして返す
   if (!err.code && /fetch|network/i.test(err.message ?? '')) return 'network';
   return 'internal';
 }
 
-/** 回答・想定レンジの送信のエラー文（06 章 §7）。`already_answered` は表示せずに集計へ移る。 */
+/** 回答の送信のエラー文（06 章 §7）。`already_answered` は表示せずに集計へ移る。 */
 export function answerErrorMessage(code: string): string {
   if (code.startsWith('paint_') || code.startsWith('size_')) return '回答の内容が正しくありません';
   switch (code) {
     case 'post_not_found':
       return 'スポットが見つかりません';
-    case 'own_post':
-    case 'not_author':
+    case 'forbidden':
       return 'この操作はできません';
     case 'not_authenticated':
       return 'ログインし直してください';

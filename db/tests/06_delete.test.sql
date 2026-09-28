@@ -1,19 +1,19 @@
 -- DB-14〜16: 投稿削除のカスケード、削除の権限、アカウント削除
 begin;
 \ir helpers/setup.psql
-select plan(20);
+select plan(19);
 
 select pg_temp.create_user(n) from generate_series(1, 4) as n;
 insert into public.app_admins (uid) values (pg_temp.uid(4));
 select pg_temp.make_post(1, pg_temp.hs1('P1')) as p1 \gset
 select pg_temp.make_post(2, pg_temp.hs1('P2')) as p2 \gset
 
--- 3 が P1 に回答、1 が P1 に Hero の予想
+-- 3 と投稿者 1 が P1 に回答
 select pg_temp.login(3);
 insert into public.answers (post_id, paint) values (:'p1', pg_temp.paint('[[0,0,0,20,0]]'));
 select pg_temp.logout();
 select pg_temp.login(1);
-select public.save_host_answer(:'p1', pg_temp.paint('[[0,20,0,0,0]]'), null);
+insert into public.answers (post_id, paint) values (:'p1', pg_temp.paint('[[0,20,0,0,0]]'));
 select pg_temp.logout();
 
 -- ---- DB-15 他人の投稿は削除できない。管理者は削除できる ----
@@ -29,7 +29,6 @@ select pg_temp.logout();
 select is((select count(*)::int from public.posts where id = :'p1'), 0, 'DB-14 投稿が消える');
 select is((select count(*)::int from public.post_hands where post_id = :'p1'), 0, 'DB-14 post_hands が消える');
 select is((select count(*)::int from public.post_secrets where post_id = :'p1'), 0, 'DB-14 post_secrets が消える');
-select is((select count(*)::int from public.host_answers where post_id = :'p1'), 0, 'DB-14 host_answers が消える');
 select is((select count(*)::int from public.answers where post_id = :'p1'), 0, 'DB-14 answers が消える');
 select is((select count(*)::int from public.post_aggregates where post_id = :'p1'), 0, 'DB-14 post_aggregates が消える');
 
@@ -41,11 +40,16 @@ select is((select count(*)::int from public.posts where id = :'p2'), 0, 'DB-15 �
 
 -- ---- 容量の整理（管理者のみ） ----
 select pg_temp.make_post(2, pg_temp.hs1('P3')) as p3 \gset
+-- 投稿者本人の回答しかない投稿も「回答なし」として整理する
+select pg_temp.make_post(2, pg_temp.hs1('P4')) as p4 \gset
+select pg_temp.login(2);
+insert into public.answers (post_id, paint) values (:'p4', pg_temp.paint('[[0,0,0,20,0]]'));
+select pg_temp.logout();
 select pg_temp.login(2);
 select throws_ok($$ select public.admin_delete_unanswered_posts(now() + interval '1 day') $$, 'P0001', 'not_admin', '整理は管理者のみ');
 select pg_temp.logout();
 select pg_temp.login(4);
-select is(public.admin_delete_unanswered_posts(now() + interval '1 day'), 1, '回答のない投稿を消す');
+select is(public.admin_delete_unanswered_posts(now() + interval '1 day'), 2, '回答のない投稿（投稿者本人の回答だけの投稿を含む）を消す');
 select pg_temp.logout();
 
 -- ---- DB-16 アカウント削除 ----

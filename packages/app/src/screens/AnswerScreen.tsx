@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
-import { insertAnswer, saveHostAnswer } from '../answer/answerApi.ts';
+import { insertAnswer } from '../answer/answerApi.ts';
 import { initialSize, parseSizeText, sizeForSubmit, sizeSummary, submitErrors, type SizeSpot } from '../answer/answerForm.ts';
 import { initialBrush } from '../answer/brush.ts';
 import { BrushPanel, type KeyNames } from '../answer/BrushPanel.tsx';
@@ -64,12 +64,11 @@ export function metaLine(d: PostDetail): string {
 const paintKey = (p: Paint): string => toHex(encodePaint(p));
 
 /**
- * 回答（レンジ入力）画面（06 章 §4。仕様書 §5.3）。`detail.viewer` は `unanswered`（回答モード）か `author`（Hero の想定レンジモード）。
- * `onDone` は送信（保存）が済んだとき（または既に回答済みだったとき）。
+ * 回答（レンジ入力）画面（06 章 §4。仕様書 §5.3）。未回答の人が開く（投稿者も自分の投稿に回答する。2026-09-28）。
+ * `onDone` は送信が済んだとき（または既に回答済みだったとき）。
  */
-export function AnswerScreen(props: { detail: PostDetail; onDone: (host: boolean) => void }): JSX.Element {
+export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }): JSX.Element {
   const { detail: d } = props;
-  const host = d.viewer === 'author';
   const { hand, post } = d;
   const mobile = useIsMobile();
   const toast = useToast();
@@ -91,14 +90,13 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: (host: boolean
     post.keys.includes('s1') && post.minTo !== null && post.maxTo !== null
       ? { currentBet: stop.currentBet, potBase: post.potBase, minTo: post.minTo, maxTo: post.maxTo }
       : null;
-  const saved = host ? d.hostAnswer : null;
 
   // ---- 塗り・ブラシ・サイズ ----
-  const initialPaint = useMemo(() => saved?.paint ?? emptyPaint(), [saved]);
+  const initialPaint = useMemo(() => emptyPaint(), []);
   const [editor, setEditor] = useState<Editor>(() => newEditor(initialPaint));
   const [brush, setBrush] = useState<Mix>(() => initialBrush(post.keys));
   const [tool, setTool] = useState<Tool>('brush');
-  const [sizeText, setSizeText] = useState(() => (sizeSpot ? formatBb(initialSize(sizeSpot, saved?.size ?? null)) : ''));
+  const [sizeText, setSizeText] = useState(() => (sizeSpot ? formatBb(initialSize(sizeSpot, null)) : ''));
   const [sizeOpen, setSizeOpen] = useState(false);
 
   // ポインタのイベントから最新の値を読むため
@@ -155,12 +153,12 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: (host: boolean
   const send = async (): Promise<void> => {
     setBusy(true);
     const size = sizeForSubmit(editor.paint, to);
-    const r = host ? await saveHostAnswer(post.id, editor.paint, size) : await insertAnswer(post.id, editor.paint, size);
+    const r = await insertAnswer(post.id, editor.paint, size);
     setBusy(false);
     if (r.ok || r.code === 'already_answered') {
       setSent(true);
       setConfirming(false);
-      props.onDone(host);
+      props.onDone();
       return;
     }
     setConfirming(false);
@@ -170,8 +168,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: (host: boolean
   const submit = (): void => {
     setAttempted(true);
     if (busy || submitErrors(editor.paint, post.keys, to, sizeSpot).length > 0) return;
-    if (host) void send();
-    else setConfirming(true);
+    setConfirming(true);
   };
 
   // ---- 部品 ----
@@ -213,7 +210,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: (host: boolean
   const bar = <ComboBar keys={post.keys} names={names} ratios={paintBar(editor.paint)} />;
   const submitButton = (
     <button type="button" className="btn" disabled={busy} onClick={submit}>
-      {busy ? (host ? '保存中…' : '送信中…') : host ? '想定レンジを保存' : '回答する'}
+      {busy ? '送信中…' : '回答する'}
     </button>
   );
   const replayView = <ReplayView detail={d} frames={frames} c={replay} collapsibleLog={mobile} />;
@@ -329,7 +326,8 @@ function ReplayView(props: {
   if (!state) return <></>;
   const actor = actorAt(hand.actions, c.step, hand.stopIndex, post.villain);
   const board = hand.board.slice(0, BOARD_COUNT[state.street]);
-  const host = d.viewer === 'author';
+  // 投稿者は自分のハンドなので表向き（Q-14）
+  const author = d.viewer === 'author';
   const log = (
     <HandLog
       setup={hand.setup}
@@ -346,8 +344,8 @@ function ReplayView(props: {
         seats={seatViews(state, { hero: post.hero, villain: post.villain, actor })}
         pot={state.pot}
         board={board}
-        holes={state.folded.has(post.hero) ? {} : { [post.hero]: (host ? d.secrets?.heroCards : null) ?? 'back' }}
-        villainLabel={host ? 'Villain' : 'Villain（あなた）'}
+        holes={state.folded.has(post.hero) ? {} : { [post.hero]: (author ? d.secrets?.heroCards : null) ?? 'back' }}
+        villainLabel="Villain（あなた）"
       />
       <ReplayControls c={c} />
       {props.collapsibleLog ? (

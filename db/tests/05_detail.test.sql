@@ -1,7 +1,7 @@
 -- DB-13: get_post_detail の出し分け（未回答者には停止位置まで。Q-9）
 begin;
 \ir helpers/setup.psql
-select plan(18);
+select plan(22);
 
 select pg_temp.create_user(n) from generate_series(1, 3) as n;
 select pg_temp.make_post(1) as post \gset
@@ -12,7 +12,6 @@ select public.get_post_detail(:'post') as d \gset
 select pg_temp.logout();
 select is((:'d'::jsonb)->>'viewer', 'unanswered', 'DB-13 viewer = unanswered');
 select is((:'d'::jsonb)->'secrets', 'null'::jsonb, 'DB-13 secrets は null');
-select is((:'d'::jsonb)->'host_answer', 'null'::jsonb, 'DB-13 host_answer は null');
 select is((:'d'::jsonb)->'aggregate', 'null'::jsonb, 'DB-13 aggregate は null');
 select is(jsonb_array_length((:'d'::jsonb)->'hand'->'actions'), 11, 'DB-13 actions は stop_index（11）件');
 select is((:'d'::jsonb)->'hand'->'actions'->10->>'type', 'bet', 'DB-13 最後はスポットの Hero のアクション（10 BTN b6.5）');
@@ -38,6 +37,16 @@ select public.get_post_detail(:'post') as d3 \gset
 select pg_temp.logout();
 select is((:'d3'::jsonb)->>'viewer', 'author', '投稿者は viewer = author');
 select is(((:'d3'::jsonb)->'post'->>'can_delete')::boolean, true, '投稿者は削除できる');
+select is(((:'d3'::jsonb)->>'answered')::boolean, false, '投稿者は回答前 answered = false');
+select is((:'d3'::jsonb)->'aggregate', 'null'::jsonb, '投稿者も回答前は集計を返さない');
+select is(jsonb_array_length((:'d3'::jsonb)->'hand'->'actions'), 15, '投稿者は回答前でも全アクション（自分のハンド）');
+select is((:'d3'::jsonb)->'secrets'->'hero_cards', '["Ad","Kd"]'::jsonb, '投稿者は回答前でも Hero のハンドが見える');
+
+select pg_temp.login(1);
+insert into public.answers (post_id, paint) values (:'post', pg_temp.paint('[[0,20,0,0,0]]'));
+select public.get_post_detail(:'post') as d4 \gset
+select pg_temp.logout();
+select is(((:'d4'::jsonb)->'aggregate'->>'n')::int, 2, '投稿者は回答後に集計が見える（自分の回答も含む）');
 
 select pg_temp.login(1);
 select throws_ok($$ select public.get_post_detail(gen_random_uuid()) $$, 'P0001', 'post_not_found', '存在しない投稿は post_not_found');

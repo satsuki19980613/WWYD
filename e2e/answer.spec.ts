@@ -379,7 +379,7 @@ test.describe('送信（06 章 §4.9）', () => {
 
   test('サーバーに拒否されたらエラーを出して留まる', async ({ page }) => {
     const be = await open(page);
-    be.insertError = { status: 400, body: { code: 'P0001', message: 'own_post', details: null, hint: null } };
+    be.insertError = { status: 403, body: { code: '42501', message: 'new row violates row-level security policy', details: null, hint: null } };
     await cell(page, 'AA').click();
     await page.getByRole('button', { name: '回答する' }).click();
     await page.getByRole('button', { name: '送信する' }).click();
@@ -398,42 +398,39 @@ test.describe('送信（06 章 §4.9）', () => {
   });
 });
 
-test.describe('Hero の想定レンジ（06 章 §4.2・§4.9）', () => {
-  function authorDetail(withPrediction: boolean): Record<string, unknown> {
-    const p = emptyPaint();
-    p[0] = { fold: 0, check: 0, call: 10, s1: 10 };
-    return detailJson(undefined, {
+test.describe('投稿者の回答（06 章 §4.2・§4.9。投稿者も回答者の 1 人）', () => {
+  const author = (): Record<string, unknown> => detailJson(undefined, { viewer: 'author', id: ID });
+
+  test('自分の投稿でも空の表から回答し、確認ダイアログ → 送信 → 集計へ', async ({ page }) => {
+    const be = await open(page, author());
+    be.afterInsert = detailJson(undefined, {
       viewer: 'author',
       id: ID,
-      hostAnswer: withPrediction ? { paint: toHex(encodePaint(p)), size: 30 } : null,
+      answerCount: 1,
+      myAnswer: { paint: toHex(encodePaint(emptyPaint())), size: null },
     });
-  }
-
-  test('既存の想定レンジを読み込み、確認なしで上書き保存 → 集計の「Hero の想定レンジ」へ', async ({ page }) => {
-    const be = await open(page, authorDetail(true));
-    // Hero のハンドは表向き。Villain は「あなた」ではない
+    // Hero のハンドは自分のハンドなので表向き。席は他の回答者と同じ「Villain（あなた）」
     await expect(page.getByLabel('ダイヤのA')).toBeVisible();
     await expect(page.getByLabel('ダイヤのK')).toBeVisible();
-    await expect(page.getByText('Villain（あなた）')).toHaveCount(0);
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA コール 50% / レイズ 50%');
-    await expect(page.getByRole('button', { name: /^レイズサイズ/ })).toContainText('30bb');
-
-    await cell(page, 'KK').click();
-    await page.getByRole('button', { name: '想定レンジを保存' }).click();
-    await expect(page).toHaveURL(`${RESULT}?view=host`);
-    await expect(page.getByRole('alertdialog')).toHaveCount(0);
-    expect(be.hostSaves).toHaveLength(1);
-    const p = emptyPaint();
-    p[0] = { fold: 0, check: 0, call: 10, s1: 10 };
-    p[14] = { fold: 0, check: 0, call: 20, s1: 0 };
-    expect(be.hostSaves[0]).toEqual({ p_post_id: ID, p_paint: toHex(encodePaint(p)), p_size: 30 });
-  });
-
-  test('想定レンジが無ければ空・サイズは 50%', async ({ page }) => {
-    await open(page, authorDetail(false));
+    await expect(page.getByText('Villain（あなた）')).toBeVisible();
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA レンジ外');
     await expect(page.getByRole('button', { name: /^レイズサイズ/ })).toContainText('17.55bb');
-    await expect(page.getByRole('button', { name: '想定レンジを保存' })).toBeVisible();
+
+    await cell(page, 'KK').click();
+    await page.getByRole('button', { name: '回答する' }).click();
+    await expect(page.getByRole('alertdialog')).toContainText('送信後は変更できません。');
+    await page.getByRole('button', { name: '送信する' }).click();
+    await expect(page).toHaveURL(RESULT);
+    expect(be.inserts).toHaveLength(1);
+    const p = emptyPaint();
+    p[14] = { fold: 0, check: 0, call: 20, s1: 0 };
+    expect(be.inserts[0]).toEqual({ post_id: ID, paint: toHex(encodePaint(p)), size: null });
+  });
+
+  test('未回答の投稿者が集計の URL を開いても回答画面へ', async ({ page }) => {
+    await open(page, author(), RESULT);
+    await expect(page).toHaveURL(ANSWER);
+    await expect(page.getByRole('button', { name: '回答する' })).toBeVisible();
   });
 });
 

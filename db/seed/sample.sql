@@ -1,15 +1,14 @@
--- 開発用の試験データ（dev ブランチ専用。`npm run db:seed -- --branch dev`。production では実行しない）
--- 一覧（P4）以降の画面を確かめるための投稿と回答を作る。何度実行しても同じ状態になる（前回の分を消してから作る）。
+-- 本番でも使える試験データ（`npm run db:sample -- --branch <ブランチ>`。消すときは `npm run db:sample-clean -- --branch <ブランチ>`）
+-- スマホなどで本番の画面を確かめるための投稿と回答を作る。何度実行しても同じ状態になる（前回の分を消してから作る）。
 --
--- - 試験用ユーザー 8 人（UUID が 00000000-0000-0000-5eed-…、メールは @example.test）が 5 件ずつ投稿（計 40 件、過去 12 日に散らす）
--- - dev に実在するユーザー（さつきのログイン）には「自分の投稿」を 3 件ずつ作り、試験用の投稿のいくつかに回答させる
--- - 回答は試験用ユーザー同士でも入れ、回答数を 0〜7 にばらつかせる
--- ハンドはすべて H-S1（04 章）。スポットは BTN のアクション 7 / 10 / 13（フロップ〜リバー。プリフロップは出題しない）、Villain は BB。
--- 派生メタは packages/core の spotView で計算した値（create-post が保存する値と同じ）。
+-- - 試験用ユーザー 8 人（UUID が 00000000-0000-0000-5eed-…、メールは @example.test。個人の情報は持たない）が 5 件ずつ投稿（計 40 件、過去 12 日に散らす）
+-- - 回答は試験用ユーザー同士だけ（回答数 0〜7）。**実在するユーザーの投稿・回答・投稿枠には一切触れない**（dev.sql との違い）
+-- - 消すときは試験用ユーザーの投稿を作成者で選んで消す（回答・集計はカスケード）。題名では選ばない（利用者の投稿を巻き込まないため）
+-- ハンドはすべて H-S1（04 章）。スポットは BTN のアクション 7 / 10 / 13（フロップ〜リバー）、Villain は BB。
 begin;
 
 -- ---- 前回の試験データを消す ----
-delete from public.posts where title like '試験%';
+delete from public.posts where author_uid::text like '00000000-0000-0000-5eed-%';
 delete from neon_auth."user" where id::text like '00000000-0000-0000-5eed-%';
 
 -- ---- 試験用ユーザー ----
@@ -55,7 +54,7 @@ create function pg_temp.seed_post(author uuid, title text, sp seed_spot, fmt tex
     'hero_cards', '["Ad","Kd"]'::jsonb, 'known_cards', '{"BB":["Ks","Js"]}'::jsonb))
 $$;
 
--- 投稿上限（1 日 5 件）を一時的に広げ、最後に戻す。実在ユーザーの枠は使った分を戻す
+-- 投稿上限（1 日 5 件）を一時的に広げ、最後に戻す
 create temp table seed_limit as select daily_post_limit from public.app_settings;
 update public.app_settings set daily_post_limit = 100;
 
@@ -66,7 +65,6 @@ declare
   j int;
   sp seed_spot;
   pid uuid;
-  real_user record;
 begin
   for u in 1..8 loop
     for j in 0..4 loop
@@ -76,16 +74,6 @@ begin
       insert into seed_posts values (pid, ('00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'))::uuid, u * 5 + j);
     end loop;
   end loop;
-
-  for real_user in select id from neon_auth."user" where id::text not like '00000000-0000-0000-%' loop
-    for j in 1..3 loop
-      select * into sp from seed_spot order by spot_index offset (j % 3) limit 1;
-      pid := pg_temp.seed_post(real_user.id, '試験 自分の投稿 ' || j, sp, 'cash');
-      insert into seed_posts values (pid, real_user.id, 100 + j);
-    end loop;
-    update public.post_quota set count = greatest(0, count - 3)
-    where uid = real_user.id and day = (now() at time zone 'utc')::date;
-  end loop;
 end $$;
 
 update public.app_settings set daily_post_limit = (select daily_post_limit from seed_limit);
@@ -93,20 +81,17 @@ update public.app_settings set daily_post_limit = (select daily_post_limit from 
 -- 作成日時を過去 12 日に散らす（作成日時の書き換えはトリガで拒否されるので、一時的に外す）
 alter table public.posts disable trigger posts_only_count_update;
 update public.posts p set created_at = now() - make_interval(mins => (s.k * 397) % (12 * 24 * 60))
-from seed_posts s where s.id = p.id and s.k < 100;
-update public.posts p set created_at = now() - make_interval(mins => s.k - 100)
-from seed_posts s where s.id = p.id and s.k >= 100;
+from seed_posts s where s.id = p.id;
 alter table public.posts enable trigger posts_only_count_update;
 
--- ---- 回答（AA を call 100%、22 を fold 100%） ----
+-- ---- 回答（AA を call 100%、22 を fold 100%）。試験用ユーザー同士だけ ----
 do $$
 declare
   p record;
   u int;
-  real_user record;
   v_paint bytea := set_byte(set_byte(decode(repeat('00', 676), 'hex'), 2, 20), 672, 20);
 begin
-  for p in select * from seed_posts where k < 100 loop
+  for p in select * from seed_posts loop
     for u in 1..8 loop
       -- 回答数を 0〜7 にばらつかせる（試験データでは投稿者自身の回答は入れない）
       continue when ('00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'))::uuid = p.author;
@@ -116,23 +101,8 @@ begin
       insert into public.answers (post_id, paint) values (p.id, v_paint);
     end loop;
   end loop;
-
-  -- 実在ユーザーの投稿にも回答を付ける（削除のカスケードを確かめるため。自分の投稿 n に n 件）
-  for p in select * from seed_posts where k >= 100 loop
-    for u in 1..(p.k - 100) loop
-      perform set_config('request.jwt.claims',
-        json_build_object('sub', '00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'), 'role', 'authenticated')::text, true);
-      insert into public.answers (post_id, paint) values (p.id, v_paint);
-    end loop;
-  end loop;
-
-  for real_user in select id from neon_auth."user" where id::text not like '00000000-0000-0000-%' loop
-    perform set_config('request.jwt.claims', json_build_object('sub', real_user.id, 'role', 'authenticated')::text, true);
-    insert into public.answers (post_id, paint)
-    select id, v_paint from seed_posts where k < 100 and k % 4 = 0;
-  end loop;
   perform set_config('request.jwt.claims', '', true);
 end $$;
 
-select count(*) as seed_posts, sum(answer_count) as seed_answers from public.posts where title like '試験%';
+select count(*) as sample_posts, sum(answer_count) as sample_answers from public.posts where author_uid::text like '00000000-0000-0000-5eed-%';
 commit;

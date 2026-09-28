@@ -2,7 +2,7 @@ import type { Page, Route } from '@playwright/test';
 
 /**
  * 偽のバックエンド（Neon Auth・Data API）。ログイン済みの利用者として、アプリの起動（ヘルスチェック →
- * セッション → whoami）と、投稿の読み込み・回答・Hero の想定レンジの保存に答える。受け取った要求は記録する。
+ * セッション → whoami）と、投稿の読み込み・回答に答える。受け取った要求は記録する。
  */
 
 export const AUTH = 'http://auth.e2e.test';
@@ -16,8 +16,6 @@ export type Backend = {
   detail: Json;
   /** answers への insert の本文 */
   inserts: Record<string, unknown>[];
-  /** save_host_answer の引数 */
-  hostSaves: Record<string, unknown>[];
   /** insert をこのエラー（PostgREST の本文）で拒否する。null なら受け付ける */
   insertError: { status: number; body: Record<string, unknown> } | null;
   /** insert を受け付けたら、get_post_detail の応答をこれに差し替える（回答済みの状態） */
@@ -60,7 +58,7 @@ async function json(route: Route, status: number, body: Json): Promise<void> {
 /** `signedIn: false` なら未ログイン（セッションなし） */
 export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: boolean } = {}): Promise<Backend> {
   const signedIn = opts.signedIn ?? true;
-  const be: Backend = { detail, inserts: [], hostSaves: [], insertError: null, afterInsert: null, deletes: [], calls: [], deleteAccountError: null };
+  const be: Backend = { detail, inserts: [], insertError: null, afterInsert: null, deletes: [], calls: [], deleteAccountError: null };
 
   await page.route(`${AUTH}/**`, async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors(route) });
@@ -101,10 +99,6 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
     if (path === '/rpc/delete_my_account') {
       be.calls.push('delete_my_account');
       if (be.deleteAccountError) return json(route, be.deleteAccountError.status, be.deleteAccountError.body);
-      return route.fulfill({ status: 204, headers: cors(route), body: '' });
-    }
-    if (path === '/rpc/save_host_answer') {
-      be.hostSaves.push(body);
       return route.fulfill({ status: 204, headers: cors(route), body: '' });
     }
     return json(route, 404, { code: 'PGRST202', message: `偽のバックエンドに無い: ${req.method()} ${path}` });

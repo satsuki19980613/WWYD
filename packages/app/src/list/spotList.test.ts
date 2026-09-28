@@ -152,10 +152,13 @@ describe('cardStatus / cardAction', () => {
     expect(cardStatus(r)).toBe('answered');
     expect(cardAction(r)).toEqual({ primary: false, label: '結果を見る', to: '/s/p1/result' });
   });
-  it('自分の投稿', () => {
+  it('自分の投稿: 未回答なら回答する、回答済みなら回答を見る（投稿者も回答してから集計を見る）', () => {
     const r = row({ id: 'p1', is_mine: true });
     expect(cardStatus(r)).toBe('mine');
-    expect(cardAction(r)).toEqual({ primary: false, label: '回答を見る', to: '/s/p1/result' });
+    expect(cardAction(r)).toEqual({ primary: true, label: '回答する', to: '/s/p1/answer' });
+    const answered = row({ id: 'p1', is_mine: true, answered_by_me: true });
+    expect(cardStatus(answered)).toBe('mine');
+    expect(cardAction(answered)).toEqual({ primary: false, label: '回答を見る', to: '/s/p1/result' });
   });
 });
 
