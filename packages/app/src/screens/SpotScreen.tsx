@@ -11,7 +11,7 @@ export type SpotView = 'spot' | 'answer' | 'result';
 /**
  * `/s/:id`・`/s/:id/answer`・`/s/:id/result` の共通の器（06 章 §0.1・§4.2・§5.1）。
  * `get_post_detail` を 1 回読み、`viewer` に合わない画面なら置き換え遷移する
- * （未回答 → 回答、回答済み → 集計。投稿者は回答画面で Hero の予想を入力し、`/s/:id` からは集計へ）。
+ * （未回答 → 回答、回答済み → 集計。投稿者は回答画面で Hero の想定レンジを入力し、`/s/:id` からは集計へ）。
  * 画面を切り替えても同じ部品のまま（読み込み直さない）。
  */
 export function SpotScreen(props: { id: string; view: SpotView }): JSX.Element {
@@ -65,7 +65,7 @@ export function SpotScreen(props: { id: string; view: SpotView }): JSX.Element {
       <AnswerScreen
         detail={state.detail}
         onDone={(host) => {
-          // 集計は送信後の値で読み直す。Hero の予想は集計の「Hero の予想」タブで開く（06 章 §4.9）
+          // 集計は送信後の値で読み直す。Hero の想定レンジは集計の「Hero の想定レンジ」タブで開く（06 章 §4.9）
           reload();
           navigate(`${routePath({ name: 'result', id })}${host ? '?view=host' : ''}`, { replace: true });
         }}

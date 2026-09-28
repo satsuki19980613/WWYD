@@ -35,12 +35,12 @@ function detail(o: Partial<DetailOpts> = {}, raw = hs1()): PostDetail {
 }
 
 describe('タブと初期表示（06 章 §5.2）', () => {
-  it('他人の投稿は 全体（N人）/ 自分 / Hero の予想、自分の投稿は 全体 / Hero の予想', () => {
-    expect(resultTabs(detail()).map((t) => t.label)).toEqual(['全体（2人）', '自分', 'Hero の予想']);
+  it('他人の投稿は 全体（N人）/ 自分 / Hero の想定レンジ、自分の投稿は 全体 / Hero の想定レンジ', () => {
+    expect(resultTabs(detail()).map((t) => t.label)).toEqual(['全体（2人）', '自分', 'Hero の想定レンジ']);
     expect(resultTabs(detail({ viewer: 'author', myAnswer: null })).map((t) => t.value)).toEqual(['all', 'host']);
   });
 
-  it('?view=host なら Hero の予想、それ以外は全体', () => {
+  it('?view=host なら Hero の想定レンジ、それ以外は全体', () => {
     expect(initialView('?view=host')).toBe('host');
     expect(initialView('')).toBe('all');
     expect(initialView('?view=mine')).toBe('all');
@@ -72,7 +72,7 @@ describe('マスと内訳（05 章 §4）', () => {
     expect(v[idxOf('QQ')]).toEqual({ ratio: null, opacity: 0 });
   });
 
-  it('自分 / Hero の予想はミックスをそのまま（濃さ 1）', () => {
+  it('自分 / Hero の想定レンジはミックスをそのまま（濃さ 1）', () => {
     const d = detail({ hostAnswer: { paint: paintHexOf({ QQ: { fold: 5, call: 15 } }), size: null } });
     expect(cellViews(d, 'mine')[idxOf('AA')]).toEqual({ ratio: { fold: 0, check: 0, call: 1, s1: 0 }, opacity: 1 });
     expect(cellViews(d, 'host')[idxOf('QQ')]).toEqual({ ratio: { fold: 0.25, check: 0, call: 0.75, s1: 0 }, opacity: 1 });
@@ -100,18 +100,18 @@ describe('マスと内訳（05 章 §4）', () => {
     expect(breakdown(detail({ viewer: 'author', myAnswer: null }), 'all', idxOf('AA'))).toMatchObject({ mine: null });
   });
 
-  it('自分 / Hero の予想の内訳は「{名前} {%} / …」か「レンジ外」', () => {
+  it('自分 / Hero の想定レンジの内訳は「{名前} {%} / …」か「レンジ外」', () => {
     const d = detail({ hostAnswer: { paint: paintHexOf({ QQ: { fold: 5, s1: 15 } }), size: 20 } });
     expect(breakdown(d, 'host', idxOf('QQ'))).toEqual({ kind: 'single', label: 'QQ', text: 'フォールド 25% / レイズ 75%' });
     expect(breakdown(d, 'mine', idxOf('QQ'))).toEqual({ kind: 'single', label: 'QQ', text: 'レンジ外' });
   });
 
-  it('空状態: 回答 0 件は「回答なし」、予想が無ければ「予想なし」', () => {
+  it('空状態: 回答 0 件は「回答なし」、想定レンジが無ければ「想定レンジなし」', () => {
     const none = detail({ answerCount: 0, aggregate: undefined });
     expect(emptyLabel(none, 'all')).toBe('回答なし');
     expect(emptyLabel(detail(), 'all')).toBeNull();
     expect(emptyLabel(detail(), 'mine')).toBeNull();
-    expect(emptyLabel(detail(), 'host')).toBe('予想なし');
+    expect(emptyLabel(detail(), 'host')).toBe('想定レンジなし');
   });
 });
 

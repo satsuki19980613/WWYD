@@ -19,7 +19,7 @@ function detail(o: Partial<DetailOpts> = {}): Record<string, unknown> {
   return detailJson(undefined, { viewer: 'answered', id: ID, answerCount: 2, aggregate: AGG, myAnswer: MY, ...o });
 }
 
-/** 自分の投稿（Hero の予想あり / なし） */
+/** 自分の投稿（Hero の想定レンジあり / なし） */
 function authorDetail(prediction: boolean): Record<string, unknown> {
   return detail({
     viewer: 'author',
@@ -45,7 +45,7 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await open(page);
     await expect(tab(page, '全体（2人）')).toHaveAttribute('aria-selected', 'true');
     await expect(tab(page, '自分')).toBeVisible();
-    await expect(tab(page, 'Hero の予想')).toBeVisible();
+    await expect(tab(page, 'Hero の想定レンジ')).toBeVisible();
 
     // 上部バー（05 章 PAINT-13）: fold 0.226% / call 0.339% / s1 0.113% / レンジ外 99.3%
     const legend = page.locator('.cbar-legend');
@@ -76,7 +76,7 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await expect(detailBox(page)).toContainText('自分：コール 100%');
   });
 
-  test('自分 / Hero の予想のタブ。他人の投稿の予想なしにはボタンを出さない', async ({ page }) => {
+  test('自分 / Hero の想定レンジのタブ。他人の投稿の想定レンジなしにはボタンを出さない', async ({ page }) => {
     await open(page);
     await tab(page, '自分').click();
     await cell(page, 'AA').click();
@@ -85,9 +85,9 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await cell(page, 'KK').click();
     await expect(detailBox(page)).toContainText('レンジ外');
 
-    await tab(page, 'Hero の予想').click();
-    await expect(page.getByText('予想なし')).toBeVisible();
-    await expect(page.getByRole('link', { name: '予想を入力' })).toHaveCount(0);
+    await tab(page, 'Hero の想定レンジ').click();
+    await expect(page.getByText('想定レンジなし')).toBeVisible();
+    await expect(page.getByRole('link', { name: '想定レンジを入力' })).toHaveCount(0);
     await expect(page.locator('.rgrid')).toHaveCount(0);
   });
 
@@ -156,7 +156,7 @@ test.describe('操作（06 章 §5.5）', () => {
     await open(page);
     await expect(page.locator('.res-actual')).toBeVisible();
     await expect(page.getByRole('button', { name: '削除' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: '予想を編集' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '想定レンジを編集' })).toHaveCount(0);
   });
 
   test('管理者は他人の投稿を削除できる', async ({ page }) => {
@@ -168,10 +168,10 @@ test.describe('操作（06 章 §5.5）', () => {
     expect(be.deletes).toEqual([ID]);
   });
 
-  test('自分の投稿: 全体 / Hero の予想、予想を編集、削除（やめる）', async ({ page }) => {
+  test('自分の投稿: 全体 / Hero の想定レンジ、想定レンジを編集、削除（やめる）', async ({ page }) => {
     const be = await open(page, authorDetail(true));
-    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', 'Hero の予想']);
-    await tab(page, 'Hero の予想').click();
+    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', 'Hero の想定レンジ']);
+    await tab(page, 'Hero の想定レンジ').click();
     await cell(page, 'QQ').click();
     await expect(detailBox(page)).toContainText('フォールド 25% / レイズ 75%');
 
@@ -180,16 +180,16 @@ test.describe('操作（06 章 §5.5）', () => {
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     expect(be.deletes).toEqual([]);
 
-    await page.getByRole('link', { name: '予想を編集' }).click();
+    await page.getByRole('link', { name: '想定レンジを編集' }).click();
     await expect(page).toHaveURL(ANSWER);
-    await expect(page.getByRole('button', { name: '予想を保存' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '想定レンジを保存' })).toBeVisible();
   });
 
-  test('予想の保存後（?view=host）は Hero の予想のタブ。予想が無ければ「予想を入力」', async ({ page }) => {
+  test('想定レンジの保存後（?view=host）は Hero の想定レンジのタブ。想定レンジが無ければ「想定レンジを入力」', async ({ page }) => {
     await open(page, authorDetail(false), `${RESULT}?view=host`);
-    await expect(tab(page, 'Hero の予想')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByText('予想なし')).toBeVisible();
-    await page.getByRole('link', { name: '予想を入力' }).click();
+    await expect(tab(page, 'Hero の想定レンジ')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText('想定レンジなし')).toBeVisible();
+    await page.getByRole('link', { name: '想定レンジを入力' }).click();
     await expect(page).toHaveURL(ANSWER);
   });
 });

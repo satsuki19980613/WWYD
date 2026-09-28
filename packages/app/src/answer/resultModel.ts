@@ -38,11 +38,11 @@ export type ResultView = 'all' | 'mine' | 'host';
 export function resultTabs(d: PostDetail): { value: ResultView; label: string }[] {
   const n = d.aggregate?.n ?? 0;
   const all = { value: 'all' as const, label: `全体（${n}人）` };
-  const host = { value: 'host' as const, label: 'Hero の予想' };
+  const host = { value: 'host' as const, label: 'Hero の想定レンジ' };
   return d.post.isMine ? [all, host] : [all, { value: 'mine', label: '自分' }, host];
 }
 
-/** 最初のタブ。Hero の予想の保存後は `?view=host` で来る（06 章 §4.9）。 */
+/** 最初のタブ。Hero の想定レンジの保存後は `?view=host` で来る（06 章 §4.9）。 */
 export function initialView(search: string): ResultView {
   return new URLSearchParams(search).get('view') === 'host' ? 'host' : 'all';
 }
@@ -81,7 +81,7 @@ export function actionText(a: Action): string {
 
 // ---- レンジ表 ----
 
-/** 表示中のタブのマス（全体 = 05 章 §4.1、自分 / Hero の予想 = §4.2）。 */
+/** 表示中のタブのマス（全体 = 05 章 §4.1、自分 / Hero の想定レンジ = §4.2）。 */
 export function cellViews(d: PostDetail, view: ResultView): CellView[] {
   if (view === 'all') {
     const agg = d.aggregate;
@@ -93,11 +93,11 @@ export function cellViews(d: PostDetail, view: ResultView): CellView[] {
   return Array.from({ length: CELL_COUNT }, (_, i) => paintCellView(saved?.paint[i] ?? null));
 }
 
-/** 空状態（§5.2）: 全体で回答 0 件 →「回答なし」、予想なし →「予想なし」。空でなければ null。 */
+/** 空状態（§5.2）: 全体で回答 0 件 →「回答なし」、想定レンジなし →「想定レンジなし」。空でなければ null。 */
 export function emptyLabel(d: PostDetail, view: ResultView): string | null {
   if (view === 'all') return (d.aggregate?.n ?? 0) === 0 ? '回答なし' : null;
   if (view === 'mine') return d.myAnswer ? null : '回答なし';
-  return d.hostAnswer ? null : '予想なし';
+  return d.hostAnswer ? null : '想定レンジなし';
 }
 
 /** ミックスの文字列「コール 50% / レイズ 50%」。レンジ外は「レンジ外」。 */

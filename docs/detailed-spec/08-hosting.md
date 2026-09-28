@@ -42,7 +42,7 @@
 
 - ビルド: `npm run build`（`packages/app`）、出力 `packages/app/dist`。
 - 環境変数（Pages のプロジェクト設定）: `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`。
-- `public/_headers`: CSP（`default-src 'self'; connect-src 'self' https://<project>.supabase.co; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval'`）ほか。
+- `public/_headers`: CSP（`default-src 'self'; connect-src 'self' https://<project>.supabase.co; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval'`）ほか。
 - メンテナンス表示（§8 休止時）は同じ静的サイト内の画面で出す（06 章 §0.3）。
 
 ## 4. Supabase の休止への対応【Q-12】

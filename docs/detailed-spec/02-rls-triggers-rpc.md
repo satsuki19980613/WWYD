@@ -38,7 +38,7 @@ returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.app_admins m where m.uid = auth.uid());
 $$;
 
--- 集計・Hero のハンド・known_cards・Hero の予想を見てよいか（投稿者本人か、回答済み）
+-- 集計・Hero のハンド・known_cards・Hero の想定レンジを見てよいか（投稿者本人か、回答済み）
 create or replace function public.can_view_results(p_post_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
   select public.is_allowed() and (
@@ -175,7 +175,7 @@ create policy posts_delete on public.posts
 -- create policy post_hands_select on public.post_hands
 --   for select to authenticated using (public.is_allowed());
 
--- Hero のハンド・known_cards / Hero の予想 / 集計: 投稿者本人か回答済みのみ
+-- Hero のハンド・known_cards / Hero の想定レンジ / 集計: 投稿者本人か回答済みのみ
 create policy post_secrets_select on public.post_secrets
   for select to authenticated using (public.can_view_results(post_id));
 create policy host_answers_select on public.host_answers
@@ -460,7 +460,7 @@ end $$;
 grant execute on function public.get_post_detail(uuid) to authenticated;
 ```
 
-### 4.4 `save_host_answer`（Hero の予想。§5.3.8「別の経路」）
+### 4.4 `save_host_answer`（Hero の想定レンジ。§5.3.8「別の経路」）
 
 ```sql
 create or replace function public.save_host_answer(p_post_id uuid, p_paint bytea, p_size numeric)
@@ -483,7 +483,7 @@ end $$;
 grant execute on function public.save_host_answer(uuid, bytea, numeric) to authenticated;
 ```
 
-Hero の予想は何度でも上書きできる。集計（`post_aggregates`）には含めない。
+Hero の想定レンジは何度でも上書きできる。集計（`post_aggregates`）には含めない。
 
 ### 4.5 回答の送信
 
@@ -500,7 +500,7 @@ declare
 begin
   if me is null then perform public.fail('not_authenticated'); end if;
   delete from public.answers where uid = me;          -- 他人の投稿の集計と answer_count をトリガで減算
-  delete from public.posts   where author_uid = me;   -- 本人の投稿（回答・集計・予想はカスケード）
+  delete from public.posts   where author_uid = me;   -- 本人の投稿（回答・集計・想定レンジはカスケード）
   delete from auth.users     where id = me;           -- 認証ユーザー（残りはカスケード）
 end $$;
 

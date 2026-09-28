@@ -22,7 +22,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       {
         term: 'ログイン',
-        desc: 'Google アカウントでログインする。表示名とメールアドレスは他のユーザーに表示されず、アプリのデータベースにも保存されない。',
+        desc: 'Google アカウントでログインする。表示名とメールアドレスは他のユーザーに表示されず、投稿や回答と一緒には保存されない。',
       },
     ],
   },
@@ -68,7 +68,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       { term: '下部のバー', desc: '1326 combos に対する各アクションとレンジ外の比率。' },
       {
         term: '送信',
-        desc: '回答は 1 スポットにつき 1 回で、送信後は変更できない。自分の投稿への入力は Hero の予想として保存され、全体の集計には含まれない。Hero の予想は何度でも変更できる。',
+        desc: '回答は 1 スポットにつき 1 回で、送信後は変更できない。自分の投稿への入力は Hero の想定レンジとして保存され、全体の集計には含まれない。Hero の想定レンジは何度でも変更できる。',
       },
     ],
   },
@@ -86,7 +86,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         term: '上部のバー',
         desc: '1326 combos に対する各アクションとレンジ外の比率。レンジ内とした回答者の割合で重み付けしている。',
       },
-      { term: 'タブ', desc: '全体・自分・Hero の予想を切り替えられる。マスを選ぶと内訳が表示される。' },
+      { term: 'タブ', desc: '全体・自分・Hero の想定レンジを切り替えられる。マスを選ぶと内訳が表示される。' },
       { term: 'ハンドヒストリー', desc: 'ハンドを最後まで再生し、ショーダウンのハンドを確認できる。' },
     ],
   },

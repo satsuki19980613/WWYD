@@ -2,8 +2,11 @@ import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { APP_STATES, type AppState } from './appState.ts';
 import { useAuth } from './auth/useAuth.ts';
 import { BackLink } from './components/BackLink.tsx';
+import { ConfirmDialog } from './components/ConfirmDialog.tsx';
 import { Header } from './components/Header.tsx';
 import { InfoModal } from './components/InfoModal.tsx';
+import { useToast } from './components/Toast.tsx';
+import { LegalScreen } from './legal/LegalScreen.tsx';
 import { useLeaveGuard } from './post/draftStore.ts';
 import { INFO_SECTIONS, infoSectionFor, type InfoSectionId } from './info/infoSections.ts';
 import { useLocation, useRoute, useScrollTopOnNavigate, type Route } from './router.ts';
@@ -12,7 +15,6 @@ import { ListScreen } from './screens/ListScreen.tsx';
 import { NewPostScreen } from './screens/NewPostScreen.tsx';
 import { LoginScreen } from './screens/LoginScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
-import { ScreenStub } from './screens/ScreenStub.tsx';
 import { SpotScreen } from './screens/SpotScreen.tsx';
 import { StatusScreen } from './screens/StatusScreen.tsx';
 
@@ -40,6 +42,16 @@ export function App(): JSX.Element {
   const state = devStateFrom(search) ?? auth.state;
 
   const [info, setInfo] = useState<InfoSectionId | null>(null);
+  const [deleting, setDeleting] = useState<{ busy: boolean } | null>(null);
+  const toast = useToast();
+
+  const confirmDeleteAccount = (): void => {
+    setDeleting({ busy: true });
+    void auth.deleteAccount().then((ok) => {
+      setDeleting(null);
+      if (!ok) toast('削除できませんでした');
+    });
+  };
 
   if (state === 'booting') return <BootScreen />;
 
@@ -68,12 +80,25 @@ export function App(): JSX.Element {
         showAccount={state === 'ready'}
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}
         onLogout={() => void auth.signOut()}
+        onDeleteAccount={() => setDeleting({ busy: false })}
       />
       <DraftLeaveGuard />
       <main className="app-main">
         {showBack && <BackLink />}
         {body}
       </main>
+      {deleting && state === 'ready' && (
+        <ConfirmDialog
+          title="アカウントを削除しますか"
+          body="投稿と回答がすべて削除されます。元には戻せません。"
+          confirmLabel="削除する"
+          busyLabel="削除中…"
+          destructive
+          busy={deleting.busy}
+          onConfirm={confirmDeleteAccount}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
       {info && <InfoModal section={INFO_SECTIONS[info]} title={infoTitle} onClose={() => setInfo(null)} />}
     </>
   );
@@ -92,9 +117,9 @@ function RouteScreen(props: { route: Route }): JSX.Element {
       // 同じ位置・同じ部品にして、振り分けの置き換え遷移で読み込み直さない
       return <SpotScreen key={route.id} id={route.id} view={route.name} />;
     case 'terms':
-      return <ScreenStub title="利用規約" />;
+      return <LegalScreen doc="terms" />;
     case 'privacy':
-      return <ScreenStub title="プライバシーポリシー" />;
+      return <LegalScreen doc="privacy" />;
     case 'devUi':
       return DevUiScreen ? (
         <Suspense fallback={null}>
