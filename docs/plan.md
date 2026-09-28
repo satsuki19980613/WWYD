@@ -12,9 +12,9 @@
 |---|---|
 | 現在のフェーズ | **P6 回答 — 実装完了**（PR #7 で main へマージ済み。次の作業ブランチは `phase/07-result`）。残りはスマホ実機（M-08 の後）。P5 は本番に配備済み・スマホ実機のみ残り |
 | 直近で完了したこと | 回答画面（リプレイ・ブラシ・ミックスバー・塗り・スポイト・元に戻す・サイズ・集計バー・送信・Hero の予想・スマホのタブ）。Playwright を導入し E2E 32 件（偽のバックエンド）。dev の実データで、回答の送信 → DB の値、再回答・自分の投稿・不正なキーの拒否、Hero の予想の保存と上書きを確認 |
-| 次にやること | 1. P7 集計（T-701〜。`/s/:id/result` は今は見出しだけ。Hero の予想の保存後は `?view=host` で来る）<br>2. さつき: Neon（production）の Auth の trusted domains と Google Cloud の JavaScript 生成元に `https://wwyd.pages.dev` を追加。Claude: create-post の許可するオリジンに同じ URL を足して本番に配備し直す（承認待ち）→ スマホ実機で P5・P6 を確認<br>3. さつき: N-05（CI 用の NEON_API_KEY）、dev の「Sign-up with Email」をオフ |
+| 次にやること | 1. P7 集計（T-701〜。`/s/:id/result` は今は見出しだけ。Hero の予想の保存後は `?view=host` で来る）<br>2. create-post の許可するオリジンに `https://wwyd.pages.dev` を足して本番に配備し直す（さつきの承認待ち）。iPhone 実機の確認は**保留**（さつきが iPhone を持っていないため、知り合いに依頼。その人を Google の同意画面のテストユーザーに追加する必要がある。許可リストは本番で無効なので追加は不要）<br>3. さつき: N-05（CI 用の NEON_API_KEY）、dev の「Sign-up with Email」をオフ |
 | ブロッカー | なし |
-| さつきの確認待ち | trusted domains・JavaScript 生成元への URL の追加、create-post の本番の配備し直しの承認、N-05 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
+| さつきの確認待ち | create-post の本番の配備し直しの承認、iPhone 実機の確認（保留）、N-05 と dev の Sign-up with Email の手作業（N-05 が無いため CI の db ジョブは DB テストを実行せずに緑になっている） |
 
 ---
 
@@ -385,3 +385,4 @@
 - **追記（2026-09-28）**: さつきの指示で `phase/06-answer` を push → [satsuki19980613/WWYD#7](https://github.com/satsuki19980613/WWYD/pull/7) を作成。CI（check・db・e2e）緑を確認して main へマージ。db ジョブは N-05 が未設定のため DB テストを実行していない。次の作業ブランチ `phase/07-result` を作成。
 - **追記（2026-09-28）**: Q-30 をさつきが推奨案で承認。11 章を「決定」に、06 章 §4.4 の重なったハンドルの書き方を「その方向へ動けるハンドルを掴む」に直した。
 - **追記（2026-09-28）**: M-08（Cloudflare Pages、https://wwyd.pages.dev ）と M-09（本番の管理者の登録）をさつきが完了。Claude が公開サイト（深いパスも index.html が返る・本番の Neon の URL が入っている）と app_admins（1 行・利用者に対応）を読み取りで確認。最初は Workers で作られてデプロイの段階で失敗したため、10 章 M-08 に注意を追記。
+- **追記（2026-09-28）**: さつきが Neon（production）の trusted domains と Google Cloud の JavaScript 生成元に `https://wwyd.pages.dev` を追加。iPhone 実機の確認はさつきの判断で保留（知り合いに依頼する）。本番の許可リストは無効（allowlist_enabled = false）なので、依頼先は Google のテストユーザーへの追加だけでログインできる。
