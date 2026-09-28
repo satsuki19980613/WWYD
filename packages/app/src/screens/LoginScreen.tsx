@@ -1,13 +1,16 @@
 import { Link } from '../components/Link.tsx';
 
 /**
- * ログイン画面（06 章 §1。最小構成）。アプリ名・「Google でログイン」・規約へのリンク。
+ * ログイン画面（06 章 §1。最小構成）。アプリ名・サービスの説明 1 行・「Google でログイン」・規約へのリンク。
+ * 説明 1 行は Google の OAuth 同意画面の「ホームページ」の要件（アプリの機能を説明する）のため。
+ * 画面に説明文を出さない規則（CLAUDE.md 不変条件 1）の例外として決めたもの。
  * ログイン処理（`signInWithOAuth`）は P3（T-304）で渡す。渡されていない間は押せない。
  */
 export function LoginScreen(props: { onLogin?: () => void; busy?: boolean; failed?: boolean }): JSX.Element {
   return (
     <section className="login">
       <h1 className="login-name">WWYD</h1>
+      <p className="login-tagline">ポーカーのスポットを投稿し、Villain のレンジを他のプレイヤーの回答から集合知として見るツール</p>
       {props.failed && (
         <p className="form-err" role="alert">
           ログインできませんでした

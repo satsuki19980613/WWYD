@@ -1,4 +1,4 @@
-# バトン: P8 アカウントと管理者（PR 作成済み）
+# バトン: P8 完了（本番公開済み）→ P9 OCR へ
 
 **更新 2026-09-28 / セッション 5（Opus 5.5）から次セッションへの引き継ぎ**
 **発注者: さつき（ディレクター兼意思決定者。日本語で対応。実装はすべて Claude に任されている。操作をお願いするときは非エンジニアにも分かる言葉で説明する）**
@@ -7,8 +7,8 @@
 
 ## 0. 結論から言うと、次のセッションでやること
 
-**P7（集計）は PR #8 で main へマージ済み**。P8 は `phase/08-account` で進行中: アカウント削除と規約ページの表示は完了。規約の文面は claude.ai の Fable が起草中（さつきが持ってくる）。
-- 文案が来たら `packages/app/src/legal/{terms,privacy}.md` にそのまま入れる（`markdown.ts` が対応していない書き方があれば足す）。Fable の「食い違いの一覧」「要確認」はコードで確かめてさつきに返す。
+**P8 は PR #9 で main へマージ・本番に公開済み**（規約ページ・アカウント削除・書体の自サイト配信・「Hero の想定レンジ」）。次の作業ブランチは `phase/09-ocr`（作成済み）。
+- 規約の文面は `packages/app/src/legal/{terms,privacy}.md`。直すときはさつきの確認後に。プライバシーポリシー 1.3（OCR）は P9 の実装と一致させる（T-1001 で確認）。
 - **このプロジェクトは非営利**（広告・寄付・有料機能など一切なし。CLAUDE.md §1）。
 
 1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
@@ -118,7 +118,6 @@
 | Docker | Claude の Git Bash では PATH に `docker` が無い。`export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"` |
 | heredoc | Git Bash の heredoc で長い CSS を書くと途中で壊れたことがある。長いファイルは Write ツールで書く |
 | ブラウザ確認 | `.claude/launch.json` の `app`（dev につなぐ）/ `app-production`（本番につなぐ）。どちらも 5173。スクリーンショットはペインの大きさが変わると乱れるので、DOM（`javascript_tool`）で確かめるのが確実 |
-| 未実装画面 | 一覧・投稿・回答・集計・規約は見出しだけの器（`ScreenStub`） |
 | CSP | `public/_headers` は未作成（遅くとも P5。Neon Auth と Data API の URL を許可） |
 | ICMCLEC の資料 | 非公開。`.claude/skills/wwyd-ui-concept/references/icmclec-*` はコミットしない |
 | push | 毎回さつきの確認。force push しない |
