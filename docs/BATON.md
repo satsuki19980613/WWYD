@@ -14,8 +14,7 @@
 1. [plan.md](plan.md) の「現在の状況」と「確認待ち」を見る。
    - PR の「Workers Builds: wwyd」の失敗は無視してよい（削除済みの Worker のビルドの設定が Cloudflare に残っているだけ。公開サイトにもマージにも影響しない）。
    - E2E で応答を途中で差し替えるときは、画面の読み込みが終わってから差し替える（`open()` は読み込みを待たない）。
-2. 残りの P8: T-802 の本番の検証用アカウントでの確認（さつきが用意）、T-803 の文面と M-11。
-3. さつきの手作業の残り: N-05（CI 用 NEON_API_KEY）、dev の「Sign-up with Email」をオフ。iPhone 実機は保留。
+2. さつきの手作業は iPhone 実機の確認（保留）だけ。N-05（CI の DB テストが動いている）と dev の「Sign-up with Email」のオフは済み。
 
 ## 0.00001 P7 で作ったもの
 
@@ -124,7 +123,7 @@
 
 ## 3. さつきの手作業（担当: さつき）
 
-- N-05 CI 用 NEON_API_KEY、M-09 管理者 UID の登録（本番の `app_admins` に自分の UID）
+- ~~N-05 CI 用 NEON_API_KEY~~（済み）、M-09 管理者 UID の登録（本番の `app_admins` に自分の UID）
 - M-08 Cloudflare Pages（P5 まで）、M-05b 同意画面の公開（P10）
 
 手順は [10-manual-tasks.md](detailed-spec/10-manual-tasks.md)。
