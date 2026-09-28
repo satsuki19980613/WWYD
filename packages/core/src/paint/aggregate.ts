@@ -91,7 +91,7 @@ export function aggregateCellView(cell: AggCell, total: number): CellView {
   return { ratio, opacity: levelOpacity(opacityLevel(cell.n, total)) };
 }
 
-/** 自分・Hero の想定レンジの表示のマス（§4.2）。 */
+/** 自分の回答の表示のマス（§4.2）。 */
 export function paintCellView(mix: Mix | null): CellView {
   if (!mix) return { ratio: null, opacity: 0 };
   const ratio = zeroMix();
@@ -113,7 +113,7 @@ export function aggregateBar(agg: readonly AggCell[], total: number): BarRatios 
   return out;
 }
 
-/** 自分・Hero の想定レンジ・回答中の集計バー（§4.2、§5.3.7）。 */
+/** 自分の回答・回答中の集計バー（§4.2、§5.3.7）。 */
 export function paintBar(paint: Paint): BarRatios {
   const out: BarRatios = { fold: 0, check: 0, call: 0, s1: 0, off: 0 };
   paint.forEach((mix, idx) => {

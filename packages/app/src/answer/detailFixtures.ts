@@ -21,7 +21,6 @@ export type DetailOpts = {
   answerCount?: number;
   /** `\x…` の paint と bb のサイズ */
   myAnswer?: { paint: string; size: number | null } | null;
-  hostAnswer?: { paint: string; size: number | null } | null;
   /** 集計（`\x…` の 1690 バイト）。省略時はすべて 0 */
   aggregate?: string;
   /** 管理者として見る（他人の投稿を削除できる） */
@@ -36,12 +35,15 @@ export const EMPTY_AGG_HEX = `\\x${'00'.repeat(1690)}`;
 export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unknown> {
   const d = raw.derived as Record<string, unknown>;
   const canView = o.viewer !== 'unanswered';
+  // 集計は回答済みだけ（投稿者も回答してから。2026-09-28）
+  const answered = o.viewer === 'answered' || Boolean(o.myAnswer);
   const actions = raw.actions as unknown[];
   const board = raw.board as string[];
   const stop = d.stop_index as number;
   const id = o.id ?? '00000000-0000-4000-8000-000000000001';
   return {
     viewer: o.viewer,
+    answered,
     post: {
       id,
       created_at: '2026-09-28T00:00:00+00:00',
@@ -74,8 +76,7 @@ export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unkn
     },
     secrets: canView ? { hero_cards: raw.hero_cards, known_cards: raw.known_cards } : null,
     my_answer: o.myAnswer ? { ...o.myAnswer, created_at: '2026-09-28T00:00:00+00:00' } : null,
-    host_answer: canView && o.hostAnswer ? { ...o.hostAnswer, updated_at: '2026-09-28T00:00:00+00:00' } : null,
-    aggregate: canView ? { n: o.answerCount ?? 0, cells: o.aggregate ?? EMPTY_AGG_HEX } : null,
+    aggregate: answered ? { n: o.answerCount ?? 0, cells: o.aggregate ?? EMPTY_AGG_HEX } : null,
   };
 }
 

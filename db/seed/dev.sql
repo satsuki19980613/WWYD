@@ -108,7 +108,7 @@ declare
 begin
   for p in select * from seed_posts where k < 100 loop
     for u in 1..8 loop
-      -- 回答数を 0〜7 にばらつかせる（自分の投稿には回答できない）
+      -- 回答数を 0〜7 にばらつかせる（試験データでは投稿者自身の回答は入れない）
       continue when ('00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'))::uuid = p.author;
       continue when (p.k * 7 + u * 3) % 8 >= (p.k % 9);
       perform set_config('request.jwt.claims',

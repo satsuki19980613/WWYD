@@ -37,7 +37,7 @@ export function inRange(to: Mbb | null, spot: SizeSpot): to is Mbb {
   return to !== null && to >= spot.minTo && to <= spot.maxTo;
 }
 
-/** 初期値: 保存済みのサイズ（Hero の想定レンジ）があればそれ、なければ 50%（04 章 §9）。 */
+/** 初期値: 保存済みのサイズがあればそれ、なければ 50%（04 章 §9）。 */
 export function initialSize(spot: SizeSpot, saved: Mbb | null): Mbb {
   if (saved !== null) return saved;
   return sizeFromPct(spot.currentBet, spot.potBase, PCT_DEFAULT, spot.minTo, spot.maxTo);

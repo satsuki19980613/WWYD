@@ -9,7 +9,6 @@ import { hs1 } from '../packages/core/src/post/postFixtures.ts';
 import { fakeBackend, type Backend } from './fakeBackend.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
-const ANSWER = `/s/${ID}/answer`;
 const RESULT = `/s/${ID}/result`;
 
 const AGG = aggregateHex([paintOf({ AA: { call: 20 } }), paintOf({ AA: { call: 10, s1: 10 }, KK: { fold: 20 } })]);
@@ -19,13 +18,9 @@ function detail(o: Partial<DetailOpts> = {}): Record<string, unknown> {
   return detailJson(undefined, { viewer: 'answered', id: ID, answerCount: 2, aggregate: AGG, myAnswer: MY, ...o });
 }
 
-/** 自分の投稿（Hero の想定レンジあり / なし） */
-function authorDetail(prediction: boolean): Record<string, unknown> {
-  return detail({
-    viewer: 'author',
-    myAnswer: null,
-    hostAnswer: prediction ? { paint: paintHexOf({ QQ: { fold: 5, s1: 15 } }), size: 20 } : null,
-  });
+/** 自分の投稿（投稿者も回答済み。自分の回答は QQ fold 25% / s1 75%） */
+function authorDetail(): Record<string, unknown> {
+  return detail({ viewer: 'author', myAnswer: { paint: paintHexOf({ QQ: { fold: 5, s1: 15 } }), size: 20 } });
 }
 
 async function open(page: Page, d: Record<string, unknown> = detail(), path = RESULT): Promise<Backend> {
@@ -44,8 +39,7 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
   test('全体: タブ・上部バー・白枠の初期選択・マスの内訳', async ({ page }) => {
     await open(page);
     await expect(tab(page, '全体（2人）')).toHaveAttribute('aria-selected', 'true');
-    await expect(tab(page, '自分')).toBeVisible();
-    await expect(tab(page, 'Hero の想定レンジ')).toBeVisible();
+    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', '自分']);
 
     // 上部バー（05 章 PAINT-13）: fold 0.226% / call 0.339% / s1 0.113% / レンジ外 99.3%
     const legend = page.locator('.cbar-legend');
@@ -76,7 +70,7 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await expect(detailBox(page)).toContainText('自分：コール 100%');
   });
 
-  test('自分 / Hero の想定レンジのタブ。他人の投稿の想定レンジなしにはボタンを出さない', async ({ page }) => {
+  test('自分のタブ', async ({ page }) => {
     await open(page);
     await tab(page, '自分').click();
     await cell(page, 'AA').click();
@@ -84,11 +78,6 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await expect(page.locator('.cbar-legend')).toContainText('コール 0.5%');
     await cell(page, 'KK').click();
     await expect(detailBox(page)).toContainText('レンジ外');
-
-    await tab(page, 'Hero の想定レンジ').click();
-    await expect(page.getByText('想定レンジなし')).toBeVisible();
-    await expect(page.getByRole('link', { name: '想定レンジを入力' })).toHaveCount(0);
-    await expect(page.locator('.rgrid')).toHaveCount(0);
   });
 
   test('回答 0 件は「回答なし」', async ({ page }) => {
@@ -156,7 +145,6 @@ test.describe('操作（06 章 §5.5）', () => {
     await open(page);
     await expect(page.locator('.res-actual')).toBeVisible();
     await expect(page.getByRole('button', { name: '削除' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: '想定レンジを編集' })).toHaveCount(0);
   });
 
   test('管理者は他人の投稿を削除できる', async ({ page }) => {
@@ -168,29 +156,19 @@ test.describe('操作（06 章 §5.5）', () => {
     expect(be.deletes).toEqual([ID]);
   });
 
-  test('自分の投稿: 全体 / Hero の想定レンジ、想定レンジを編集、削除（やめる）', async ({ page }) => {
-    const be = await open(page, authorDetail(true));
-    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', 'Hero の想定レンジ']);
-    await tab(page, 'Hero の想定レンジ').click();
+  test('自分の投稿: 全体 / 自分（自分の回答）、削除（やめる）。編集のボタンは無い', async ({ page }) => {
+    const be = await open(page, authorDetail());
+    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', '自分']);
     await cell(page, 'QQ').click();
+    await expect(detailBox(page)).toContainText('自分：フォールド 25% / レイズ 75%');
+    await tab(page, '自分').click();
     await expect(detailBox(page)).toContainText('フォールド 25% / レイズ 75%');
+    await expect(page.getByRole('link', { name: /想定レンジ/ })).toHaveCount(0);
 
     await page.getByRole('button', { name: '削除' }).click();
     await page.getByRole('button', { name: 'やめる' }).click();
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     expect(be.deletes).toEqual([]);
-
-    await page.getByRole('link', { name: '想定レンジを編集' }).click();
-    await expect(page).toHaveURL(ANSWER);
-    await expect(page.getByRole('button', { name: '想定レンジを保存' })).toBeVisible();
-  });
-
-  test('想定レンジの保存後（?view=host）は Hero の想定レンジのタブ。想定レンジが無ければ「想定レンジを入力」', async ({ page }) => {
-    await open(page, authorDetail(false), `${RESULT}?view=host`);
-    await expect(tab(page, 'Hero の想定レンジ')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByText('想定レンジなし')).toBeVisible();
-    await page.getByRole('link', { name: '想定レンジを入力' }).click();
-    await expect(page).toHaveURL(ANSWER);
   });
 });
 
