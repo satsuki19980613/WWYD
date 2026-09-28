@@ -1,0 +1,241 @@
+import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Street } from '@wwyd/core';
+import { useEffect, useState } from 'react';
+import { PlayingCard } from '../components/PlayingCard.tsx';
+import { POS_VAR } from '../components/posColor.ts';
+import { actionLog, STREET_NAME } from '../post/draft.ts';
+import { useMediaQuery } from '../useMediaQuery.ts';
+import type { SeatView } from './replayModel.ts';
+
+/** リプレイの 1 手の間隔（06 章 §4.3） */
+export const REPLAY_STEP_MS = 650;
+
+export type ReplayControl = {
+  step: number;
+  max: number;
+  playing: boolean;
+  first: () => void;
+  back: () => void;
+  toggle: () => void;
+  forward: () => void;
+};
+
+/**
+ * リプレイの再生状態。開くと 0 手目から `max` 手目まで自動再生する。
+ * 視差効果を減らす設定では自動再生せず、最初から `max` 手目を出す。
+ */
+export function useReplay(max: number): ReplayControl {
+  const reduce = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const [step, setStep] = useState(() => (reduce ? max : 0));
+  const [playing, setPlaying] = useState(() => !reduce && max > 0);
+
+  useEffect(() => {
+    if (!playing) return;
+    if (step >= max) {
+      setPlaying(false);
+      return;
+    }
+    const t = window.setTimeout(() => setStep((s) => Math.min(max, s + 1)), REPLAY_STEP_MS);
+    return () => window.clearTimeout(t);
+  }, [playing, step, max]);
+
+  return {
+    step,
+    max,
+    playing,
+    first: () => {
+      setPlaying(false);
+      setStep(0);
+    },
+    back: () => {
+      setPlaying(false);
+      setStep((s) => Math.max(0, s - 1));
+    },
+    toggle: () => {
+      if (playing) {
+        setPlaying(false);
+        return;
+      }
+      if (step >= max) setStep(0);
+      setPlaying(true);
+    },
+    forward: () => {
+      setPlaying(false);
+      setStep((s) => Math.min(max, s + 1));
+    },
+  };
+}
+
+export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
+  const { c } = props;
+  return (
+    <div className="rp-ctrl">
+      <div className="rp-btns">
+        <button type="button" className="btn ghost" onClick={c.first}>
+          最初から
+        </button>
+        <button type="button" className="btn ghost" disabled={c.step <= 0} onClick={c.back}>
+          1手戻る
+        </button>
+        <button type="button" className="btn ghost" onClick={c.toggle}>
+          {c.playing ? '一時停止' : '再生'}
+        </button>
+        <button type="button" className="btn ghost" disabled={c.step >= c.max} onClick={c.forward}>
+          1手進む
+        </button>
+      </div>
+      <div className="rp-prog">
+        <span className="rp-bar" aria-hidden="true">
+          <i style={{ width: `${c.max > 0 ? (c.step / c.max) * 100 : 100}%` }} />
+        </span>
+        <span className="num rp-count" aria-live="polite">
+          {c.step} / {c.max} 手目
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** 席の配置（手前の中央から時計回り。卓の中の % 座標）とチップの位置（席から中央へ寄せた点） */
+const SLOTS: readonly (readonly [number, number])[] = [
+  [50, 90],
+  [8, 70],
+  [8, 30],
+  [50, 10],
+  [92, 30],
+  [92, 70],
+];
+const CHIPS: readonly (readonly [number, number])[] = [
+  [50, 70],
+  [28, 61],
+  [28, 39],
+  [50, 29],
+  [72, 39],
+  [72, 61],
+];
+
+/**
+ * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Villain の席を手前に置く（席の並びは replayModel の seatOrder）。
+ * `heroCards` が null なら Hero のハンドは裏向き。
+ */
+export function PokerTable(props: {
+  seats: readonly SeatView[];
+  pot: Mbb;
+  board: readonly Card[];
+  heroCards: readonly Card[] | null;
+  villainLabel: string;
+}): JSX.Element {
+  return (
+    <div className="ptable" role="img" aria-label="テーブル">
+      <div className="ptable-felt" />
+      <div className="ptable-mid">
+        <div className="ptable-pot">
+          <span className="mono-lbl">POT</span>
+          <b className="num">{formatBb(props.pot)}bb</b>
+        </div>
+        <div className="ptable-board">
+          {[0, 1, 2, 3, 4].map((i) => {
+            const c = props.board[i];
+            return c ? <PlayingCard key={c} card={c} /> : <span key={i} className="ptable-slot" />;
+          })}
+        </div>
+      </div>
+      {props.seats.map((seat, i) => {
+        const [x, y] = SLOTS[i] ?? [50, 50];
+        const [cx, cy] = CHIPS[i] ?? [50, 50];
+        const anchor = x < 20 ? 'l' : x > 80 ? 'r' : 'c';
+        return (
+          <div key={seat.pos}>
+            <div
+              className={`pseat a-${anchor}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
+              style={{ top: `${y}%`, ...(anchor === 'c' ? { left: `${x}%` } : {}) }}
+            >
+              {seat.hero && !seat.folded && (
+                <div className="pseat-cards">
+                  {props.heroCards ? (
+                    props.heroCards.map((c) => <PlayingCard key={c} card={c} size="sm" />)
+                  ) : (
+                    <>
+                      <span className="pback" />
+                      <span className="pback" />
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="pseat-plate">
+                <span className="pseat-top">
+                  <b className="pseat-pos" style={{ color: POS_VAR[seat.pos] }}>
+                    {seat.pos}
+                  </b>
+                  {seat.hero && <span className="pseat-tag hero">Hero</span>}
+                  {seat.villain && <span className="pseat-tag villain">{props.villainLabel}</span>}
+                </span>
+                <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
+              </div>
+              {seat.last && <span className="pseat-last">{seat.last}</span>}
+            </div>
+            {seat.bet > 0 && (
+              <span className="pchip num" style={{ left: `${cx}%`, top: `${cy}%` }}>
+                {formatBb(seat.bet)}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * ハンドヒストリー（ストリートごとの列）。出題の Hero のアクションに「出題」、最新の 1 手を強調、
+ * `actual`（集計画面の Villain の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
+ */
+export function HandLog(props: {
+  setup: HandSetup;
+  actions: readonly Action[];
+  board: readonly Card[];
+  spotIndex: number;
+  highlightLast: boolean;
+  actual?: number;
+  prompt?: string | null;
+}): JSX.Element {
+  const items = actionLog(props.setup, props.actions);
+  const last = items.length - 1;
+  const streets = STREETS.filter((s) => items.some((it) => it.street === s));
+  const boardOf: Record<Street, readonly Card[]> = {
+    pf: [],
+    flop: props.board.slice(0, 3),
+    turn: props.board.slice(3, 4),
+    river: props.board.slice(4, 5),
+  };
+  return (
+    <div className="hlog">
+      {streets.map((s) => (
+        <div key={s} className="hlog-col">
+          <div className="hlog-head">
+            <span className="mono-lbl">{STREET_NAME[s]}</span>
+            <span className="hlog-board">
+              {boardOf[s].map((c) => (
+                <PlayingCard key={c} card={c} size="sm" />
+              ))}
+            </span>
+          </div>
+          <ol className="hlog-list">
+            {items
+              .filter((it) => it.street === s)
+              .map((it) => (
+                <li
+                  key={it.index}
+                  className={`${props.highlightLast && it.index === last ? 'latest' : ''}${it.index === props.actual ? ' actual' : ''}`}
+                >
+                  <b style={{ color: POS_VAR[it.pos] }}>{it.pos}</b>
+                  {it.text.slice(it.pos.length)}
+                  {it.index === props.spotIndex && <span className="hlog-tag">出題</span>}
+                </li>
+              ))}
+          </ol>
+        </div>
+      ))}
+      {props.prompt && <p className="hlog-next num">{props.prompt}</p>}
+    </div>
+  );
+}

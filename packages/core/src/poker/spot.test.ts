@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { ValidationError } from '../errors.ts';
 import { mbbToBb } from '../money.ts';
 import { runActions } from './replay.ts';
-import { pctFromSize, potBaseOf, sizeFromPct, spotCandidates, spotView, type SpotView } from './spot.ts';
+import { pctFromSize, potBaseOf, sizeFromPct, spotCandidates, spotView, stopState, type SpotView } from './spot.ts';
 import { advance, legal, nextActor, status, type State } from './state.ts';
 import { acts, mbb, setup } from './testHelpers.ts';
 
@@ -280,5 +280,23 @@ describe('PCT % pot', () => {
     const d = v.derived;
     expect(pctFromSize(v.state.currentBet, d.potBase, mbb(13), mbb(95.7))).toBe(29);
     expect(pctFromSize(v.state.currentBet, d.potBase, mbb(95.7), mbb(95.7))).toBe('allin');
+  });
+});
+
+describe('stopState 切り詰めたアクション列から停止位置の状態', () => {
+  it('ストリートをまたぐスポット（フロップの Hero のコール → ターンの BB）', () => {
+    const actions = acts({ pf: 'UTG..CO f, BTN r2.5, SB f, BB c', flop: 'BB b3, BTN c', turn: 'BB x, BTN x' });
+    const v = spotView(S100, actions, 'BTN', 7, 'BB');
+    expect(v.derived.stopIndex).toBe(8);
+    // 未回答者に返る形（停止位置より後を除いた列）でも同じ状態になる
+    const s = stopState(S100, actions.slice(0, v.derived.stopIndex), v.derived.stopIndex, v.derived.street);
+    expect(s).toEqual(v.state);
+    expect(s.street).toBe('turn');
+    expect(status(s)).toEqual({ kind: 'act', pos: 'BB' });
+  });
+
+  it('同じストリートのスポット（H-S1）', () => {
+    const v = spotView(S100, H_S1, 'BTN', 10, 'BB');
+    expect(stopState(S100, H_S1.slice(0, 11), 11, 'turn')).toEqual(v.state);
   });
 });

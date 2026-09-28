@@ -17,3 +17,7 @@ coverage/
 .claude/skills/wwyd-ui-concept/references/icmclec-*
 # OCR の正解画像（個人の対戦画像）
 packages/ocr/fixtures-local/
+
+# Playwright の結果（E2E）
+test-results/
+playwright-report/

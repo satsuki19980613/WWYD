@@ -13,6 +13,7 @@ import { NewPostScreen } from './screens/NewPostScreen.tsx';
 import { LoginScreen } from './screens/LoginScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
 import { ScreenStub } from './screens/ScreenStub.tsx';
+import { SpotScreen } from './screens/SpotScreen.tsx';
 import { StatusScreen } from './screens/StatusScreen.tsx';
 
 // 部品一覧は開発時だけ読み込む（本番ビルドには含めない）
@@ -86,12 +87,10 @@ function RouteScreen(props: { route: Route }): JSX.Element {
     case 'new':
       return <NewPostScreen />;
     case 'spot':
-      // P6（T-601）で get_post_detail の viewer により answer / result へ置き換え遷移する
-      return <BootScreen />;
     case 'answer':
-      return <ScreenStub title="回答" />;
     case 'result':
-      return <ScreenStub title="集計" />;
+      // 同じ位置・同じ部品にして、振り分けの置き換え遷移で読み込み直さない
+      return <SpotScreen key={route.id} id={route.id} view={route.name} />;
     case 'terms':
       return <ScreenStub title="利用規約" />;
     case 'privacy':

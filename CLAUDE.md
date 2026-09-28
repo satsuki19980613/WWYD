@@ -82,6 +82,7 @@ WWYD/
 ├── db/
 │   ├── migrations/               # DDL・RLS・トリガ・RPC（SQL。scripts/db.mjs で適用）
 │   └── tests/                    # pgTAP テスト（03_paint_vectors は生成物）
+├── e2e/                          # E2E（Playwright。Neon への通信は fakeBackend.ts の偽の応答）
 ├── scripts/                      # db.mjs（マイグレーション・DB テスト）、genPaintVectorsSql.mjs
 ├── .env.example                  # 環境変数の雛形（実値は .env に。コミットしない）
 └── .gitignore
@@ -99,7 +100,7 @@ WWYD/
 | 単体テスト | `npm test`（Vitest）。カバレッジは `npm run test:coverage`（core の行 90% 以上） |
 | 型検査 | `npm run typecheck` |
 | ビルド | `npm run build`（出力 `packages/app/dist`） |
-| E2E | `npm run e2e`（Playwright。予定） |
+| E2E | `npm run e2e`（Playwright。Neon への通信は偽の応答に差し替え、本物にはつながない。初回だけ `npx playwright install chromium`。スマホの試験はテスト名に `@sp`） |
 | DB テスト | `npm run test:db`（空の `test-base` から一時ブランチを作り、全マイグレーション → pgTAP → 同時回答 → 削除。1 時間で自動削除もされる。Docker が必要） |
 | 共有テストベクタの pgTAP を生成 | `npm run gen:db-vectors`（CI は `check:db-vectors` で最新かを検査） |
 | マイグレーションを dev に適用 | `npm run db:migrate -- --branch dev` |

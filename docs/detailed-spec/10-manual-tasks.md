@@ -70,18 +70,21 @@
    - Redirect URLs: `http://localhost:5173/**`、本番の URL `/**`、Cloudflare Pages のプレビュー URL（`https://*.<project>.pages.dev/**`）
 3. メール・パスワード等、Google 以外のプロバイダは無効のままにする。
 
-## M-08 Cloudflare Pages のプロジェクト作成（基盤フェーズの終わり）
+## M-08 Cloudflare Pages のプロジェクト作成（Neon 版。2026-09-28 に書き直し）
 
-1. Cloudflare ダッシュボード「Workers & Pages → 作成 → Pages → Git に接続」で `satsuki19980613/WWYD` を選ぶ。
-2. ビルドコマンド `npm run build`、出力ディレクトリ `packages/app/dist`、Node のバージョン 22（環境変数 `NODE_VERSION=22`）。
-3. 環境変数: `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`（本番とプレビューの両方）。
-4. 発行された URL（`https://<project>.pages.dev`、独自ドメインを使うならその URL）を Claude に伝え、M-05・M-06・M-07 の URL 欄に追加する。
+1. Cloudflare ダッシュボード「Workers & Pages → 作成 → Pages → Git に接続」で `satsuki19980613/WWYD` を選ぶ。本番のブランチは `main`。
+2. ビルドコマンド `npm run build`、出力ディレクトリ `packages/app/dist`、環境変数 `NODE_VERSION` = `22`。
+3. アプリが使う住所（Neon Auth・Data API・create-post の URL）はリポジトリの `.env.production` に入っていてビルドが自動で読むので、Cloudflare に秘密の値を入れる必要はない。
+4. 発行された URL（`https://<名前>.pages.dev`）を Claude に伝える。その後、次の 2 つを行う:
+   - Neon のコンソール（production ブランチ）「Auth」の **trusted domains** にその URL を足す（さつき）。
+   - create-post の許可するオリジンにその URL を足して配備し直す（Claude がコマンドを用意し、止められたらさつきが実行）。
 
-## M-09 管理者 UID の登録（初回ログイン後）
+## M-09 管理者の登録（Neon 版。本番で一度ログインした後）
 
-1. 本番の WWYD に Google でログインする。
-2. Supabase ダッシュボード「Authentication → Users」で自分の User UID を確認。
-3. 「SQL Editor」で実行: `insert into public.app_admins (uid) values ('<自分の UID>');`
+1. 本番の WWYD に Google で一度ログインする（`npm run dev:prod` でよい）。
+2. Neon のコンソールでプロジェクト → ブランチ **production** →「SQL Editor」を開き、次の 1 行の `<自分の Gmail>` を書き換えて実行する（UID を書き写さなくてよい）:
+   `insert into public.app_admins (uid) select id from neon_auth."user" where email = '<自分の Gmail>';`
+3. 「INSERT 0 1」と出れば完了。Claude に「入れた」と伝える。
 
 ## M-10 GitHub への push の承認
 
