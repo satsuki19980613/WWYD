@@ -122,18 +122,19 @@ export function HistoryButton(props: { disabled?: boolean; children: ReactNode }
 }
 
 type Pt = readonly [number, number];
-type Slot = { seat: Pt; chip: Pt };
+/** `chipTop` は上下の席のチップの高さ（CSS の top）。横の席のチップは席のプレートのすぐ内側に置く（CSS の .pchip.side） */
+type Slot = { seat: Pt; chipTop?: string };
 /**
  * 席とチップの配置（手前の中央から時計回り。卓の中の % 座標）。2〜6 人（04 章 §2.1）。
  * ボードは卓の中央に大きく出す（2026-09-29 さつき）ので、横の席は卓の縁に重ねて上下に寄せ、ボードの高さを空ける。
- * チップは横の席なら同じ高さで内側、上下の席なら中央寄り（ボードに重ならない所）。
+ * チップは横の席ならプレートの内側の隣、上の席はポットの上、手前の席はボードのすぐ下（ホールカードの上）。
  */
-const L_UP: Slot = { seat: [0, 27], chip: [30, 27] };
-const L_DOWN: Slot = { seat: [0, 73], chip: [30, 73] };
-const R_UP: Slot = { seat: [100, 27], chip: [70, 27] };
-const R_DOWN: Slot = { seat: [100, 73], chip: [70, 73] };
-const BOTTOM: Slot = { seat: [50, 91], chip: [50, 75] };
-const TOP: Slot = { seat: [50, 9], chip: [50, 25] };
+const L_UP: Slot = { seat: [0, 27] };
+const L_DOWN: Slot = { seat: [0, 73] };
+const R_UP: Slot = { seat: [100, 27] };
+const R_DOWN: Slot = { seat: [100, 73] };
+const BOTTOM: Slot = { seat: [50, 91], chipTop: 'calc(50% + var(--bw) * 0.69 + 20px)' };
+const TOP: Slot = { seat: [50, 9], chipTop: '25%' };
 const SLOTS_BY_COUNT: Record<number, readonly Slot[]> = {
   2: [BOTTOM, TOP],
   3: [BOTTOM, L_UP, R_UP],
@@ -175,10 +176,17 @@ export function PokerTable(props: {
         {props.note && <span className="ptable-note">{props.note}</span>}
       </div>
       {props.seats.map((seat, i) => {
-        const slot = SLOTS_BY_COUNT[props.seats.length]?.[i] ?? { seat: [50, 50] as const, chip: [50, 50] as const };
+        const slot = SLOTS_BY_COUNT[props.seats.length]?.[i] ?? { seat: [50, 50] as const };
         const [x, y] = slot.seat;
-        const [cx, cy] = slot.chip;
         const anchor = x < 20 ? 'l' : x > 80 ? 'r' : 'c';
+        const chip = seat.bet > 0 && (
+          <span
+            className={`pchip num${anchor === 'c' ? '' : ' side'}`}
+            style={anchor === 'c' ? { left: `${x}%`, top: slot.chipTop ?? '50%' } : undefined}
+          >
+            {formatBb(seat.bet)}
+          </span>
+        );
         return (
           <div key={seat.pos}>
             <div
@@ -197,12 +205,9 @@ export function PokerTable(props: {
                 <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
               </div>
               {seat.last && <span className="pseat-last">{seat.last}</span>}
+              {anchor !== 'c' && chip}
             </div>
-            {seat.bet > 0 && (
-              <span className="pchip num" style={{ left: `${cx}%`, top: `${cy}%` }}>
-                {formatBb(seat.bet)}
-              </span>
-            )}
+            {anchor === 'c' && chip}
           </div>
         );
       })}

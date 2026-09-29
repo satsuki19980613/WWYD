@@ -692,8 +692,7 @@
 .pf.sp.docked { padding-bottom: calc(var(--dock-h, 200px) - var(--s6) - var(--sab) + var(--s2)); }
 .pf.sp.fill > .pf-actsec { flex: 1 1 auto; }
 .pf.sp.fill .pf-actsec > .ptable { flex: 1 1 auto; height: auto; min-height: 340px; }
-.pf.sp .pseat-plate { min-width: 72px; padding: 3px 6px; }
-.pf.sp .pseat-stack { font-size: 13px; }
+.pf.sp .pseat-plate { min-width: 76px; padding: 3px 6px; }
 
 .pf-actsec { position: relative; }
 .modal .hlog { grid-template-columns: 1fr; }
