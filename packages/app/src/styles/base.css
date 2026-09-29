@@ -38,7 +38,8 @@ a { color: var(--cyan); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  /* 擬似要素（SPOT の光・読み取り中の走査線）も止める（17 章 §3.5。リリース前テスト T-E F-005） */
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
 /* ---- HUD ヘッダー（全画面・固定） ---- */
