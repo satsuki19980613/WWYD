@@ -475,6 +475,7 @@ function ReplayView(props: {
       highlightLast
       prompt={c.step === hand.stopIndex ? `▶ ${post.hero} to act` : null}
       onPick={props.logInModal ? undefined : (i) => c.goto(i + 1)}
+      strip={!props.logInModal}
     />
   );
   return (

@@ -566,3 +566,15 @@ test.describe('スマホ（06 章 §4.1）', () => {
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA Call 100%');
   });
 });
+
+test('PC の Hand History は卓の下に横一列で、停止位置の「▶ to act」まで（2026-09-29）', async ({ page }) => {
+  await fakeBackend(page, detailJson(hs1bb(), { viewer: 'unanswered', id: '00000000-0000-4000-8000-000000000001' }));
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/s/00000000-0000-4000-8000-000000000001/answer');
+  await page.keyboard.press('End');
+  const strip = page.locator('.ans-replay .hlog.strip');
+  await expect(strip).toContainText('BB to act');
+  const tops = await strip.locator('li').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  await expect(strip.getByText(/BB to act/)).toBeInViewport();
+});

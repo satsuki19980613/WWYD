@@ -308,3 +308,21 @@ test.describe('スクロールしても固定する部分（2026-09-29）', () =
     await expect(page.getByRole('button', { name: '回答が多い順' })).toBeInViewport();
   });
 });
+
+test('PC の Hand History は卓の下に横一列（横にスクロール。押すとその時点へ。2026-09-29）', async ({ page }) => {
+  await open(page);
+  const strip = page.locator('.ans-replay .hlog.strip');
+  // 最初は最後の手（River の BB の Call）まで出して、そこへ送ってある
+  await expect(strip.locator('li').last()).toContainText('BB Call');
+  await expect(strip.locator('li').last()).toBeInViewport();
+  const tops = await strip.locator('li').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  // 最後の手まで送ってある
+  const m = await strip.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, left: e.scrollLeft }));
+  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 1);
+  // 卓は縦長にしない（460px まで）
+  const t = await page.locator('.ans-replay .ptable').boundingBox();
+  expect(t!.height).toBeLessThanOrEqual(461);
+  await strip.getByRole('button', { name: 'BTN Bet 1.8' }).click();
+  await expect(page.getByText('8 / 15 手目')).toBeVisible();
+});

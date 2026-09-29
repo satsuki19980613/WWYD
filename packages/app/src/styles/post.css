@@ -753,45 +753,6 @@
 .fit-stage.pf .pf-dockslot { grid-area: dock; display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
 .fit-stage.pf .pf-logslot { grid-area: log; min-height: 0; min-width: 0; }
 
-/* History の横一列（HandLog の strip）: ストリートごとに 見出し（名前と Board）＋ 1 手ずつのカード */
-.hlog.strip {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: var(--s2);
-  height: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-2) transparent;
-}
-.hlog.strip .hlog-col { flex: none; flex-direction: row; align-items: stretch; gap: var(--s2); }
-.hlog.strip .hlog-head {
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: var(--s1);
-  min-height: 0;
-  padding-right: var(--s2);
-  border-right: 1px solid var(--line);
-}
-.hlog.strip .hlog-list { flex-direction: row; align-items: stretch; gap: 6px; }
-.hlog.strip .hlog-list li {
-  position: relative;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 78px;
-  padding: 0 var(--s3);
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  white-space: nowrap;
-}
-.hlog.strip .hlog-list li.latest { border-color: rgba(58, 230, 255, 0.55); }
-.hlog.strip .hlog-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
-.hlog.strip .hlog-pick b { font-size: 14px; }
-.hlog.strip .hlog-tag { margin: 4px 0 0; }
 /* 台は段いっぱいの 1 枚の枠にし、3 つのボタンは枠の下に揃える（よく使う額・Fold to の行の有無でボタンが動かない） */
 .fit-stage.pf .pf-dockslot > .act-dock { flex: 1 1 auto; min-height: 0; }
 .fit-stage.pf .pf-dockslot .ad-btns { margin-top: auto; }

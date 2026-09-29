@@ -314,6 +314,7 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
       highlightLast={c.step < c.max}
       actual={hand.spotIndex}
       onPick={props.logInModal ? undefined : (i) => c.goto(i + 1)}
+      strip={!props.logInModal}
     />
   );
   return (
