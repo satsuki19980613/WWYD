@@ -17,7 +17,7 @@
 | F-007 | R1 | S4 | `package.json` の description | 「Villain のレンジ」が残っている（16 章で Villain の概念は無くなった） | 確認済み |
 | F-008 | R2 | S4 | `helpers.sql`（is_allowed_uid）ほか | R2 の指摘 3〜9（削除後の JWT、中継の X-Forwarded-For、`/api/auth` の nosniff、connect-src の Neon Auth の住所、`.env.*` の検査、JWT の algorithms、neon_auth の権限の試験） | 未確認（S4。plan.md のタスクに回す案） |
 | F-009 | R3 | S4 | R3 の指摘 4〜10 | RangeGrid の memo、送信中に離れた後の画面移動、使っていないコード、SQL の Board 枚数の表（River の試験）、Check 済みの席と不足の All-in Bet（仕様の確認）、設定だけで Preflop All-in、getToken の同時呼び出し | 未確認（S4） |
-| F-010 | T-B（TB-2）・T-C（F-C2） | S3 | `packages/core/src/post/validateInput.ts` | 題名に NUL・対のないサロゲートを入れた本文を create-post へ → 検証を通り、jsonb への変換で落ちて 500 `internal`（期待: 422 `invalid_title`）。画面の入力では起きない | 確認済み（`post.test.ts` VAL-17 に再現の試験）→ 修正 `ba5bdf1`。dev に配備済み（createpost/6、2026-09-30）。**本番は配備し直しで反映** |
+| F-010 | T-B（TB-2）・T-C（F-C2） | S3 | `packages/core/src/post/validateInput.ts` | 題名に NUL・対のないサロゲートを入れた本文を create-post へ → 検証を通り、jsonb への変換で落ちて 500 `internal`（期待: 422 `invalid_title`）。画面の入力では起きない | 確認済み（`post.test.ts` VAL-17 に再現の試験）→ 修正 `ba5bdf1`。dev・本番に配備済み（どちらも createpost/6、2026-09-30） |
 | F-011 | T-B（TB-3） | S4 | `savedDrafts.ts` | 開き直した下書きに、札でない Board（`zz` 等）と、整数でない・候補に無い Spot の番号が残る | 確認済み → 修正 `ad49e7c` |
 | F-012 | T-C（観察 7） | S3 | `.github/workflows/ci.yml` の db ジョブ | PR でも `NEON_API_KEY` を渡す。同じリポジトリのブランチの PR なら、スクリプトの書き換えで鍵を使える | 未確認（直すかはさつきの判断。鍵の権限を絞る・main への push だけにする案） |
 | F-013 | T-C（観察 4） | S4 | create-post | Neon の URL に直接公開され、回数の制限が無い（無料枠を使い切る攻撃への備えが無い。不変条件 3） | 未確認（S4） |
