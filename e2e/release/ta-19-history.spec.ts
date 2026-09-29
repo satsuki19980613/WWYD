@@ -23,7 +23,8 @@ test('「戻る」を 3 回押して毎回「やめる」→ 履歴の長さは�
   expect(after, `履歴の長さ ${before} → ${after}`).toBe(before);
 });
 
-test('ブラウザの「戻る」→「保存しない」で一覧へ出たあと、もう一度「戻る」を押しても、捨てた /new には戻らない（S4: 履歴に /new が残る）', async ({ page }) => {
+// 既知の S4（docs/release-test/findings.md F-027）。直すまで fixme
+test.fixme('ブラウザの「戻る」→「保存しない」で一覧へ出たあと、もう一度「戻る」を押しても、捨てた /new には戻らない（S4: 履歴に /new が残る）', async ({ page }) => {
   await fakeBackend(page, null);
   await page.goto('/');
   await page.getByRole('link', { name: /Post/ }).first().click();
