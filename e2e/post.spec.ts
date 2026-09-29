@@ -298,7 +298,8 @@ test('PC の投稿: 卓と台は動かず、History は横一列で横にスク�
   expect(new Set(tops).size).toBe(1);
   const m = await strip.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, left: e.scrollLeft }));
   expect(m.sw).toBeGreaterThan(m.cw);
-  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 1);
+  // FitStage の zoom で scrollLeft は小数になる（CI の Linux で右端でも 0.08px 足りなかった）ので 2px まで許す
+  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 2);
   await expect(strip.getByRole('button', { name: 'BB Check' }).last()).toBeInViewport();
   // 押すと入れ直しの確認
   await strip.getByRole('button', { name: 'BTN Raise 2.5' }).click();

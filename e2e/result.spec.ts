@@ -319,7 +319,8 @@ test('PC の Hand History は卓の下に横一列（横にスクロール。押
   expect(new Set(tops).size).toBe(1);
   // 最後の手まで送ってある
   const m = await strip.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, left: e.scrollLeft }));
-  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 1);
+  // FitStage の zoom で scrollLeft は小数になるので 2px まで許す（post.spec.ts と同じ）
+  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 2);
   // 卓は縦長にしない（460px まで）
   const t = await page.locator('.ans-replay .ptable').boundingBox();
   expect(t!.height).toBeLessThanOrEqual(461);
