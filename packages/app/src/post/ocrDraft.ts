@@ -1,4 +1,4 @@
-import { bbToMbb, POSITIONS, runActions, spotCandidates, type Action, type Card, type HandSetup, type Legal, type Mbb, type Pos, type State, type Street } from '@wwyd/core';
+import { bbToMbb, hasPreflopAllin, POSITIONS, spotCandidates, type Action, type Card, type HandSetup, type Legal, type Mbb, type Pos, type State, type Street } from '@wwyd/core';
 import type { OcrAction, OcrResult, OcrVerb } from '@wwyd/ocr';
 import { handCards, isHandComplete } from './cardInput.ts';
 import { candidates, emptyDraft, normalizeSpot, parseSettings, phaseOf, PREFLOP_ALLIN, type Draft } from './draft.ts';
@@ -84,14 +84,7 @@ function ocrPreflopAllin(r: OcrResult, setup: HandSetup): boolean {
     if (phase.kind !== 'act' || !next) break;
     actions.push(next);
   }
-  return preflopAllin(setup, actions);
-}
-
-/** 再生した Preflop のアクションで、だれかのスタックが 0 になったか（All-in になったか） */
-function preflopAllin(setup: HandSetup, actions: readonly Action[]): boolean {
-  const states = runActions(setup, actions.filter((a) => a.street === 'pf'));
-  const last = states[states.length - 1];
-  return last !== undefined && POSITIONS.some((p) => setup.stacks[p] > 0 && last.stacks[p] === 0);
+  return hasPreflopAllin(setup, actions);
 }
 
 /** 読み取り結果から確認画面の初期状態を作る。Hero が読めなければ下書きの Hero のまま。 */
@@ -168,7 +161,7 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
 
   draft = normalizeSpot({ ...draft, actions });
   // Preflop で All-in になったハンドは、Hero でもほかの席でも投稿できない（読み込みの時点ではじく種類。2026-09-29 さつき）
-  if (preflopAllin(setup, actions)) issues.push(PREFLOP_ALLIN);
+  if (hasPreflopAllin(setup, actions)) issues.push(PREFLOP_ALLIN);
   // 最後まで再生できたのに出題できるアクションが無い（Hero の席の直し間違いなど）
   else if (issues.length === 0 && candidates(draft).length === 0) issues.push(NO_SPOT_MESSAGE);
   return { draft, rows: views, issues };

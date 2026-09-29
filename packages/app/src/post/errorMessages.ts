@@ -25,6 +25,8 @@ export function messageForCode(code: string, index?: number): string {
       return '本日の投稿上限（5件）に達しました';
     case 'invalid_spot':
       return 'Spot を選び直してください';
+    case 'preflop_allin':
+      return 'Preflop で All-in になった Hand は投稿できません';
     case 'derived_mismatch':
       return '投稿できませんでした。再読み込みしてやり直してください';
     case 'not_authenticated':

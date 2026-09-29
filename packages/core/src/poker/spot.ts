@@ -25,6 +25,21 @@ export function spotCandidates(actions: readonly Action[], hero: Pos): SpotCandi
   return out;
 }
 
+/**
+ * Preflop でだれかが All-in になったか（Preflop のアクションのあとでスタックが 0 の席がある。Hero でもほかの席でも）。
+ * そのハンドは投稿できない（2026-09-29 さつき）。Flop 以降に Hero の手番があっても（サイドポット）同じ。
+ */
+export function hasPreflopAllin(setup: HandSetup, actions: readonly Action[]): boolean {
+  const pf: Action[] = [];
+  for (const a of actions) {
+    if (a.street !== 'pf') break;
+    pf.push(a);
+  }
+  const states = runActions(setup, pf);
+  const last = states[states.length - 1] as State;
+  return last.seated.some((p) => last.stacks[p] === 0);
+}
+
 export type Derived = {
   street: Street;
   keys: AnswerKey[];

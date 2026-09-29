@@ -526,15 +526,28 @@ describe('Spot の候補が無いハンドの投稿のエラー', () => {
     expect(buildSubmission(d)).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
   });
   it('Hero が Preflop で Fold、または Preflop で全員が Fold', () => {
-    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB r100, UTG c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB f'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
     expect(buildSubmission(pf('UTG..CO f, BTN r2.5, SB f, BB f'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
   });
-  it('Hero が Preflop で Fold したあと、ほかの席が All-in', () => {
-    expect(buildSubmission(pf('UTG..CO f, BTN f, SB r100, BB c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+  it('Hero が Preflop で Fold したあと、ほかの席が All-in（2026-09-29 さつき: Hero でもほかの席でも）', () => {
+    expect(buildSubmission(pf('UTG..CO f, BTN f, SB r100, BB c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB r100, UTG c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+  });
+  it('短い UTG の Preflop の All-in のあと、Hero が Flop 以降を続けた（サイドポット）も候補なし', () => {
+    const raw = {
+      ...hs1(),
+      stacks: { ...(hs1().stacks as Record<string, number>), UTG: 10 },
+      actions: acts({ pf: 'UTG r10, HJ..CO f, BTN c, SB f, BB c', flop: 'BB x, BTN b5, BB f' }).map((a) =>
+        a.to === undefined ? { ...a } : { ...a, to: a.to / 1000 },
+      ),
+    };
+    const d = { ...play(raw), title: '見本' };
+    expect(candidates(d)).toEqual([]);
+    expect(buildSubmission(d)).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
   });
 });
 
-describe('Preflop で All-in になる Action は受け付けない（2026-09-29）', () => {
+describe('Preflop で All-in になる Action は受け付けない（2026-09-29。Hero でもほかの席でも）', () => {
   const at = (line: string, stacks?: Record<string, number>): { d: Draft; last: Action } => {
     const all = acts({ pf: line });
     const raw = { ...hs1(), actions: [], board: [], ...(stacks ? { stacks } : {}) };
@@ -548,23 +561,26 @@ describe('Preflop で All-in になる Action は受け付けない（2026-09-29
   };
   const S = { ...(hs1().stacks as Record<string, number>) };
 
-  it('Hero の All-in の Raise・All-in の Call', () => {
+  it('Hero の All-in の Raise', () => {
     expect(refused('UTG..CO f, BTN r100')).toBe(true);
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN c')).toBe(true);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r10, BTN r100')).toBe(true);
   });
-  it('相手の All-in にスタックの多い Hero が Call し、誰も Action できなくなる', () => {
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r30, BTN c', { ...S, BB: 30 })).toBe(true);
+  it('相手の All-in の Raise（100bb でも、短いスタックでも）', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100')).toBe(true);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r30', { ...S, BB: 30 })).toBe(true);
+    expect(refused('UTG r10', { ...S, UTG: 10 })).toBe(true);
   });
-  it('短い UTG の All-in に Hero が Call し、最後の BB の Fold でランアウトになる', () => {
-    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB c', { ...S, UTG: 10 })).toBe(false);
-    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB f', { ...S, UTG: 10 })).toBe(true);
+  it('短いスタックの Call で All-in になる', () => {
+    expect(refused('UTG..CO f, BTN r20, SB f, BB c', { ...S, BB: 15 })).toBe(true);
   });
-  it('相手の Preflop の All-in そのもの・Hero の Fold・Flop 以降の All-in は受け付ける', () => {
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100')).toBe(false);
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN f')).toBe(false);
+  it('Hero の Fold・All-in にならない Action・Flop 以降の All-in は受け付ける', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB f')).toBe(false);
     expect(refused('UTG..CO f, BTN r2.5, SB f, BB c')).toBe(false);
     const d = play({ ...hs1(), actions: rawActs(hs1(), 'BB x') });
     expect(makesPreflopAllin(d, [{ street: 'flop', pos: 'BTN', type: 'bet', to: 97500 }])).toBe(false);
+  });
+  it('すでに Preflop の All-in があるハンド（前の版の下書きなど）は、続きの Action を止めない', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN f')).toBe(false);
   });
 });
 

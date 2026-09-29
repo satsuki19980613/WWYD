@@ -87,7 +87,7 @@
 2. **形の検証**: 型・必須項目・列挙値・小数桁・上限（`packages/core/src/post/validateInput.ts`）。失敗は 422 `malformed` / `invalid_settings` / `invalid_title` / `hero_cards_required`。
 3. **カードの検証**: 形式と重複（Hero・known_cards・ボード）。422 `duplicate_card` など。
 4. **再生**: `replay(setup, actions, board)`（04 章 §7）。失敗は 422（04 章 §10.12 のコード）。
-5. **スポット**: `spot_index` が候補か、`villain` が候補の席か（04 章 §8）。422 `invalid_spot` / `invalid_villain`。
+5. **スポット**: Preflop でだれかが All-in になったハンドは 422 `preflop_allin`（2026-09-29。16 章）。`spot_index` が候補か、`villain` が候補の席か（04 章 §8）。422 `invalid_spot` / `invalid_villain`。
 6. **派生メタの再計算と照合**: `street, keys, s1_label, min_to, max_to, pot_base, effective_stack, stop_index` をサーバーで計算し、`derived` と**完全一致**（金額は mbb の整数で比較）しなければ 422 `derived_mismatch`。
 7. **known_cards の補完**: ショーダウンに残った Hero 以外の席でカードが無い席に `"muck"` を入れる（04 章 SD）。
 8. **保存**: service_role のクライアントで `rpc('insert_post', { p_author: uid, p: {...再計算した値...} })`。保存する派生メタは**サーバーが計算した値**（クライアントの値ではない）。`daily_limit` / `not_allowed` は DB が返す（429 / 403 に写す）。

@@ -6,7 +6,7 @@ import type { Pos } from '../constants.ts';
 import { findDuplicateCard, type Card } from '../cards.ts';
 import { fail } from '../errors.ts';
 import { replay, type HandResult } from '../poker/replay.ts';
-import { spotView, type Derived } from '../poker/spot.ts';
+import { hasPreflopAllin, spotView, type Derived } from '../poker/spot.ts';
 import type { PostInput } from './validateInput.ts';
 
 /** 保存する known_cards。ショーダウンでカードが無い席は `'muck'`。 */
@@ -40,6 +40,9 @@ export function verifyPost(input: PostInput): VerifiedPost {
 
   // 4. 再生
   const r = replay(input.setup, input.actions, input.board.length);
+
+  // Preflop でだれかが All-in になったハンドは投稿できない（Hero でもほかの席でも。2026-09-29 さつき）
+  if (hasPreflopAllin(input.setup, input.actions)) fail('preflop_allin');
 
   // 5〜6. スポットと派生メタの再計算・照合（金額は mbb の整数で比較）
   const view = spotView(input.setup, input.actions, input.hero, input.spotIndex);

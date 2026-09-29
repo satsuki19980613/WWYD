@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { ValidationError } from '../errors.ts';
 import { mbbToBb } from '../money.ts';
 import { runActions } from './replay.ts';
-import { pctFromSize, potBaseOf, sizeFromPct, spotCandidates, spotView, stopState, type SpotView } from './spot.ts';
+import { hasPreflopAllin, pctFromSize, potBaseOf, sizeFromPct, spotCandidates, spotView, stopState, type SpotView } from './spot.ts';
 import { advance, legal, nextActor, status, type Action, type State } from './state.ts';
 import { acts, mbb, setup } from './testHelpers.ts';
 
@@ -331,5 +331,21 @@ describe('stopState 切り詰めたアクション列から停止位置の状態
   it('同じストリートのスポット（H-S1）', () => {
     const v = spotView(S100, H_S1, 'BTN', 10);
     expect(stopState(S100, H_S1.slice(0, 10), 10, 'turn')).toEqual(v.state);
+  });
+});
+
+describe('hasPreflopAllin（Preflop でだれかが All-in になったハンドは投稿できない。2026-09-29 さつき）', () => {
+  it('Hero の All-in・相手の All-in（Hero が Fold しても、サイドポットで続けても）', () => {
+    expect(hasPreflopAllin(S100, acts({ pf: 'UTG..CO f, BTN r100, SB f, BB c' }))).toBe(true);
+    expect(hasPreflopAllin(S100, acts({ pf: 'UTG..CO f, BTN f, SB r100, BB c' }))).toBe(true);
+    // All-in の Raise だけで、まだだれも Call していない途中の状態も
+    expect(hasPreflopAllin(S100, acts({ pf: 'UTG..CO f, BTN r2.5, SB f, BB r100' }))).toBe(true);
+    const short = setup({ UTG: 10 });
+    expect(hasPreflopAllin(short, acts({ pf: 'UTG r10, HJ..CO f, BTN c, SB f, BB c', flop: 'BB x, BTN b5, BB f' }))).toBe(true);
+  });
+  it('Preflop に All-in が無ければ false（Flop 以降の All-in は数えない）', () => {
+    expect(hasPreflopAllin(S100, acts({ pf: 'UTG..CO f, BTN r2.5, SB f, BB c' }))).toBe(false);
+    expect(hasPreflopAllin(S100, acts({ pf: 'UTG..CO f, BTN r2.5, SB f, BB c', flop: 'BB x, BTN b97.5, BB c' }))).toBe(false);
+    expect(hasPreflopAllin(S100, [])).toBe(false);
   });
 });

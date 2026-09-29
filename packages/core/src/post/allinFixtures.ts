@@ -1,6 +1,7 @@
 /**
  * オールインを含むハンドの見本（2026-09-29 さつき「オールインも他のアクションと変わらない」）。テスト専用。
  * Hero の Flop 以降の手番は、オールイン（Bet / Raise / Call）もその前の手番も、すべてスポットの候補になる。
+ * ただし Preflop でだれかが All-in になったハンドは、Hero でもほかの席でも候補なし（投稿できない）。
  * core（検証）・投稿画面の下書き・E2E（画面の操作）で同じ表を使う。
  *
  * - `actions` は testHelpers の記法（額は bb の to）。ボードは `BOARD` の先頭から、到達したストリート
@@ -100,6 +101,14 @@ export const ALLIN_CASES: AllinCase[] = [
     actions: { pf: 'UTG..CO f, BTN r2.5, SB f, BB r11, BTN r100, BB c' },
     spots: [],
     refusedAt: 6,
+  },
+  {
+    name: '短い UTG（10bb）の Preflop の All-in に Hero と BB が Call、Flop 以降を続ける（相手の Preflop の All-in も候補なし）',
+    hero: 'BTN',
+    stacks: { ...SIX, UTG: 10 },
+    actions: { pf: 'UTG r10, HJ..CO f, BTN c, SB f, BB c', flop: 'BB x, BTN b5, BB f' },
+    spots: [],
+    refusedAt: 0,
   },
   {
     name: '短い相手（30bb）が Turn で All-in、Hero が Call（実効 30）',
