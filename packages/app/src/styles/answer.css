@@ -93,6 +93,11 @@
   border-radius: 4px;
 }
 .ptable-board .pcard { gap: 2px; }
+/*
+ * 卓の上の札は白を抑えたグレー（2026-09-29 さつき。真っ白だと暗い卓から浮く）。透明にはしない（卓の模様が透けて読みにくくなる）。
+ * 4 色のランクとの対比は大きい文字の基準（3:1）以上
+ */
+.ptable .pcard:not(.pending) { background: #c9cbc0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
 .ptable-board .pcard em { font-size: calc(var(--bw) * 0.38); }
 .ptable-slot {
   border: 1px solid rgba(190, 232, 255, 0.3);
