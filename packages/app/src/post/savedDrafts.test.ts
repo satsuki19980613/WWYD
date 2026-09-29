@@ -52,7 +52,7 @@ describe('下書きの保存（14 章 §3.5）', () => {
     expect(list[0]?.draft).toEqual({ ...emptyDraft(), title: 't' });
   });
 
-  it('再生できない Action は捨てる（Action・Board・Spot）', () => {
+  it('再生できない Action はその手から後を捨てる（画面の settleActions と同じ。Board は残す。R3-1）', () => {
     const d = sanitizeDraft({
       ...draft('t'),
       actions: [{ street: 'pf', pos: 'BB', type: 'raise', to: 1 }],
@@ -60,9 +60,16 @@ describe('下書きの保存（14 章 §3.5）', () => {
       spotIndex: 0,
     });
     expect(d.actions).toEqual([]);
-    expect(d.board).toEqual([]);
+    expect(d.board).toEqual(['Ah']);
     expect(d.spotIndex).toBeNull();
     expect(d.title).toBe('t');
+  });
+
+  it('形の壊れた Action（null など）は捨てる。人数が未選択でも画面が落ちない（リリース前レビュー R3-3）', () => {
+    for (const actions of [[null], [{ street: 'pf' }], [{ street: 'pf', pos: 'UTG', type: 'raise', to: '2' }], 'x']) {
+      const d = sanitizeDraft({ ...emptyDraft(), players: null, actions });
+      expect(d.actions).toEqual([]);
+    }
   });
 
   it('一覧の文言: タイトル（無ければ「タイトルなし」）と人数・Hero・Street・Action 数', () => {

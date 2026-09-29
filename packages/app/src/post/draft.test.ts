@@ -43,6 +43,7 @@ import {
   usedCards,
   type Draft,
 } from './draft.ts';
+import { sanitizeDraft } from './savedDrafts.ts';
 import { messageForCode } from './errorMessages.ts';
 
 /** 見本のプリフロップのまま、フロップのアクションを差し替える（額は bb。見本の JSON の形） */
@@ -326,6 +327,13 @@ describe('Action を入れたあとに設定を変える（2026-09-29 さつき:
     const d = settleActions({ ...done(), stacks: { ...done().stacks, BTN: '1' } });
     expect(d.actions).toHaveLength(3);
     expect(d.spotIndex).toBeNull();
+  });
+  it('外した手が残った下書きを保存して開き直しても、画面に出ていた Action と Board は残る（リリース前レビュー R3-1）', () => {
+    // 保存されるのは外す前の下書き（ストア）。開き直すと画面と同じ（settleActions の結果）になる
+    const raw = { ...done(), stacks: { ...done().stacks, BTN: '1' } };
+    const reopened = sanitizeDraft(JSON.parse(JSON.stringify(raw)));
+    expect(reopened.actions).toEqual(settleActions(raw).actions);
+    expect(reopened.board).toEqual(raw.board);
   });
   it('打っている途中（読めない値）では外さない。元の下書きは書き換えない', () => {
     const base = done();
