@@ -86,6 +86,15 @@ test.describe('起動時の状態（休止からの再開・障害）', () => {
     expect(await shown(page)).toBe('maintenance');
   });
 
+  test('/api/auth が 429（Pages Functions の 1 日 10 万回の上限・レート制限）→ ログイン画面になる（期待: メンテナンス中）', async ({ page, context }) => {
+    test.fail(true, 'F-05-1b: /ok の 4xx は「到達できた」と扱い、get-session の 4xx は「未ログイン」と扱うので、上限に達すると全員にログイン画面が出て、Google ログインの開始（sign-in/social）も失敗する');
+    await guard(context);
+    await installFake(page, { ok: 429, session: 429 });
+    await page.goto(`${ORIGIN}/`);
+    await expect.poll(() => shown(page)).not.toBe('boot');
+    expect(await shown(page)).toBe('maintenance');
+  });
+
   test('get-session が応答しない → 起動の画面のまま（10 秒の打ち切りがない）（期待: メンテナンス中）', async ({ page, context }) => {
     test.fail(true, 'F-05-2: get-session・whoami に打ち切り時間がない（health だけ 10 秒）');
     await guard(context);
