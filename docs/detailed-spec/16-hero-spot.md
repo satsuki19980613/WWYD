@@ -28,6 +28,7 @@ Villain（Hero のアクションに答える相手の席）の概念をなく�
 - **Preflop で All-in になる Action は入力で受け付けない**（2026-09-29 さつき）。押すとエラー「Preflop で All-in になった Hand は投稿できません」を出し、手番はそのまま（`makesPreflopAllin`）。
   対象は、Hero が Preflop で All-in になる Action（All-in の Raise・All-in の Call）と、Hero が残ったまま誰も Action できなくなる Action（相手の All-in にスタックの多い Hero が Call して終わる、最後の席の Fold でランアウトになる など）。
   相手の Preflop の All-in そのものは受け付ける（Hero と別の席が Flop 以降を続けられる）。OCR で読み込んだハンドなどで入ってしまった場合は、上の投稿時のエラーで止める。
+- **T4 の画像の読み込みでは、Preflop でだれかが All-in になったハンドをはじく**（Hero でもほかの席でも。2026-09-29 さつき）。「Preflop で All-in になった Hand は投稿できません」（06 章 §3.9）。
 - オールインは他のアクションと同じ扱い（Hero の All-in も、相手の All-in への Call / Fold も、その前の手番も候補）。22 通りの見本 `packages/core/src/post/allinFixtures.ts` で core・下書き・E2E を試験する。
 
 見本（`packages/core/src/post/postFixtures.ts`）:

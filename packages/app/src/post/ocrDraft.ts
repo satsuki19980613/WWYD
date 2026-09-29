@@ -1,7 +1,7 @@
-import { bbToMbb, POSITIONS, spotCandidates, type Action, type Card, type Legal, type Mbb, type Pos, type State, type Street } from '@wwyd/core';
+import { bbToMbb, POSITIONS, runActions, spotCandidates, type Action, type Card, type HandSetup, type Legal, type Mbb, type Pos, type State, type Street } from '@wwyd/core';
 import type { OcrAction, OcrResult, OcrVerb } from '@wwyd/ocr';
 import { handCards, isHandComplete } from './cardInput.ts';
-import { candidates, emptyDraft, normalizeSpot, parseSettings, phaseOf, type Draft } from './draft.ts';
+import { candidates, emptyDraft, normalizeSpot, parseSettings, phaseOf, PREFLOP_ALLIN, type Draft } from './draft.ts';
 import { applyT4Game, type T4Game } from './t4Games.ts';
 
 /**
@@ -47,12 +47,16 @@ export const NO_SPOT_MESSAGE = 'Flop 以降の Hero の Action がない Hand �
 /**
  * 読み込んだ時点で、投稿できるハンドかを判定する（06 章 §3.9）。スポットは Hero のフロップ以降のアクション
  * だけ（04 章 §8.1）なので、そうでないハンドは確認画面を開かずにはじく。
- * 画像で読んだ席とストリートのまま判定する（再生はしない。席のバッジ・ストリートの区切り・ボードはほぼ確実に読める）。
+ * - `preflop_allin`: Preflop でだれかが All-in になった（Hero でもほかの席でも。2026-09-29 さつき）。
+ *   額は読み込む前の下書きのスタックと選んだ T4 のゲームで Preflop の行を先頭から再生して判定する
  * - `unreadable`: フロップ以降のアクションがあるのにフロップが読めない（スクリーンショットなど。あきらめてもらう）
  * - `no_spot`: プリフロップで終わった、または Hero に出題できるフロップ以降のアクションが無い
+ * それ以外は画像で読んだ席とストリートのまま判定する（席のバッジ・ストリートの区切り・ボードはほぼ確実に読める）。
  * Hero の席や、どこかの行の席が読めなければ、はじかずに確認画面で直してもらう。
  */
-export function ocrPostability(r: OcrResult): 'ok' | 'unreadable' | 'no_spot' {
+export function ocrPostability(r: OcrResult, base: Draft, game: T4Game): 'ok' | 'preflop_allin' | 'unreadable' | 'no_spot' {
+  const { setup } = parseSettings(applyT4Game(base, game));
+  if (setup && ocrPreflopAllin(r, setup)) return 'preflop_allin';
   const postflop = r.actions.some((a) => a.street !== 'pf');
   if (r.board.length < 3) return postflop ? 'unreadable' : 'no_spot';
   if (r.hero === null) return 'ok';
@@ -63,6 +67,31 @@ export function ocrPostability(r: OcrResult): 'ok' | 'unreadable' | 'no_spot' {
     actions.push({ street: a.street, pos: a.pos, type: a.verb === 'allin' ? 'raise' : a.verb });
   }
   return spotCandidates(actions, r.hero).length > 0 ? 'ok' : 'no_spot';
+}
+
+/**
+ * 読み取った Preflop の行に All-in があるか。`All-in` と書かれた行に加え、額で All-in になる行
+ * （T4 は 100bb の All-in を「Raise 100bb」と書く。短いスタックの Call も）を、Preflop の行を先頭から再生して見つける。
+ * 再生できない行（読み違い・スタックの入力が画像と合わない）で止め、そこまでで判定する（残りは確認画面で直してもらう）。
+ */
+function ocrPreflopAllin(r: OcrResult, setup: HandSetup): boolean {
+  if (r.actions.some((a) => a.street === 'pf' && a.verb === 'allin')) return true;
+  const actions: Action[] = [];
+  for (const a of r.actions) {
+    if (a.street !== 'pf') break;
+    const phase = phaseOf(setup, actions, []);
+    const next = phase.kind === 'act' ? toAction(phase.state, phase.pos, phase.legal, a) : null;
+    if (phase.kind !== 'act' || !next) break;
+    actions.push(next);
+  }
+  return preflopAllin(setup, actions);
+}
+
+/** 再生した Preflop のアクションで、だれかのスタックが 0 になったか（All-in になったか） */
+function preflopAllin(setup: HandSetup, actions: readonly Action[]): boolean {
+  const states = runActions(setup, actions.filter((a) => a.street === 'pf'));
+  const last = states[states.length - 1];
+  return last !== undefined && POSITIONS.some((p) => setup.stacks[p] > 0 && last.stacks[p] === 0);
 }
 
 /** 読み取り結果から確認画面の初期状態を作る。Hero が読めなければ下書きの Hero のまま。 */
@@ -138,8 +167,10 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
   else if (phaseOf(setup, actions, board).kind !== 'done') issues.push(`${actions.length + 1}手目以降の Action が足りません`);
 
   draft = normalizeSpot({ ...draft, actions });
+  // Preflop で All-in になったハンドは、Hero でもほかの席でも投稿できない（読み込みの時点ではじく種類。2026-09-29 さつき）
+  if (preflopAllin(setup, actions)) issues.push(PREFLOP_ALLIN);
   // 最後まで再生できたのに出題できるアクションが無い（Hero の席の直し間違いなど）
-  if (issues.length === 0 && candidates(draft).length === 0) issues.push(NO_SPOT_MESSAGE);
+  else if (issues.length === 0 && candidates(draft).length === 0) issues.push(NO_SPOT_MESSAGE);
   return { draft, rows: views, issues };
 }
 

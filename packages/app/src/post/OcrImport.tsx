@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Modal } from '../components/Modal.tsx';
-import { isDirty } from './draft.ts';
+import { isDirty, PREFLOP_ALLIN } from './draft.ts';
 import { getDraft, setDraft } from './draftStore.ts';
 import { NO_SPOT_MESSAGE, ocrPostability, reviewFromOcr, type Review } from './ocrDraft.ts';
 import { OcrReview } from './OcrReview.tsx';
@@ -12,7 +12,7 @@ import { T4_GAME_ORDER, T4_GAMES, type T4Game } from './t4Games.ts';
  * ゲームの種類（通常 / エキスパート）を選ぶ → ファイル選択 → 「読み取り中…」（キャンセルできる）
  * → 確認画面（OcrReview。画像と見比べて直す）→ 反映。
  * 入力中の内容があれば、ゲームを選ぶダイアログで置き換わることを示す。
- * 投稿できないハンド（Hero のフロップ以降のアクションが無い）は、確認画面を開かずにエラーを出す。
+ * 投稿できないハンド（Hero のフロップ以降のアクションが無い、Preflop でだれかが All-in になった）は、確認画面を開かずにエラーを出す。
  * 読めなかった所はエラーとして並べ、読めたところまでフォームに入れる。
  * OCR の本体（tesseract.js）はここで初めて読み込む。画像はメモリの中だけで扱う（runOcr.ts）。
  */
@@ -51,8 +51,11 @@ export function OcrImport(props: { button?: boolean; onApplied?: () => void }): 
         const { runOcr } = await import('../ocr/runOcr.ts');
         const result = await runOcr(file, controller.signal);
         if (controller.signal.aborted) return;
-        const postable = result.problems.some((p) => p.code === 'not_six_players') ? 'unreadable' : ocrPostability(result);
+        const postable = result.problems.some((p) => p.code === 'not_six_players')
+          ? 'unreadable'
+          : ocrPostability(result, getDraft(), chosen);
         if (postable === 'unreadable') setErrors(['読み取れませんでした']);
+        else if (postable === 'preflop_allin') setErrors([PREFLOP_ALLIN]);
         else if (postable === 'no_spot') setErrors([NO_SPOT_MESSAGE]);
         else setReview({ initial: reviewFromOcr(result, chosen, getDraft().hero), imageUrl: URL.createObjectURL(file) });
       } catch {
