@@ -1,5 +1,6 @@
 import { bbToMbb, playerCountOf, type Action, type HandSetup, type Pos } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
+import { ALLIN_CASES, allinHand, allinRaw, allinTitle } from '../../../core/src/post/allinFixtures.ts';
 import { hmw, hs1, hs3, type Raw } from '../../../core/src/post/postFixtures.ts';
 import { acts } from '../../../core/src/poker/testHelpers.ts';
 import {
@@ -485,6 +486,22 @@ describe('投稿（06 章 §3.8）', () => {
   it('何か入力したら下書きあり', () => {
     expect(isDirty(emptyDraft())).toBe(false);
     expect(isDirty({ ...emptyDraft(), title: 'x' })).toBe(true);
+  });
+});
+
+describe('オールインを含むハンドの Spot（2026-09-29「オールインも他のアクションと変わらない」）', () => {
+  it.each(ALLIN_CASES.map((c) => [c.name, c] as const))('%s', (_, c) => {
+    // 画面と同じ操作で入れ、候補は Flop 以降の Hero の手番すべて（オールインも、その前の手番も）
+    const d = play(allinHand(c));
+    expect(phaseOf(parseSettings(d).setup, d.actions, d.board).kind).toBe('done');
+    const list = candidates(d);
+    expect(list.map((x) => x.label)).toEqual(c.spots.map(([label]) => label));
+    // どの候補を選んでも投稿でき、送る本文は core の見本と一致する（サーバーと同じ検証も通る）
+    for (const { index } of list) {
+      const s = buildSubmission({ ...selectSpot(d, index), title: allinTitle(c) });
+      expect(s.ok ? null : s.errors).toBeNull();
+      if (s.ok) expect(s.body).toEqual(allinRaw(c, index));
+    }
   });
 });
 

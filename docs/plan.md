@@ -726,3 +726,12 @@
 - **変更したファイル**: `packages/core/src/{poker/spot.ts,poker/spot.test.ts,poker/seats.test.ts,post/*,errors.ts}`、`packages/functions/src/createPost/{payload.ts,handler.test.ts}`、`db/migrations/20260929000000_hero_spot.sql`（新規）、`db/tests/{01_access.test.sql,helpers/setup.psql}`、`db/seed/*.sql`、`scripts/db.mjs`、`packages/app/src/`（draft・SpotSection・replayModel・Replay・resultModel・postDetail・Answer / Result / List / NewPost / Login の画面・ⓘ・CSS・テスト）、`e2e/*.spec.ts`、`docs/detailed-spec/{00-index,01〜06（注記）,09-info-modal,16-hero-spot（新規）}.md`、`CLAUDE.md`、`docs/plan.md`
 - **確認**: 型検査・単体 541 件・E2E 68 件・pgTAP 140 件（一時ブランチで新しいマイグレーションまで適用）が通る。412×915 で投稿のスポット・回答（Replay / Range）・集計を画面で確かめた。
 - **残課題**: さつきの確認 → PR・マージ。本番の切り替え（マイグレーション・create-post。本番はさつきが実行）。
+
+### 2026-09-29（セッション 7 の続き・オールインの Spot の試験）
+
+- **行ったこと**: さつきの指摘（オールインのハンドで Spot が「候補なし」）を調べた。原因は、確認に使ったブラウザのタブが core の `spot.ts` を古い版（Villain の応答を要求する判定）のまま持っていたこと（画面は新しい版）。読み込み直すと新しい判定になる。コードの不具合ではなかったが、「オールインも他のアクションと変わらない」を 22 通りの見本で試験に固定した。
+  - 見本 `packages/core/src/post/allinFixtures.ts`（River / Turn / Flop / Preflop の All-in、Hero の All-in・相手の All-in への Call / Fold、Check-raise の All-in、短いスタック・足りない額の Call、3 人とサイドポット、Hero が BB、Heads-up、MTT）。
+  - core `allin.test.ts`（候補・キー・サーバーと同じ検証）、下書き `draft.test.ts`（画面と同じ操作で入れ、候補の表示と送る本文）、E2E `e2e/allin.spec.ts`（画面を操作して入れ、候補を 1 つずつ選んで投稿。create-post は本物の処理に通し、DB の保存だけを偽にする）。
+- **確認**: 型検査・単体 586 件・E2E 90 件が通る。
+- **残課題**: dev の画面から実際に投稿するには、dev へのマイグレーションと create-post の dev への配備が要る（さつきの確認後）。
+
