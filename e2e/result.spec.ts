@@ -162,6 +162,20 @@ test.describe('実際の Action と Hand History（06 章 §5.3・§5.4）', () 
     await expect(page.getByText('1 / 15 手目')).toBeVisible();
     await expect(page.locator('.hlog-list li.latest')).toHaveText('UTG Fold');
   });
+
+  test('River まで続くハンドの途中の Spot: 出題の局面（Hero の Call の直前）だけ卓に SPOT（17 章）', async ({ page }) => {
+    await open(page);
+    // 最後の状態（River の Showdown）では出さない
+    await expect(page.getByText('15 / 15 手目')).toBeVisible();
+    await expect(page.locator('.pseat-spot')).toHaveCount(0);
+    await page.keyboard.press('Home');
+    for (let i = 0; i < 11; i++) await page.keyboard.press('ArrowRight');
+    await expect(page.getByText('11 / 15 手目')).toBeVisible();
+    await expect(page.locator('.ptable.at-spot .pseat-spot')).toBeVisible();
+    await expect(page.locator('.ptable-board .pcard')).toHaveCount(4);
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.pseat-spot')).toHaveCount(0);
+  });
 });
 
 test.describe('次の Spot（14 章）', () => {

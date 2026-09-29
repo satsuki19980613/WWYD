@@ -729,54 +729,55 @@
 .sp-nums { display: flex; gap: var(--s4); margin-left: auto; font-size: 17px; color: var(--fg); white-space: nowrap; }
 .sp-nums .mono-lbl { margin-right: 4px; font-style: normal; }
 
-/* ---- 出題の局面（17 章。2026-09-29 さつき: どこが出題か分かるようにアニメで） ----
- * 卓の縁を黄で 1 回光らせ、Hero の席を黄で脈打たせ、席の右に「SPOT」の札を出す。進み具合のバーには黄の目盛り。
- * 視差効果を減らす設定ではアニメを止め、札と枠だけを出す（base.css）。 */
+/* ---- 出題の局面（17 章。2026-09-29 さつき: どこが出題か分かるようにアニメで。派手すぎないよう静かに） ----
+ * 卓の縁を黄で 1 回うっすら光らせ、Hero の席をゆっくり淡く光らせ、席の右に「SPOT」の札（黄の枠と文字）を出す。
+ * 進み具合のバーには黄の目盛り。視差効果を減らす設定ではアニメを止め、枠と札だけを出す（base.css）。 */
 .ptable.at-spot::after {
   content: '';
   position: absolute;
   inset: 9% 6%;
   border-radius: 50%;
-  border: 2px solid var(--yellow);
+  border: 1px solid rgba(252, 238, 10, 0.6);
   pointer-events: none;
   opacity: 0;
-  animation: spot-ring 1100ms var(--ease) 1;
+  animation: spot-ring 1600ms var(--ease) 1;
 }
 @keyframes spot-ring {
-  0% { opacity: 0.95; transform: scale(0.97); }
-  100% { opacity: 0; transform: scale(1.07); }
+  0% { opacity: 0; }
+  30% { opacity: 0.45; }
+  100% { opacity: 0; }
 }
 /* 席のプレートは面取り（clip-path）で影が切れるので、光は席全体の drop-shadow で出す */
-.ptable.at-spot .pseat.hero .pseat-plate { border-color: var(--yellow); }
-.ptable.at-spot .pseat.hero { animation: spot-pulse 1400ms ease-in-out infinite; }
+.ptable.at-spot .pseat.hero .pseat-plate { border-color: rgba(252, 238, 10, 0.7); }
+.ptable.at-spot .pseat.hero { animation: spot-pulse 2800ms ease-in-out infinite; }
 @keyframes spot-pulse {
-  0%, 100% { filter: drop-shadow(0 0 3px rgba(252, 238, 10, 0.45)); }
-  50% { filter: drop-shadow(0 0 14px rgba(252, 238, 10, 0.95)); }
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(252, 238, 10, 0.2)); }
+  50% { filter: drop-shadow(0 0 6px rgba(252, 238, 10, 0.45)); }
 }
 .pseat-spot {
   position: absolute;
-  left: calc(100% + 10px);
+  left: calc(100% + 8px);
   top: 50%;
   transform: translateY(-50%);
-  padding: 3px 10px;
-  background: var(--yellow);
-  color: var(--yellow-ink);
+  padding: 1px 7px;
+  border: 1px solid rgba(252, 238, 10, 0.6);
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--yellow);
   font-family: var(--disp);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
-  clip-path: var(--chamfer-xs);
-  animation: spot-in 420ms var(--ease) both;
+  animation: spot-in 500ms var(--ease) both;
 }
 @keyframes spot-in {
-  from { opacity: 0; transform: translate(-10px, -50%) scale(0.8); }
-  to { opacity: 1; transform: translateY(-50%) scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .rp-bar { position: relative; overflow: visible; }
 .rp-bar i { overflow: hidden; }
-.rp-spot { position: absolute; top: -4px; width: 3px; height: 12px; margin-left: -1.5px; background: var(--yellow); box-shadow: 0 0 6px rgba(252, 238, 10, 0.7); }
+.rp-spot { position: absolute; top: -3px; width: 2px; height: 10px; margin-left: -1px; background: var(--yellow); opacity: 0.8; }
 
 /* スマホのスポットの要約も、出題の局面だと分かるよう黄の枠（PC の見出しと同じ。17 章） */
 .spot-strip { border-color: rgba(252, 238, 10, 0.4); }

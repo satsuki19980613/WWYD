@@ -781,3 +781,6 @@
 - **変更したファイル**: `db/migrations/20260929000002_list_board.sql`（新規）、`db/tests/07_list.test.sql`、`packages/app/src/{components/FitStage.tsx（新規）,screens/{List,Answer,Result,NewPost}Screen.tsx,answer/Replay.tsx,list/spotList.ts,info/infoSections.ts,styles/{base,screens,answer,post}.css}`、`e2e/{fakeBackend,answer.spec,list.spec（新規）}.ts`、`docs/detailed-spec/{09-info-modal,17-pc-ui}.md`、`docs/plan.md`
 - **確認**: 型検査・単体 631 件・E2E 97 件・pgTAP 144 件が通る。1134×760（さつきの画面の幅）とスマホ（375×812）で一覧・投稿・回答・集計を画面で確かめた。
 - **残課題**: 本番へのマイグレーションの適用（マージの前に。さつき）。さつきの確認 → push・PR・マージ。
+- **追記（さつきの確認）**: 出題の局面の演出を静かにした（縁の光は薄く 1 回、席の光は 2.8 秒周期で淡く、SPOT の札は黄の枠と文字、フェードで出す）。
+  River まで入れたハンドで Flop の Hero の手番を出題した場合を dev で確かめた: 一覧の Board は Flop の 3 枚、回答画面の Replay は Flop の Hero の手番の直前で止まり（7 / 7 手目。Turn・River は出ない。サーバーも返さない＝pgTAP DB-13）、
+  回答後の集計は River まで再生でき、Spot の位置（7 / 15 手目）で SPOT の札とバーの目盛り、ログに「出題」。E2E に集計の途中の Spot の試験を足した（98 件）。
