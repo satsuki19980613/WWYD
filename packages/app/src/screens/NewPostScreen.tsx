@@ -61,6 +61,7 @@ export function NewPostScreen(): JSX.Element {
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [seat, setSeat] = useState<Pos | null>(null);
+  const [ocrSlot, setOcrSlot] = useState<HTMLDivElement | null>(null);
   const [attempted, setAttempted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -259,32 +260,44 @@ export function NewPostScreen(): JSX.Element {
       onCancel={() => setRecount(null)}
     />
   );
-  // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ。
+  // 画像の読み込みは PC とスマホで同じ位置（画面の外側の最初の子）に置き、幅が変わってレイアウトが切り替わっても
+  // 読み込み・確認の途中の状態を保つ（06 章 §3.9。リリース前テスト T-A F2）。ボタンだけを画面の中の置き場所へ映す。
   // 反映したらスマホはアクションのステップへ（読み込んだアクションとスポットの確認に進む。2026-09-29）
-  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => {
-    setFuture([]);
-    setStep(ACTION_STEP);
-  }} />;
+  const ocrImport = (
+    <OcrImport
+      key="ocr"
+      button={!mobile || step === 0}
+      slot={ocrSlot}
+      onApplied={() => {
+        setFuture([]);
+        setStep(ACTION_STEP);
+      }}
+    />
+  );
+  const ocrPlace = <div ref={setOcrSlot} className="pf-ocr-slot" />;
 
   if (!mobile) {
     return (
-      <FitStage className="screen pf">
-        {ocr(true)}
-        <div className="pf-grid">
-          <div className="pf-col">
-            {settings}
-            {players}
+      <>
+        {ocrImport}
+        <FitStage className="screen pf">
+          {ocrPlace}
+          <div className="pf-grid">
+            <div className="pf-col">
+              {settings}
+              {players}
+            </div>
+            <div className="pf-col">{actions}</div>
+            <div className="pf-col">
+              {spot}
+              <ErrorList errors={errors} />
+              {submitButton}
+            </div>
           </div>
-          <div className="pf-col">{actions}</div>
-          <div className="pf-col">
-            {spot}
-            <ErrorList errors={errors} />
-            {submitButton}
-          </div>
-        </div>
-        {keyboard}
-        {recountDialog}
-      </FitStage>
+          {keyboard}
+          {recountDialog}
+        </FitStage>
+      </>
     );
   }
 
@@ -294,47 +307,50 @@ export function NewPostScreen(): JSX.Element {
   const docked = step === ACTION_STEP && (phase.kind === 'act' || phase.kind === 'board');
   const fill = !seat && step === ACTION_STEP && phase.kind !== 'invalid';
   return (
-    <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
-      <nav className="pf-steps" aria-label="ステップ">
-        {STEPS.map((name, i) => (
-          <button
-            key={name}
-            type="button"
-            className={`pf-step ${done[i] ? 'done' : ''}`}
-            aria-current={i === step ? 'step' : undefined}
-            onClick={() => setStep(i)}
-          >
-            <span className="num">{i + 1}</span>
-            {name}
-          </button>
-        ))}
-      </nav>
-      {ocr(step === 0)}
-      {step === 0 && settings}
-      {step === 1 && players}
-      {step === 2 && actions}
-      {step === 3 && spot}
-      {/* 台を出している間は戻る・次へを隠す（13 章） */}
-      {!seat && !docked && (
-        <div className="pf-bar" ref={barRef}>
-          <ErrorList errors={errors} />
-          <div className="btn-row">
-            <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
-              Back
+    <>
+      {ocrImport}
+      <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
+        <nav className="pf-steps" aria-label="ステップ">
+          {STEPS.map((name, i) => (
+            <button
+              key={name}
+              type="button"
+              className={`pf-step ${done[i] ? 'done' : ''}`}
+              aria-current={i === step ? 'step' : undefined}
+              onClick={() => setStep(i)}
+            >
+              <span className="num">{i + 1}</span>
+              {name}
             </button>
-            {last ? (
-              submitButton
-            ) : (
-              <button type="button" className="btn" onClick={() => setStep((s) => s + 1)}>
-                次へ：{STEPS[step + 1]}
+          ))}
+        </nav>
+        {ocrPlace}
+        {step === 0 && settings}
+        {step === 1 && players}
+        {step === 2 && actions}
+        {step === 3 && spot}
+        {/* 台を出している間は戻る・次へを隠す（13 章） */}
+        {!seat && !docked && (
+          <div className="pf-bar" ref={barRef}>
+            <ErrorList errors={errors} />
+            <div className="btn-row">
+              <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+                Back
               </button>
-            )}
+              {last ? (
+                submitButton
+              ) : (
+                <button type="button" className="btn" onClick={() => setStep((s) => s + 1)}>
+                  次へ：{STEPS[step + 1]}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-      {mobileKeyboard}
-      {recountDialog}
-    </section>
+        )}
+        {mobileKeyboard}
+        {recountDialog}
+      </section>
+    </>
   );
 }
 
