@@ -1,6 +1,7 @@
 import { bbToMbb, playerCountOf, type Action, type HandSetup, type Pos } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
 import { hmw, hs1, hs3, type Raw } from '../../../core/src/post/postFixtures.ts';
+import { acts } from '../../../core/src/poker/testHelpers.ts';
 import {
   actionLog,
   addAction,
@@ -38,11 +39,24 @@ import {
 } from './draft.ts';
 import { messageForCode } from './errorMessages.ts';
 
+/** 見本のプリフロップのまま、フロップのアクションを差し替える（額は bb。見本の JSON の形） */
+function rawActs(base: Raw, flop: string): Raw[] {
+  const pf = (base.actions as Raw[]).filter((a) => a.street === 'pf');
+  const f = acts({ flop }).map((a) => (a.to === undefined ? { ...a } : { ...a, to: a.to / 1000 }));
+  return [...pf, ...f];
+}
+
 /** 6 人を選んだ下書き */
 const six = (): Draft => ({ ...emptyDraft(), players: 6 });
 
 /** 見本（03 章 §3.1 の形）を画面の操作どおりに入力した下書き。ボードはストリートが進むたびに足す。 */
 function enter(raw: Raw): Draft {
+  const d = selectSpot(play(raw), raw.spot_index as number);
+  return { ...d, villain: raw.villain as Pos, title: raw.title as string };
+}
+
+/** 見本のアクションとボードを入れるだけ（スポットは選ばない） */
+function play(raw: Raw): Draft {
   let d: Draft = six();
   const stacks = raw.stacks as Record<Pos, number>;
   d = {
@@ -78,8 +92,7 @@ function enter(raw: Raw): Draft {
     d = addBoardCard(d, board[d.board.length] as string);
     ph = phaseOf(setup, d.actions, d.board);
   }
-  d = selectSpot(d, raw.spot_index as number);
-  return { ...d, villain: raw.villain as Pos, title: raw.title as string };
+  return d;
 }
 
 describe('基本設定（06 章 §3.3）', () => {
@@ -404,6 +417,38 @@ describe('Spot（06 章 §3.7）', () => {
     expect(selectSpot(d, 10).villain).toBe('BB');
     const mw = { ...enter(hmw()), spotIndex: null, villain: null }; // CO b3 の区間は BTN・BB
     expect(selectSpot(mw, 7)).toMatchObject({ spotIndex: 7, villain: null });
+  });
+
+  describe('Hero のオールインは、ハンドが終わったらスポットに自動で選ぶ（2026-09-29）', () => {
+    const shove = (flop: string, base: Raw = hs1()): Raw => ({ ...base, actions: rawActs(base, flop) });
+
+    it('ヘッズアップ: Villain はコールした席', () => {
+      const d = play(shove('BB x, BTN b97.5, BB c'));
+      expect(d).toMatchObject({ spotIndex: 7, villain: 'BB' });
+      expect(candidates(d).find((c) => c.index === 7)?.label).toBe('Flop / BTN Bet 97.5');
+    });
+
+    it('マルチウェイ: Villain は最後まで残った最初の席（選び直せる）', () => {
+      const d = play(shove('BB x, CO b97.5, BTN f, BB c', hmw()));
+      expect(d).toMatchObject({ spotIndex: 7, villain: 'BB' });
+      expect(candidates(d).find((c) => c.index === 7)?.villains).toEqual(['BTN', 'BB']);
+    });
+
+    it('オールインが重なった（2 人がコール）: 最初にコールした席', () => {
+      const d = play(shove('BB x, CO b97.5, BTN c, BB c', hmw()));
+      expect(d).toMatchObject({ spotIndex: 7, villain: 'BTN' });
+    });
+
+    it('全員フォールド: 最初にアクションした席', () => {
+      const d = play(shove('BB x, CO b97.5, BTN f, BB f', hmw()));
+      expect(d).toMatchObject({ spotIndex: 7, villain: 'BTN' });
+    });
+
+    it('ハンドが終わる前は選ばない。自分で選んだスポットは変えない', () => {
+      const raw = shove('BB x, CO b97.5, BTN f, BB c', hmw());
+      const partial = { ...raw, actions: (raw.actions as Raw[]).slice(0, -1), board: (raw.board as string[]).slice(0, 3) };
+      expect(play(partial)).toMatchObject({ spotIndex: null, villain: null });
+    });
   });
 
   it('Action を戻して候補が消えたら選択を解除', () => {

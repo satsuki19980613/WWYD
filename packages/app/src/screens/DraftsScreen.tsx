@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
-import { ChevronIcon } from '../components/Icons.tsx';
+import { ChevronIcon, TrashIcon } from '../components/Icons.tsx';
 import { Link } from '../components/Link.tsx';
 import { formatAgo } from '../list/spotList.ts';
 import { openDraft } from '../post/draftStore.ts';
@@ -22,7 +22,7 @@ export function DraftsScreen(): JSX.Element {
         <div className="list-empty">
           <p className="list-empty-label">下書きなし</p>
           <Link to="/new" className="btn auto">
-            Spot を投稿
+            Post
           </Link>
         </div>
       </section>
@@ -41,6 +41,10 @@ export function DraftsScreen(): JSX.Element {
             <article key={e.id} className="spot-card">
               <div className="spot-top">
                 <span className="spot-fmt num">{formatAgo(e.savedAt, now)}に保存</span>
+                {/* 削除は一覧のカードと同じく右上（2026-09-29） */}
+                <button type="button" className="spot-del" aria-label="削除" onClick={() => setDeleting(e)}>
+                  <TrashIcon />
+                </button>
               </div>
               <h2 className="spot-title">
                 <a
@@ -58,14 +62,9 @@ export function DraftsScreen(): JSX.Element {
               <p className="spot-seats num">{s.meta}</p>
               <div className="spot-foot">
                 <span />
-                <span className="spot-ops">
-                  <button type="button" className="btn red auto sm" onClick={() => setDeleting(e)}>
-                    削除
-                  </button>
-                  <span className="spot-go primary" aria-hidden="true">
-                    開く
-                    <ChevronIcon />
-                  </span>
+                <span className="spot-go primary" aria-hidden="true">
+                  開く
+                  <ChevronIcon />
                 </span>
               </div>
             </article>

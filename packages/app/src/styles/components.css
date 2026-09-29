@@ -203,6 +203,8 @@
 }
 .select-trigger:hover:not(:disabled) { border-color: var(--line-2); }
 .select-trigger:disabled { opacity: 0.45; cursor: default; }
+.select.fixed .select-trigger:disabled { opacity: 1; color: var(--fg); }
+.select.fixed .select-chev { visibility: hidden; }
 .select.open .select-trigger { border-color: var(--cyan); }
 .select-chev { flex: none; color: var(--dim); transition: transform 150ms var(--ease); }
 .select.open .select-chev { transform: rotate(180deg); }

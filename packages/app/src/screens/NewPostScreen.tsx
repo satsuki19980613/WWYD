@@ -243,7 +243,7 @@ export function NewPostScreen(): JSX.Element {
           <ErrorList errors={errors} />
           <div className="btn-row">
             <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
-              戻る
+              Back
             </button>
             {last ? (
               submitButton

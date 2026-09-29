@@ -419,12 +419,43 @@ export function candidates(d: Draft): { index: number; villains: Pos[]; label: s
   });
 }
 
-/** 候補から消えたスポット・Villain の選択を解除し、Villain が 1 席なら自動で選ぶ（06 章 §3.7）。 */
+/**
+ * 候補から消えたスポット・Villain の選択を解除し、Villain が 1 席なら自動で選ぶ（06 章 §3.7）。
+ * Hero のオールインは、ハンドが終わったらスポットに自動で選ぶ（allinSpot）。
+ */
 export function normalizeSpot(d: Draft): Draft {
-  const c = candidates(d).find((x) => x.index === d.spotIndex);
-  if (!c) return d.spotIndex === null && d.villain === null ? d : { ...d, spotIndex: null, villain: null };
+  const all = candidates(d);
+  const c = all.find((x) => x.index === d.spotIndex);
+  if (!c) {
+    const auto = allinSpot(d, all);
+    if (auto) return { ...d, spotIndex: auto.index, villain: auto.villain };
+    return d.spotIndex === null && d.villain === null ? d : { ...d, spotIndex: null, villain: null };
+  }
   if (c.villains.length === 1) return c.villains[0] === d.villain ? d : { ...d, villain: c.villains[0] as Pos };
-  return d.villain !== null && !c.villains.includes(d.villain) ? { ...d, villain: null } : d;
+  if (d.villain !== null && !c.villains.includes(d.villain)) return { ...d, villain: null };
+  if (d.villain === null) {
+    const auto = allinSpot(d, all);
+    if (auto && auto.index === c.index) return { ...d, villain: auto.villain };
+  }
+  return d;
+}
+
+/**
+ * Hero のオールイン（2026-09-29 さつき）。オールインの後に Hero のアクションは無いので、出題はそのアクションに決まる。
+ * ハンドが終わっていて、Hero のオールインが候補にあれば、そのスポットと Villain を返す。
+ * Villain が複数（マルチウェイ・オールインが重なった）ときは、最後まで残った（コールした）最初の席。
+ * 残った席が無ければ（全員フォールド）、最初にアクションした席。どちらも Villain の欄で選び直せる。
+ */
+function allinSpot(d: Draft, all: readonly { index: number; villains: Pos[] }[]): { index: number; villain: Pos } | null {
+  const { setup } = parseSettings(d);
+  if (!setup) return null;
+  const phase = phaseOf(setup, d.actions, d.board);
+  if (phase.kind !== 'done') return null;
+  const states = runActions(setup, d.actions);
+  const c = all.find((x) => (states[x.index + 1] as State | undefined)?.stacks[d.hero] === 0);
+  if (!c) return null;
+  const villain = c.villains.find((p) => !phase.state.folded.has(p)) ?? (c.villains[0] as Pos);
+  return { index: c.index, villain };
 }
 
 export function selectSpot(d: Draft, index: number): Draft {
@@ -456,7 +487,8 @@ export function clearActions(d: Draft): Draft {
 }
 
 export function addBoardCard(d: Draft, card: Card): Draft {
-  return d.board.length >= 5 ? d : { ...d, board: [...d.board, card] };
+  // ボードが揃ってハンドが終わると、Hero のオールインのスポットを自動で選ぶことがある（normalizeSpot）
+  return d.board.length >= 5 ? d : normalizeSpot({ ...d, board: [...d.board, card] });
 }
 
 /** ボードの i 枚目を押す: そのカード以降のボードと、そのストリート以降のアクションを消す（確認なし） */

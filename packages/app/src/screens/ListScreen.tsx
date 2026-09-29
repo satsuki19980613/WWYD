@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChipGroup } from '../components/ChipGroup.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
-import { ChevronIcon } from '../components/Icons.tsx';
+import { ChevronIcon, TrashIcon } from '../components/Icons.tsx';
 import { Link } from '../components/Link.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { Tabs } from '../components/Tabs.tsx';
@@ -65,7 +65,7 @@ export function ListScreen(): JSX.Element {
           <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
           {!mobile && (
             <Link to="/new" className="btn auto">
-              ＋ Spot を投稿
+              ＋ Post
             </Link>
           )}
         </div>
@@ -118,7 +118,7 @@ export function ListScreen(): JSX.Element {
       {mobile && (
         <div className="list-fab">
           <Link to="/new" className="btn">
-            ＋ Spot を投稿
+            ＋ Post
           </Link>
         </div>
       )}
@@ -151,6 +151,12 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
         <span className="spot-fmt num">{formatLabel(row)}</span>
         {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
         {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
+        {/* 削除はカードの右上に固定（右下の「回答する」「結果を見る」の幅で位置が変わらないように。2026-09-29 さつき） */}
+        {row.can_delete && (
+          <button type="button" className="spot-del" aria-label="削除" onClick={props.onDelete}>
+            <TrashIcon />
+          </button>
+        )}
       </div>
       <h2 className="spot-title">
         <Link to={action.to} className="spot-link">
@@ -171,16 +177,9 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
         <span className="spot-meta">
           <span className="num spot-count">{row.answer_count}</span> 人が回答 · {formatAgo(row.created_at, props.now)}
         </span>
-        <span className="spot-ops">
-          {row.can_delete && (
-            <button type="button" className="btn red auto sm" onClick={props.onDelete}>
-              削除
-            </button>
-          )}
-          <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
-            {action.label}
-            <ChevronIcon />
-          </span>
+        <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
+          {action.label}
+          <ChevronIcon />
         </span>
       </div>
     </article>
@@ -194,7 +193,7 @@ function Empty(props: { query: ListQuery }): JSX.Element {
       <p className="list-empty-label">{e.label}</p>
       {e.showPost && (
         <Link to="/new" className="btn auto">
-          Spot を投稿
+          Post
         </Link>
       )}
     </div>

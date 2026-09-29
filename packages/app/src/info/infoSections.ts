@@ -28,7 +28,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
   },
   list: {
     id: 'list',
-    title: 'Spot 一覧',
+    title: 'List',
     items: [
       { term: 'タブ', desc: '「すべて」と「自分の投稿」。' },
       { term: 'フィルタ', desc: 'Spot の Street（Flop〜River）で絞り込み、新着順または回答数順に並び替え。' },
@@ -36,6 +36,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         term: '遷移',
         desc: 'Card を押すと、未回答の Spot は回答画面へ、回答済みの Spot は集計画面へ進む。自分の投稿にも回答でき、集計は回答するまで見られない。',
       },
+      { term: '削除', desc: '自分の投稿は Card の右上のごみ箱のマークから削除できる（回答もまとめて消える。元に戻せない）。' },
     ],
   },
   answer: {
@@ -98,7 +99,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
   },
   new: {
     id: 'new',
-    title: 'Spot 投稿',
+    title: 'Post',
     items: [
       {
         term: '画像読み込み',
