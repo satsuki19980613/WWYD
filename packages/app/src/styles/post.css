@@ -255,49 +255,51 @@
 .ad-btns .act-btn small { font-size: 10px; font-weight: 400; letter-spacing: 0.04em; }
 .ad-btns .act-btn.s1:not(:disabled) { background: rgba(252, 238, 10, 0.1); }
 
+/* 画像読み込みの確認のボード（大きい枠） */
 .pf-board { display: flex; gap: var(--s2); }
+.pf-board .pf-bslot { width: 46px; height: 62px; border: 1px dashed var(--line-2); border-radius: 4px; background: none; box-shadow: none; font-size: 20px; }
+.pf-board .pf-bslot:disabled { cursor: default; }
+.pf-board .pf-bslot:not(:disabled):not(.filled) { border-style: solid; border-color: rgba(58, 230, 255, 0.55); }
+.pf-board .pf-bslot.filled { border: 0; }
+.pf-board .pf-bslot.filled .pcard { width: 46px; height: 62px; font-size: 23px; border-radius: 4px; }
+.pf-board .pf-bslot.filled .pcard em { font-size: 18px; }
+.pf.sp .pf-board .pf-bslot { width: 100%; max-width: 56px; }
+
+/* ---- 入力中の卓（14 章）: 回答画面の卓と同じ部品。ボードの枠は押せる ---- */
+.pf .ptable { height: 360px; }
+.ptable.live .ptable-mid { pointer-events: auto; }
+.ptable.live .ptable-slot, .ptable.live .ptable-board .pcard { width: 30px; height: 42px; font-size: 16px; }
 .pf-bslot {
-  width: 46px;
-  height: 62px;
+  flex: none;
+  width: 30px;
+  height: 42px;
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px dashed var(--line-2);
-  border-radius: 4px;
-  background: none;
+  border: 1px solid var(--cyan);
+  border-radius: var(--r-sm);
+  background: rgba(4, 14, 32, 0.6);
+  box-shadow: 0 0 10px rgba(58, 230, 255, 0.35);
   color: var(--cyan);
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
 }
-.pf-bslot:disabled { cursor: default; }
-.pf-bslot:not(:disabled):not(.filled) { border-style: solid; border-color: rgba(58, 230, 255, 0.55); }
-.pf-bslot.filled { border: 0; }
+.pf-bslot.filled { border: 0; background: none; box-shadow: none; }
 /* まだ来ていないストリートのカード（1つ戻すで残ったもの） */
 .pf-bslot.filled.ahead { opacity: 0.35; }
-.pf-bslot.filled .pcard { width: 46px; height: 62px; font-size: 23px; border-radius: 4px; }
-.pf-bslot.filled .pcard em { font-size: 18px; }
 .pf-undo .btn { min-height: 40px; font-size: 14px; }
-
-.pf-log { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--s3); }
-.pf-log-col { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2); border: 1px solid var(--line); background: var(--surface); }
-.pf-log-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s1); min-height: 30px; }
-.pf-log-board { display: flex; gap: 2px; }
-.pf-log-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--dim); }
-.pf-log-list li.latest { color: var(--yellow); }
-
-.pf-end {
-  position: relative;
-  padding: var(--s4);
-  border: 1px solid var(--line);
-  background: linear-gradient(135deg, rgba(252, 238, 10, 0.08), transparent 55%), var(--surface);
+/* ログの 1 手（押すとその手から入れ直す） */
+.hlog-pick {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.pf-end .brk { position: absolute; width: 14px; height: 14px; border: 0 solid var(--yellow); }
-.pf-end .brk.tl { left: 6px; top: 6px; border-left-width: 2px; border-top-width: 2px; }
-.pf-end .brk.br { right: 6px; bottom: 6px; border-right-width: 2px; border-bottom-width: 2px; }
-.pf-end-title { font-family: var(--disp); font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
-.pf-end-seats { margin: var(--s2) 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
-.pf-end-seats li { display: flex; align-items: center; gap: var(--s2); }
-.pf-end-cards { display: flex; gap: 3px; }
+.hlog-pick:hover { color: var(--fg); }
+.hlog-pick:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 .pf-muck { font-size: 12px; color: var(--dim); }
 
 /* ---- スポット ---- */
@@ -391,7 +393,6 @@
 .pf.sp .pf-act-btns { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .pf.sp .pf-act-btns .act-btn { grid-column: span 2; }
 .pf.sp .pf-act-btns .act-btn.s1 { grid-column: span 3; }
-.pf.sp .pf-bslot { width: 100%; max-width: 56px; }
 
 /* キーボードを開いている間は、下に隠れないよう余白を足す */
 .pf.kb-open { padding-bottom: 420px; }
@@ -623,3 +624,9 @@
   .ocr-rv-form { overflow: visible; }
   .ocr-rv-row { grid-template-columns: 20px 32px minmax(0, 1fr) 84px 32px 32px; gap: var(--s1); }
 }
+
+/* 入力中の卓（スマホ。回答画面の卓と同じ詰め方） */
+.pf.sp .ptable { height: 330px; margin-bottom: var(--s3); }
+.pf.sp .pseat-plate { min-width: 72px; padding: 3px 6px; }
+.pf.sp .pseat-stack { font-size: 13px; }
+.pf.sp .ptable-felt { inset: 38px 20% 50px; }

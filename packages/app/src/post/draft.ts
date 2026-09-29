@@ -256,8 +256,7 @@ export function sizePresets(state: State, legal: Legal): SizePreset[] {
   // % pot は 0.1bb に丸める（ログ・集計の表示で 1.82 のような額にしない）。倍率は 0.01bb
   const raw: { label: string; to: number; unit: number }[] = [];
   if (state.street === 'pf' && state.currentBet <= bb) {
-    // リンプ（BB と同額を出した BB 以外の席）
-    const limpers = state.seated.filter((p) => p !== 'BB' && state.bets[p] === bb && !state.folded.has(p)).length;
+    const limpers = limperCount(state);
     const opens = limpers === 0 ? [2, 2.2, 2.5, 3] : [3, 4, 5].map((x) => x + limpers);
     for (const x of opens) raw.push({ label: formatBb(x * bb), to: x * bb, unit: 10 });
   } else if (state.street === 'pf') {
@@ -284,6 +283,32 @@ export function defaultPreset(state: State, legal: Legal): Mbb | null {
   const ps = sizePresets(state, legal);
   const want = state.street === 'pf' ? (state.currentBet <= state.bb ? '2.5' : '×3') : state.currentBet === 0 ? '33%' : '×3';
   return ps.find((p) => p.label === want)?.to ?? ps.find((p) => !p.allin)?.to ?? range.min;
+}
+
+/** プリフロップのリンプの人数（BB と同額を出した BB 以外の席） */
+function limperCount(state: State): number {
+  return state.seated.filter((p) => p !== 'BB' && state.bets[p] === state.bb && !state.folded.has(p)).length;
+}
+
+/**
+ * 台のベット・レイズのボタンの名前（13 章 §6。2026-09-29）。プレイヤーが呼ぶ名前で出す。
+ * - プリフロップ: 最初のレイズは「オープン」（リンプがいれば「レイズ」）、2 回目から「3bet」「4bet」…
+ * - フロップ以降: 「ベット」、2 回目は「レイズ」、3 回目から「3bet」「4bet」…
+ * `actions` はこれまでのアクション（このストリートのベット・レイズの回数を数える）。
+ */
+export function aggressiveName(state: State, actions: readonly Action[]): string {
+  const n = actions.filter((a) => a.street === state.street && (a.type === 'bet' || a.type === 'raise')).length;
+  if (state.street === 'pf') {
+    if (n === 0) return limperCount(state) === 0 ? 'オープン' : 'レイズ';
+    return `${n + 2}bet`;
+  }
+  if (n === 0) return 'ベット';
+  return n === 1 ? 'レイズ' : `${n + 1}bet`;
+}
+
+/** 台のコールのボタンの名前: プリフロップでレイズが無いときの BB 以外のコールは「リンプ」 */
+export function callName(state: State, pos: Pos): string {
+  return state.street === 'pf' && state.currentBet === state.bb && pos !== 'BB' ? 'リンプ' : 'コール';
 }
 
 /**
@@ -369,6 +394,11 @@ export function addActions(d: Draft, actions: readonly Action[]): Draft {
 /** 「1つ戻す」: 最後のアクションだけ取り消す（ボードは残す） */
 export function undoAction(d: Draft): Draft {
   return normalizeSpot({ ...d, actions: d.actions.slice(0, -1) });
+}
+
+/** ログの 1 手を押して「ここから入れ直す」: その手以降のアクションを消す（ボードは残す。13 章 §6） */
+export function truncateActions(d: Draft, index: number): Draft {
+  return normalizeSpot({ ...d, actions: d.actions.slice(0, Math.max(0, index)) });
 }
 
 /** 「すべて消す」: アクションとボードを消す（ロック解除） */

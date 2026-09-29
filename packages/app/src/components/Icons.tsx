@@ -60,3 +60,12 @@ export function RedoIcon(): JSX.Element {
     </svg>
   );
 }
+
+/** 進む（一覧のカードの右下） */
+export function ChevronIcon(): JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M7.5 4l6 6-6 6" {...stroke} strokeWidth={2} />
+    </svg>
+  );
+}

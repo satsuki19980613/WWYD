@@ -401,8 +401,14 @@
 .gauge::-moz-range-thumb { width: 16px; height: 22px; border: 0; border-radius: 0; background: var(--yellow); }
 .gauge:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-/* ---- 集計バー（1326 combos） ---- */
+/* ---- レンジのまとめ（大きさ＋レンジの中のアクションの割合。14 章） ---- */
 .cbar { display: flex; flex-direction: column; gap: var(--s2); }
+.cbar-top { display: flex; align-items: baseline; gap: var(--s3); font-size: 12px; color: var(--dim); }
+.cbar-lbl { font-family: var(--disp); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--fg); min-width: 2.5em; }
+.cbar-size { margin-left: auto; white-space: nowrap; }
+.cbar-size b { font-weight: 400; color: var(--fg); font-size: 14px; }
+.cbar-size i { font-style: normal; }
+.cbars { display: flex; flex-direction: column; gap: var(--s3); }
 .cbar-track { display: flex; height: 10px; background: var(--cell-off); overflow: hidden; }
 .cbar-track .cseg { height: 100%; }
 .cbar-legend {
@@ -437,6 +443,26 @@
   border-bottom: 1px solid var(--line);
 }
 .ans-panel { display: flex; flex-direction: column; gap: var(--s2); }
+/* スポットの要約（レンジタブの上。押すとリプレイへ） */
+.spot-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 40px;
+  padding: 4px var(--s2);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--dim);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.spot-strip:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.ss-board { display: flex; gap: 2px; flex: none; }
+.ss-line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.ss-line b { font-family: var(--mono); font-weight: 400; }
+.ss-tag { margin-left: 4px; font-family: var(--disp); font-size: 11px; font-weight: 700; color: var(--yellow); }
+.ss-pot { margin-left: auto; flex: none; color: var(--fg); }
 .ans.sp .brush { padding: 6px; gap: 6px; }
 /* スマホのタイルは 2 行（名前 / 頻度・額）にして上部固定パネルを低くする */
 .ans.sp .btile { min-height: 44px; padding: 3px 2px; gap: 0; }
@@ -471,7 +497,11 @@
 .ans-bottom .cbar-track { height: 8px; }
 .ans-bottom .cbar-legend { flex-wrap: nowrap; justify-content: space-between; gap: var(--s1); font-size: 10.5px; white-space: nowrap; }
 .ans-bottom .cbar-legend li { gap: 4px; }
-.ans-bottom .cbar-legend .mono-lbl { display: none; }
+.ans-bottom .cbar { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'size legend' 'track track'; align-items: center; gap: 6px var(--s3); }
+.ans-bottom .cbar-top { grid-area: size; }
+.ans-bottom .cbar-track { grid-area: track; }
+.ans-bottom .cbar-legend { grid-area: legend; justify-content: flex-end; gap: var(--s3); }
+.ans-bottom .cbar-size b { font-size: 12px; }
 .ans-bottom .cdot { width: 8px; height: 8px; }
 
 /* ---- 集計画面（06 章 §5） ---- */
@@ -541,3 +571,15 @@
 .res-actual-unknown { font-size: 13px; color: var(--dim); }
 .res-ops { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .res.sp { gap: var(--s3); padding-bottom: var(--s4); }
+
+/* ---- 自分と全体の比較（14 章） ---- */
+/* 「自分との差」: 差の大きさを黄の濃さで出す（正解・不正解ではないので赤は使わない） */
+.cheat { position: absolute; inset: 0; background: var(--yellow); }
+.rcell.ink-heat { color: var(--yellow-ink); }
+.res-detail-diff { margin-left: auto; font-size: 14px; color: var(--yellow); }
+.res-bars { display: flex; flex-direction: column; gap: 6px; }
+.res-bar { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); align-items: center; gap: var(--s2); font-size: 12px; color: var(--dim); }
+.res-bar .cbar-track { height: 8px; }
+/* 次のスポット（スマホは下部に固定） */
+.res.sp.has-next { padding-bottom: calc(72px + var(--sab)); }
+.res-agg > .btn { align-self: stretch; }

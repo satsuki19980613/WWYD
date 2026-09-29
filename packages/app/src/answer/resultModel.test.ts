@@ -9,6 +9,7 @@ import {
   actualAction,
   actualCell,
   breakdown,
+  cellDiff,
   cellViews,
   emptyLabel,
   initialCell,
@@ -35,8 +36,12 @@ function detail(o: Partial<DetailOpts> = {}, raw = hs1()): PostDetail {
 
 describe('タブと初期表示（06 章 §5.2）', () => {
   it('他人の投稿も自分の投稿も 全体（N人）/ 自分（投稿者も回答者の 1 人）', () => {
-    expect(resultTabs(detail()).map((t) => t.label)).toEqual(['全体（2人）', '自分']);
-    expect(resultTabs(detail({ viewer: 'author' })).map((t) => t.label)).toEqual(['全体（2人）', '自分']);
+    expect(resultTabs(detail()).map((t) => t.label)).toEqual(['全体（2人）', '自分', '自分との差']);
+    expect(resultTabs(detail({ viewer: 'author' })).map((t) => t.label)).toEqual(['全体（2人）', '自分', '自分との差']);
+  });
+
+  it('回答 0 件では「自分との差」を出さない', () => {
+    expect(resultTabs(detail({ answerCount: 0, aggregate: undefined })).map((t) => t.value)).toEqual(['all', 'mine']);
   });
 
   it('初期選択マスは Villain の実際のハンド（白枠）、無ければ AA', () => {
@@ -96,6 +101,17 @@ describe('マスと内訳（05 章 §4）', () => {
     const d = detail({ myAnswer: { paint: paintHexOf({ QQ: { fold: 5, s1: 15 } }), size: 20 } });
     expect(breakdown(d, 'mine', idxOf('QQ'))).toEqual({ kind: 'single', label: 'QQ', text: 'フォールド 25% / レイズ 75%' });
     expect(breakdown(d, 'mine', idxOf('AA'))).toEqual({ kind: 'single', label: 'AA', text: 'レンジ外' });
+  });
+
+  it('自分との差: キーとレンジ外の割合の差の絶対値の和の半分（14 章）', () => {
+    const d = detail();
+    // AA: 全体 call 75% / s1 25%、自分 call 100% → 25%
+    expect(cellDiff(d, idxOf('AA'))).toBeCloseTo(0.25);
+    // KK: 全体 fold 50% / レンジ外 50%、自分 レンジ外 → 50%
+    expect(cellDiff(d, idxOf('KK'))).toBeCloseTo(0.5);
+    // 72o: どちらもレンジ外 → 0
+    expect(cellDiff(d, idxOf('72o'))).toBe(0);
+    expect(breakdown(d, 'diff', idxOf('KK'))).toMatchObject({ kind: 'all', diff: '50', mine: 'レンジ外' });
   });
 
   it('空状態: 回答 0 件は「回答なし」', () => {

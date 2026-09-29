@@ -5,6 +5,8 @@ import {
   cardStatus,
   emptyState,
   fetchPostPage,
+  findNextSpot,
+  pickNext,
   formatAgo,
   formatLabel,
   listPostsArgs,
@@ -78,6 +80,29 @@ describe('listPostsArgs', () => {
       p_after: { created_at: '2026-09-28T10:00:00.123456+00:00', id: 'abc', answer_count: 7 },
       p_limit: PAGE_SIZE,
     });
+  });
+});
+
+describe('次のスポット（14 章）', () => {
+  it('未回答・自分の投稿でない・今の投稿でない最初の行', () => {
+    const rows = [
+      row({ id: 'cur' }),
+      row({ id: 'done', answered_by_me: true }),
+      row({ id: 'mine', is_mine: true }),
+      row({ id: 'next' }),
+    ];
+    expect(pickNext(rows, 'cur')?.id).toBe('next');
+    expect(pickNext(rows.slice(0, 3), 'cur')).toBeNull();
+  });
+  it('1 ページ目に無ければ続きを読む。3 ページで止める', async () => {
+    const full = (p: string, o: Partial<PostRow>) => Array.from({ length: PAGE_SIZE }, (_, i) => row({ id: `${p}${i}`, ...o }));
+    const pages = [full('a', { answered_by_me: true }), [...full('b', { is_mine: true }).slice(1), row({ id: 'hit' })]];
+    const rpc = vi.fn<RpcCaller>(async () => ({ data: pages.shift() ?? [], error: null }));
+    expect(await findNextSpot(rpc, 'cur')).toBe('hit');
+    expect(rpc).toHaveBeenCalledTimes(2);
+    const none = vi.fn<RpcCaller>(async () => ({ data: full('c', { answered_by_me: true }), error: null }));
+    expect(await findNextSpot(none, 'cur')).toBeNull();
+    expect(none).toHaveBeenCalledTimes(3);
   });
 });
 

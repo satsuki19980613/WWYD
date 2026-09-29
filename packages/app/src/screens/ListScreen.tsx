@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChipGroup } from '../components/ChipGroup.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
+import { ChevronIcon } from '../components/Icons.tsx';
 import { Link } from '../components/Link.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { Tabs } from '../components/Tabs.tsx';
@@ -141,14 +142,19 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
   const status = cardStatus(row);
   const action = cardAction(row);
   return (
-    <article className="spot-card">
+    // カード全体を押せる（タイトルのリンクをカードいっぱいに広げる。14 章）。削除のボタンはその上に重ねる
+    <article className={`spot-card${action.primary ? '' : ' done'}`}>
       <div className="spot-top">
         <span className="street-badge">{STREET_LABEL[row.street]}</span>
         <span className="spot-fmt num">{formatLabel(row)}</span>
         {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
         {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
       </div>
-      <h2 className="spot-title">{row.title}</h2>
+      <h2 className="spot-title">
+        <Link to={action.to} className="spot-link">
+          {row.title}
+        </Link>
+      </h2>
       <p className="spot-seats">
         Hero{' '}
         <b className="pos" style={{ color: POS_VAR[row.hero] }}>
@@ -169,9 +175,10 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
               削除
             </button>
           )}
-          <Link to={action.to} className={`btn auto sm ${action.primary ? '' : 'ghost'}`}>
+          <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
             {action.label}
-          </Link>
+            <ChevronIcon />
+          </span>
         </span>
       </div>
     </article>

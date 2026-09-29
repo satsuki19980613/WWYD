@@ -143,7 +143,8 @@ test.describe('塗り・道具（06 章 §4.5・§4.6）', () => {
     await open(page);
     await cell(page, 'AA').click();
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA コール 100%');
-    await expect(page.locator('.cbar-legend')).toContainText('コール 0.5%');
+    await expect(page.locator('.cbar')).toContainText('6 combos');
+    await expect(page.locator('.cbar-legend')).toContainText('コール 100.0%');
     await cell(page, 'AA').click();
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA レンジ外');
   });
@@ -451,7 +452,8 @@ test.describe('スマホ（06 章 §4.1）', () => {
 
     await cell(page, 'AA').tap();
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA コール 100%');
-    await expect(page.locator('.ans-bottom')).toContainText('コール 0.5%');
+    await expect(page.locator('.ans-bottom')).toContainText('6 combos');
+    await expect(page.locator('.ans-bottom')).toContainText('コール 100.0%');
     await page.getByRole('button', { name: '回答する' }).click();
     await page.getByRole('button', { name: '送信する' }).click();
     await expect(page).toHaveURL(RESULT);

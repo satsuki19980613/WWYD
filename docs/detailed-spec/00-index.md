@@ -26,6 +26,8 @@
 | 10 | [10-manual-tasks.md](10-manual-tasks.md) | さつきが手作業で行う作業の一覧と手順 |
 | 11 | [11-open-questions.md](11-open-questions.md) | 仕様書の曖昧な点・矛盾・判断が必要な点 |
 | 12 | [12-neon-migration.md](12-neon-migration.md) | バックエンドを Supabase から Neon に移す設計案（2026-09-28〜。確定まで 01〜03・08・10 章の Supabase 固有の記述より優先して読む） |
+| 13 | [13-action-input.md](13-action-input.md) | アクション入力の UX（ルールの要点、入力する人の考え、試験のパターン、試行錯誤の記録） |
+| 14 | [14-ui-research.md](14-ui-research.md) | 類似アプリの調査と UI・UX への反映（入力中の卓、入れ直し、答え合わせと自分との差、次のスポット） |
 
 ## 共通の表記
 

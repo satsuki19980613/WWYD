@@ -110,6 +110,24 @@ export async function fetchPostPage(rpc: RpcCaller, q: ListQuery, after: PostRow
   return { rows, hasMore: rows.length >= PAGE_SIZE };
 }
 
+/** 「次のスポット」に選べる行（未回答・自分の投稿でない・今見ている投稿でない。14 章） */
+export function pickNext(rows: readonly PostRow[], currentId: string): PostRow | null {
+  return rows.find((r) => !r.answered_by_me && !r.is_mine && r.id !== currentId) ?? null;
+}
+
+/** 次に答えるスポットを新着順から探す（最大 3 ページ）。無ければ null。 */
+export async function findNextSpot(rpc: RpcCaller, currentId: string): Promise<string | null> {
+  let after: PostRow | null = null;
+  for (let i = 0; i < 3; i++) {
+    const page = await fetchPostPage(rpc, DEFAULT_QUERY, after);
+    const hit = pickNext(page.rows, currentId);
+    if (hit) return hit.id;
+    if (!page.hasMore) return null;
+    after = page.rows[page.rows.length - 1] ?? null;
+  }
+  return null;
+}
+
 /**
  * 読み込み済みの行に次のページをつなぐ。回答数順は読んでいる間に順位が動き、同じ投稿が
  * 2 回来ることがあるので `id` で重複を除く（02 章 §4.2。抜けは許容）。

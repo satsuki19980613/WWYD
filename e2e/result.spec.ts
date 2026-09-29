@@ -6,7 +6,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { aggregateHex, detailJson, paintHexOf, paintOf, type DetailOpts } from '../packages/app/src/answer/detailFixtures.ts';
 import { hs1 } from '../packages/core/src/post/postFixtures.ts';
-import { fakeBackend, type Backend } from './fakeBackend.ts';
+import { DATA, fakeBackend, type Backend } from './fakeBackend.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
 const RESULT = `/s/${ID}/result`;
@@ -31,7 +31,7 @@ async function open(page: Page, d: Record<string, unknown> = detail(), path = RE
 }
 
 const cell = (page: Page, label: string): Locator => page.getByRole('button', { name: label, exact: true });
-const tab = (page: Page, name: string): Locator => page.getByRole('tab', { name });
+const tab = (page: Page, name: string): Locator => page.getByRole('tab', { name, exact: true });
 const detailBox = (page: Page): Locator => page.locator('.res-detail');
 const table = (page: Page): Locator => page.locator('.ptable');
 
@@ -39,14 +39,18 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
   test('全体: タブ・上部バー・白枠の初期選択・マスの内訳', async ({ page }) => {
     await open(page);
     await expect(tab(page, '全体（2人）')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', '自分']);
+    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', '自分', '自分との差']);
 
-    // 上部バー（05 章 PAINT-13）: fold 0.226% / call 0.339% / s1 0.113% / レンジ外 99.3%
-    const legend = page.locator('.cbar-legend');
-    await expect(legend).toContainText('フォールド 0.2%');
-    await expect(legend).toContainText('コール 0.3%');
-    await expect(legend).toContainText('レイズ 0.1%');
-    await expect(legend).toContainText('レンジ外 99.3%');
+    // 上部のまとめ（14 章。05 章 PAINT-13 の fold 0.226% / call 0.339% / s1 0.113% をレンジの中の割合に）:
+    // 全体は 9 combos（AA 6 + KK 6 × 1/2）· 0.7%、fold 33.3% / call 50.0% / s1 16.7%。自分は AA だけ
+    const all = page.locator('.cbar').first();
+    await expect(all).toContainText('全体');
+    await expect(all).toContainText('9 combos');
+    await expect(all).toContainText('0.7%');
+    await expect(all.locator('.cbar-legend')).toContainText('フォールド 33.3%');
+    await expect(all.locator('.cbar-legend')).toContainText('コール 50.0%');
+    await expect(all.locator('.cbar-legend')).toContainText('レイズ 16.7%');
+    await expect(page.locator('.cbar').nth(1)).toContainText('6 combos');
 
     // 初期選択は Villain の実際のハンド（KJs、白枠）
     await expect(cell(page, 'KJs')).toHaveAttribute('aria-pressed', 'true');
@@ -75,9 +79,28 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await tab(page, '自分').click();
     await cell(page, 'AA').click();
     await expect(detailBox(page)).toContainText('コール 100%');
-    await expect(page.locator('.cbar-legend')).toContainText('コール 0.5%');
+    // 自分のタブは自分のまとめだけ
+    await expect(page.locator('.cbar')).toHaveCount(1);
+    await expect(page.locator('.cbar')).toContainText('6 combos');
+    await expect(page.locator('.cbar-legend')).toContainText('コール 100.0%');
     await cell(page, 'KK').click();
     await expect(detailBox(page)).toContainText('レンジ外');
+  });
+
+  test('自分との差: 差の濃さで塗り、内訳に「差」', async ({ page }) => {
+    await open(page);
+    await tab(page, '自分との差').click();
+    // KK: 全体 fold 50% / レンジ外 50%、自分はレンジ外 → 差 50%。72o はどちらもレンジ外 → 塗らない
+    await expect(cell(page, 'KK').locator('.cheat')).toHaveCount(1);
+    await expect(cell(page, '72o').locator('.cheat')).toHaveCount(0);
+    await cell(page, 'KK').click();
+    await expect(detailBox(page)).toContainText('差 50%');
+  });
+
+  test('答え合わせ（実際のアクション）を集計の先頭に出す', async ({ page }) => {
+    await open(page);
+    const first = page.locator('.res-agg > *').first();
+    await expect(first).toContainText('実際のアクション');
   });
 
   test('回答 0 件は「回答なし」', async ({ page }) => {
@@ -140,6 +163,45 @@ test.describe('実際のアクションとハンドヒストリー（06 章 §5.
   });
 });
 
+test.describe('次のスポット（14 章）', () => {
+  const row = (id: string, o: Record<string, unknown> = {}) => ({
+    id,
+    created_at: '2026-09-28T00:00:00.000000+00:00',
+    title: 't',
+    fmt: 'cash',
+    hero: 'BTN',
+    villain: 'BB',
+    street: 'turn',
+    effective_stack: 100,
+    answer_count: 0,
+    is_mine: false,
+    answered_by_me: false,
+    can_delete: false,
+    ...o,
+  });
+  const NEXT = '00000000-0000-4000-8000-000000000009';
+
+  test('未回答・自分の投稿でない新着へ進める', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await fakeBackend(page, detail());
+    await page.route(`${DATA}/rpc/list_posts`, (r) =>
+      r.fulfill({
+        status: 200,
+        headers: { 'access-control-allow-origin': r.request().headers()['origin'] ?? '*', 'access-control-allow-credentials': 'true', 'content-type': 'application/json' },
+        body: JSON.stringify([row(ID), row('a', { answered_by_me: true }), row('b', { is_mine: true }), row(NEXT)]),
+      }),
+    );
+    await page.goto(RESULT);
+    await expect(page.getByRole('link', { name: '次のスポット' })).toHaveAttribute('href', `/s/${NEXT}`);
+  });
+
+  test('候補が無ければ出さない', async ({ page }) => {
+    await open(page);
+    await expect(cell(page, 'AA')).toBeVisible();
+    await expect(page.getByRole('link', { name: '次のスポット' })).toHaveCount(0);
+  });
+});
+
 test.describe('操作（06 章 §5.5）', () => {
   test('他人の投稿: 編集・削除のボタンを出さない', async ({ page }) => {
     await open(page);
@@ -158,7 +220,7 @@ test.describe('操作（06 章 §5.5）', () => {
 
   test('自分の投稿: 全体 / 自分（自分の回答）、削除（やめる）。編集のボタンは無い', async ({ page }) => {
     const be = await open(page, authorDetail());
-    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', '自分']);
+    await expect(page.getByRole('tab')).toHaveText(['全体（2人）', '自分', '自分との差']);
     await cell(page, 'QQ').click();
     await expect(detailBox(page)).toContainText('自分：フォールド 25% / レイズ 75%');
     await tab(page, '自分').click();

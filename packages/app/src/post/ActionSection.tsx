@@ -1,5 +1,9 @@
-import { BOARD_COUNT, formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Street } from '@wwyd/core';
+import { BOARD_COUNT, formatBb, totalPot, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
 import { useState } from 'react';
+import { HandLog, PokerTable } from '../answer/Replay.tsx';
+import { seatViews } from '../answer/replayModel.ts';
+import type { Hole } from '../answer/resultModel.ts';
+import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { UndoIcon } from '../components/Icons.tsx';
 import { PlayingCard, cardText } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
@@ -8,6 +12,8 @@ import { handCards } from './cardInput.ts';
 import { CardPicker } from './CardPicker.tsx';
 import {
   actionLog,
+  aggressiveName,
+  callName,
   defaultPreset,
   parseSize,
   PLAYERS_REQUIRED,
@@ -26,7 +32,9 @@ type ActPhase = Extract<Phase, { kind: 'act' }>;
  * アクション入力（06 章 §3.6、13 章）。
  * 手番の操作はまとめて「アクションの台」（act-dock）に置く: 手番の見出し（席・ストリート・ポット・to call・残り）と
  * 1つ戻す、よく使う額、Fold to / Check to、3 つのボタン（フォールド / チェック・コール / ベット・レイズ）。
- * スマホは台を画面の下に固定し（親指の届く所。ボタンの位置が手番ごとに動かない）、上にボード・ログ・終了表示。
+ * 上には入力中のハンドを卓で出す（Hero を手前。スタック・ベット・ポット・ボード・手番の席。14 章）。
+ * 卓のボードのカードを押すとそのカード以降を、ログの 1 手を押すとその手以降を入れ直せる。
+ * スマホは台を画面の下に固定する（親指の届く所。ボタンの位置が手番ごとに動かない）。
  */
 export function ActionSection(props: {
   draft: Draft;
@@ -36,6 +44,8 @@ export function ActionSection(props: {
   onAction: (a: Action) => void;
   onActions: (a: readonly Action[]) => void;
   onUndo: () => void;
+  /** ログの 1 手から入れ直す（その手以降を消す） */
+  onTruncate: (index: number) => void;
   onClear: () => void;
   onBoardAdd: (card: Card) => void;
   onBoardRemoveFrom: (i: number) => void;
@@ -53,6 +63,10 @@ export function ActionSection(props: {
     setDismissed(needKey);
   };
 
+  // ログの 1 手を押したら、確かめてからその手以降を消す
+  const [rewind, setRewind] = useState<number | null>(null);
+  const rewindText = rewind !== null && props.setup ? (actionLog(props.setup, d.actions)[rewind]?.text ?? null) : null;
+
   const undo = (
     <button type="button" className="icon-btn ad-undo" aria-label="1つ戻す" disabled={d.actions.length === 0} onClick={props.onUndo}>
       <UndoIcon />
@@ -60,7 +74,14 @@ export function ActionSection(props: {
   );
   const dock =
     phase.kind === 'act' ? (
-      <ActDock key={d.actions.length} phase={phase} undo={undo} onAction={props.onAction} onActions={props.onActions} />
+      <ActDock
+        key={d.actions.length}
+        phase={phase}
+        actions={d.actions}
+        undo={undo}
+        onAction={props.onAction}
+        onActions={props.onActions}
+      />
     ) : phase.kind === 'board' ? (
       <BoardDock draft={d} undo={undo} onOpen={openPicker} />
     ) : null;
@@ -73,11 +94,19 @@ export function ActionSection(props: {
       {phase.kind === 'invalid' && (
         <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
       )}
-      {/* PC は台をボードの上に置く（スマホは下に固定） */}
+      <LiveTable draft={d} phase={phase} onOpen={openPicker} onRemoveFrom={props.onBoardRemoveFrom} />
+      {/* PC は台を卓の下に置く（スマホは画面の下に固定） */}
       {!props.mobile && dock}
-      <Board draft={d} phase={phase} onOpen={openPicker} onRemoveFrom={props.onBoardRemoveFrom} />
-      {props.setup && d.actions.length > 0 && <Log setup={props.setup} draft={d} />}
-      {phase.kind === 'done' && <EndDisplay draft={d} phase={phase} />}
+      {props.setup && d.actions.length > 0 && (
+        <HandLog
+          setup={props.setup}
+          actions={d.actions}
+          board={d.board}
+          spotIndex={d.spotIndex ?? -1}
+          highlightLast
+          onPick={setRewind}
+        />
+      )}
       {/* 1つ戻すは台の見出し（手番を入れている間）。終わった後もここから戻せるように置く */}
       <div className="btn-row pf-undo">
         {!dock && (
@@ -90,6 +119,18 @@ export function ActionSection(props: {
         </button>
       </div>
       {props.mobile && dock}
+      {rewind !== null && rewindText && (
+        <ConfirmDialog
+          title={`${rewindText} から入れ直しますか`}
+          body="この手から後のアクションを消します。"
+          confirmLabel="入れ直す"
+          onConfirm={() => {
+            props.onTruncate(rewind);
+            setRewind(null);
+          }}
+          onCancel={() => setRewind(null)}
+        />
+      )}
       {pickerOpen && phase.kind === 'board' && (
         <CardPicker
           title={`${STREET_NAME[cardStreet(d.board.length)]} ${cardStreet(d.board.length) === 'flop' ? `${d.board.length + 1}/3` : ''}`.trim()}
@@ -131,6 +172,7 @@ function DockHead(props: { pos?: Action['pos']; title: string; nums?: { pot: Mbb
 
 function ActDock(props: {
   phase: ActPhase;
+  actions: readonly Action[];
   undo: JSX.Element;
   onAction: (a: Action) => void;
   onActions: (a: readonly Action[]) => void;
@@ -162,6 +204,8 @@ function ActDock(props: {
   const callAllin = legal.call !== null && legal.call >= state.stacks[pos];
   // ベットがある（または BB のオプション）ならレイズ。レイズできないとき（相手がオールイン）もレイズと出して押せなくする
   const raiseLabel = state.currentBet > 0 || (legal.raise !== null && legal.bet === null);
+  // ボタンはプレイヤーが呼ぶ名前（オープン / 3bet / リンプ など。13 章 §6）
+  const s1Name = raiseLabel && state.currentBet === 0 ? 'レイズ' : aggressiveName(state, props.actions);
 
   return (
     <div className="act-dock" role="group" aria-label="アクション">
@@ -231,12 +275,13 @@ function ActDock(props: {
           </button>
         ) : (
           <button type="button" className="act-btn call" disabled={legal.call === null} onClick={() => act('call')}>
-            コール{legal.call !== null && <span className="num"> {formatBb(legal.call)}</span>}
+            {callName(state, pos)}
+            {legal.call !== null && <span className="num"> {formatBb(legal.call)}</span>}
             {callAllin && <small>オールイン</small>}
           </button>
         )}
         <button type="button" className="act-btn s1" disabled={!range} onClick={aggressive}>
-          {raiseLabel ? 'レイズ' : 'ベット'}
+          {s1Name}
           {to !== null && <span className="num"> {formatBb(to)}</span>}
           {to !== null && range && to === range.max && <small>オールイン</small>}
         </button>
@@ -262,16 +307,60 @@ function BoardDock(props: { draft: Draft; undo: JSX.Element; onOpen: () => void 
 
 const cardStreet = (i: number): Street => (i < 3 ? 'flop' : i === 3 ? 'turn' : 'river');
 
-/** ボード 5 枠。必要になった枠の「＋」でピッカーを開く。カードを押すとそのカード以降を消す。 */
-function Board(props: { draft: Draft; phase: Phase; onOpen: () => void; onRemoveFrom: (i: number) => void }): JSX.Element {
+/**
+ * 入力中のハンドの卓（14 章。回答画面の卓と同じ部品）。Hero を手前に置き、手番の席を光らせる。
+ * ホールカードは入力した席だけ表向き。終わったら「{席} ポット獲得」または「ショーダウン」（カードの無い席は「マック」）。
+ */
+function LiveTable(props: { draft: Draft; phase: Phase; onOpen: () => void; onRemoveFrom: (i: number) => void }): JSX.Element | null {
   const { draft: d, phase } = props;
+  if (phase.kind === 'invalid') return null;
+  const done = phase.kind === 'done';
+  // 終わったらベットをポットに回収して出す（集計画面の終了時と同じ）
+  const s = done ? { ...phase.state, pot: totalPot(phase.state), bets: { UTG: 0, HJ: 0, CO: 0, BTN: 0, SB: 0, BB: 0 } } : phase.state;
+  const showdown = done && phase.result.kind === 'showdown' ? phase.result.seats : [];
+  const holes: Partial<Record<Pos, Hole>> = {};
+  for (const p of s.seated) {
+    if (s.folded.has(p)) continue;
+    const cards = handCards(d.hands[p]);
+    if (cards.length === 2) holes[p] = cards;
+    else if (showdown.includes(p)) holes[p] = 'muck';
+  }
+  const note = done ? (phase.result.kind === 'over' ? `${phase.result.winner} ポット獲得` : 'ショーダウン') : null;
+  const reached = phase.kind === 'act' ? BOARD_COUNT[phase.state.street] : phase.kind === 'board' ? phase.need : phase.boardCount;
+  return (
+    <PokerTable
+      seats={seatViews(s, {
+        hero: d.hero,
+        villain: null,
+        actor: phase.kind === 'act' ? phase.pos : null,
+        bottom: s.seated.includes(d.hero) ? d.hero : undefined,
+      })}
+      pot={s.pot}
+      board={d.board}
+      holes={holes}
+      villainLabel="Villain"
+      note={note}
+      boardContent={
+        <BoardSlots draft={d} addable={phase.kind === 'board'} reached={reached} onOpen={props.onOpen} onRemoveFrom={props.onRemoveFrom} />
+      }
+    />
+  );
+}
+
+/** 卓のボード 5 枠。次に要る枠の「＋」でピッカーを開く。カードを押すとそのカード以降を消す。 */
+function BoardSlots(props: {
+  draft: Draft;
+  addable: boolean;
+  /** 今のストリートまでに見えている枚数（それより後のカード＝1つ戻すで残ったものは薄く出す） */
+  reached: number;
+  onOpen: () => void;
+  onRemoveFrom: (i: number) => void;
+}): JSX.Element {
+  const { draft: d } = props;
   const next = d.board.length;
   const street = cardStreet(next);
-  // まだ来ていないストリートのカード（1つ戻すで残ったもの）は薄く出す
-  const reached =
-    phase.kind === 'act' ? BOARD_COUNT[phase.state.street] : phase.kind === 'board' ? phase.need : phase.kind === 'done' ? phase.boardCount : 5;
   return (
-    <div className="pf-board" role="group" aria-label="ボード">
+    <>
       {[0, 1, 2, 3, 4].map((i) => {
         const card = d.board[i];
         if (card) {
@@ -279,7 +368,7 @@ function Board(props: { draft: Draft; phase: Phase; onOpen: () => void; onRemove
             <button
               key={i}
               type="button"
-              className={`pf-bslot filled ${i >= reached ? 'ahead' : ''}`}
+              className={`pf-bslot filled ${i >= props.reached ? 'ahead' : ''}`}
               aria-label={`${cardText(card)}（このカード以降を消す）`}
               onClick={() => props.onRemoveFrom(i)}
             >
@@ -287,97 +376,15 @@ function Board(props: { draft: Draft; phase: Phase; onOpen: () => void; onRemove
             </button>
           );
         }
-        const addable = phase.kind === 'board' && i === next;
-        return (
-          <button
-            key={i}
-            type="button"
-            className="pf-bslot"
-            disabled={!addable}
-            aria-label={addable ? `${STREET_NAME[street]}のカードを選ぶ` : '空き'}
-            onClick={props.onOpen}
-          >
-            {addable ? '＋' : ''}
-          </button>
-        );
+        if (props.addable && i === next) {
+          return (
+            <button key={i} type="button" className="pf-bslot add" aria-label={`${STREET_NAME[street]}のカードを選ぶ`} onClick={props.onOpen}>
+              ＋
+            </button>
+          );
+        }
+        return <span key={i} className="ptable-slot" />;
       })}
-    </div>
-  );
-}
-
-/** ストリートごとの列（見出し = ストリート名＋そのストリートのボード）。最新のアクションを強調。 */
-function Log(props: { setup: HandSetup; draft: Draft }): JSX.Element {
-  const items = actionLog(props.setup, props.draft.actions);
-  const last = items.length - 1;
-  const streets = STREETS.filter((s) => items.some((it) => it.street === s));
-  const boardOf: Record<Street, Card[]> = {
-    pf: [],
-    flop: props.draft.board.slice(0, 3),
-    turn: props.draft.board.slice(3, 4),
-    river: props.draft.board.slice(4, 5),
-  };
-  return (
-    <div className="pf-log">
-      {streets.map((s) => (
-        <div key={s} className="pf-log-col">
-          <div className="pf-log-head">
-            <span className="mono-lbl">{STREET_NAME[s]}</span>
-            <span className="pf-log-board">
-              {boardOf[s].map((c) => (
-                <PlayingCard key={c} card={c} size="sm" />
-              ))}
-            </span>
-          </div>
-          <ol className="pf-log-list">
-            {items
-              .filter((it) => it.street === s)
-              .map((it) => (
-                <li key={it.index} className={it.index === last ? 'latest' : ''}>
-                  {it.text}
-                </li>
-              ))}
-          </ol>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** 終了表示: 「{席} ポット獲得」または「ショーダウン」（残った席のハンド、未入力は「マック」） */
-function EndDisplay(props: { draft: Draft; phase: Extract<Phase, { kind: 'done' }> }): JSX.Element {
-  const r = props.phase.result;
-  return (
-    <div className="pf-end">
-      <span className="brk tl" />
-      <span className="brk br" />
-      {r.kind === 'over' ? (
-        <p className="pf-end-title">
-          <b style={{ color: POS_VAR[r.winner] }}>{r.winner}</b> ポット獲得
-        </p>
-      ) : (
-        <>
-          <p className="pf-end-title">ショーダウン</p>
-          <ul className="pf-end-seats">
-            {r.seats.map((p) => {
-              const cards = handCards(props.draft.hands[p]);
-              return (
-                <li key={p}>
-                  <b style={{ color: POS_VAR[p] }}>{p}</b>
-                  {cards.length === 2 ? (
-                    <span className="pf-end-cards">
-                      {cards.map((c) => (
-                        <PlayingCard key={c} card={c} size="sm" />
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="pf-muck">マック</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
-    </div>
+    </>
   );
 }

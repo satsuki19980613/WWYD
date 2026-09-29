@@ -5,7 +5,9 @@ import {
   actionLog,
   addAction,
   addBoardCard,
+  aggressiveName,
   buildSubmission,
+  callName,
   candidates,
   clearActions,
   defaultAmount,
@@ -24,6 +26,7 @@ import {
   sizePresets,
   skipTargets,
   statusLine,
+  truncateActions,
   turnInfo,
   undoAction,
   usedCards,
@@ -208,6 +211,32 @@ describe('アクション入力の補助（13 章）', () => {
     expect(sk.kind).toBe('fold');
     expect(sk.targets.map((t) => t.pos)).toEqual(['HJ', 'CO', 'BTN', 'SB']);
     expect(sk.targets[2]?.actions.map((a) => `${a.pos} ${a.type}`)).toEqual(['UTG fold', 'HJ fold', 'CO fold']);
+  });
+  it('ボタンの名前: オープン → 3bet → 4bet、リンプがあればレイズ', () => {
+    const name = (acts: Action[]) => {
+      const ph = actAt(acts);
+      return `${aggressiveName(ph.state, acts)} / ${callName(ph.state, ph.pos)}`;
+    };
+    expect(name([])).toBe('オープン / リンプ');
+    expect(name([pf('UTG', 'call')])).toBe('レイズ / リンプ');
+    expect(name([pf('UTG', 'raise', 2.5)])).toBe('3bet / コール');
+    expect(name([pf('UTG', 'raise', 2.5), pf('HJ', 'raise', 7.5)])).toBe('4bet / コール');
+    // SB のリンプ（コンプリート）の後の BB はチェックかレイズ
+    expect(name([pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'fold'), pf('BTN', 'fold'), pf('SB', 'call')])).toBe('レイズ / コール');
+  });
+  it('ボタンの名前: フロップ以降はベット → レイズ → 3bet', () => {
+    const base = [pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'fold'), pf('BTN', 'raise', 2.5), pf('SB', 'fold'), pf('BB', 'call')];
+    const board = ['Kh', '8d', '3c'];
+    const name = (acts: Action[]) => aggressiveName(actAt([...base, ...acts], board).state, [...base, ...acts]);
+    expect(name([])).toBe('ベット');
+    expect(name([fl('BB', 'bet', 2)])).toBe('レイズ');
+    expect(name([fl('BB', 'bet', 2), fl('BTN', 'raise', 6)])).toBe('3bet');
+  });
+  it('ログの 1 手から入れ直す: その手以降を消し、ボードは残す', () => {
+    const acts = [pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'fold'), pf('BTN', 'raise', 2.5), pf('SB', 'fold'), pf('BB', 'call'), fl('BB', 'check')];
+    const d = truncateActions({ ...six(), actions: acts, board: ['Kh', '8d', '3c'] }, 3);
+    expect(d.actions).toEqual(acts.slice(0, 3));
+    expect(d.board).toEqual(['Kh', '8d', '3c']);
   });
   it('Check to: フロップのマルチウェイ。最後の席のチェックで終わる席は出さない', () => {
     const base = [pf('UTG', 'fold'), pf('HJ', 'call'), pf('CO', 'fold'), pf('BTN', 'call'), pf('SB', 'call'), pf('BB', 'check')];

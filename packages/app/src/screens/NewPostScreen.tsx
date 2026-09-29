@@ -19,6 +19,7 @@ import {
   seatsOf,
   selectSpot,
   setPlayers,
+  truncateActions,
   undoAction,
   usedCards,
   type Draft,
@@ -111,6 +112,7 @@ export function NewPostScreen(): JSX.Element {
       onAction={(a: Action) => update((x) => addAction(x, a))}
       onActions={(as) => update((x) => addActions(x, as))}
       onUndo={() => update(undoAction)}
+      onTruncate={(i) => update((x) => truncateActions(x, i))}
       onClear={() => update(clearActions)}
       onBoardAdd={(c: Card) => update((x) => addBoardCard(x, c))}
       onBoardRemoveFrom={(i) => update((x) => removeBoardFrom(x, i))}

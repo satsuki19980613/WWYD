@@ -5,10 +5,15 @@ import {
   formatBb,
   paintBar,
   toHex,
+  totalPot,
   type AnswerKey,
   type Mix,
   type Paint,
+  type State,
 } from '@wwyd/core';
+import { PlayingCard } from '../components/PlayingCard.tsx';
+import { POS_VAR } from '../components/posColor.ts';
+import { ACTION_NAME } from '../post/draft.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { Tabs } from '../components/Tabs.tsx';
@@ -264,6 +269,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
         <Tabs label="表示" items={MOBILE_TABS} value={tab} onChange={setTab} />
         {tab === 'range' && (
           <div className="ans-panel">
+            <SpotStrip detail={d} state={stop} onOpen={() => setTab('replay')} />
             {brushPanel}
             {size}
           </div>
@@ -304,6 +310,35 @@ function useBottomBarHeight(): (el: HTMLDivElement | null) => void {
     observer.current = new ResizeObserver(set);
     observer.current.observe(el);
   }, []);
+}
+
+/**
+ * スポットの要約（スマホのレンジタブ。14 章）: ボード・出題の Hero のアクション・ポット。
+ * 塗りながらリプレイのタブへ戻らずに局面を確かめられるようにする。押すとリプレイのタブへ。
+ */
+function SpotStrip(props: { detail: PostDetail; state: State; onOpen: () => void }): JSX.Element {
+  const { hand, post } = props.detail;
+  const board = hand.board.slice(0, BOARD_COUNT[props.state.street]);
+  const a = hand.actions[hand.spotIndex];
+  return (
+    <button type="button" className="spot-strip" aria-label="リプレイを見る" onClick={props.onOpen}>
+      <span className="ss-board">
+        {board.map((c) => (
+          <PlayingCard key={c} card={c} size="sm" />
+        ))}
+      </span>
+      {a && (
+        <span className="ss-line">
+          <b style={{ color: POS_VAR[a.pos] }}>{a.pos}</b>
+          {a.pos === post.hero && <span className="ss-tag">Hero</span>} {ACTION_NAME[a.type]}
+          {a.to !== undefined && <span className="num"> {formatBb(a.to)}</span>}
+        </span>
+      )}
+      <span className="ss-pot num">
+        <i className="mono-lbl">POT</i> {formatBb(totalPot(props.state))}
+      </span>
+    </button>
+  );
 }
 
 /** PC で非活性ボタンとして並べる取れないアクション（06 章 §4.6） */

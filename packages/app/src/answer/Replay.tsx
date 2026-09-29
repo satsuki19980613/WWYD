@@ -1,5 +1,5 @@
 import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { actionLog, STREET_NAME } from '../post/draft.ts';
@@ -146,9 +146,12 @@ export function PokerTable(props: {
   holes: Partial<Record<Pos, Hole>>;
   villainLabel: string;
   note?: string | null;
+  /** ボードの中身を差し替える（投稿の入力でカードを押して選び直す） */
+  boardContent?: ReactNode;
 }): JSX.Element {
+  const interactive = props.boardContent !== undefined;
   return (
-    <div className="ptable" role="img" aria-label="テーブル">
+    <div className={`ptable${interactive ? ' live' : ''}`} role={interactive ? 'group' : 'img'} aria-label="テーブル">
       <div className="ptable-felt" />
       <div className="ptable-mid">
         <div className="ptable-pot">
@@ -156,10 +159,11 @@ export function PokerTable(props: {
           <b className="num">{formatBb(props.pot)}bb</b>
         </div>
         <div className="ptable-board">
-          {[0, 1, 2, 3, 4].map((i) => {
-            const c = props.board[i];
-            return c ? <PlayingCard key={c} card={c} /> : <span key={i} className="ptable-slot" />;
-          })}
+          {props.boardContent ??
+            [0, 1, 2, 3, 4].map((i) => {
+              const c = props.board[i];
+              return c ? <PlayingCard key={c} card={c} /> : <span key={i} className="ptable-slot" />;
+            })}
         </div>
         {props.note && <span className="ptable-note">{props.note}</span>}
       </div>
@@ -229,6 +233,8 @@ export function HandLog(props: {
   highlightLast: boolean;
   actual?: number;
   prompt?: string | null;
+  /** 1 手を押したとき（投稿の入力の「ここから入れ直す」）。無ければ押せない */
+  onPick?: (index: number) => void;
 }): JSX.Element {
   const items = actionLog(props.setup, props.actions);
   const last = items.length - 1;
@@ -259,8 +265,17 @@ export function HandLog(props: {
                   key={it.index}
                   className={`${props.highlightLast && it.index === last ? 'latest' : ''}${it.index === props.actual ? ' actual' : ''}`}
                 >
-                  <b style={{ color: POS_VAR[it.pos] }}>{it.pos}</b>
-                  {it.text.slice(it.pos.length)}
+                  {props.onPick ? (
+                    <button type="button" className="hlog-pick" onClick={() => props.onPick?.(it.index)}>
+                      <b style={{ color: POS_VAR[it.pos] }}>{it.pos}</b>
+                      {it.text.slice(it.pos.length)}
+                    </button>
+                  ) : (
+                    <>
+                      <b style={{ color: POS_VAR[it.pos] }}>{it.pos}</b>
+                      {it.text.slice(it.pos.length)}
+                    </>
+                  )}
                   {it.index === props.spotIndex && <span className="hlog-tag">出題</span>}
                 </li>
               ))}

@@ -62,8 +62,9 @@ export function lastActionText(s: State, p: Pos): string | null {
   return a.to === undefined ? ACTION_NAME[a.type] : `${ACTION_NAME[a.type]} ${formatBb(a.to)}`;
 }
 
-export function seatViews(s: State, o: { hero: Pos; villain: Pos; actor: Pos | null }): SeatView[] {
-  return seatOrder(o.villain, s.seated).map((pos) => ({
+/** `bottom` は手前に置く席（既定は Villain。投稿の入力では Hero を手前に置き、Villain は無い） */
+export function seatViews(s: State, o: { hero: Pos; villain: Pos | null; actor: Pos | null; bottom?: Pos }): SeatView[] {
+  return seatOrder(o.bottom ?? o.villain ?? o.hero, s.seated).map((pos) => ({
     pos,
     stack: s.stacks[pos],
     // フォールドした席のベットも回収まではその席の前に残す（ポットは回収済みの額を出すため、消すと額が合わない）

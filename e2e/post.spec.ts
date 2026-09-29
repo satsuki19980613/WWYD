@@ -48,8 +48,10 @@ test('アクションの台: Fold to・オープンの額・% pot でシング�
   // UTG〜CO を 1 回でフォールド → BTN の番。オープンは 2.5 が選ばれている
   await dock.getByRole('group', { name: 'Fold to' }).getByRole('button', { name: 'BTN' }).click();
   await expect(dock).toContainText('BTN');
-  await expect(dock.getByRole('button', { name: /^レイズ\s*2\.5$/ })).toBeVisible();
-  await dock.getByRole('button', { name: /^レイズ/ }).click();
+  // ボタンはプレイヤーが呼ぶ名前（オープン / リンプ）
+  await expect(dock.getByRole('button', { name: /^オープン\s*2\.5$/ })).toBeVisible();
+  await expect(dock.getByRole('button', { name: /^リンプ\s*1$/ })).toBeVisible();
+  await dock.getByRole('button', { name: /^オープン/ }).click();
   await dock.getByRole('button', { name: 'フォールド' }).click();
   await dock.getByRole('button', { name: /^コール/ }).click();
 
@@ -63,11 +65,34 @@ test('アクションの台: Fold to・オープンの額・% pot でシング�
   await dock.getByRole('button', { name: 'フォールド' }).click();
 
   await expect(page.getByText('BTN ポット獲得')).toBeVisible();
-  const log = page.locator('.pf-log');
+  const log = page.locator('.hlog');
   await expect(log).toContainText('UTG フォールド');
   await expect(log).toContainText('BTN レイズ 2.5');
   await expect(log).toContainText('BTN ベット 4.1');
   // 終わったら台を閉じ、下に「次へ：スポット」
   await expect(dock).toHaveCount(0);
   await expect(page.getByRole('button', { name: '次へ：スポット' })).toBeVisible();
+});
+
+test('入力中の卓（Hero を手前・手番・ベット）と、ログの 1 手からの入れ直し @sp', async ({ page }) => {
+  await openPlayers(page);
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' }).click();
+  await page.getByRole('button', { name: /^3\s*アクション$/ }).click();
+
+  const table = page.getByRole('group', { name: 'テーブル' });
+  const dock = page.getByRole('group', { name: 'アクション' });
+  await expect(table.locator('.pseat.hero')).toContainText('BTN');
+  await expect(table.locator('.pseat.acting')).toContainText('UTG');
+  await dock.getByRole('group', { name: 'Fold to' }).getByRole('button', { name: 'BTN' }).click();
+  await dock.getByRole('button', { name: /^オープン/ }).click();
+  // ブラインドとオープンがチップで出て、手番は SB
+  await expect(table.locator('.pchip')).toHaveText(['2.5', '0.5', '1']);
+  await expect(table.locator('.pseat.acting')).toContainText('SB');
+
+  // ログの「HJ フォールド」から入れ直す → UTG のフォールドだけ残り、HJ の番
+  await page.getByRole('button', { name: 'HJ フォールド' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('HJ フォールド から入れ直しますか');
+  await page.getByRole('button', { name: '入れ直す' }).click();
+  await expect(table.locator('.pseat.acting')).toContainText('HJ');
+  await expect(page.locator('.hlog li')).toHaveCount(1);
 });
