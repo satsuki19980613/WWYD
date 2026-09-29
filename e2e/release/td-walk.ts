@@ -290,7 +290,7 @@ export async function walkHand(env: WalkEnv, seed: number, hand: number, opts: {
       })()`)
       .catch(() => null);
     const j = body ? serverJudge(body) : null;
-    return res('blocked', phase.actions, `候補ありで Spot・タイトルを入れたのに送られない。画面のエラー: ${errs} / 本文をサーバーの判定に通すと: ${j ? (j.ok ? 'ok' : j.message) : '本文なし'}`);
+    return res('blocked', phase.actions, `候補ありで Spot・タイトルを入れたのに送られない。画面のエラー: ${errs} / 本文をサーバーの判定に通すと: ${j ? (j.ok ? 'ok' : j.message) : '本文なし'} / derived=${JSON.stringify((body as { derived?: unknown } | null)?.derived)} stacks=${JSON.stringify((body as { stacks?: unknown } | null)?.stacks)}`);
   }
   const last = env.judged[env.judged.length - 1];
   if (!last || !last.ok) return res('server-reject', phase.actions, `${last?.message ?? '判定なし'}`);

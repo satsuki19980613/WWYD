@@ -444,7 +444,7 @@ export const SNAPSHOT_JS = `(async () => {
     problems.push({ kind: mobile ? 'overflow-x-sp' : 'overflow-x-pc', detail: 'scrollWidth=' + de.scrollWidth + '/' + document.body.scrollWidth + ' innerWidth=' + w + ' path=' + path });
   }
   if (fit && (de.scrollHeight > h + 1 || window.scrollY > 0 || (document.scrollingElement && document.scrollingElement.scrollTop > 0))) {
-    problems.push({ kind: 'page-scroll-pc', detail: 'scrollHeight=' + de.scrollHeight + ' innerHeight=' + h + ' scrollY=' + window.scrollY + ' path=' + path });
+    problems.push({ kind: 'page-scroll-pc', detail: 'scrollHeight=' + de.scrollHeight + ' innerHeight=' + h + ' scrollY=' + window.scrollY + ' path=' + path + ' stage=' + !!document.querySelector('.fit-stage') + ' login=' + !!document.querySelector('.login, [class*=login]') + ' ' + (document.querySelector('.screen') ? document.querySelector('.screen').className.slice(0, 40) : 'no-screen') });
   }
   if (window.__xss) problems.push({ kind: 'xss', detail: 'window.__xss が立った' });
   // 4 投稿の下書きが常に再生できる
@@ -528,6 +528,8 @@ export type RunResult = {
   ms: number;
   /** 操作列のハッシュ（同じ種の再実行で一致すれば、同じ操作を行った） */
   trace?: string;
+  /** 10 秒以上終わらなかった要求 */
+  stuck: string[];
   /** 到達した状態（探索の広さの目安） */
   cover: { maxActions: number; maxBoard: number; maxHands: number; handDone: number; spotSelected: number; titled: number; paths: string[]; dialogsMax: number; posts: number; inserts: number; deletes: number };
 };
@@ -568,12 +570,18 @@ const OPS = [
   ['home', 1],
 ] as const;
 
+/** TD_MACRO=1 のとき、深い状態へ進む「まとまった操作」を足す（公式の全量の操作列は変えない。補足の実行用） */
+const MACRO_OPS = [
+  ['answerMacro', 4],
+  ['primary', 5],
+] as const;
+
 export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass, seed: number, steps: number, opts: { skipInitialGoto?: boolean } = {}): Promise<RunResult> {
   const t0 = Date.now();
   const rng = mulberry32(seed);
   const touch = size === 'sp';
   const cls = touch ? 'sp' : 'pc';
-  const res: RunResult = { screen: cfg.screen, size, seed, steps: 0, violations: [], consoleErrors: [], ops: {}, hung: false, ms: 0, cover: { maxActions: 0, maxBoard: 0, maxHands: 0, handDone: 0, spotSelected: 0, titled: 0, paths: [], dialogsMax: 0, posts: 0, inserts: 0, deletes: 0 } };
+  const res: RunResult = { screen: cfg.screen, size, seed, steps: 0, violations: [], consoleErrors: [], ops: {}, hung: false, ms: 0, stuck: [], cover: { maxActions: 0, maxBoard: 0, maxHands: 0, handDone: 0, spotSelected: 0, titled: 0, paths: [], dialogsMax: 0, posts: 0, inserts: 0, deletes: 0 } };
   let step = 0;
   let lastOp = 'start';
   let prevOp = 'start';
@@ -635,15 +643,24 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
   }
 
   // 通信が静まるのを待つ（読み込みの途中で要素の数が揺れると、同じ種で同じ操作にならない）
-  let pending = 0;
-  page.on('request', () => pending++);
-  page.on('requestfinished', () => pending--);
-  page.on('requestfailed', () => pending--);
+  // 終わらない要求（ナビゲーションで捨てられた要求など）で待ちが伸びないように、3 秒より古い要求は数えない
+  const open = new Map<object, { at: number; url: string }>();
+  page.on('request', (r) => open.set(r, { at: Date.now(), url: r.url() }));
+  page.on('requestfinished', (r) => open.delete(r));
+  page.on('requestfailed', (r) => open.delete(r));
+  const pendingNow = (): number => {
+    const now = Date.now();
+    let n = 0;
+    for (const v of open.values()) if (now - v.at < 3000) n++;
+    return n;
+  };
   async function quiet(): Promise<void> {
     for (let round = 0; round < 2; round++) {
-      for (let i = 0; i < 100 && (pending > 0 || ctx.inflight > 0); i++) await page.waitForTimeout(40);
+      for (let i = 0; i < 75 && (pendingNow() > 0 || ctx.inflight > 0); i++) await page.waitForTimeout(40);
       await page.waitForTimeout(30);
     }
+    const stuck = [...open.values()].filter((v) => Date.now() - v.at > 10_000);
+    if (stuck.length > 0 && res.stuck.length < 5) res.stuck.push(...stuck.slice(0, 3).map((v) => `${v.url.replace(/^https?:\/\/[^/]+/, '').slice(0, 80)} (${Math.round((Date.now() - v.at) / 1000)}s)`));
   }
   async function gotoStart(): Promise<void> {
     await page.goto(cfg.start, { waitUntil: 'domcontentloaded' }).catch((e) => addViolation('goto-failed', String(e.message).slice(0, 200)));
@@ -706,7 +723,7 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
     const els = s.els;
     const modalEls = els.filter((e) => e.modal);
     prevOp = lastOp;
-    const opName = rng.weighted(OPS as unknown as readonly (readonly [string, number])[]);
+    const opName = rng.weighted((process.env.TD_MACRO ? [...OPS, ...MACRO_OPS] : OPS) as unknown as readonly (readonly [string, number])[]);
     // 要素を選ぶ（モーダル・メニューが出ていれば、その中を多めに。chrome は上のバーを多めに）
     const chooseEl = (filter?: (e: Elt) => boolean): Elt | null => {
       let pool = filter ? els.filter(filter) : els;
@@ -881,6 +898,36 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
           lastOp = 'home';
           await gotoStart();
           break;
+        case 'primary': {
+          // 主な操作のボタン（回答する・投稿する・次へ・保存する・削除する など）を押す
+          const primary = els.filter((e) => /^(回答する|投稿する|次へ|保存する|保存しない|削除する|削除して保存|変更する|入れ直す|すべて消す|再試行|完了|ログアウト|閉じる|やめる|Back)/.test(e.label));
+          const e = primary.length > 0 ? rng.pick(primary) : null;
+          if (!e) break;
+          lastOp = `primary "${e.label}" @${e.x},${e.y}`;
+          await tapOrClick(e.x, e.y);
+          break;
+        }
+        case 'answerMacro': {
+          // レンジ表を数回なぞって塗り、回答するを押す（回答の送信・二重送信・エラーの流れを深く試す）
+          const cells = els.filter((e) => /^[AKQJT98765432]{2}[so]? /.test(e.label));
+          const submit = els.find((e) => /^回答する/.test(e.label));
+          if (cells.length < 10) break;
+          const strokes = rng.range(1, 4);
+          lastOp = `answerMacro strokes=${strokes} submit=${submit ? 'yes' : 'no'}`;
+          for (let i = 0; i < strokes; i++) {
+            const a = rng.pick(cells);
+            const b = rng.pick(cells);
+            await page.mouse.move(a.x, a.y);
+            await page.mouse.down();
+            await page.mouse.move(b.x, b.y, { steps: rng.range(2, 6) });
+            await page.mouse.up();
+          }
+          if (submit) {
+            const clicks = rng.chance(0.3) ? 2 : 1;
+            await page.mouse.click(submit.x, submit.y, { clickCount: clicks });
+          }
+          break;
+        }
       }
     } catch (e) {
       const msg = String((e as Error).message);

@@ -43,9 +43,10 @@ function sampleImages(kind: 'pc' | 'sp'): string[] {
 
 test.describe.configure({ mode: 'parallel' });
 
-for (const size of sizes) {
-  for (const screen of screens) {
-    for (let k = 1; k <= SEEDS; k++) {
+// 種を外側にする（途中で止めても、全部の画面・大きさに同じ数の種が回っているように）
+for (let k = 1; k <= SEEDS; k++) {
+  for (const size of sizes) {
+    for (const screen of screens) {
       const seed = BASE + k;
       if (only && (only[0] !== screen || only[1] !== size || Number(only[2]) !== seed)) continue;
       const name = `monkey ${screen} ${size} seed=${seed}${size === 'sp' ? ' @sp' : ''}`;
@@ -65,14 +66,19 @@ for (const size of sizes) {
           test.skip(images.length === 0, `sample/ に画像が無い（${SAMPLE_DIR}）`);
           await page.setViewportSize(SIZES[size]);
           if (cfg.reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
-          const image = images[seed % images.length] as string;
-          await page.goto('/new', { waitUntil: 'domcontentloaded' });
-          await page.getByTestId('ocr-file').setInputFiles(image);
-          // 読み取り中 → 確認画面（またはエラー）
-          const busy = page.getByRole('dialog', { name: '読み取り中…' });
-          await busy.waitFor({ timeout: 10_000 }).catch(() => undefined);
-          await busy.waitFor({ state: 'detached', timeout: 150_000 }).catch(() => undefined);
-          prefix = `ocr=${image.split(/[\\/]/).pop()} review=${(await page.getByRole('dialog').count()) > 0}`;
+          // 確認画面（読み取り結果）が開く画像が見つかるまで、種から決めた順に試す（投稿できないハンドの画像はエラーで止まる）
+          let image = '';
+          let reviewOpen = false;
+          for (let attempt = 0; attempt < 24 && !reviewOpen; attempt++) {
+            image = images[(seed * 7 + attempt * 5) % images.length] as string;
+            await page.goto('/new', { waitUntil: 'domcontentloaded' });
+            await page.getByTestId('ocr-file').setInputFiles(image);
+            const busy = page.getByRole('dialog', { name: '読み取り中…' });
+            await busy.waitFor({ timeout: 10_000 }).catch(() => undefined);
+            await busy.waitFor({ state: 'detached', timeout: 150_000 }).catch(() => undefined);
+            reviewOpen = (await page.getByRole('dialog', { name: '読み取り結果' }).count()) > 0;
+          }
+          prefix = `ocr=${image.split(/[\/]/).pop()} review=${reviewOpen}`;
           skip = true;
         }
         if (screen === 'post' && seed % 3 !== 0) {
