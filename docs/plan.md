@@ -12,9 +12,9 @@
 |---|---|
 | 現在のフェーズ | **P10 仕上げとリリース**（リリース前の総合テストとレビューを実施済み。さつきの判断 → 本番への反映 → 本番のスモーク・実機の確認が残り）。P5〜P8 はスマホ実機（iPhone）のみ残り |
 | 直近で完了したこと | **リリース前の総合テストとレビュー**（[release-test/report.md](release-test/report.md)。2026-09-29〜30）: テスト担当 6（Sonnet 5.5）・レビュー 3（Opus 5.5）。S1 は 0 件。S2 は 6 件のうち 5 件を直した（list_posts の許可リスト、下書きを開き直すと Action が消える、get-session の 5xx、使っている途中のセッション切れ、タブレットの幅の一覧）。S3・S4 の一部も直した（題名の NUL、OCR の後始末と幅の切り替え、ヘッダーのナビの強調、ログアウト時の入力、視差効果の設定、使わない書体）。自動の試験: 単体 983・E2E 395（＋fixme 1）・pgTAP 306・型検査・ビルド・OCR 100%。モンキー 444 本・88,774 手で例外 0。WebKit 104/105・Firefox 105/105。dev にマイグレーション `20260929000003_list_posts_allowlist.sql` を適用済み。以前の経緯はセッションログ |
-| 次にやること | 0. さつきの判断（下の確認待ち）→ F-002 の文言を直す<br>1. 本番にマイグレーション `20260929000003_list_posts_allowlist.sql`（さつきが実行）、create-post を dev・本番に配備し直す（題名の検証。F-010）<br>2. push → PR → マージ → 本番のスモーク（release-test-plan.md §3 H）→ 実機の確認（§3 G）<br>3. 残した S3・S4（findings.md）と、各 worktree の試験の扱い。worktree 6 つの削除（さつきの承認） |
+| 次にやること | 0. 本番のマイグレーションの適用の出力をさつきに確かめる（Claude は本番を読めない）<br>1. create-post を本番に配備し直す（さつきが実行。題名の検証 F-010）<br>2. push → PR → マージ → 本番のスモーク（release-test-plan.md §3 H）→ 実機の確認（§3 G）<br>3. 確認待ちの判断と、残した S3・S4（findings.md）。worktree 6 つの削除（さつきの承認） |
 | ブロッカー | なし |
-| さつきの確認待ち | **リリース前テスト**（findings.md）: F-002 ⓘ のログインの文言（案: 「投稿や回答と一緒には保存しない」に戻す）、F-006 posts の author_uid を誰でも読める（列を絞るか）、F-012 CI の NEON_API_KEY を PR でも渡している、F-021 無料枠の compute の監視と `/api/auth` の大量アクセス、F-029 一覧のタブレットの幅の見た目、F-032〜F-034（iPhone の入力欄の拡大・FitStage の縮小しすぎ・コントラストとタップの大きさ）、F-037 Pot の上限、F-028・F-036（仕様の確認 Q-1〜Q-5）。以前から: wwyd-ui-concept の 420px、13 章 §5.4、シグネチャー 3、「投稿する」を Post に、Replay の「最初から」、iPhone 実機 |
+| さつきの確認待ち | **リリース前テスト**（findings.md）: F-006 posts の author_uid を誰でも読める（列を絞るか）、F-012 CI の NEON_API_KEY を PR でも渡している、F-021 無料枠の compute の監視と `/api/auth` の大量アクセス、F-029 一覧のタブレットの幅の見た目、F-032〜F-034（iPhone の入力欄の拡大・FitStage の縮小しすぎ・コントラストとタップの大きさ）、F-037 Pot の上限、F-028・F-036（仕様の確認 Q-1〜Q-5）。以前から: wwyd-ui-concept の 420px、13 章 §5.4、シグネチャー 3、「投稿する」を Post に、Replay の「最初から」、iPhone 実機 |
 
 ---
 
@@ -313,6 +313,7 @@
 | 2026-09-29 | **ログインを保つため、セッションの確認・JWT・ログアウトを自サイトの `/api/auth/*`（Cloudflare Pages Functions。開発は Vite の proxy）から Neon Auth へ中継し、セッションのクッキーを自サイトのものにする**。ログインの開始（照合用のクッキーを付ける）も中継する。切り替え後に 1 回だけログインし直し（12 章 §7.2） | さつき「数日使わないとログインし直しになる」。原因は Neon Auth のクッキーが他サイトのものでブラウザが消すこと。Bearer 方式は Neon Auth が受け付けない（dev で確認）。中継は AskUserQuestion で承認（推奨案） | さつき |
 | 2026-09-30 | **リリース前テストの指摘の直し方（指揮役の判断。仕様の範囲）**: ① get-session の 5xx・通信エラーはメンテナンス中（オフライン）、4xx は未ログイン（06 章 §0.3。F-025）② 使っている途中のセッション切れ（Data API の 401・not_authenticated・JWT を取り直せない）はログイン画面に「ログインし直してください」（06 章 §7。回答の送信時も同じで、塗りは残らない。F-026）③ ログアウト・アカウント削除で入力中の投稿（メモリの中だけ）を捨てる（保存先がなく、確認を出しても保存できないため。F-024）④ 保存した下書きを開き直すときも画面と同じく settleActions で合わなくなった手から後だけを外し、Board は残す（F-003）⑤ 題名に NUL・対のないサロゲートがあれば invalid_title（jsonb に保存できないため。F-010）⑥ PC の一覧は 1100px 未満で絞り込みを表の上に横並びにし、投稿の経過時間の列を隠す（F-029）⑦ 使っていない書体の太さ 900 を読み込まない（F-019） | release-test/findings.md。⑥ は見た目の変更なので、さつきの確認を得たい |
 | 2026-09-30 | E2E を WebKit・Firefox でも回せるようにした（`E2E_ALL_BROWSERS=1`。通常の `npm run e2e` は Chromium だけのまま）。T-A・T-B・T-C の試験を取り込み、T-D（モンキー。数時間かかる）・T-E（確認待ちの判断を含む）・T-F（本番ビルドが要る）・T-C の C-06（同）は各 worktree のブランチに残す | 指揮役 |
+| 2026-09-30 | ⓘ のログインの文言を「Google でログインする。表示名とメールアドレスは投稿や回答と一緒には保存しない。」に戻す（2026-09-29 の簡素化で「保存しない」に戻っていた。実際は Neon Auth が保存する。Q-26）。create-post を dev に配備し直した（createpost/6、許可するオリジン `http://localhost:5173`。題名の検証 F-010） | さつきの判断（推奨どおり。F-002）。本番のマイグレーション `20260929000003_list_posts_allowlist.sql` はさつきが実行 |
 
 ---
 
@@ -838,3 +839,4 @@
 - **変更したファイル**: `db/migrations/20260929000003_list_posts_allowlist.sql`（新規）、`packages/core/src/post/validateInput.ts`、`packages/app/src/{auth/useAuth.ts,auth/resolveAppState.ts,backend/neon.ts,components/Link.tsx,post/savedDrafts.ts,post/OcrImport.tsx,screens/NewPostScreen.tsx,screens/LoginScreen.tsx,App.tsx,main.tsx,styles/{base,post,screens}.css}`、試験（`db/tests/`、`packages/**/release.*.test.ts`、`e2e/release/ta-*`）、`playwright.config.ts`、`package.json`、`docs/release-test/`（新規）、`docs/plan.md`
 - **注意**: サブエージェントの worktree は main から作られる（全員が自分で RC1 へ進めてから試験した）。worktree は `.claude/worktrees/` に 6 つ（OneDrive の中。node_modules 込み）残っている。削除はさつきの承認後。
 - **残課題**: 確認待ちの判断、本番のマイグレーションと create-post の配備、push・本番のスモーク・実機、S3・S4 の残り。
+- **追記（2026-09-30）**: さつきが本番にマイグレーション `20260929000003_list_posts_allowlist.sql` を実行（Claude の本番の読み取りは安全機能で止められ、適用の確認はさつきの出力による）。さつきの判断で ⓘ のログインの文言を戻した（F-002。09 章→コード→E2E）。create-post を dev に配備し直した（createpost/6）。dev のログインが切れていたため、配備した版の動作は画面から確かめていない。

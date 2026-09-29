@@ -35,7 +35,7 @@ for (const v of VARIANTS) {
       await expect(dlg).toBeVisible();
       await expect(dlg.locator('dt')).toHaveText(['WWYD', 'ログイン']);
       await expect(dlg.locator('dd').first()).toContainText('Hero の手番');
-      await expect(dlg.locator('dd').nth(1)).toContainText('表示名とメールアドレスは保存しない');
+      await expect(dlg.locator('dd').nth(1)).toContainText('表示名とメールアドレスは投稿や回答と一緒には保存しない');
       await page.keyboard.press('Escape');
       await expect(dlg).toHaveCount(0);
       await page.getByRole('button', { name: 'インフォメーション' }).click();

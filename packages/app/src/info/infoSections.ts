@@ -17,7 +17,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     title: 'ログイン',
     items: [
       { term: 'WWYD', desc: 'Hand の Spot（Hero の手番）で、ほかの Player ならどんな Range で打つかを、回答を集めて見る。' },
-      { term: 'ログイン', desc: 'Google でログインする。表示名とメールアドレスは保存しない。' },
+      { term: 'ログイン', desc: 'Google でログインする。表示名とメールアドレスは投稿や回答と一緒には保存しない。' },
     ],
   },
   list: {
