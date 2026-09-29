@@ -5,6 +5,8 @@ import {
   cardStatus,
   emptyState,
   fetchPostPage,
+  findNextSpot,
+  pickNext,
   formatAgo,
   formatLabel,
   listPostsArgs,
@@ -47,7 +49,7 @@ describe('parseListQuery / listSearch', () => {
     expect(q).toEqual({ tab: 'mine', street: 'flop', sort: 'many' });
     expect(listSearch(q)).toBe('?tab=mine&street=flop&sort=many');
   });
-  it('プリフロップは出題しないので絞り込めない（既定値にする）', () => {
+  it('Preflop は出題しないので絞り込めない（既定値にする）', () => {
     expect(parseListQuery('?street=pf').street).toBe('all');
     expect(STREET_ITEMS.map((i) => i.value)).toEqual(['all', 'flop', 'turn', 'river']);
   });
@@ -60,7 +62,7 @@ describe('parseListQuery / listSearch', () => {
 });
 
 describe('listPostsArgs', () => {
-  it('1 ページ目。ストリートすべては null', () => {
+  it('1 ページ目。Street すべては null', () => {
     expect(listPostsArgs(ALL, null)).toEqual({
       p_tab: 'all',
       p_street: null,
@@ -78,6 +80,29 @@ describe('listPostsArgs', () => {
       p_after: { created_at: '2026-09-28T10:00:00.123456+00:00', id: 'abc', answer_count: 7 },
       p_limit: PAGE_SIZE,
     });
+  });
+});
+
+describe('次の Spot（14 章）', () => {
+  it('未回答・自分の投稿でない・今の投稿でない最初の行', () => {
+    const rows = [
+      row({ id: 'cur' }),
+      row({ id: 'done', answered_by_me: true }),
+      row({ id: 'mine', is_mine: true }),
+      row({ id: 'next' }),
+    ];
+    expect(pickNext(rows, 'cur')?.id).toBe('next');
+    expect(pickNext(rows.slice(0, 3), 'cur')).toBeNull();
+  });
+  it('1 ページ目に無ければ続きを読む。3 ページで止める', async () => {
+    const full = (p: string, o: Partial<PostRow>) => Array.from({ length: PAGE_SIZE }, (_, i) => row({ id: `${p}${i}`, ...o }));
+    const pages = [full('a', { answered_by_me: true }), [...full('b', { is_mine: true }).slice(1), row({ id: 'hit' })]];
+    const rpc = vi.fn<RpcCaller>(async () => ({ data: pages.shift() ?? [], error: null }));
+    expect(await findNextSpot(rpc, 'cur')).toBe('hit');
+    expect(rpc).toHaveBeenCalledTimes(2);
+    const none = vi.fn<RpcCaller>(async () => ({ data: full('c', { answered_by_me: true }), error: null }));
+    expect(await findNextSpot(none, 'cur')).toBeNull();
+    expect(none).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -113,8 +138,8 @@ describe('appendPage', () => {
 });
 
 describe('formatLabel', () => {
-  it('キャッシュ · 100bb / MTT · 22.5bb', () => {
-    expect(formatLabel({ fmt: 'cash', effective_stack: 100 })).toBe('キャッシュ · 100bb');
+  it('Cash · 100bb / MTT · 22.5bb', () => {
+    expect(formatLabel({ fmt: 'cash', effective_stack: 100 })).toBe('Cash · 100bb');
     expect(formatLabel({ fmt: 'mtt', effective_stack: 22.5 })).toBe('MTT · 22.5bb');
   });
 });
@@ -163,11 +188,11 @@ describe('cardStatus / cardAction', () => {
 });
 
 describe('emptyState（06 章 §2.3）', () => {
-  it('自分の投稿・ストリートすべては「投稿なし」＋投稿ボタン', () => {
+  it('自分の投稿・Street すべては「投稿なし」＋投稿ボタン', () => {
     expect(emptyState({ tab: 'mine', street: 'all', sort: 'many' })).toEqual({ label: '投稿なし', showPost: true });
   });
-  it('それ以外は「該当スポットなし」', () => {
-    expect(emptyState({ tab: 'mine', street: 'flop', sort: 'new' })).toEqual({ label: '該当スポットなし', showPost: false });
-    expect(emptyState(ALL)).toEqual({ label: '該当スポットなし', showPost: false });
+  it('それ以外は「該当 Spot なし」', () => {
+    expect(emptyState({ tab: 'mine', street: 'flop', sort: 'new' })).toEqual({ label: '該当 Spot なし', showPost: false });
+    expect(emptyState(ALL)).toEqual({ label: '該当 Spot なし', showPost: false });
   });
 });

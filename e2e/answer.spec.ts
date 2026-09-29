@@ -57,7 +57,7 @@ async function longPress(page: Page, label: string): Promise<void> {
 /** ミックスバー上で x の割合（0〜1）の位置から dx の割合だけドラッグする */
 async function dragBar(page: Page, from: number, dx: number): Promise<void> {
   const b = await page.locator('.mixbar').boundingBox();
-  if (!b) throw new Error('ミックスバーが見えない');
+  if (!b) throw new Error('Mix バーが見えない');
   const y = b.y + b.height / 2;
   await page.mouse.move(b.x + b.width * from, y);
   await page.mouse.down();
@@ -97,13 +97,13 @@ test.describe('振り分け（06 章 §4.2）', () => {
 
   test('存在しない投稿', async ({ page }) => {
     await open(page, null);
-    await expect(page.getByText('スポットが見つかりません')).toBeVisible();
+    await expect(page.getByText('Spot が見つかりません')).toBeVisible();
     await page.getByRole('link', { name: '一覧へ' }).last().click();
     await expect(page).toHaveURL('/');
   });
 });
 
-test.describe('リプレイ（06 章 §4.3）', () => {
+test.describe('Replay（06 章 §4.3）', () => {
   test('視差効果を減らす設定: 自動再生せず停止位置を表示', async ({ page }) => {
     await open(page);
     await expect(page.getByText('11 / 11 手目')).toBeVisible();
@@ -139,77 +139,78 @@ test.describe('リプレイ（06 章 §4.3）', () => {
 });
 
 test.describe('塗り・道具（06 章 §4.5・§4.6）', () => {
-  test('タップで塗り、同じミックスのマスをもう一度押すと消える', async ({ page }) => {
+  test('タップで塗り、同じ Mix のマスをもう一度押すと消える', async ({ page }) => {
     await open(page);
     await cell(page, 'AA').click();
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA コール 100%');
-    await expect(page.locator('.cbar-legend')).toContainText('コール 0.5%');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Call 100%');
+    await expect(page.locator('.cbar')).toContainText('6 combos');
+    await expect(page.locator('.cbar-legend')).toContainText('Call 100.0%');
     await cell(page, 'AA').click();
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA レンジ外');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Range 外');
   });
 
   test('なぞった範囲を塗り、1 回の「元に戻す」で全部戻る。やり直しもできる', async ({ page }) => {
     await open(page);
     await stroke(page, ['AA', 'AKs', 'AQs', 'KQs']);
-    for (const l of ['AA', 'AKs', 'AQs', 'KQs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} コール 100%`);
+    for (const l of ['AA', 'AKs', 'AQs', 'KQs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} Call 100%`);
     await page.getByRole('button', { name: '元に戻す' }).click();
-    for (const l of ['AA', 'AKs', 'AQs', 'KQs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} レンジ外`);
+    for (const l of ['AA', 'AKs', 'AQs', 'KQs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} Range 外`);
     await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled();
     await page.getByRole('button', { name: 'やり直す' }).click();
-    await expect(cell(page, 'KQs')).toHaveAccessibleName('KQs コール 100%');
+    await expect(cell(page, 'KQs')).toHaveAccessibleName('KQs Call 100%');
   });
 
   test('塗ったマスから始めたなぞりは消去になる', async ({ page }) => {
     await open(page);
     await stroke(page, ['AA', 'AKs', 'AQs']);
     await stroke(page, ['AKs', 'AQs', 'AJs']);
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA コール 100%');
-    for (const l of ['AKs', 'AQs', 'AJs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} レンジ外`);
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Call 100%');
+    for (const l of ['AKs', 'AQs', 'AJs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} Range 外`);
   });
 
-  test('別のミックスのマスは上書き。消しゴム。クリアと元に戻す', async ({ page }) => {
+  test('別の Mix のマスは上書き。消しゴム。クリアと元に戻す', async ({ page }) => {
     await open(page);
     await stroke(page, ['AA', 'AKs']);
-    await tile(page, 'レイズ').click();
+    await tile(page, 'Raise').click();
     await cell(page, 'AA').click();
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA レイズ 100%');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Raise 100%');
 
     await page.getByRole('button', { name: '消しゴム' }).click();
     await expect(page.getByRole('button', { name: '消しゴム' })).toHaveAttribute('aria-pressed', 'true');
     await cell(page, 'AA').click();
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA レンジ外');
-    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs コール 100%');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Range 外');
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 100%');
 
     await page.getByRole('button', { name: 'クリア' }).click();
-    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs レンジ外');
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Range 外');
     await expect(page.getByRole('button', { name: 'クリア' })).toBeDisabled();
     await page.getByRole('button', { name: '元に戻す' }).click();
-    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs コール 100%');
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 100%');
   });
 
-  test('スポイト: 長押しで塗りを取り消し、マスのミックスをブラシに読み込む', async ({ page }) => {
+  test('スポイト: 長押しで塗りを取り消し、マスの Mix をブラシに読み込む', async ({ page }) => {
     await open(page);
     // コール 50% / レイズ 50% のブラシで AKs を塗る
-    await press(slider(page, 'コール / レイズ の境界'), 'ArrowLeft', 10);
+    await press(slider(page, 'Call / Raise の境界'), 'ArrowLeft', 10);
     await cell(page, 'AKs').click();
-    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs コール 50% / レイズ 50%');
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 50% / Raise 50%');
     // フォールド 100% に変えてから AKs を長押し
-    await tile(page, 'フォールド').click();
+    await tile(page, 'Fold').click();
     await longPress(page, 'AKs');
-    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs コール 50% / レイズ 50%');
-    await expect(tile(page, 'コール')).toHaveAccessibleName(/^コール 50%/);
-    await expect(tile(page, 'レイズ')).toHaveAccessibleName(/^レイズ 50%/);
-    await expect(tile(page, 'フォールド')).toHaveAccessibleName(/^フォールド 0%/);
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 50% / Raise 50%');
+    await expect(tile(page, 'Call')).toHaveAccessibleName(/^Call 50%/);
+    await expect(tile(page, 'Raise')).toHaveAccessibleName(/^Raise 50%/);
+    await expect(tile(page, 'Fold')).toHaveAccessibleName(/^Fold 0%/);
     // 長押しは履歴に残らない（元に戻すと最初の塗りが消える）
     await page.getByRole('button', { name: '元に戻す' }).click();
-    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs レンジ外');
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Range 外');
   });
 
-  test('スポイト: レンジ外のマスでは「レンジ外」とトーストし、塗らない', async ({ page }) => {
+  test('スポイト: Range 外のマスでは「Range 外」とトーストし、塗らない', async ({ page }) => {
     await open(page);
     await longPress(page, 'KK');
-    await expect(page.locator('.toast')).toHaveText('レンジ外');
-    await expect(cell(page, 'KK')).toHaveAccessibleName('KK レンジ外');
+    await expect(page.locator('.toast')).toHaveText('Range 外');
+    await expect(cell(page, 'KK')).toHaveAccessibleName('KK Range 外');
     await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled();
   });
 
@@ -219,87 +220,87 @@ test.describe('塗り・道具（06 章 §4.5・§4.6）', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
-    await expect(cell(page, 'KK')).toHaveAccessibleName('KK コール 100%');
+    await expect(cell(page, 'KK')).toHaveAccessibleName('KK Call 100%');
   });
 
-  test('PC では取れないアクションを非活性で並べる', async ({ page }) => {
+  test('PC では取れない Action を非活性で並べる', async ({ page }) => {
     await open(page);
-    await expect(page.getByRole('button', { name: 'チェック', exact: true })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'ベット', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Check', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Bet', exact: true })).toBeDisabled();
   });
 });
 
-test.describe('ブラシとミックスバー（06 章 §4.4）', () => {
-  test('初期は コール 100%。タイルでそのキー 100%。境界は左右キーで ±5%', async ({ page }) => {
+test.describe('ブラシと Mix バー（06 章 §4.4）', () => {
+  test('初期は Call 100%。タイルでそのキー 100%。境界は左右キーで ±5%', async ({ page }) => {
     await open(page);
-    await expect(tile(page, 'コール')).toHaveAttribute('aria-pressed', 'true');
-    const h = slider(page, 'フォールド / コール の境界');
+    await expect(tile(page, 'Call')).toHaveAttribute('aria-pressed', 'true');
+    const h = slider(page, 'Fold / Call の境界');
     await press(h, 'ArrowRight', 3);
     await expect(h).toHaveAttribute('aria-valuenow', '15');
-    await expect(tile(page, 'フォールド')).toHaveAccessibleName(/^フォールド 15%/);
-    await expect(tile(page, 'コール')).toHaveAccessibleName(/^コール 85%/);
-    await tile(page, 'レイズ').click();
-    await expect(tile(page, 'レイズ')).toHaveAccessibleName(/^レイズ 100%/);
+    await expect(tile(page, 'Fold')).toHaveAccessibleName(/^Fold 15%/);
+    await expect(tile(page, 'Call')).toHaveAccessibleName(/^Call 85%/);
+    await tile(page, 'Raise').click();
+    await expect(tile(page, 'Raise')).toHaveAccessibleName(/^Raise 100%/);
   });
 
-  test('右端で重なったハンドル（フォールド 100%）: 左へドラッグで動ける方を掴む', async ({ page }) => {
+  test('右端で重なったハンドル（Fold 100%）: 左へドラッグで動ける方を掴む', async ({ page }) => {
     await open(page);
-    await tile(page, 'フォールド').click();
+    await tile(page, 'Fold').click();
     await dragBar(page, 1, -0.3);
-    await expect(tile(page, 'フォールド')).toHaveAccessibleName(/^フォールド 70%/);
-    await expect(tile(page, 'コール')).toHaveAccessibleName(/^コール 30%/);
+    await expect(tile(page, 'Fold')).toHaveAccessibleName(/^Fold 70%/);
+    await expect(tile(page, 'Call')).toHaveAccessibleName(/^Call 30%/);
   });
 
-  test('中央で重なったハンドル（フォールド 50% / コール 0% / レイズ 50%）: 右へも左へも動かせる', async ({ page }) => {
+  test('中央で重なったハンドル（Fold 50% / Call 0% / Raise 50%）: 右へも左へも動かせる', async ({ page }) => {
     await open(page);
-    await tile(page, 'レイズ').click();
-    await press(slider(page, 'コール / レイズ の境界'), 'ArrowRight', 10);
-    await press(slider(page, 'フォールド / コール の境界'), 'ArrowRight', 10);
-    await expect(tile(page, 'フォールド')).toHaveAccessibleName(/^フォールド 50%/);
-    await expect(tile(page, 'コール')).toHaveAccessibleName(/^コール 0%/);
+    await tile(page, 'Raise').click();
+    await press(slider(page, 'Call / Raise の境界'), 'ArrowRight', 10);
+    await press(slider(page, 'Fold / Call の境界'), 'ArrowRight', 10);
+    await expect(tile(page, 'Fold')).toHaveAccessibleName(/^Fold 50%/);
+    await expect(tile(page, 'Call')).toHaveAccessibleName(/^Call 0%/);
 
     await dragBar(page, 0.5, 0.2);
-    await expect(tile(page, 'フォールド')).toHaveAccessibleName(/^フォールド 50%/);
-    await expect(tile(page, 'コール')).toHaveAccessibleName(/^コール 20%/);
-    await expect(tile(page, 'レイズ')).toHaveAccessibleName(/^レイズ 30%/);
+    await expect(tile(page, 'Fold')).toHaveAccessibleName(/^Fold 50%/);
+    await expect(tile(page, 'Call')).toHaveAccessibleName(/^Call 20%/);
+    await expect(tile(page, 'Raise')).toHaveAccessibleName(/^Raise 30%/);
 
     // もう一度重ねてから左へ
-    await press(slider(page, 'コール / レイズ の境界'), 'ArrowLeft', 4);
+    await press(slider(page, 'Call / Raise の境界'), 'ArrowLeft', 4);
     await dragBar(page, 0.5, -0.2);
-    await expect(tile(page, 'フォールド')).toHaveAccessibleName(/^フォールド 30%/);
-    await expect(tile(page, 'コール')).toHaveAccessibleName(/^コール 20%/);
-    await expect(tile(page, 'レイズ')).toHaveAccessibleName(/^レイズ 50%/);
+    await expect(tile(page, 'Fold')).toHaveAccessibleName(/^Fold 30%/);
+    await expect(tile(page, 'Call')).toHaveAccessibleName(/^Call 20%/);
+    await expect(tile(page, 'Raise')).toHaveAccessibleName(/^Raise 50%/);
   });
 
   test('消しゴムのときにバーを動かすとブラシに戻る', async ({ page }) => {
     await open(page);
     await page.getByRole('button', { name: '消しゴム' }).click();
-    await press(slider(page, 'フォールド / コール の境界'), 'ArrowRight', 1);
+    await press(slider(page, 'Fold / Call の境界'), 'ArrowRight', 1);
     await expect(page.getByRole('button', { name: 'ブラシ' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
-test.describe('サイズ（06 章 §4.7）', () => {
+test.describe('Size（06 章 §4.7）', () => {
   test('初期値 50%、プリセット、増減、範囲外', async ({ page }) => {
     await open(page);
-    const row = page.getByRole('button', { name: /^レイズサイズ/ });
+    const row = page.getByRole('button', { name: /^Raise Size/ });
     await expect(row).toContainText('17.55bb');
     await expect(row).toContainText('50% pot');
-    await expect(tile(page, 'レイズ')).toContainText('17.55bb');
+    await expect(tile(page, 'Raise')).toContainText('17.55bb');
     await row.click();
     await page.getByRole('button', { name: '33%' }).click();
     await expect(row).toContainText('13.79bb');
     await page.getByRole('button', { name: '0.1bb 増やす' }).click();
-    await expect(page.getByRole('textbox', { name: 'レイズサイズ（bb）' })).toHaveValue('13.89');
-    await page.getByRole('button', { name: 'オールイン' }).click();
-    await expect(row).toContainText('オールイン');
-    await expect(tile(page, 'レイズ')).toContainText('オールイン');
+    await expect(page.getByRole('textbox', { name: 'Raise Size（bb）' })).toHaveValue('13.89');
+    await page.getByRole('button', { name: 'All-in' }).click();
+    await expect(row).toContainText('All-in');
+    await expect(tile(page, 'Raise')).toContainText('All-in');
     await expect(page.getByText('min 13 / max 95.7bb')).toBeVisible();
 
-    await page.getByRole('textbox', { name: 'レイズサイズ（bb）' }).fill('5');
+    await page.getByRole('textbox', { name: 'Raise Size（bb）' }).fill('5');
     await expect(page.getByText('範囲外')).toBeVisible();
     await page.getByRole('button', { name: '0.1bb 減らす' }).click();
-    await expect(page.getByRole('textbox', { name: 'レイズサイズ（bb）' })).toHaveValue('13');
+    await expect(page.getByRole('textbox', { name: 'Raise Size（bb）' })).toHaveValue('13');
     await expect(page.getByText('範囲外')).toHaveCount(0);
   });
 });
@@ -313,19 +314,19 @@ test.describe('送信（06 章 §4.9）', () => {
     expect(be.inserts).toHaveLength(0);
   });
 
-  test('レイズを含むのにサイズが範囲外だと送れない（レイズを含まなければ見ない）', async ({ page }) => {
+  test('Raise を含むのに Size が範囲外だと送れない（Raise を含まなければ見ない）', async ({ page }) => {
     await open(page);
     await cell(page, 'AA').click();
-    await page.getByRole('button', { name: /^レイズサイズ/ }).click();
-    await page.getByRole('textbox', { name: 'レイズサイズ（bb）' }).fill('200');
+    await page.getByRole('button', { name: /^Raise Size/ }).click();
+    await page.getByRole('textbox', { name: 'Raise Size（bb）' }).fill('200');
     await page.getByRole('button', { name: '回答する' }).click();
     await expect(page.getByRole('alertdialog')).toBeVisible();
     await page.getByRole('button', { name: 'やめる' }).click();
 
-    await tile(page, 'レイズ').click();
+    await tile(page, 'Raise').click();
     await cell(page, 'KK').click();
     await page.getByRole('button', { name: '回答する' }).click();
-    await expect(page.getByRole('alert')).toHaveText('サイズを 13〜95.7bb にしてください');
+    await expect(page.getByRole('alert')).toHaveText('Size を 13〜95.7bb にしてください');
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
   });
 
@@ -333,7 +334,7 @@ test.describe('送信（06 章 §4.9）', () => {
     const be = await open(page);
     be.afterInsert = answered();
     await cell(page, 'AA').click();
-    await tile(page, 'レイズ').click();
+    await tile(page, 'Raise').click();
     await cell(page, 'KK').click();
     await page.getByRole('button', { name: '回答する' }).click();
     const dialog = page.getByRole('alertdialog');
@@ -353,7 +354,7 @@ test.describe('送信（06 章 §4.9）', () => {
     expect(be.inserts[0]).toEqual({ post_id: ID, paint: toHex(encodePaint(p)), size: 17.55 });
   });
 
-  test('レイズを含まない回答はサイズを送らない', async ({ page }) => {
+  test('Raise を含まない回答は Size を送らない', async ({ page }) => {
     const be = await open(page);
     be.afterInsert = answered();
     await cell(page, 'AA').click();
@@ -409,12 +410,12 @@ test.describe('投稿者の回答（06 章 §4.2・§4.9。投稿者も回答者
       answerCount: 1,
       myAnswer: { paint: toHex(encodePaint(emptyPaint())), size: null },
     });
-    // Hero のハンドは自分のハンドなので表向き。席は他の回答者と同じ「Villain（あなた）」
-    await expect(page.getByLabel('ダイヤのA')).toBeVisible();
-    await expect(page.getByLabel('ダイヤのK')).toBeVisible();
+    // Hero のハンドは自分の投稿でも伏せる（回答してから集計で見せる。2026-09-29）。席は他の回答者と同じ「Villain（あなた）」
+    await expect(page.locator('.pback')).toHaveCount(2);
+    await expect(page.getByLabel('Diamond の A')).toHaveCount(0);
     await expect(page.getByText('Villain（あなた）')).toBeVisible();
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA レンジ外');
-    await expect(page.getByRole('button', { name: /^レイズサイズ/ })).toContainText('17.55bb');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Range 外');
+    await expect(page.getByRole('button', { name: /^Raise Size/ })).toContainText('17.55bb');
 
     await cell(page, 'KK').click();
     await page.getByRole('button', { name: '回答する' }).click();
@@ -435,23 +436,25 @@ test.describe('投稿者の回答（06 章 §4.2・§4.9。投稿者も回答者
 });
 
 test.describe('スマホ（06 章 §4.1）', () => {
-  test('リプレイ / レンジのタブ、下部固定の送信まで @sp', async ({ page }) => {
+  test('Replay / Range のタブ、下部固定の送信まで @sp', async ({ page }) => {
     const be = await open(page);
     be.afterInsert = answered();
-    await expect(page.getByRole('tab', { name: 'リプレイ' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Replay' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.ptable')).toBeVisible();
-    // ハンドヒストリーは折りたたみ
-    await expect(page.locator('.hlog')).toBeHidden();
-    await page.getByText('ハンドヒストリー').click();
-    await expect(page.locator('.hlog')).toBeVisible();
+    // Hand History はボタンからモーダル（14 章）
+    await expect(page.locator('.hlog')).toHaveCount(0);
+    await page.getByRole('button', { name: 'History' }).click();
+    await expect(page.getByRole('dialog', { name: 'Hand History' }).locator('.hlog')).toBeVisible();
+    await page.keyboard.press('Escape');
     // 取れないアクションは出さない
-    await page.getByRole('button', { name: 'レンジ入力' }).click();
-    await expect(page.getByRole('tab', { name: 'レンジ' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('button', { name: 'チェック', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Range 入力' }).click();
+    await expect(page.getByRole('tab', { name: 'Range' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('button', { name: 'Check', exact: true })).toHaveCount(0);
 
     await cell(page, 'AA').tap();
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA コール 100%');
-    await expect(page.locator('.ans-bottom')).toContainText('コール 0.5%');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Call 100%');
+    await expect(page.locator('.ans-bottom')).toContainText('6 combos');
+    await expect(page.locator('.ans-bottom')).toContainText('Call 100.0%');
     await page.getByRole('button', { name: '回答する' }).click();
     await page.getByRole('button', { name: '送信する' }).click();
     await expect(page).toHaveURL(RESULT);
@@ -460,7 +463,7 @@ test.describe('スマホ（06 章 §4.1）', () => {
 
   test('指でなぞる・長押し（スポイト）@sp', async ({ page }) => {
     await open(page);
-    await page.getByRole('tab', { name: 'レンジ' }).click();
+    await page.getByRole('tab', { name: 'Range' }).click();
     const cdp = await page.context().newCDPSession(page);
     const touch = async (type: 'touchStart' | 'touchMove' | 'touchEnd', p?: { x: number; y: number }): Promise<void> => {
       await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: p ? [p] : [] });
@@ -469,24 +472,24 @@ test.describe('スマホ（06 章 §4.1）', () => {
     await touch('touchStart', await center(cell(page, 'AA')));
     for (const l of ['AKs', 'AQs', 'AJs']) await touch('touchMove', await center(cell(page, l)));
     await touch('touchEnd');
-    for (const l of ['AA', 'AKs', 'AQs', 'AJs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} コール 100%`);
+    for (const l of ['AA', 'AKs', 'AQs', 'AJs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} Call 100%`);
     // 長押し
-    await tile(page, 'フォールド').tap();
+    await tile(page, 'Fold').tap();
     await touch('touchStart', await center(cell(page, 'AKs')));
     await page.waitForTimeout(700);
     await touch('touchEnd');
-    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs コール 100%');
-    await expect(tile(page, 'コール')).toHaveAttribute('aria-pressed', 'true');
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 100%');
+    await expect(tile(page, 'Call')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('タブを切り替えても塗りとリプレイの位置が残る @sp', async ({ page }) => {
+  test('タブを切り替えても塗りと Replay の位置が残る @sp', async ({ page }) => {
     await open(page);
     await page.getByRole('button', { name: '1手戻る' }).click();
-    await page.getByRole('tab', { name: 'レンジ' }).click();
+    await page.getByRole('tab', { name: 'Range' }).click();
     await cell(page, 'AA').tap();
-    await page.getByRole('tab', { name: 'リプレイ' }).click();
+    await page.getByRole('tab', { name: 'Replay' }).click();
     await expect(page.getByText('10 / 11 手目')).toBeVisible();
-    await page.getByRole('tab', { name: 'レンジ' }).click();
-    await expect(cell(page, 'AA')).toHaveAccessibleName('AA コール 100%');
+    await page.getByRole('tab', { name: 'Range' }).click();
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Call 100%');
   });
 });

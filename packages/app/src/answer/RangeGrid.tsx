@@ -11,7 +11,7 @@ const SIDE = 13;
 
 /** マスの読み上げ（「AKs コール 50% / レイズ 50%」「AKs レンジ外」） */
 export function cellText(idx: number, mix: Mix | null, names: KeyNames): string {
-  if (!mix) return `${labelOf(idx)} レンジ外`;
+  if (!mix) return `${labelOf(idx)} Range 外`;
   const parts = ANSWER_KEYS.filter((k) => mix[k] > 0).map((k) => `${names[k]} ${mixUnitsToPercent(mix[k])}%`);
   return `${labelOf(idx)} ${parts.join(' / ')}`;
 }
@@ -140,7 +140,7 @@ export const RangeGrid = memo(function RangeGrid(props: {
       ref={grid}
       className="rgrid"
       role="group"
-      aria-label="レンジ表"
+      aria-label="Range 表"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}

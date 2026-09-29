@@ -6,6 +6,8 @@ import { checkHealth, cleanAuthParams, resolveAppState, type Whoami } from './re
 
 export type Auth = {
   state: AppState;
+  /** ログインしている利用者の ID（下書きの保存先を分ける。14 章 §3.5） */
+  userId: string | null;
   admin: boolean;
   /** Google の同意を拒否した・失敗した（ログイン画面に「ログインできませんでした」を出す） */
   loginFailed: boolean;
@@ -34,6 +36,8 @@ async function callWhoami(): Promise<Whoami | Reachability> {
 export function useAuth(): Auth {
   const [state, setState] = useState<AppState>('booting');
   const [admin, setAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const sessionUser = useRef<string | null>(null);
   const [loginFailed, setLoginFailed] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const run = useRef(0);
@@ -50,8 +54,11 @@ export function useAuth(): Auth {
       online: () => navigator.onLine,
       hasSession: async () => {
         try {
-          return (await getSessionUser(verifier)) !== null;
+          const u = await getSessionUser(verifier);
+          sessionUser.current = u?.id ?? null;
+          return u !== null;
         } catch {
+          sessionUser.current = null;
           return false;
         }
       },
@@ -60,6 +67,7 @@ export function useAuth(): Auth {
     if (id !== run.current) return; // 後から始めた判定を優先する
     setState(r.state);
     setAdmin(r.admin);
+    setUserId(r.state === 'ready' ? sessionUser.current : null);
   }, []);
 
   useEffect(() => {
@@ -91,6 +99,7 @@ export function useAuth(): Auth {
     }
     setState('signedOut');
     setAdmin(false);
+    setUserId(null);
   }, []);
 
   const deleteAccount = useCallback(async () => {
@@ -107,5 +116,5 @@ export function useAuth(): Auth {
     return true;
   }, [signOut]);
 
-  return { state, admin, loginFailed, signingIn, signIn, signOut, deleteAccount };
+  return { state, userId, admin, loginFailed, signingIn, signIn, signOut, deleteAccount };
 }

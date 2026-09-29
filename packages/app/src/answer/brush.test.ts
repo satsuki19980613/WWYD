@@ -17,7 +17,7 @@ describe('初期ブラシ（06 章 §4.4）', () => {
   });
 });
 
-describe('ミックスバーの境界', () => {
+describe('Mix バーの境界', () => {
   const keys = ['fold', 'call', 's1'] as const;
 
   it('境界は累積', () => {

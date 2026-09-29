@@ -20,13 +20,13 @@ test('T4 ではない画像は「読み取れませんでした」。入力は�
   await title.fill('残る');
 
   // 先にゲームの種類を選ぶ。入力中の内容があれば置き換わることを示す
-  const open = page.getByRole('button', { name: 'T4ハンドヒストリー画像を読み込む' });
+  const open = page.getByRole('button', { name: 'T4 Hand History 画像を読み込む' });
   await open.click();
-  const dialog = page.getByRole('dialog', { name: 'T4 のゲーム' });
+  const dialog = page.getByRole('dialog', { name: 'T4 の Game' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('入力中の内容は画像の内容に置き換わります。')).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^通常\s*レーキ 5%（4bb cap）$/ })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^エキスパート\s*レーキ 5%（0\.6bb cap）$/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^通常\s*Rake 5%（4bb cap）$/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^エキスパート\s*Rake 5%（0\.6bb cap）$/ })).toBeVisible();
   await dialog.getByRole('button', { name: '閉じる' }).click();
   await expect(dialog).toHaveCount(0);
 
@@ -57,7 +57,7 @@ test('読み取り中はキャンセルできる（入力はそのまま） @sp'
   await fakeBackend(page, null);
   await page.goto('/new');
   // スマホは 1 ステップ目（基本設定）の上にボタンがある
-  await expect(page.getByRole('button', { name: 'T4ハンドヒストリー画像を読み込む' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'T4 Hand History 画像を読み込む' })).toBeVisible();
   await page.getByTestId('ocr-file').setInputFiles({ name: 'x.png', mimeType: 'image/png', buffer: NOT_T4 });
   const busy = page.getByRole('dialog', { name: '読み取り中…' });
   await expect(busy).toBeVisible();

@@ -5,10 +5,15 @@ import {
   formatBb,
   paintBar,
   toHex,
+  totalPot,
   type AnswerKey,
   type Mix,
   type Paint,
+  type State,
 } from '@wwyd/core';
+import { PlayingCard } from '../components/PlayingCard.tsx';
+import { POS_VAR } from '../components/posColor.ts';
+import { ACTION_NAME } from '../post/draft.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { Tabs } from '../components/Tabs.tsx';
@@ -35,17 +40,18 @@ import {
 } from '../answer/paintEditor.ts';
 import { answerErrorMessage, type PostDetail } from '../answer/postDetail.ts';
 import { RangeGrid } from '../answer/RangeGrid.tsx';
-import { HandLog, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
+import { HandLog, HistoryButton, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
 import { actorAt, answerFrames, seatViews } from '../answer/replayModel.ts';
 import { SizeControl } from '../answer/SizeControl.tsx';
 import { STREET_LABEL } from '../list/spotList.ts';
 import { ErrorList } from '../post/SpotSection.tsx';
+import { useHeightVar } from '../useHeightVar.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 
 type MobileTab = 'replay' | 'range';
 const MOBILE_TABS: readonly { value: MobileTab; label: string }[] = [
-  { value: 'replay', label: 'リプレイ' },
-  { value: 'range', label: 'レンジ' },
+  { value: 'replay', label: 'Replay' },
+  { value: 'range', label: 'Range' },
 ];
 
 /** 「ターン · キャッシュ · 100bb · SB 0.5 / BB 1」（アンティは 0 のとき出さない） */
@@ -53,11 +59,11 @@ export function metaLine(d: PostDetail): string {
   const { setup } = d.hand;
   const parts = [
     STREET_LABEL[d.post.street],
-    d.post.fmt === 'mtt' ? 'MTT' : 'キャッシュ',
+    d.post.fmt === 'mtt' ? 'MTT' : 'Cash',
     `${formatBb(d.post.effectiveStack)}bb`,
     `SB ${formatBb(setup.sb)} / BB ${formatBb(setup.bb)}`,
   ];
-  if (setup.ante > 0) parts.push(`アンティ ${formatBb(setup.ante)}`);
+  if (setup.ante > 0) parts.push(`Ante ${formatBb(setup.ante)}`);
   return parts.join(' · ');
 }
 
@@ -83,8 +89,8 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
 
   // ---- アクションの名前とサイズ ----
   const facing = post.keys.includes('call');
-  const s1Name = post.s1Label === 'bet' || (post.s1Label === null && stop.currentBet === 0) ? 'ベット' : 'レイズ';
-  const names: KeyNames = { fold: 'フォールド', check: 'チェック', call: 'コール', s1: s1Name };
+  const s1Name = post.s1Label === 'bet' || (post.s1Label === null && stop.currentBet === 0) ? 'Bet' : 'Raise';
+  const names: KeyNames = { fold: 'Fold', check: 'Check', call: 'Call', s1: s1Name };
   const callAmount = Math.min(stop.currentBet - stop.bets[post.villain], stop.stacks[post.villain]);
   const sizeSpot: SizeSpot | null =
     post.keys.includes('s1') && post.minTo !== null && post.maxTo !== null
@@ -123,7 +129,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
         setBrush({ ...mix });
         setTool('brush');
       } else {
-        toast('レンジ外', 'notice');
+        toast('Range 外', 'notice');
       }
     },
     [toast],
@@ -173,7 +179,8 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
 
   // ---- 部品 ----
   const [tab, setTab] = useState<MobileTab>('replay');
-  const bottomRef = useBottomBarHeight();
+  // スマホの下部固定バーの高さを --ans-bottom-h に（いちばん下までスクロールしたとき、レンジ表の最後の行がバーのすぐ上に来る）
+  const bottomRef = useHeightVar('.ans', '--ans-bottom-h');
   const s1Sub = sizeSpot ? sizeSummary(to, sizeSpot) : null;
   const brushPanel = (
     <BrushPanel
@@ -181,7 +188,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
       names={names}
       subs={{
         call: facing ? `${formatBb(callAmount)}bb` : undefined,
-        s1: s1Sub ? (s1Sub.pct === 'オールイン' ? 'オールイン' : s1Sub.amount) : undefined,
+        s1: s1Sub ? (s1Sub.pct === 'All-in' ? 'All-in' : s1Sub.amount) : undefined,
       }}
       disabledNames={mobile ? [] : unavailableNames(post.keys, facing, s1Name)}
       brush={brush}
@@ -199,7 +206,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   const grid = <RangeGrid paint={editor.paint} names={names} onStart={onStart} onEnter={onEnter} onEnd={onEnd} onPick={onPick} />;
   const size = sizeSpot && (
     <SizeControl
-      label={`${s1Name}サイズ`}
+      label={`${s1Name} Size`}
       spot={sizeSpot}
       text={sizeText}
       onText={setSizeText}
@@ -213,7 +220,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
       {busy ? '送信中…' : '回答する'}
     </button>
   );
-  const replayView = <ReplayView detail={d} frames={frames} c={replay} collapsibleLog={mobile} />;
+  const replayView = <ReplayView detail={d} frames={frames} c={replay} logInModal={mobile} />;
 
   const head = (
     <div className="ans-head">
@@ -239,11 +246,11 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
         {head}
         <div className="ans-grid">
           <div className="ans-col">
-            <h2 className="sec-h">リプレイ</h2>
+            <h2 className="sec-h">Replay</h2>
             {replayView}
           </div>
           <div className="ans-col">
-            <h2 className="sec-h">レンジ</h2>
+            <h2 className="sec-h">Range</h2>
             {brushPanel}
             {grid}
             {size}
@@ -264,6 +271,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
         <Tabs label="表示" items={MOBILE_TABS} value={tab} onChange={setTab} />
         {tab === 'range' && (
           <div className="ans-panel">
+            <SpotStrip detail={d} state={stop} onOpen={() => setTab('replay')} />
             {brushPanel}
             {size}
           </div>
@@ -273,7 +281,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
       <div className="ans-bottom" ref={bottomRef}>
         {tab === 'replay' ? (
           <button type="button" className="btn" onClick={() => setTab('range')}>
-            レンジ入力
+            Range 入力
           </button>
         ) : (
           <>
@@ -289,36 +297,47 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
 }
 
 /**
- * スマホの下部固定バーの高さを `--ans-bottom-h` に入れる（画面の下の余白をバーの高さに合わせ、
- * いちばん下までスクロールしたときにレンジ表の最後の行がバーのすぐ上に来るようにする）。
+ * スポットの要約（スマホのレンジタブ。14 章）: ボード・出題の Hero のアクション・ポット。
+ * 塗りながらリプレイのタブへ戻らずに局面を確かめられるようにする。押すとリプレイのタブへ。
  */
-function useBottomBarHeight(): (el: HTMLDivElement | null) => void {
-  const observer = useRef<ResizeObserver | null>(null);
-  return useCallback((el: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    observer.current = null;
-    if (!el) return;
-    const root = el.closest<HTMLElement>('.ans');
-    const set = (): void => root?.style.setProperty('--ans-bottom-h', `${el.offsetHeight}px`);
-    set();
-    observer.current = new ResizeObserver(set);
-    observer.current.observe(el);
-  }, []);
+function SpotStrip(props: { detail: PostDetail; state: State; onOpen: () => void }): JSX.Element {
+  const { hand, post } = props.detail;
+  const board = hand.board.slice(0, BOARD_COUNT[props.state.street]);
+  const a = hand.actions[hand.spotIndex];
+  return (
+    <button type="button" className="spot-strip" aria-label="Replay を見る" onClick={props.onOpen}>
+      <span className="ss-board">
+        {board.map((c) => (
+          <PlayingCard key={c} card={c} size="sm" />
+        ))}
+      </span>
+      {a && (
+        <span className="ss-line">
+          <b style={{ color: POS_VAR[a.pos] }}>{a.pos}</b>
+          {a.pos === post.hero && <span className="ss-tag">Hero</span>} {ACTION_NAME[a.type]}
+          {a.to !== undefined && <span className="num"> {formatBb(a.to)}</span>}
+        </span>
+      )}
+      <span className="ss-pot num">
+        <i className="mono-lbl">POT</i> {formatBb(totalPot(props.state))}
+      </span>
+    </button>
+  );
 }
 
 /** PC で非活性ボタンとして並べる取れないアクション（06 章 §4.6） */
 function unavailableNames(keys: readonly AnswerKey[], facing: boolean, s1Name: string): string[] {
-  const out = facing ? ['チェック', 'ベット'] : ['フォールド', 'コール'];
+  const out = facing ? ['Check', 'Bet'] : ['Fold', 'Call'];
   if (!keys.includes('s1')) out.push(s1Name);
   return out;
 }
 
-/** リプレイ（テーブル・操作・ハンドヒストリー）。スマホではハンドヒストリーを折りたたむ */
+/** リプレイ（テーブル・操作・ハンドヒストリー）。スマホのハンドヒストリーは卓の左上のボタンからモーダルで開く（14 章） */
 function ReplayView(props: {
   detail: PostDetail;
   frames: ReturnType<typeof answerFrames>;
   c: ReplayControl;
-  collapsibleLog: boolean;
+  logInModal: boolean;
 }): JSX.Element {
   const { detail: d, c } = props;
   const { hand, post } = d;
@@ -326,8 +345,7 @@ function ReplayView(props: {
   if (!state) return <></>;
   const actor = actorAt(hand.actions, c.step, hand.stopIndex, post.villain);
   const board = hand.board.slice(0, BOARD_COUNT[state.street]);
-  // 投稿者は自分のハンドなので表向き（Q-14）
-  const author = d.viewer === 'author';
+  // Hero のハンドは投稿者が自分の投稿に答えるときも伏せる（回答してから集計画面で見せる。2026-09-29 さつき。Q-14 を改める）
   const log = (
     <HandLog
       setup={hand.setup}
@@ -340,22 +358,16 @@ function ReplayView(props: {
   );
   return (
     <div className="replay">
+      {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
       <PokerTable
         seats={seatViews(state, { hero: post.hero, villain: post.villain, actor })}
         pot={state.pot}
         board={board}
-        holes={state.folded.has(post.hero) ? {} : { [post.hero]: (author ? d.secrets?.heroCards : null) ?? 'back' }}
+        holes={state.folded.has(post.hero) ? {} : { [post.hero]: 'back' }}
         villainLabel="Villain（あなた）"
       />
       <ReplayControls c={c} />
-      {props.collapsibleLog ? (
-        <details className="hlog-box">
-          <summary>ハンドヒストリー</summary>
-          {log}
-        </details>
-      ) : (
-        log
-      )}
+      {!props.logInModal && log}
     </div>
   );
 }

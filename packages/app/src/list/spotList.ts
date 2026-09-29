@@ -42,10 +42,10 @@ export const TAB_ITEMS: readonly { value: ListTab; label: string }[] = [
 ];
 
 export const STREET_LABEL: Record<Street, string> = {
-  pf: 'プリフロップ',
-  flop: 'フロップ',
-  turn: 'ターン',
-  river: 'リバー',
+  pf: 'Preflop',
+  flop: 'Flop',
+  turn: 'Turn',
+  river: 'River',
 };
 
 export const STREET_ITEMS: readonly { value: StreetFilter; label: string }[] = [
@@ -110,6 +110,24 @@ export async function fetchPostPage(rpc: RpcCaller, q: ListQuery, after: PostRow
   return { rows, hasMore: rows.length >= PAGE_SIZE };
 }
 
+/** 「次のスポット」に選べる行（未回答・自分の投稿でない・今見ている投稿でない。14 章） */
+export function pickNext(rows: readonly PostRow[], currentId: string): PostRow | null {
+  return rows.find((r) => !r.answered_by_me && !r.is_mine && r.id !== currentId) ?? null;
+}
+
+/** 次に答えるスポットを新着順から探す（最大 3 ページ）。無ければ null。 */
+export async function findNextSpot(rpc: RpcCaller, currentId: string): Promise<string | null> {
+  let after: PostRow | null = null;
+  for (let i = 0; i < 3; i++) {
+    const page = await fetchPostPage(rpc, DEFAULT_QUERY, after);
+    const hit = pickNext(page.rows, currentId);
+    if (hit) return hit.id;
+    if (!page.hasMore) return null;
+    after = page.rows[page.rows.length - 1] ?? null;
+  }
+  return null;
+}
+
 /**
  * 読み込み済みの行に次のページをつなぐ。回答数順は読んでいる間に順位が動き、同じ投稿が
  * 2 回来ることがあるので `id` で重複を除く（02 章 §4.2。抜けは許容）。
@@ -125,7 +143,7 @@ export function appendPage(prev: readonly PostRow[], page: readonly PostRow[]): 
 export function formatLabel(row: Pick<PostRow, 'fmt' | 'effective_stack'>): string {
   const mbb = bbToMbb(Number(row.effective_stack));
   const stack = mbb === null ? String(row.effective_stack) : formatBb(mbb);
-  return `${row.fmt === 'mtt' ? 'MTT' : 'キャッシュ'} · ${stack}bb`;
+  return `${row.fmt === 'mtt' ? 'MTT' : 'Cash'} · ${stack}bb`;
 }
 
 const MINUTE = 60_000;
@@ -169,5 +187,5 @@ export function cardAction(row: Pick<PostRow, 'id' | 'is_mine' | 'answered_by_me
 /** 空のときの表示（06 章 §2.3）。自分の投稿・ストリートすべてのときだけ投稿ボタンを添える。 */
 export function emptyState(q: ListQuery): { label: string; showPost: boolean } {
   if (q.tab === 'mine' && q.street === 'all') return { label: '投稿なし', showPost: true };
-  return { label: '該当スポットなし', showPost: false };
+  return { label: '該当 Spot なし', showPost: false };
 }

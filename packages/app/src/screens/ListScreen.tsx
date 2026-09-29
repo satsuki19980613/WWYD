@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChipGroup } from '../components/ChipGroup.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
+import { ChevronIcon } from '../components/Icons.tsx';
 import { Link } from '../components/Link.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { Tabs } from '../components/Tabs.tsx';
@@ -63,14 +64,14 @@ export function ListScreen(): JSX.Element {
         <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
         {!mobile && (
           <Link to="/new" className="btn auto">
-            ＋ スポットを投稿
+            ＋ Spot を投稿
           </Link>
         )}
       </div>
 
       <div className="list-filters">
         <ChipGroup
-          label="ストリート"
+          label="Street"
           variant="segment"
           items={STREET_ITEMS}
           value={query.street}
@@ -115,7 +116,7 @@ export function ListScreen(): JSX.Element {
       {mobile && (
         <div className="list-fab">
           <Link to="/new" className="btn">
-            ＋ スポットを投稿
+            ＋ Spot を投稿
           </Link>
         </div>
       )}
@@ -141,14 +142,19 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
   const status = cardStatus(row);
   const action = cardAction(row);
   return (
-    <article className="spot-card">
+    // カード全体を押せる（タイトルのリンクをカードいっぱいに広げる。14 章）。削除のボタンはその上に重ねる
+    <article className={`spot-card${action.primary ? '' : ' done'}`}>
       <div className="spot-top">
         <span className="street-badge">{STREET_LABEL[row.street]}</span>
         <span className="spot-fmt num">{formatLabel(row)}</span>
         {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
         {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
       </div>
-      <h2 className="spot-title">{row.title}</h2>
+      <h2 className="spot-title">
+        <Link to={action.to} className="spot-link">
+          {row.title}
+        </Link>
+      </h2>
       <p className="spot-seats">
         Hero{' '}
         <b className="pos" style={{ color: POS_VAR[row.hero] }}>
@@ -169,9 +175,10 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
               削除
             </button>
           )}
-          <Link to={action.to} className={`btn auto sm ${action.primary ? '' : 'ghost'}`}>
+          <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
             {action.label}
-          </Link>
+            <ChevronIcon />
+          </span>
         </span>
       </div>
     </article>
@@ -185,7 +192,7 @@ function Empty(props: { query: ListQuery }): JSX.Element {
       <p className="list-empty-label">{e.label}</p>
       {e.showPost && (
         <Link to="/new" className="btn auto">
-          スポットを投稿
+          Spot を投稿
         </Link>
       )}
     </div>

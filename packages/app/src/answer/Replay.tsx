@@ -1,5 +1,7 @@
 import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { HistoryIcon } from '../components/Icons.tsx';
+import { Modal } from '../components/Modal.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { actionLog, STREET_NAME } from '../post/draft.ts';
@@ -98,23 +100,48 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
   );
 }
 
-/** 席の配置（手前の中央から時計回り。卓の中の % 座標）とチップの位置（席から中央へ寄せた点） */
-const SLOTS: readonly (readonly [number, number])[] = [
-  [50, 90],
-  [8, 70],
-  [8, 30],
-  [50, 10],
-  [92, 30],
-  [92, 70],
-];
-const CHIPS: readonly (readonly [number, number])[] = [
-  [50, 70],
-  [28, 61],
-  [28, 39],
-  [50, 29],
-  [72, 39],
-  [72, 61],
-];
+/**
+ * スマホのハンドヒストリーのボタン（卓の左上。押すとモーダル。14 章）。ログを常に出すと画面を圧迫するため。
+ * `children` はモーダルの中身（HandLog）。
+ */
+export function HistoryButton(props: { disabled?: boolean; children: ReactNode }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="hist-btn" disabled={props.disabled} onClick={() => setOpen(true)}>
+        <HistoryIcon />
+        History
+      </button>
+      {open && (
+        <Modal title="Hand History" tone="info" onClose={() => setOpen(false)}>
+          {props.children}
+        </Modal>
+      )}
+    </>
+  );
+}
+
+type Pt = readonly [number, number];
+/** `chipTop` は上下の席のチップの高さ（CSS の top）。横の席のチップは席のプレートのすぐ内側に置く（CSS の .pchip.side） */
+type Slot = { seat: Pt; chipTop?: string };
+/**
+ * 席とチップの配置（手前の中央から時計回り。卓の中の % 座標）。2〜6 人（04 章 §2.1）。
+ * ボードは卓の中央に大きく出す（2026-09-29 さつき）ので、横の席は卓の縁に重ねて上下に寄せ、ボードの高さを空ける。
+ * チップは横の席ならプレートの内側の隣、上の席はポットの上、手前の席はボードのすぐ下（ホールカードの上）。
+ */
+const L_UP: Slot = { seat: [0, 27] };
+const L_DOWN: Slot = { seat: [0, 73] };
+const R_UP: Slot = { seat: [100, 27] };
+const R_DOWN: Slot = { seat: [100, 73] };
+const BOTTOM: Slot = { seat: [50, 91], chipTop: 'calc(50% + var(--bw) * 0.69 + 20px)' };
+const TOP: Slot = { seat: [50, 9], chipTop: '25%' };
+const SLOTS_BY_COUNT: Record<number, readonly Slot[]> = {
+  2: [BOTTOM, TOP],
+  3: [BOTTOM, L_UP, R_UP],
+  4: [BOTTOM, L_UP, TOP, R_UP],
+  5: [BOTTOM, L_DOWN, L_UP, R_UP, R_DOWN],
+  6: [BOTTOM, L_DOWN, L_UP, TOP, R_UP, R_DOWN],
+};
 
 /**
  * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Villain の席を手前に置く（席の並びは replayModel の seatOrder）。
@@ -127,9 +154,12 @@ export function PokerTable(props: {
   holes: Partial<Record<Pos, Hole>>;
   villainLabel: string;
   note?: string | null;
+  /** ボードの中身を差し替える（投稿の入力でカードを押して選び直す） */
+  boardContent?: ReactNode;
 }): JSX.Element {
+  const interactive = props.boardContent !== undefined;
   return (
-    <div className="ptable" role="img" aria-label="テーブル">
+    <div className={`ptable${interactive ? ' live' : ''}`} role={interactive ? 'group' : 'img'} aria-label="Table">
       <div className="ptable-felt" />
       <div className="ptable-mid">
         <div className="ptable-pot">
@@ -137,21 +167,30 @@ export function PokerTable(props: {
           <b className="num">{formatBb(props.pot)}bb</b>
         </div>
         <div className="ptable-board">
-          {[0, 1, 2, 3, 4].map((i) => {
-            const c = props.board[i];
-            return c ? <PlayingCard key={c} card={c} /> : <span key={i} className="ptable-slot" />;
-          })}
+          {props.boardContent ??
+            [0, 1, 2, 3, 4].map((i) => {
+              const c = props.board[i];
+              return c ? <PlayingCard key={c} card={c} /> : <span key={i} className="ptable-slot" />;
+            })}
         </div>
         {props.note && <span className="ptable-note">{props.note}</span>}
       </div>
       {props.seats.map((seat, i) => {
-        const [x, y] = SLOTS[i] ?? [50, 50];
-        const [cx, cy] = CHIPS[i] ?? [50, 50];
+        const slot = SLOTS_BY_COUNT[props.seats.length]?.[i] ?? { seat: [50, 50] as const };
+        const [x, y] = slot.seat;
         const anchor = x < 20 ? 'l' : x > 80 ? 'r' : 'c';
+        const chip = seat.bet > 0 && (
+          <span
+            className={`pchip num${anchor === 'c' ? '' : ' side'}`}
+            style={anchor === 'c' ? { left: `${x}%`, top: slot.chipTop ?? '50%' } : undefined}
+          >
+            {formatBb(seat.bet)}
+          </span>
+        );
         return (
           <div key={seat.pos}>
             <div
-              className={`pseat a-${anchor}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
+              className={`pseat a-${anchor}${y < 20 ? ' top' : ''}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
               style={{ top: `${y}%`, ...(anchor === 'c' ? { left: `${x}%` } : {}) }}
             >
               <HoleCards hole={props.holes[seat.pos]} />
@@ -166,12 +205,9 @@ export function PokerTable(props: {
                 <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
               </div>
               {seat.last && <span className="pseat-last">{seat.last}</span>}
+              {anchor !== 'c' && chip}
             </div>
-            {seat.bet > 0 && (
-              <span className="pchip num" style={{ left: `${cx}%`, top: `${cy}%` }}>
-                {formatBb(seat.bet)}
-              </span>
-            )}
+            {anchor === 'c' && chip}
           </div>
         );
       })}
@@ -182,9 +218,9 @@ export function PokerTable(props: {
 function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
   const { hole } = props;
   if (!hole) return null;
-  if (hole === 'muck') return <span className="pseat-muck">マック</span>;
+  if (hole === 'muck') return <span className="pseat-hole pseat-muck">Muck</span>;
   return (
-    <div className="pseat-cards">
+    <div className="pseat-hole pseat-cards">
       {hole === 'back' ? (
         <>
           <span className="pback" />
@@ -209,6 +245,8 @@ export function HandLog(props: {
   highlightLast: boolean;
   actual?: number;
   prompt?: string | null;
+  /** 1 手を押したとき（投稿の入力の「ここから入れ直す」）。無ければ押せない */
+  onPick?: (index: number) => void;
 }): JSX.Element {
   const items = actionLog(props.setup, props.actions);
   const last = items.length - 1;
@@ -239,8 +277,17 @@ export function HandLog(props: {
                   key={it.index}
                   className={`${props.highlightLast && it.index === last ? 'latest' : ''}${it.index === props.actual ? ' actual' : ''}`}
                 >
-                  <b style={{ color: POS_VAR[it.pos] }}>{it.pos}</b>
-                  {it.text.slice(it.pos.length)}
+                  {props.onPick ? (
+                    <button type="button" className="hlog-pick" onClick={() => props.onPick?.(it.index)}>
+                      <b style={{ color: POS_VAR[it.pos] }}>{it.pos}</b>
+                      {it.text.slice(it.pos.length)}
+                    </button>
+                  ) : (
+                    <>
+                      <b style={{ color: POS_VAR[it.pos] }}>{it.pos}</b>
+                      {it.text.slice(it.pos.length)}
+                    </>
+                  )}
                   {it.index === props.spotIndex && <span className="hlog-tag">出題</span>}
                 </li>
               ))}

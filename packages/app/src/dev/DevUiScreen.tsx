@@ -53,12 +53,12 @@ export default function DevUiScreen(): JSX.Element {
       <h2 className="sec-h">カスタムセレクト</h2>
       <div className="dev-grid">
         <Select
-          label="ストリート"
+          label="Street"
           options={[
-            { value: 'all', label: 'すべてのストリート' },
-            { value: 'flop', label: 'フロップ' },
-            { value: 'turn', label: 'ターン' },
-            { value: 'river', label: 'リバー' },
+            { value: 'all', label: 'すべての Street' },
+            { value: 'flop', label: 'Flop' },
+            { value: 'turn', label: 'Turn' },
+            { value: 'river', label: 'River' },
           ]}
           value={street}
           onChange={setStreet}
@@ -97,7 +97,7 @@ export default function DevUiScreen(): JSX.Element {
         </div>
       </div>
 
-      <h2 className="sec-h">アクション色</h2>
+      <h2 className="sec-h">Action 色</h2>
       <div className="dev-swatches">
         {(['fold', 'check', 'call', 's1', 'off'] as const).map((k) => (
           <span key={k} className="dev-swatch">
@@ -118,7 +118,7 @@ export default function DevUiScreen(): JSX.Element {
         <button type="button" className="btn ghost" onClick={() => toast('通信に失敗しました')}>
           トースト（エラー）
         </button>
-        <button type="button" className="btn ghost" onClick={() => toast('レンジ外', 'notice')}>
+        <button type="button" className="btn ghost" onClick={() => toast('Range 外', 'notice')}>
           トースト（スポイト）
         </button>
       </div>

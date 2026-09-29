@@ -45,11 +45,29 @@ type State = {
 - `ORDER_PF = [UTG, HJ, CO, BTN, SB, BB]`
 - `ORDER_POST = [SB, BB, UTG, HJ, CO, BTN]`
 
+### 2.1 人数（2〜6 人。2026-09-29 さつきの決定。仕様書の「6max 固定」を改める）
+
+| 人数 | 席（`SEATS_BY_COUNT`） |
+|---|---|
+| 6 | UTG, HJ, CO, BTN, SB, BB |
+| 5 | HJ, CO, BTN, SB, BB |
+| 4 | CO, BTN, SB, BB |
+| 3 | BTN, SB, BB |
+| 2 | BTN, BB（ヘッズアップ。BTN が SB を払う） |
+
+- 早い席から削る。BTN と BB はどの人数にもある。
+- **空席はスタック 0** で表す（`HandSetup.stacks` は 6 席のまま）。空席は初期状態で `folded` に入れ、アンティもブラインドも払わない。
+  `State.seated` に座っている席（プリフロップの順）を持つ（表示用）。
+- 投稿の JSON・DB の `stacks` は**座っている席のキーだけ**を持つ（キーの集合が上の表のどれかと一致しなければ `invalid_settings`）。
+  Hero・判明したハンドの席は座っている席に限る。
+- ヘッズアップ: SB の席が空いているので BTN が SB を払う。プリフロップは `ORDER_PF` の順で BTN → BB、フロップ以降は
+  `ORDER_POST` の順（SB が空き）で BB → BTN になり、特別な分岐は要らない。
+
 ## 3. 初期状態（§6.2）
 
 1. `pot = 0`、全席 `bets = 0`、`stacks = 入力値`。
-2. **アンティ**: 各席 `a = min(ante, stack)` を徴収して `pot += a`。徴収後にスタックが 0 の席は `allin` に入れる。
-3. **ブラインド**: SB は `min(sb, stack)`、BB は `min(bb, stack)` を `bets` に置く。ポスト後にスタックが 0 なら `allin`。
+2. **アンティ**: 座っている各席 `a = min(ante, stack)` を徴収して `pot += a`。徴収後にスタックが 0 の席は `allin` に入れる。空席（§2.1）は `folded` に入れる。
+3. **ブラインド**: SB（空席ならボタン。§2.1）は `min(sb, stack)`、BB は `min(bb, stack)` を `bets` に置く。ポスト後にスタックが 0 なら `allin`。
 4. `street = pf`、`currentBet = bb`（BB が不足でポストした額が bb 未満でも bb）、`minRaise = bb`。
 5. `actedThisStreet = ∅`、`actedSinceFullRaise = ∅`、`lastActor = BB`（次の席探索が UTG から始まるように）。
 

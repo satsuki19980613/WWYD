@@ -35,10 +35,10 @@ export function boardCountOf(s: State): number {
   return BOARD_COUNT[s.street];
 }
 
-/** 手前（下中央）の席から時計回りの席の並び。 */
-export function seatOrder(bottom: Pos): Pos[] {
-  const i = POSITIONS.indexOf(bottom);
-  return POSITIONS.map((_, k) => POSITIONS[(i + k) % POSITIONS.length] as Pos);
+/** 手前（下中央）の席から時計回りの席の並び。`seated` は座っている席（空席は卓に出さない。既定は 6 席） */
+export function seatOrder(bottom: Pos, seated: readonly Pos[] = POSITIONS): Pos[] {
+  const i = seated.indexOf(bottom);
+  return seated.map((_, k) => seated[(i + k) % seated.length] as Pos);
 }
 
 export type SeatView = {
@@ -58,12 +58,13 @@ export type SeatView = {
 export function lastActionText(s: State, p: Pos): string | null {
   const a = s.lastAction[p];
   if (!a) return s.folded.has(p) ? ACTION_NAME.fold : null;
-  if (a.type !== 'fold' && s.stacks[p] === 0) return 'オールイン';
+  if (a.type !== 'fold' && s.stacks[p] === 0) return 'All-in';
   return a.to === undefined ? ACTION_NAME[a.type] : `${ACTION_NAME[a.type]} ${formatBb(a.to)}`;
 }
 
-export function seatViews(s: State, o: { hero: Pos; villain: Pos; actor: Pos | null }): SeatView[] {
-  return seatOrder(o.villain).map((pos) => ({
+/** `bottom` は手前に置く席（既定は Villain。投稿の入力では Hero を手前に置き、Villain は無い） */
+export function seatViews(s: State, o: { hero: Pos; villain: Pos | null; actor: Pos | null; bottom?: Pos }): SeatView[] {
+  return seatOrder(o.bottom ?? o.villain ?? o.hero, s.seated).map((pos) => ({
     pos,
     stack: s.stacks[pos],
     // フォールドした席のベットも回収まではその席の前に残す（ポットは回収済みの額を出すため、消すと額が合わない）

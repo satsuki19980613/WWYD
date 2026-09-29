@@ -35,7 +35,7 @@ test.describe('アカウントメニュー（06 章 §0.2）', () => {
     await expect(page.getByRole('button', { name: 'Google でログイン' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'アカウント' })).toHaveCount(0);
     // Google の同意画面の要件: ログイン画面でアプリの機能を説明し、規約へリンクする
-    await expect(page.getByText(/^ポーカーのスポットを投稿し、Villain のレンジを/)).toBeVisible();
+    await expect(page.getByText(/^Poker の Spot を投稿し、Villain の Range を/)).toBeVisible();
     await expect(page.getByRole('link', { name: 'プライバシーポリシー' })).toBeVisible();
     expect(be.calls).toEqual(['sign-out']);
   });

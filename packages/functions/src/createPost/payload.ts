@@ -1,4 +1,4 @@
-import { mbbToBb, POSITIONS, type VerifiedPost } from '@wwyd/core';
+import { mbbToBb, seatedOf, type VerifiedPost } from '@wwyd/core';
 
 /**
  * `insert_post(p_author, p)` の `p`（詳細仕様 02 章 §4.1）。金額は bb の数値（DB の numeric）。
@@ -34,7 +34,8 @@ const bbOrNull = (mbb: number | null): number | null => (mbb === null ? null : m
 export function toInsertPayload(v: VerifiedPost): InsertPayload {
   const d = v.derived;
   const stacks: Record<string, number> = {};
-  for (const p of POSITIONS) stacks[p] = mbbToBb(v.setup.stacks[p]);
+  // 空席（スタック 0）は保存しない。席は stacks のキーで表す（2〜6 人。04 章 §2.1）
+  for (const p of seatedOf(v.setup)) stacks[p] = mbbToBb(v.setup.stacks[p]);
   const known: Record<string, string[] | 'muck'> = {};
   for (const [pos, cards] of Object.entries(v.knownCards)) {
     if (cards) known[pos] = cards === 'muck' ? 'muck' : [...cards];

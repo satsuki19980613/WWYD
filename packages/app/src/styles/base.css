@@ -85,17 +85,11 @@ a { color: var(--cyan); }
   color: var(--fg);
   white-space: nowrap;
 }
-/* 一覧（最上位）だけハザードティック（シグネチャー 3）。下の階層は「＜」が先頭に立つ */
-.hdr-title.tick::before {
-  content: '';
-  width: 16px;
-  height: 11px;
-  flex: none;
-  background: repeating-linear-gradient(-45deg, var(--yellow) 0 3px, var(--bg) 3px 6px);
-}
 .hdr-actions { display: flex; align-items: center; gap: var(--s1); }
 
 /* ---- アプリ面 ---- */
+/* 画面の中身を画面の高さちょうどにするときの高さ（ヘッダーとその下線 1px、.app-main の上下の余白を除く。卓で残りを埋める画面が使う） */
+:root { --screen-fill-h: calc(100dvh - var(--hdr-h) - var(--sat) - 1px - var(--s4) - var(--s6) - var(--sab)); }
 .app-main {
   max-width: var(--app-w);
   margin: 0 auto;

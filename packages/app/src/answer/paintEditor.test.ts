@@ -39,13 +39,13 @@ describe('塗り（06 章 §4.5）', () => {
     expect(undo(e).paint).toEqual(emptyPaint());
   });
 
-  it('ブラシと同じミックスのマスから始めると消去（なぞった範囲も）', () => {
+  it('ブラシと同じ Mix のマスから始めると消去（なぞった範囲も）', () => {
     let e = stroke(newEditor(), [0, 1, 2], CALL);
     e = stroke(e, [1, 2, 3], CALL);
     expect(e.paint.slice(0, 4)).toEqual([CALL, null, null, null]);
   });
 
-  it('違うミックスのマスから始めると上書き', () => {
+  it('違う Mix のマスから始めると上書き', () => {
     let e = stroke(newEditor(), [0], CALL);
     e = stroke(e, [0, 1], MIXED);
     expect(e.paint.slice(0, 2)).toEqual([MIXED, MIXED]);
@@ -113,7 +113,7 @@ describe('元に戻す / やり直す / クリア（06 章 §4.6）', () => {
     expect(e.paint.slice(20, 120).every((m) => m === null)).toBe(true);
   });
 
-  it('クリアは全マスをレンジ外にし、元に戻せる。空なら何もしない', () => {
+  it('クリアは全マスを Range 外にし、元に戻せる。空なら何もしない', () => {
     let e = stroke(newEditor(), [0, 1], CALL);
     e = clear(e);
     expect(e.paint).toEqual(emptyPaint());

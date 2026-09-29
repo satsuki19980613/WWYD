@@ -1,5 +1,6 @@
 import {
   advance,
+  apply,
   BOARD_COUNT,
   bbToMbb,
   formatBb,
@@ -7,6 +8,7 @@ import {
   mbbToBb,
   POSITIONS,
   runActions,
+  SEATS_BY_COUNT,
   spotCandidates,
   spotView,
   status,
@@ -24,6 +26,7 @@ import {
   type HandSetup,
   type Legal,
   type Mbb,
+  type PlayerCount,
   type Pos,
   type State,
   type Street,
@@ -42,6 +45,9 @@ export type Draft = {
   sb: string;
   ante: string;
   rake: string;
+  /** 人数（2〜6）。選ぶまでは null（必須。06 章 §3.4） */
+  players: PlayerCount | null;
+  /** 席ごとのスタック（空席の値は使わない） */
   stacks: Record<Pos, string>;
   hero: Pos;
   /** 席ごとのハンド（cardInput の形式） */
@@ -60,6 +66,7 @@ export function emptyDraft(): Draft {
     sb: '0.5',
     ante: '0',
     rake: '',
+    players: null,
     stacks: each('100'),
     hero: 'BTN',
     hands: each(''),
@@ -76,20 +83,43 @@ export function isDirty(d: Draft): boolean {
   return JSON.stringify(d) !== JSON.stringify(emptyDraft());
 }
 
-/** アクションを 1 つでも入れたら、基本設定・スタック・Hero の席はロック（06 章 §3.3）。 */
+/** アクションを 1 つでも入れたら、基本設定・人数・スタック・Hero の席はロック（06 章 §3.3）。 */
 export function isLocked(d: Draft): boolean {
   return d.actions.length > 0;
 }
 
+/** 座っている席（人数を選ぶまでは空）。プリフロップのアクション順 */
+export function seatsOf(d: Draft): readonly Pos[] {
+  return d.players === null ? [] : SEATS_BY_COUNT[d.players];
+}
+
+/** カードキーボードの ← → で移る席（座っている席を巡る。UTG の前は BB、BB の次は UTG） */
+export function neighborSeat(seats: readonly Pos[], seat: Pos, dir: 1 | -1): Pos {
+  const i = seats.indexOf(seat);
+  if (i < 0 || seats.length === 0) return seat;
+  return seats[(i + dir + seats.length) % seats.length] as Pos;
+}
+
+/**
+ * 人数を選ぶ（06 章 §3.4）。席は早い席から削る（04 章 §2.1）。空席になった席のハンドは消し、
+ * Hero が空席になったら BTN（どの人数にもある席）にする。
+ */
+export function setPlayers(d: Draft, n: PlayerCount): Draft {
+  const seats = SEATS_BY_COUNT[n];
+  const hands = { ...d.hands };
+  for (const p of POSITIONS) if (!seats.includes(p)) hands[p] = '';
+  return { ...d, players: n, hands, hero: seats.includes(d.hero) ? d.hero : 'BTN' };
+}
+
 // ---- 基本設定（06 章 §3.3・§3.4） ----
 
-export const STREET_NAME: Record<Street, string> = { pf: 'プリフロップ', flop: 'フロップ', turn: 'ターン', river: 'リバー' };
+export const STREET_NAME: Record<Street, string> = { pf: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River' };
 export const ACTION_NAME: Record<ActionType, string> = {
-  fold: 'フォールド',
-  check: 'チェック',
-  call: 'コール',
-  bet: 'ベット',
-  raise: 'レイズ',
+  fold: 'Fold',
+  check: 'Check',
+  call: 'Call',
+  bet: 'Bet',
+  raise: 'Raise',
 };
 
 /** 数値の文字列を mbb に（空は `empty`）。小数第 4 位以下・数でないものは null。 */
@@ -103,17 +133,19 @@ function parseAmount(text: string, empty: Mbb | null): Mbb | null {
 export type SettingField = 'sb' | 'ante' | 'rake' | Pos;
 export const FIELD_LABEL: Record<SettingField, string> = {
   sb: 'SB',
-  ante: 'アンティ',
-  rake: 'レーキ',
-  UTG: 'UTG のスタック',
-  HJ: 'HJ のスタック',
-  CO: 'CO のスタック',
-  BTN: 'BTN のスタック',
-  SB: 'SB のスタック',
-  BB: 'BB のスタック',
+  ante: 'Ante',
+  rake: 'Rake',
+  UTG: 'UTG の Stack',
+  HJ: 'HJ の Stack',
+  CO: 'CO の Stack',
+  BTN: 'BTN の Stack',
+  SB: 'SB の Stack',
+  BB: 'BB の Stack',
 };
 
-export type ParsedSettings = { setup: HandSetup | null; rake: number | null; invalid: SettingField[] };
+export const PLAYERS_REQUIRED = 'Player の人数を選択してください';
+
+export type ParsedSettings ={ setup: HandSetup | null; rake: number | null; invalid: SettingField[] };
 
 export function parseSettings(d: Draft): ParsedSettings {
   const invalid: SettingField[] = [];
@@ -128,13 +160,19 @@ export function parseSettings(d: Draft): ParsedSettings {
     if (!/^\d+(\.\d{1,2})?$/.test(t) || r > 100) invalid.push('rake');
     else rake = r;
   }
+  // 空席はスタック 0（core の空席の表し方）。人数を選ぶまではハンドを進められない（setup は null）
+  const seats = seatsOf(d);
   const stacks = {} as Record<Pos, Mbb>;
   for (const p of POSITIONS) {
+    if (!seats.includes(p)) {
+      stacks[p] = 0;
+      continue;
+    }
     const s = parseAmount(d.stacks[p], null);
     if (s === null || s <= 0) invalid.push(p);
     else stacks[p] = s;
   }
-  if (invalid.some((f) => f !== 'rake')) return { setup: null, rake, invalid };
+  if (invalid.some((f) => f !== 'rake') || seats.length === 0) return { setup: null, rake, invalid };
   return { setup: { sb: sb as Mbb, bb: 1000, ante: ante as Mbb, stacks }, rake, invalid };
 }
 
@@ -180,7 +218,7 @@ export function statusLine(state: State, pos: Pos): string {
   const toCall = state.currentBet - state.bets[pos];
   const parts = [`${pos} to act`, STREET_NAME[state.street]];
   if (toCall > 0) parts.push(`to call ${formatBb(Math.min(toCall, state.stacks[pos]))}`);
-  parts.push(`スタック ${formatBb(state.stacks[pos])}bb`);
+  parts.push(`Stack ${formatBb(state.stacks[pos])}bb`);
   return parts.join(' · ');
 }
 
@@ -189,6 +227,162 @@ export function defaultAmount(state: State, pos: Pos, range: { min: Mbb; max: Mb
   const toCall = state.currentBet - state.bets[pos];
   const target = toCall > 0 ? range.min : Math.round(totalPot(state) / 2 / 10) * 10;
   return Math.min(range.max, Math.max(range.min, target));
+}
+
+// ---- アクション入力の補助（13 章。2026-09-29） ----
+
+/** 手番の見出し: ポット（このストリートのベットを含む）・to call・残りスタック */
+export function turnInfo(state: State, pos: Pos): { pot: Mbb; toCall: Mbb; stack: Mbb } {
+  const toCall = Math.min(state.currentBet - state.bets[pos], state.stacks[pos]);
+  return { pot: totalPot(state), toCall, stack: state.stacks[pos] };
+}
+
+/** 額のボタン。`label` は考え方の単位（bb・×倍率・% pot）、`sub` は to の額（bb） */
+export type SizePreset = { label: string; sub: string; to: Mbb; allin: boolean };
+
+/**
+ * よく使う額（13 章 §2）。プレイヤーが考える単位で出す。
+ * - プリフロップのオープン: 2 / 2.2 / 2.5 / 3bb（リンプがあれば 3 / 4 / 5bb＋リンプ 1 人につき 1bb）
+ * - プリフロップの 3bet 以降: 直前のレイズ（to）の ×2.2 / ×2.5 / ×3 / ×4
+ * - フロップ以降のベット: ポットの 25 / 33 / 50 / 75 / 100 / 150%
+ * - フロップ以降のレイズ: 直前のベット（to）の ×2.5 / ×3 / ×4
+ * 最小に満たない額と、オールイン以上の額は出さない（オールインは最後に必ず出す）。
+ */
+export function sizePresets(state: State, legal: Legal): SizePreset[] {
+  const range = legal.bet ?? legal.raise;
+  if (!range) return [];
+  const bb = state.bb;
+  const pot = totalPot(state);
+  // % pot は 0.1bb に丸める（ログ・集計の表示で 1.82 のような額にしない）。倍率は 0.01bb
+  const raw: { label: string; to: number; unit: number }[] = [];
+  if (state.street === 'pf' && state.currentBet <= bb) {
+    const limpers = limperCount(state);
+    const opens = limpers === 0 ? [2, 2.2, 2.5, 3] : [3, 4, 5].map((x) => x + limpers);
+    for (const x of opens) raw.push({ label: formatBb(x * bb), to: x * bb, unit: 10 });
+  } else if (state.street === 'pf') {
+    for (const k of [2.2, 2.5, 3, 4]) raw.push({ label: `×${k}`, to: state.currentBet * k, unit: 10 });
+  } else if (state.currentBet === 0) {
+    for (const pct of [25, 33, 50, 75, 100, 150]) raw.push({ label: `${pct}%`, to: (pot * pct) / 100, unit: 100 });
+  } else {
+    for (const k of [2.5, 3, 4]) raw.push({ label: `×${k}`, to: state.currentBet * k, unit: 10 });
+  }
+  const out: SizePreset[] = [];
+  for (const r of raw) {
+    const to = Math.round(r.to / r.unit) * r.unit;
+    if (to < range.min || to >= range.max || out.some((o) => o.to === to)) continue;
+    out.push({ label: r.label, sub: formatBb(to), to, allin: false });
+  }
+  out.push({ label: 'All-in', sub: formatBb(range.max), to: range.max, allin: true });
+  return out;
+}
+
+/** 最初に選んでおく額: オープン 2.5bb・3bet ×3・ベット 33%・レイズ ×3（無ければ最小） */
+export function defaultPreset(state: State, legal: Legal): Mbb | null {
+  const range = legal.bet ?? legal.raise;
+  if (!range) return null;
+  const ps = sizePresets(state, legal);
+  const want = state.street === 'pf' ? (state.currentBet <= state.bb ? '2.5' : '×3') : state.currentBet === 0 ? '33%' : '×3';
+  return ps.find((p) => p.label === want)?.to ?? ps.find((p) => !p.allin)?.to ?? range.min;
+}
+
+/** プリフロップのリンプの人数（BB と同額を出した BB 以外の席） */
+function limperCount(state: State): number {
+  return state.seated.filter((p) => p !== 'BB' && state.bets[p] === state.bb && !state.folded.has(p)).length;
+}
+
+/**
+ * 台のベット・レイズのボタンの名前（13 章 §6。2026-09-29）。プレイヤーが呼ぶ名前で出す。
+ * - プリフロップ: 最初のレイズは「オープン」（リンプがいれば「レイズ」）、2 回目から「3bet」「4bet」…
+ * - フロップ以降: 「ベット」、2 回目は「レイズ」、3 回目から「3bet」「4bet」…
+ * `actions` はこれまでのアクション（このストリートのベット・レイズの回数を数える）。
+ */
+export function aggressiveName(state: State, actions: readonly Action[]): string {
+  const n = actions.filter((a) => a.street === state.street && (a.type === 'bet' || a.type === 'raise')).length;
+  if (state.street === 'pf') {
+    if (n === 0) return limperCount(state) === 0 ? 'Open' : 'Raise';
+    return `${n + 2}bet`;
+  }
+  if (n === 0) return 'Bet';
+  return n === 1 ? 'Raise' : `${n + 1}bet`;
+}
+
+/** 台のコールのボタンの名前: プリフロップでレイズが無いときの BB 以外のコールは「リンプ」 */
+export function callName(state: State, pos: Pos): string {
+  return state.street === 'pf' && state.currentBet === state.bb && pos !== 'BB' ? 'Limp' : 'Call';
+}
+
+/**
+ * 「Fold to」「Check to」（13 章 §2。途中の席のフォールド・チェックを 1 回で入れる）。
+ * 手番の席から、フォールド（ベットがあるとき）またはチェック（ないとき）を続けて、そのストリートのうちに
+ * 手番が回る席と、そこまでに入れるアクションを返す。すぐ次の手番（1 手で回る席）も含む。
+ */
+export function skipTargets(state: State, pos: Pos, legalNow: Legal): { kind: 'fold' | 'check'; targets: { pos: Pos; actions: Action[] }[] } {
+  const kind = legalNow.check ? 'check' : 'fold';
+  const targets: { pos: Pos; actions: Action[] }[] = [];
+  let s = state;
+  let p = pos;
+  const actions: Action[] = [];
+  for (let guard = 0; guard < 6; guard++) {
+    const lg = legal(s, p);
+    if (kind === 'fold' ? !lg.fold : !lg.check) break;
+    const a: Action = { street: s.street, pos: p, type: kind };
+    actions.push(a);
+    s = apply(s, a);
+    const st = status(s);
+    if (st.kind !== 'act') break;
+    p = st.pos;
+    targets.push({ pos: p, actions: [...actions] });
+  }
+  return { kind, targets };
+}
+
+// ---- 額のスライダー（スマホ。14 章 §3.1） ----
+
+/** なぞったときの刻み（mbb）: 幅が 10bb まで 0.1bb、50bb まで 0.5bb、それより広ければ 1bb。▲▼ は常に 0.1bb */
+export function sliderStep(range: { min: Mbb; max: Mbb }): Mbb {
+  const span = range.max - range.min;
+  return span <= 10_000 ? 100 : span <= 50_000 ? 500 : 1000;
+}
+export const SLIDER_NUDGE: Mbb = 100;
+
+/** スライダーの位置（0 = 下端 = 最小、1 = 上端 = 最大）から額。刻みに丸め、端は最小・最大ちょうど */
+export function sliderValue(ratio: number, range: { min: Mbb; max: Mbb }): Mbb {
+  if (ratio <= 0.005) return range.min;
+  if (ratio >= 0.995) return range.max;
+  const step = sliderStep(range);
+  const v = Math.round((range.min + ratio * (range.max - range.min)) / step) * step;
+  return Math.min(range.max, Math.max(range.min, v));
+}
+
+/** 額の添え書き: ベットは「{n}% pot」、レイズは直前のベット（to）の「×{n}」。プリフロップのオープンは無し */
+export function sizeNote(state: State, to: Mbb): string | null {
+  if (state.currentBet === 0) {
+    const pot = totalPot(state);
+    return pot > 0 ? `${Math.round((to / pot) * 100)}% pot` : null;
+  }
+  if (state.street === 'pf' && state.currentBet <= state.bb) return null;
+  return `×${(Math.round((to / state.currentBet) * 10) / 10).toString()}`;
+}
+
+// ---- 1つ進む（取り消したアクションを入れ直す。14 章 §3.1） ----
+
+/** 取り消したアクション `a` を今の手番にそのまま入れられるか（同じストリート・同じ席・合法な額） */
+export function canReplay(phase: Phase, a: Action | undefined): boolean {
+  if (!a || phase.kind !== 'act' || a.street !== phase.state.street || a.pos !== phase.pos) return false;
+  const lg = phase.legal;
+  const within = (r: { min: Mbb; max: Mbb } | null): boolean => r !== null && a.to !== undefined && a.to >= r.min && a.to <= r.max;
+  switch (a.type) {
+    case 'fold':
+      return lg.fold;
+    case 'check':
+      return lg.check;
+    case 'call':
+      return lg.call !== null;
+    case 'bet':
+      return within(lg.bet);
+    case 'raise':
+      return within(lg.raise);
+  }
 }
 
 /** 額の入力を検査する。範囲外・小数第 4 位以下・数でなければ null。 */
@@ -209,7 +403,7 @@ export function actionLog(setup: HandSetup, actions: readonly Action[]): LogItem
     let text = `${a.pos} ${ACTION_NAME[a.type]}`;
     if (a.type === 'call') text += ` ${formatBb(after.bets[a.pos] - prev.bets[a.pos])}`;
     if (a.to !== undefined) text += ` ${formatBb(a.to)}`;
-    if (a.type !== 'fold' && a.type !== 'check' && after.stacks[a.pos] === 0) text += ' オールイン';
+    if (a.type !== 'fold' && a.type !== 'check' && after.stacks[a.pos] === 0) text += ' All-in';
     return { index: i, street: a.street, pos: a.pos, text };
   });
 }
@@ -241,9 +435,19 @@ export function addAction(d: Draft, action: Action): Draft {
   return normalizeSpot({ ...d, actions: [...d.actions, action] });
 }
 
+/** 続けて入れる（Fold to / Check to） */
+export function addActions(d: Draft, actions: readonly Action[]): Draft {
+  return normalizeSpot({ ...d, actions: [...d.actions, ...actions] });
+}
+
 /** 「1つ戻す」: 最後のアクションだけ取り消す（ボードは残す） */
 export function undoAction(d: Draft): Draft {
   return normalizeSpot({ ...d, actions: d.actions.slice(0, -1) });
+}
+
+/** ログの 1 手を押して「ここから入れ直す」: その手以降のアクションを消す（ボードは残す。13 章 §6） */
+export function truncateActions(d: Draft, index: number): Draft {
+  return normalizeSpot({ ...d, actions: d.actions.slice(0, Math.max(0, index)) });
 }
 
 /** 「すべて消す」: アクションとボードを消す（ロック解除） */
@@ -285,17 +489,19 @@ export function titleLength(title: string): number {
 export function buildSubmission(d: Draft): Submission {
   const errors: string[] = [];
   const { setup, rake, invalid } = parseSettings(d);
+  const seats = seatsOf(d);
+  if (d.players === null) errors.push(PLAYERS_REQUIRED);
   for (const f of invalid) errors.push(`${FIELD_LABEL[f]} の値が正しくありません`);
 
   const heroCards = handCards(d.hands[d.hero]);
-  if (heroCards.length !== 2 || !isHandComplete(d.hands[d.hero])) errors.push(`Hero（${d.hero}）のハンドを入力してください`);
-  for (const p of POSITIONS) {
-    if (p !== d.hero && !isHandComplete(d.hands[p])) errors.push(`${p} のハンドが途中です`);
+  if (heroCards.length !== 2 || !isHandComplete(d.hands[d.hero])) errors.push(`Hero（${d.hero}）の Hand を入力してください`);
+  for (const p of seats) {
+    if (p !== d.hero && !isHandComplete(d.hands[p])) errors.push(`${p} の Hand が途中です`);
   }
 
   const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
-  if (phase.kind !== 'done' && invalid.length === 0) errors.push('ハンドを最後まで入力してください');
-  if (d.spotIndex === null) errors.push('スポットを選択してください');
+  if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
+  if (d.spotIndex === null) errors.push('Spot を選択してください');
   else if (d.villain === null) errors.push('Villain を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null || d.villain === null) {
@@ -303,7 +509,7 @@ export function buildSubmission(d: Draft): Submission {
   }
 
   const known: Record<string, Card[]> = {};
-  for (const p of POSITIONS) {
+  for (const p of seats) {
     const cards = handCards(d.hands[p]);
     if (p !== d.hero && cards.length === 2) known[p] = cards;
   }
@@ -311,8 +517,9 @@ export function buildSubmission(d: Draft): Submission {
 
   try {
     const view = spotView(setup, d.actions, d.hero, d.spotIndex, d.villain);
+    // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
     const stacks: Record<string, number> = {};
-    for (const p of POSITIONS) stacks[p] = mbbToBb(setup.stacks[p]);
+    for (const p of seats) stacks[p] = mbbToBb(setup.stacks[p]);
     const body: Record<string, unknown> = {
       title: d.title.trim(),
       fmt: d.fmt,

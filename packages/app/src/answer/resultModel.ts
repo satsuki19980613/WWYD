@@ -32,15 +32,18 @@ import type { PostDetail } from './postDetail.ts';
  * 集計画面（詳細仕様 06 章 §5。仕様書 §5.4）の表示の計算。計算の本体は core の aggregate（05 章 §4）。
  */
 
-export type ResultView = 'all' | 'mine';
+/** 全体 / 自分 / 自分との差（14 章。自分と全体のミックスの違いの大きさを濃さで出す） */
+export type ResultView = 'all' | 'mine' | 'diff';
 
 /** 集計のタブ（§5.2）。投稿者も回答者の 1 人なので、自分の投稿でも「全体」「自分」。 */
 export function resultTabs(d: PostDetail): { value: ResultView; label: string }[] {
   const n = d.aggregate?.n ?? 0;
-  return [
+  const tabs: { value: ResultView; label: string }[] = [
     { value: 'all', label: `全体（${n}人）` },
     { value: 'mine', label: '自分' },
   ];
+  if (n > 0 && d.myAnswer) tabs.push({ value: 'diff', label: '自分との差' });
+  return tabs;
 }
 
 /** Villain のハンド（判明していればカード、マック、不明は null）。 */
@@ -61,7 +64,7 @@ export function initialCell(d: PostDetail): number {
 
 /** アクションのキーの名前（s1 はベットかレイズ）。 */
 export function keyNames(d: PostDetail): KeyNames {
-  return { fold: 'フォールド', check: 'チェック', call: 'コール', s1: d.post.s1Label === 'bet' ? 'ベット' : 'レイズ' };
+  return { fold: 'Fold', check: 'Check', call: 'Call', s1: d.post.s1Label === 'bet' ? 'Bet' : 'Raise' };
 }
 
 /** Villain の実際のアクション（停止位置のアクション）。 */
@@ -79,7 +82,7 @@ export function actionText(a: Action): string {
 
 /** 表示中のタブのマス（全体 = 05 章 §4.1、自分 = §4.2）。 */
 export function cellViews(d: PostDetail, view: ResultView): CellView[] {
-  if (view === 'all') {
+  if (view !== 'mine') {
     const agg = d.aggregate;
     return Array.from({ length: CELL_COUNT }, (_, i) =>
       agg ? aggregateCellView(agg.cells[i] as (typeof agg.cells)[number], agg.n) : { ratio: null, opacity: 0 },
@@ -90,13 +93,13 @@ export function cellViews(d: PostDetail, view: ResultView): CellView[] {
 
 /** 空状態（§5.2）: 回答 0 件 →「回答なし」。空でなければ null。 */
 export function emptyLabel(d: PostDetail, view: ResultView): string | null {
-  if (view === 'all') return (d.aggregate?.n ?? 0) === 0 ? '回答なし' : null;
+  if (view !== 'mine') return (d.aggregate?.n ?? 0) === 0 ? '回答なし' : null;
   return d.myAnswer ? null : '回答なし';
 }
 
 /** ミックスの文字列「コール 50% / レイズ 50%」。レンジ外は「レンジ外」。 */
 export function mixText(mix: Mix | null, names: KeyNames): string {
-  if (!mix) return 'レンジ外';
+  if (!mix) return 'Range 外';
   return ANSWER_KEYS.filter((k) => mix[k] > 0)
     .map((k) => `${names[k]} ${mixUnitsToPercent(mix[k])}%`)
     .join(' / ');
@@ -112,6 +115,8 @@ export type Breakdown =
       rows: { key: AnswerKey; name: string; pct: string; count: number }[];
       /** 自分のミックス。 */
       mine: string;
+      /** 自分との差（%。「自分との差」のタブだけ） */
+      diff?: string;
     }
   | { kind: 'single'; label: string; text: string };
 
@@ -119,7 +124,7 @@ export type Breakdown =
 export function breakdown(d: PostDetail, view: ResultView, idx: number): Breakdown {
   const names = keyNames(d);
   const label = labelOf(idx);
-  if (view !== 'all') return { kind: 'single', label, text: mixText(d.myAnswer?.paint[idx] ?? null, names) };
+  if (view === 'mine') return { kind: 'single', label, text: mixText(d.myAnswer?.paint[idx] ?? null, names) };
   const total = d.aggregate?.n ?? 0;
   const cell = d.aggregate?.cells[idx] ?? { n: 0, sum: { fold: 0, check: 0, call: 0, s1: 0 } };
   const rows =
@@ -132,7 +137,47 @@ export function breakdown(d: PostDetail, view: ResultView, idx: number): Breakdo
           count: weightedCount(cell, k),
         }));
   const mine = mixText(d.myAnswer?.paint[idx] ?? null, names);
-  return { kind: 'all', label, n: cell.n, total, rows, mine };
+  const out: Breakdown = { kind: 'all', label, n: cell.n, total, rows, mine };
+  return view === 'diff' ? { ...out, diff: String(Math.round(cellDiff(d, idx) * 100)) } : out;
+}
+
+// ---- 自分と全体の比較（14 章） ----
+
+export type Shares = Record<AnswerKey | 'off', number>;
+
+/**
+ * マスの割合（全体と自分）。全体は回答者全員に対するキーごとの割合（レンジに入れなかった人は off）、
+ * 自分はミックスの割合（レンジ外なら off = 1）。
+ */
+export function cellShares(d: PostDetail, idx: number): { all: Shares | null; mine: Shares | null } {
+  const total = d.aggregate?.n ?? 0;
+  const cell = d.aggregate?.cells[idx];
+  let all: Shares | null = null;
+  if (total > 0 && cell) {
+    all = { fold: 0, check: 0, call: 0, s1: 0, off: 1 - cell.n / total };
+    for (const k of ANSWER_KEYS) all[k] = cell.sum[k] / (total * MIX_TOTAL);
+  }
+  let mine: Shares | null = null;
+  if (d.myAnswer) {
+    const mix = d.myAnswer.paint[idx] ?? null;
+    mine = { fold: 0, check: 0, call: 0, s1: 0, off: mix ? 0 : 1 };
+    if (mix) for (const k of ANSWER_KEYS) mine[k] = mix[k] / MIX_TOTAL;
+  }
+  return { all, mine };
+}
+
+/** 自分と全体の差（0〜1）: キーごとの割合とレンジ外の割合の差の絶対値の和の半分。比べられなければ 0 */
+export function cellDiff(d: PostDetail, idx: number): number {
+  const { all, mine } = cellShares(d, idx);
+  if (!all || !mine) return 0;
+  let sum = Math.abs(all.off - mine.off);
+  for (const k of ANSWER_KEYS) sum += Math.abs(all[k] - mine[k]);
+  return sum / 2;
+}
+
+/** 「自分との差」のタブのマスの濃さ（169 マス） */
+export function diffHeat(d: PostDetail): number[] {
+  return Array.from({ length: CELL_COUNT }, (_, i) => cellDiff(d, i));
 }
 
 // ---- ハンドヒストリー（最後まで再生） ----
@@ -186,7 +231,7 @@ export function resultFrames(d: PostDetail): ResultFrame[] {
 function endNote(d: PostDetail): string | null {
   try {
     const r = replay(d.hand.setup, d.hand.actions, d.hand.board.length).result;
-    return r.kind === 'showdown' ? 'ショーダウン' : `${r.winner} ポット獲得`;
+    return r.kind === 'showdown' ? 'Showdown' : `${r.winner} Pot 獲得`;
   } catch {
     return null;
   }

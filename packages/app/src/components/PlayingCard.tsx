@@ -1,10 +1,10 @@
 import type { Card } from '@wwyd/core';
 
 const SUIT: Record<string, { sym: string; cls: string; name: string }> = {
-  s: { sym: '♠', cls: '', name: 'スペード' },
-  h: { sym: '♥', cls: 'red', name: 'ハート' },
-  d: { sym: '♦', cls: 'blue', name: 'ダイヤ' },
-  c: { sym: '♣', cls: 'green', name: 'クラブ' },
+  s: { sym: '♠', cls: '', name: 'Spade' },
+  h: { sym: '♥', cls: 'red', name: 'Heart' },
+  d: { sym: '♦', cls: 'blue', name: 'Diamond' },
+  c: { sym: '♣', cls: 'green', name: 'Club' },
 };
 
 /** 表示用の「K♦」（トースト等の文字列）。 */
@@ -20,7 +20,7 @@ export function PlayingCard(props: { card?: Card; rank?: string; size?: 'sm' | '
   const size = props.size && props.size !== 'md' ? ` ${props.size}` : '';
   if (!props.card) {
     return (
-      <span className={`pcard pending${size}`} aria-label={`${props.rank ?? ''} スート未確定`}>
+      <span className={`pcard pending${size}`} aria-label={`${props.rank ?? ''} Suit 未確定`}>
         {props.rank}
         <em>?</em>
       </span>
@@ -28,7 +28,7 @@ export function PlayingCard(props: { card?: Card; rank?: string; size?: 'sm' | '
   }
   const suit = SUIT[props.card.charAt(1)];
   return (
-    <span className={`pcard ${suit?.cls ?? ''}${size}`} aria-label={`${suit?.name ?? ''}の${props.card.charAt(0)}`}>
+    <span className={`pcard ${suit?.cls ?? ''}${size}`} aria-label={`${suit?.name ?? ''} の ${props.card.charAt(0)}`}>
       {props.card.charAt(0)}
       <em aria-hidden="true">{suit?.sym}</em>
     </span>

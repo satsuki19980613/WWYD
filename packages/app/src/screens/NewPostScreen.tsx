@@ -1,4 +1,4 @@
-import type { Action, Card, Pos } from '@wwyd/core';
+import { STREETS, type Action, type Card, type Pos } from '@wwyd/core';
 import { useEffect, useState } from 'react';
 import { cardText } from '../components/PlayingCard.tsx';
 import { useToast } from '../components/Toast.tsx';
@@ -7,29 +7,37 @@ import { applyCardKey, isHandComplete, type CardKey } from '../post/cardInput.ts
 import { CardKeyboard } from '../post/CardKeyboard.tsx';
 import {
   addAction,
+  addActions,
   addBoardCard,
   buildSubmission,
+  canReplay,
   clearActions,
+  neighborSeat,
   normalizeSpot,
   parseSettings,
   phaseOf,
   removeBoardFrom,
+  seatsOf,
   selectSpot,
+  setPlayers,
+  truncateActions,
   undoAction,
   usedCards,
   type Draft,
 } from '../post/draft.ts';
-import { getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
+import { draftSlot, getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
+import { activeUser, deleteDraft } from '../post/savedDrafts.ts';
 import { messageForCode } from '../post/errorMessages.ts';
 import { OcrImport } from '../post/OcrImport.tsx';
 import { sendPost } from '../post/sendPost.ts';
 import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
 import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
 import { navigate } from '../router.ts';
+import { useHeightVar } from '../useHeightVar.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 
-const STEPS = ['基本設定', 'プレイヤー', 'アクション', 'スポット'] as const;
-const ACTION_STEP = STEPS.indexOf('アクション');
+const STEPS = ['基本設定', 'Player', 'Action', 'Spot'] as const;
+const ACTION_STEP = STEPS.indexOf('Action');
 
 /**
  * スポット投稿（06 章 §3。仕様書 §5.2）。
@@ -45,6 +53,8 @@ export function NewPostScreen(): JSX.Element {
   const [attempted, setAttempted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // スマホの戻る・次へのバーの高さ（画面の下の余白に使う）
+  const barRef = useHeightVar('.pf', '--bar-h');
 
   const { setup, invalid } = parseSettings(d);
   const phase = phaseOf(setup, d.actions, d.board);
@@ -59,6 +69,18 @@ export function NewPostScreen(): JSX.Element {
   }, [seat]);
 
   const update = (f: (x: Draft) => Draft): void => setDraft(f);
+
+  // 1つ進む（14 章 §3.1）: 1つ戻す・入れ直しで取り消したアクションを先頭から順に持つ。
+  // 取り消したものと同じアクションを入れたら先へ進め、違うアクションを入れたら捨てる
+  const [future, setFuture] = useState<readonly Action[]>([]);
+  const advanceFuture = (as: readonly Action[]): void =>
+    setFuture((f) => (as.every((a, k) => sameAction(a, f[k])) ? f.slice(as.length) : []));
+  const redo = (): void => {
+    const next = future[0];
+    if (!next || !canReplay(phase, next)) return;
+    setFuture((f) => f.slice(1));
+    update((x) => addAction(x, next));
+  };
   const patch = (p: Partial<Draft>): void => update((x) => normalizeSpot({ ...x, ...p }));
 
   const onKey = (key: CardKey): void => {
@@ -79,6 +101,10 @@ export function NewPostScreen(): JSX.Element {
     void sendPost(s.body).then((r) => {
       setBusy(false);
       if (r.ok) {
+        // 開いた下書きから投稿したら、その下書きは消す
+        const slot = draftSlot();
+        const uid = activeUser();
+        if (slot && uid) deleteDraft(uid, slot);
         resetDraft();
         navigate('/?tab=mine');
       } else {
@@ -89,18 +115,50 @@ export function NewPostScreen(): JSX.Element {
 
   const settings = <SettingsSection draft={d} invalid={invalid} onChange={patch} />;
   const players = (
-    <PlayersSection draft={d} invalid={invalid} activeSeat={seat} onChange={patch} onOpenHand={(p) => setSeat(p)} />
+    <PlayersSection
+      draft={d}
+      invalid={invalid}
+      activeSeat={seat}
+      onChange={patch}
+      onPlayers={(n) => update((x) => setPlayers(x, n))}
+      onOpenHand={(p) => setSeat(p)}
+    />
   );
   const actions = (
     <ActionSection
       draft={d}
       setup={setup}
       phase={phase}
-      onAction={(a: Action) => update((x) => addAction(x, a))}
-      onUndo={() => update(undoAction)}
-      onClear={() => update(clearActions)}
+      mobile={mobile}
+      onAction={(a: Action) => {
+        advanceFuture([a]);
+        update((x) => addAction(x, a));
+      }}
+      onActions={(as) => {
+        advanceFuture(as);
+        update((x) => addActions(x, as));
+      }}
+      onUndo={() => {
+        const last = d.actions[d.actions.length - 1];
+        if (last) setFuture((f) => [last, ...f]);
+        update(undoAction);
+      }}
+      onRedo={canReplay(phase, future[0]) ? redo : null}
+      onTruncate={(i) => {
+        setFuture((f) => [...d.actions.slice(i), ...f]);
+        update((x) => truncateActions(x, i));
+      }}
+      onClear={() => {
+        setFuture([]);
+        update(clearActions);
+      }}
       onBoardAdd={(c: Card) => update((x) => addBoardCard(x, c))}
-      onBoardRemoveFrom={(i) => update((x) => removeBoardFrom(x, i))}
+      onBoardRemoveFrom={(i) => {
+        const street = i < 3 ? 'flop' : i === 3 ? 'turn' : 'river';
+        const cut = d.actions.findIndex((a) => STREETS.indexOf(a.street) >= STREETS.indexOf(street));
+        if (cut >= 0) setFuture((f) => [...d.actions.slice(cut), ...f]);
+        update((x) => removeBoardFrom(x, i));
+      }}
     />
   );
   const spot = (
@@ -116,10 +174,21 @@ export function NewPostScreen(): JSX.Element {
       {busy ? '投稿中…' : '投稿する'}
     </button>
   );
-  const keyboard = seat && <CardKeyboard seat={seat} onKey={onKey} onClose={() => setSeat(null)} />;
+  const keyboard = seat && (
+    <CardKeyboard
+      seat={seat}
+      onKey={onKey}
+      onClose={() => setSeat(null)}
+      onPrev={() => setSeat(neighborSeat(seatsOf(d), seat, -1))}
+      onNext={() => setSeat(neighborSeat(seatsOf(d), seat, 1))}
+    />
+  );
   // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ。
   // 反映したらスマホはアクションのステップへ（読み込んだアクションとスポットの確認に進む。2026-09-29）
-  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => setStep(ACTION_STEP)} />;
+  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => {
+    setFuture([]);
+    setStep(ACTION_STEP);
+  }} />;
 
   if (!mobile) {
     return (
@@ -144,8 +213,11 @@ export function NewPostScreen(): JSX.Element {
 
   const done = stepDone(d, phase.kind === 'done');
   const last = step === STEPS.length - 1;
+  // アクションのステップは卓で画面の残りを埋める。ハンドを入れている間は、下にアクションの台を出す（14 章）
+  const docked = step === ACTION_STEP && (phase.kind === 'act' || phase.kind === 'board');
+  const fill = !seat && step === ACTION_STEP && phase.kind !== 'invalid';
   return (
-    <section className={`screen pf sp ${seat ? 'kb-open' : ''}`}>
+    <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
       <nav className="pf-steps" aria-label="ステップ">
         {STEPS.map((name, i) => (
           <button
@@ -165,8 +237,9 @@ export function NewPostScreen(): JSX.Element {
       {step === 1 && players}
       {step === 2 && actions}
       {step === 3 && spot}
-      {!seat && (
-        <div className="pf-bar">
+      {/* 台を出している間は戻る・次へを隠す（13 章） */}
+      {!seat && !docked && (
+        <div className="pf-bar" ref={barRef}>
           <ErrorList errors={errors} />
           <div className="btn-row">
             <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
@@ -195,6 +268,10 @@ function submissionErrors(d: Draft): string[] {
 /** ステップの完了（シアン）: 設定が正しい / ハンドが揃っている / ハンドが最後まで / スポットとタイトル */
 function stepDone(d: Draft, handDone: boolean): boolean[] {
   const settingsOk = parseSettings(d).invalid.length === 0;
-  const handsOk = Object.values(d.hands).every(isHandComplete) && d.hands[d.hero].length === 4;
+  const handsOk = d.players !== null && seatsOf(d).every((p) => isHandComplete(d.hands[p])) && d.hands[d.hero].length === 4;
   return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.villain !== null && d.title.trim() !== ''];
+}
+
+function sameAction(a: Action, b: Action | undefined): boolean {
+  return !!b && a.street === b.street && a.pos === b.pos && a.type === b.type && a.to === b.to;
 }

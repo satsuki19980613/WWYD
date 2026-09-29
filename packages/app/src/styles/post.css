@@ -159,47 +159,205 @@
 .pf-size { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s2); }
 .pf-range { font-size: 12px; color: var(--dim); white-space: nowrap; }
 
+/* ---- アクションの台（13 章）。PC は節の中、スマホは画面の下に固定 ---- */
+.act-dock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.pf.sp .act-dock {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--s2) max(var(--s3), var(--sar)) calc(var(--s2) + var(--sab)) max(var(--s3), var(--sal));
+  border: 0;
+  border-top: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, 0.96);
+  backdrop-filter: blur(12px);
+}
+.pf.sp .act-dock > * { width: 100%; max-width: 480px; margin: 0 auto; }
+/* 道具の行（14 章 §3.1）: 手番（席の上にストリート）・1つ戻す・1つ進む・すべて消す、右に額。ポット・残りは卓に出ている */
+.ad-toolrow { display: flex; align-items: center; gap: var(--s2); min-height: 44px; }
+.ad-turn { display: flex; flex-direction: column; justify-content: center; flex: none; min-width: 52px; line-height: 1.1; }
+.ad-pos { font-family: var(--disp); font-size: 20px; font-weight: 700; letter-spacing: 0.04em; }
+.ad-street { font-size: 11px; color: var(--dim); white-space: nowrap; }
+.ad-tools { display: flex; gap: 4px; flex: none; }
+.ad-tool { width: 42px; height: 42px; color: var(--cyan); border-color: rgba(58, 230, 255, 0.4); }
+.ad-tool.red { color: var(--red); border-color: rgba(255, 51, 51, 0.45); }
+.ad-tool:disabled { opacity: 0.3; cursor: default; }
+.ad-toolrow .ad-size { margin-left: auto; }
+.pf-undo { display: flex; justify-content: flex-end; }
+.ad-size {
+  flex: none;
+  width: 96px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  border: 1px solid rgba(252, 238, 10, 0.45);
+  background: var(--surface-2);
+}
+.ad-size .inp { width: 100%; min-width: 0; min-height: 40px; padding: 0 6px; border: 0; background: transparent; font-size: 17px; }
+/* スマホの額: ボタン＋縦のスライダー（キーボードを出さない） */
+.ad-size.sl { position: relative; padding: 0; }
+.ad-size-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+.ad-size-btn b { margin-left: auto; font-size: 18px; font-weight: 400; }
+.ad-size-btn[aria-expanded='true'] { box-shadow: inset 0 0 0 1px var(--yellow); }
+.sl-backdrop { position: fixed; inset: 0; z-index: 1; }
+.sl-pop {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--s2) 6px;
+  border: 1px solid rgba(252, 238, 10, 0.55);
+  background: rgba(8, 8, 4, 0.97);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7);
+  clip-path: var(--chamfer-sm);
+}
+.sl-val { display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+.sl-val b { font-size: 22px; font-weight: 400; color: var(--yellow); }
+.sl-val span { font-size: 11px; color: var(--dim); }
+.sl-nudge {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 13px;
+  cursor: pointer;
+}
+.sl-nudge:disabled { opacity: 0.3; cursor: default; }
+.sl-end { font-size: 11px; color: var(--dim); }
+.sl-track {
+  position: relative;
+  width: 44px;
+  height: clamp(140px, 30dvh, 260px);
+  background: var(--surface-3);
+  touch-action: none;
+  cursor: pointer;
+}
+.sl-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--act-s1-stripe), rgba(252, 238, 10, 0.35); }
+.sl-thumb {
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  height: 18px;
+  background: var(--yellow);
+  box-shadow: 0 0 12px rgba(252, 238, 10, 0.6);
+}
+.sl-thumb:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* よく使う額は等分に並べる（最大 7 つ。スマホの幅でも切れない） */
+.ad-chips { display: flex; gap: 4px; min-width: 0; }
+.ad-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 2px;
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  color: var(--fg);
+  cursor: pointer;
+  line-height: 1.15;
+}
+.ad-chip b { font-family: var(--disp); font-size: 16px; font-weight: 700; }
+.ad-chip span { font-size: 11px; color: var(--dim); }
+.ad-chip[aria-pressed='true'] { border-color: var(--yellow); background: rgba(252, 238, 10, 0.1); color: var(--yellow); }
+.ad-chip.allin b { font-size: 13px; }
+/* Fold to / Check to */
+.ad-skip { display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.ad-skip::-webkit-scrollbar { display: none; }
+.ad-skip .mono-lbl { flex: none; margin-right: 4px; }
+.ad-skip-btn {
+  flex: none;
+  min-width: 52px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  font-family: var(--disp);
+  font-size: 15px;
+  cursor: pointer;
+}
+.ad-skip-btn:hover { border-color: var(--cyan); }
+/* 3 つのボタン（フォールド / チェック・コール / ベット・レイズ）。位置は手番ごとに動かない */
+.ad-btns { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 6px; }
+.ad-btns.one { grid-template-columns: 1fr; }
+.ad-btns .act-btn { min-height: 56px; font-size: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.ad-btns .act-btn .num { font-family: var(--mono); font-size: 16px; }
+.ad-btns .act-btn small { font-size: 10px; font-weight: 400; letter-spacing: 0.04em; }
+.ad-btns .act-btn.s1:not(:disabled) { background: rgba(252, 238, 10, 0.1); }
+
+/* 画像読み込みの確認のボード（大きい枠） */
 .pf-board { display: flex; gap: var(--s2); }
+.pf-board .pf-bslot { width: 46px; height: 62px; border: 1px dashed var(--line-2); border-radius: 4px; background: none; box-shadow: none; font-size: 20px; }
+.pf-board .pf-bslot:disabled { cursor: default; }
+.pf-board .pf-bslot:not(:disabled):not(.filled) { border-style: solid; border-color: rgba(58, 230, 255, 0.55); }
+.pf-board .pf-bslot.filled { border: 0; }
+.pf-board .pf-bslot.filled .pcard { width: 46px; height: 62px; font-size: 23px; border-radius: 4px; }
+.pf-board .pf-bslot.filled .pcard em { font-size: 18px; }
+.pf.sp .pf-board .pf-bslot { width: 100%; max-width: 56px; }
+
+/* ---- 入力中の卓（14 章）: 回答画面の卓と同じ部品。ボードの枠は押せる ---- */
+.pf .ptable { height: 420px; }
+.ptable.live .ptable-mid { pointer-events: auto; }
 .pf-bslot {
-  width: 46px;
-  height: 62px;
+  flex: none;
+  width: var(--bw);
+  height: calc(var(--bw) * 1.38);
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px dashed var(--line-2);
-  border-radius: 4px;
-  background: none;
+  border: 1px solid var(--cyan);
+  border-radius: var(--r-sm);
+  background: rgba(4, 14, 32, 0.6);
+  box-shadow: 0 0 10px rgba(58, 230, 255, 0.35);
   color: var(--cyan);
-  font-size: 20px;
+  font-size: calc(var(--bw) * 0.45);
   cursor: pointer;
 }
-.pf-bslot:disabled { cursor: default; }
-.pf-bslot:not(:disabled):not(.filled) { border-style: solid; border-color: rgba(58, 230, 255, 0.55); }
-.pf-bslot.filled { border: 0; }
-.pf-bslot.filled .pcard { width: 46px; height: 62px; font-size: 23px; border-radius: 4px; }
-.pf-bslot.filled .pcard em { font-size: 18px; }
+.pf-bslot.filled { border: 0; background: none; box-shadow: none; }
+/* まだ来ていないストリートのカード（1つ戻すで残ったもの） */
+.pf-bslot.filled.ahead { opacity: 0.35; }
 .pf-undo .btn { min-height: 40px; font-size: 14px; }
-
-.pf-log { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--s3); }
-.pf-log-col { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2); border: 1px solid var(--line); background: var(--surface); }
-.pf-log-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s1); min-height: 30px; }
-.pf-log-board { display: flex; gap: 2px; }
-.pf-log-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--dim); }
-.pf-log-list li.latest { color: var(--yellow); }
-
-.pf-end {
-  position: relative;
-  padding: var(--s4);
-  border: 1px solid var(--line);
-  background: linear-gradient(135deg, rgba(252, 238, 10, 0.08), transparent 55%), var(--surface);
+/* ログの 1 手（押すとその手から入れ直す） */
+.hlog-pick {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.pf-end .brk { position: absolute; width: 14px; height: 14px; border: 0 solid var(--yellow); }
-.pf-end .brk.tl { left: 6px; top: 6px; border-left-width: 2px; border-top-width: 2px; }
-.pf-end .brk.br { right: 6px; bottom: 6px; border-right-width: 2px; border-bottom-width: 2px; }
-.pf-end-title { font-family: var(--disp); font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
-.pf-end-seats { margin: var(--s2) 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
-.pf-end-seats li { display: flex; align-items: center; gap: var(--s2); }
-.pf-end-cards { display: flex; gap: 3px; }
+.hlog-pick:hover { color: var(--fg); }
+.hlog-pick:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 .pf-muck { font-size: 12px; color: var(--dim); }
 
 /* ---- スポット ---- */
@@ -247,7 +405,8 @@
 }
 
 /* ---- スマホ: 4 ステップ ---- */
-.pf.sp { padding-bottom: 96px; }
+/* 下の余白 = 戻る・次へのバーの実際の高さ（NewPostScreen の useBarHeight が --bar-h を入れる） */
+.pf.sp { padding-bottom: calc(var(--bar-h, 128px) - var(--s6) - var(--sab) + var(--s2)); }
 .pf-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
 .pf-step {
   display: flex;
@@ -293,7 +452,6 @@
 .pf.sp .pf-act-btns { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .pf.sp .pf-act-btns .act-btn { grid-column: span 2; }
 .pf.sp .pf-act-btns .act-btn.s1 { grid-column: span 3; }
-.pf.sp .pf-bslot { width: 100%; max-width: 56px; }
 
 /* キーボードを開いている間は、下に隠れないよう余白を足す */
 .pf.kb-open { padding-bottom: 420px; }
@@ -317,7 +475,10 @@
 .ckb-head, .ckb-grid { max-width: 400px; margin: 0 auto; }
 .ckb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2); }
 .ckb-seat { font-family: var(--disp); font-size: 17px; font-weight: 700; letter-spacing: 0.05em; color: var(--cyan); }
-.ckb-done { min-height: 40px; padding: 6px 18px; }
+.ckb-done { min-height: 44px; padding: 6px 18px; }
+/* 前の席・次の席（完了の左） */
+.ckb-nav { display: flex; gap: 6px; }
+.ckb-move { min-width: 52px; min-height: 44px; padding: 6px 12px; font-size: 20px; }
 /*
  * キーの高さは画面の高さに合わせる（低すぎると画面の下の端で打ちにくい。2026-09-29 さつき）。
  * 高さ 900px 前後のスマホで 1 段 68px、小さい画面でも 48px 以上
@@ -522,3 +683,16 @@
   .ocr-rv-form { overflow: visible; }
   .ocr-rv-row { grid-template-columns: 20px 32px minmax(0, 1fr) 84px 32px 32px; gap: var(--s1); }
 }
+
+/*
+ * 入力中の卓（スマホ。回答画面の卓と同じ詰め方）。ログはモーダルなので、卓で画面の残りを埋める（画面を画面の高さちょうどにする）。
+ * 台を出している間の下の余白は台の高さ --dock-h（ActionSection の useDockHeight）、終わった後は戻る・次へのバーの高さ（--bar-h）。
+ */
+.pf.sp.fill { min-height: var(--screen-fill-h); }
+.pf.sp.docked { padding-bottom: calc(var(--dock-h, 200px) - var(--s6) - var(--sab) + var(--s2)); }
+.pf.sp.fill > .pf-actsec { flex: 1 1 auto; }
+.pf.sp.fill .pf-actsec > .ptable { flex: 1 1 auto; height: auto; min-height: 340px; }
+.pf.sp .pseat-plate { min-width: 76px; padding: 3px 6px; }
+
+.pf-actsec { position: relative; }
+.modal .hlog { grid-template-columns: 1fr; }

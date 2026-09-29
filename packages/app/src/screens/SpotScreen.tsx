@@ -37,7 +37,7 @@ export function SpotScreen(props: { id: string; view: SpotView }): JSX.Element {
     return (
       <section className="screen">
         <div className="list-empty" role="alert">
-          <p className="form-err">スポットが見つかりません</p>
+          <p className="form-err">Spot が見つかりません</p>
           <Link to="/" className="btn ghost auto">
             一覧へ
           </Link>

@@ -32,6 +32,8 @@ export const ResultGrid = memo(function ResultGrid(props: {
   selected: number;
   actual: number | null;
   onSelect: (idx: number) => void;
+  /** 「自分との差」のタブ: マスごとの差（0〜1）。あれば色の代わりに差の濃さで塗る（14 章） */
+  heat?: readonly number[];
 }): JSX.Element {
   const grid = useRef<HTMLDivElement>(null);
 
@@ -57,22 +59,28 @@ export const ResultGrid = memo(function ResultGrid(props: {
   };
 
   return (
-    <div ref={grid} className="rgrid result" role="group" aria-label="レンジ表" onKeyDown={onKeyDown}>
+    <div ref={grid} className="rgrid result" role="group" aria-label="Range 表" onKeyDown={onKeyDown}>
       {Array.from({ length: CELL_COUNT }, (_, idx) => {
         const view = props.views[idx] ?? { ratio: null, opacity: 0 };
         const selected = idx === props.selected;
+        const heat = props.heat?.[idx];
+        const ink = heat === undefined ? inkClass(view) : heat >= 0.5 ? ' ink-heat' : heat > 0 ? ' ink-mixed' : '';
         return (
           <button
             key={idx}
             type="button"
             data-idx={idx}
-            className={`rcell${view.ratio ? ' on' : ''}${inkClass(view)}${idx === props.actual ? ' actual' : ''}`}
+            className={`rcell${view.ratio || heat ? ' on' : ''}${ink}${idx === props.actual ? ' actual' : ''}`}
             tabIndex={selected ? 0 : -1}
             aria-pressed={selected}
             aria-label={labelOf(idx)}
             onClick={() => props.onSelect(idx)}
           >
-            <RatioFill view={view} />
+            {heat === undefined ? (
+              <RatioFill view={view} />
+            ) : (
+              heat > 0 && <span className="cheat" style={{ opacity: 0.15 + 0.85 * heat }} aria-hidden="true" />
+            )}
             <span className="rcell-lbl">{labelOf(idx)}</span>
           </button>
         );

@@ -17,7 +17,7 @@ const INPUT_CODES = new Set(['malformed', 'invalid_settings', 'invalid_title', '
 /** `index` はアクションの添字（0 始まり）。画面では「n手目」（1 始まり）にする。 */
 export function messageForCode(code: string, index?: number): string {
   if (ACTION_CODES.has(code)) {
-    return index === undefined ? 'アクションの内容を確認してください' : `アクションの内容を確認してください（${index + 1}手目）`;
+    return index === undefined ? 'Action の内容を確認してください' : `Action の内容を確認してください（${index + 1}手目）`;
   }
   if (INPUT_CODES.has(code)) return '入力内容を確認してください';
   switch (code) {
@@ -25,7 +25,7 @@ export function messageForCode(code: string, index?: number): string {
       return '本日の投稿上限（5件）に達しました';
     case 'invalid_spot':
     case 'invalid_villain':
-      return 'スポットを選び直してください';
+      return 'Spot を選び直してください';
     case 'derived_mismatch':
       return '投稿できませんでした。再読み込みしてやり直してください';
     case 'not_authenticated':

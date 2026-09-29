@@ -78,7 +78,7 @@ export function OcrImport(props: { button?: boolean; onApplied?: () => void }): 
       {showButton && (
         <div className="pf-ocr">
           <button type="button" className="btn ghost" disabled={busy} onClick={() => setChoosing(true)}>
-            T4ハンドヒストリー画像を読み込む
+            T4 Hand History 画像を読み込む
           </button>
           <ErrorList errors={errors} />
         </div>
@@ -92,14 +92,14 @@ export function OcrImport(props: { button?: boolean; onApplied?: () => void }): 
         onChange={(e) => onFile(e.currentTarget.files?.[0])}
       />
       {choosing && (
-        <Modal title="T4 のゲーム" tone="confirm" onClose={() => setChoosing(false)}>
+        <Modal title="T4 の Game" tone="confirm" onClose={() => setChoosing(false)}>
           {isDirty(getDraft()) && <p className="confirm-body">入力中の内容は画像の内容に置き換わります。</p>}
           <div className="pf-ocr-games">
             {T4_GAME_ORDER.map((g) => (
               <button key={g} type="button" className="btn ghost pf-ocr-game" onClick={() => pick(g)}>
                 <span>{T4_GAMES[g].label}</span>
                 <span className="pf-ocr-rake">
-                  レーキ {T4_GAMES[g].rakePct}%（{T4_GAMES[g].capBb}bb cap）
+                  Rake {T4_GAMES[g].rakePct}%（{T4_GAMES[g].capBb}bb cap）
                 </span>
               </button>
             ))}

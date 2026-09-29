@@ -54,11 +54,11 @@ const row = (verb: ReviewRow['verb'], amount: number | null = null): ReviewRow =
 const summary = (d: Draft): string[] => d.actions.map((a) => `${a.street} ${a.pos} ${a.type} ${a.to ?? ''}`.trim());
 
 describe('ocrPostability（読み込みの時点ではじく）', () => {
-  it('Hero のフロップ以降のアクションに出題できるものがあれば読み込む', () => {
+  it('Hero の Flop 以降の Action に出題できるものがあれば読み込む', () => {
     expect(ocrPostability(hs1)).toBe('ok');
   });
 
-  it('プリフロップで終わったハンド・Hero がフロップ以降にアクションしていないハンドははじく', () => {
+  it('Preflop で終わった Hand・Hero が Flop 以降に Action していない Hand ははじく', () => {
     const pfOnly: OcrResult = { ...hs1, board: [], actions: hs1.actions.slice(0, 5).concat(act('pf', 'BB', 'fold')) };
     expect(ocrPostability(pfOnly)).toBe('no_spot');
     // プリフロップのオールインでボードが開いても、Hero のフロップ以降のアクションは無い
@@ -69,7 +69,7 @@ describe('ocrPostability（読み込みの時点ではじく）', () => {
     expect(ocrPostability({ ...hs1, actions: hs1.actions.slice(0, 8) })).toBe('no_spot');
   });
 
-  it('フロップ以降のアクションがあるのにフロップが読めなければ、読み取れない', () => {
+  it('Flop 以降の Action があるのに Flop が読めなければ、読み取れない', () => {
     expect(ocrPostability({ ...hs1, board: [] })).toBe('unreadable');
     expect(ocrPostability({ ...hs1, board: ['Qh', '8c'] })).toBe('unreadable');
   });
@@ -92,7 +92,7 @@ describe('reviewFromOcr', () => {
 });
 
 describe('evaluateReview', () => {
-  it('そのまま反映すると、Hero・全席のハンド・ボード・アクションと T4 のゲームの設定が入り、最後まで再生できる', () => {
+  it('そのまま反映すると、Hero・全席の Hand・Board・Action と T4 の Game の設定が入り、最後まで再生できる', () => {
     const base: Draft = { ...emptyDraft(), fmt: 'mtt', sb: '0.4', ante: '0.2', title: '残る', spotIndex: 3, villain: 'BB' };
     const ev = evaluateReview(base, reviewFromOcr(allin, 'normal', 'BTN'));
     // プリフロップのオールインで終わったので、出題できるアクションは無い（読み込みの時点ではじく種類）
@@ -117,7 +117,7 @@ describe('evaluateReview', () => {
     expect(done(d)).toBe(true);
   });
 
-  it('席とストリートは再生で決まる。ポストフロップの Bet・All-in も直す', () => {
+  it('席と Street は再生で決まる。ポストフロップの Bet・All-in も直す', () => {
     const rv: Review = {
       ...reviewFromOcr(allin, 'normal', 'BTN'),
       hero: 'BB',
@@ -154,22 +154,22 @@ describe('evaluateReview', () => {
     const bad = evaluateReview(emptyDraft(), { ...reviewFromOcr(allin, 'normal', 'BTN'), rows: [row('fold'), row('raise', 1.5), row('fold')] });
     expect(bad.draft.actions).toHaveLength(1);
     expect(bad.rows.map((r) => r.ok)).toEqual([true, false, false]);
-    expect(bad.issues).toEqual(['2手目のアクションが正しくありません']);
+    expect(bad.issues).toEqual(['2手目の Action が正しくありません']);
 
     const tooDeep = evaluateReview(emptyDraft(), { ...reviewFromOcr(allin, 'normal', 'BTN'), rows: [row('allin', 150)] });
-    expect(tooDeep.issues).toEqual(['1手目のアクションが正しくありません']);
+    expect(tooDeep.issues).toEqual(['1手目の Action が正しくありません']);
 
     const short = evaluateReview(emptyDraft(), { ...reviewFromOcr(allin, 'normal', 'BTN'), rows: [row('fold'), row('fold')] });
-    expect(short.issues).toEqual(['3手目以降のアクションが足りません']);
+    expect(short.issues).toEqual(['3手目以降の Action が足りません']);
   });
 
-  it('最後まで再生できて、Hero のフロップ以降のアクションに出題できるものがあれば問題なし', () => {
+  it('最後まで再生できて、Hero の Flop 以降の Action に出題できるものがあれば問題なし', () => {
     const ev = evaluateReview(emptyDraft(), reviewFromOcr({ ...hs1, hands: allin.hands }, 'normal', 'BTN'));
     expect(ev.issues).toEqual([]);
     expect(done(ev.draft)).toBe(true);
   });
 
-  it('無いハンド・途中のハンド・重複したカード・欠けたフロップを知らせ、使わない', () => {
+  it('無い Hand・途中の Hand・重複した Card・欠けた Flop を知らせ、使わない', () => {
     const rv: Review = {
       ...reviewFromOcr(allin, 'normal', 'BTN'),
       hands: { UTG: 'AhAd', HJ: 'AhKd', CO: 'Kc', BTN: '', SB: 'AsKs', BB: '7d2c' },
@@ -180,11 +180,11 @@ describe('evaluateReview', () => {
     expect(ev.draft.hands).toEqual({ UTG: 'AhAd', HJ: '', CO: '', BTN: '', SB: 'AsKs', BB: '7d2c' });
     expect(ev.draft.board).toEqual([]);
     expect(ev.issues).toEqual([
-      'HJ のハンドが正しくありません',
-      'CO のハンドが正しくありません',
-      'BTN のハンドがありません',
-      'ボードが正しくありません',
-      '1手目以降のアクションが足りません',
+      'HJ の Hand が正しくありません',
+      'CO の Hand が正しくありません',
+      'BTN の Hand がありません',
+      'Board が正しくありません',
+      '1手目以降の Action が足りません',
     ]);
   });
 });

@@ -7,6 +7,7 @@ describe('parseRoute', () => {
     ['', { name: 'list' }],
     ['/new', { name: 'new' }],
     ['/new/', { name: 'new' }],
+    ['/drafts', { name: 'drafts' }],
     ['/terms', { name: 'terms' }],
     ['/privacy', { name: 'privacy' }],
     ['/s/abc-123', { name: 'spot', id: 'abc-123' }],
@@ -34,6 +35,7 @@ describe('routePath', () => {
   it.each<Route>([
     { name: 'list' },
     { name: 'new' },
+    { name: 'drafts' },
     { name: 'spot', id: 'p1' },
     { name: 'answer', id: 'p1' },
     { name: 'result', id: 'p1' },

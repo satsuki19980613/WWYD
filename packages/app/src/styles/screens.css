@@ -152,15 +152,27 @@
 }
 .list-screen.sp .spot-grid { grid-template-columns: 1fr; }
 .spot-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--s2);
-  padding: var(--s4);
+  gap: 6px;
+  padding: var(--s3) var(--s4);
   background: var(--surface);
   border: 1px solid var(--line);
   transition: border-color 150ms var(--ease);
 }
 .spot-card:hover { border-color: var(--line-2); }
+/* カード全体を押せる（タイトルのリンクをカードいっぱいに広げる。14 章） */
+.spot-link { color: inherit; text-decoration: none; }
+.spot-link::after { content: ''; position: absolute; inset: 0; z-index: 0; }
+.spot-link:focus-visible { outline: none; }
+.spot-card:has(.spot-link:focus-visible) { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.spot-card:active { background: var(--surface-2); }
+/* 回答済み・自分の回答済みは少し沈める（未回答を目立たせる） */
+.spot-card.done .spot-title { color: var(--dim); }
+.spot-ops .btn { position: relative; z-index: 1; }
+.spot-go { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; color: var(--cyan); white-space: nowrap; }
+.spot-go.primary { color: var(--yellow); }
 .spot-top { display: flex; align-items: center; gap: var(--s2); min-height: 22px; }
 .street-badge {
   flex: none;
@@ -194,16 +206,15 @@
 .spot-seats .pos { font-weight: 700; }
 .spot-foot {
   margin-top: auto;
-  padding-top: var(--s2);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--s2);
-  border-top: 1px solid var(--line);
 }
 .spot-meta { font-size: 12px; color: var(--dim); white-space: nowrap; }
 .spot-count { font-size: 18px; color: var(--fg); }
-.spot-ops { display: flex; gap: var(--s2); flex: none; }
+.spot-ops { display: flex; align-items: center; gap: var(--s3); flex: none; }
+.spot-ops .btn.sm { padding: 5px 12px; font-size: 13px; }
 .btn.sm { font-size: 14px; padding: 8px 14px; text-decoration: none; }
 a.btn { text-decoration: none; }
 

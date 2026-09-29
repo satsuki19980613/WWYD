@@ -1,6 +1,6 @@
 import { RANKS, SUITS, type Card } from '@wwyd/core';
 import { Modal } from '../components/Modal.tsx';
-import { PlayingCard } from '../components/PlayingCard.tsx';
+import { cardText, PlayingCard } from '../components/PlayingCard.tsx';
 
 /**
  * ボードのカードピッカー（06 章 §3.6）。13 × 4、使用済みは非活性。
@@ -14,7 +14,7 @@ export function CardPicker(props: {
 }): JSX.Element {
   return (
     <Modal title={props.title} tone="info" onClose={props.onClose}>
-      <div className="picker" role="grid" aria-label="カード">
+      <div className="picker" role="grid" aria-label="Card">
         {[...SUITS].map((s) => (
           <div key={s} className="picker-row" role="row">
             {[...RANKS].map((r) => {
@@ -26,6 +26,8 @@ export function CardPicker(props: {
                   type="button"
                   role="gridcell"
                   className="picker-cell"
+                  // 札の span の aria-label は読み上げに使われないので、ボタンに名前を付ける
+                  aria-label={cardText(card)}
                   disabled={used}
                   aria-disabled={used}
                   onClick={() => props.onPick(card)}

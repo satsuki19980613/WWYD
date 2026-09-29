@@ -1,8 +1,8 @@
-import { aggregateBar, labelOfCards, paintBar, type BarRatios, type Card } from '@wwyd/core';
+import { aggregateBar, labelOfCards, paintBar, type AnswerKey, type Card } from '@wwyd/core';
 import { useMemo, useState } from 'react';
 import { ComboBar } from '../answer/ComboBar.tsx';
 import type { PostDetail } from '../answer/postDetail.ts';
-import { HandLog, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
+import { HandLog, HistoryButton, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
 import { seatViews } from '../answer/replayModel.ts';
 import { ResultGrid } from '../answer/ResultGrid.tsx';
 import {
@@ -10,7 +10,9 @@ import {
   actualAction,
   actualCell,
   breakdown,
+  cellShares,
   cellViews,
+  diffHeat,
   emptyLabel,
   initialCell,
   keyNames,
@@ -19,12 +21,14 @@ import {
   villainHand,
   type ResultFrame,
   type ResultView,
+  type Shares,
 } from '../answer/resultModel.ts';
+import { Link } from '../components/Link.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
-import { deletePost } from '../list/useSpotList.ts';
+import { deletePost, useNextSpot } from '../list/useSpotList.ts';
 import { navigate } from '../router.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 import { metaLine } from './AnswerScreen.tsx';
@@ -32,12 +36,14 @@ import { metaLine } from './AnswerScreen.tsx';
 type MobileTab = 'agg' | 'hand';
 const MOBILE_TABS: readonly { value: MobileTab; label: string }[] = [
   { value: 'agg', label: '集計' },
-  { value: 'hand', label: 'ハンドヒストリー' },
+  { value: 'hand', label: 'Hand History' },
 ];
 
 /**
  * 集計画面（06 章 §5。仕様書 §5.4）。回答済みの人が開く（投稿者も回答してから。未回答は SpotScreen が回答画面へ移す）。
  * PC は左にハンドヒストリーの再生、右に集計。スマホは上部固定のタブ「集計 / ハンドヒストリー」。
+ * 集計は答え合わせ（Villain の実際のアクションとハンド）を先頭に置き、全体と自分のレンジを並べて比べる（14 章）。
+ * 最後に「次のスポット」（未回答の新着）へ進める。
  */
 export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   const { detail: d } = props;
@@ -52,10 +58,10 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   const names = keyNames(d);
   const views = useMemo(() => cellViews(d, view), [d, view]);
   const empty = emptyLabel(d, view);
-  const ratios: BarRatios | null = useMemo(() => {
-    if (view === 'all') return d.aggregate ? aggregateBar(d.aggregate.cells, d.aggregate.n) : null;
-    return d.myAnswer ? paintBar(d.myAnswer.paint) : null;
-  }, [d, view]);
+  const allRatios = useMemo(() => (d.aggregate && d.aggregate.n > 0 ? aggregateBar(d.aggregate.cells, d.aggregate.n) : null), [d]);
+  const myRatios = useMemo(() => (d.myAnswer ? paintBar(d.myAnswer.paint) : null), [d]);
+  const heat = useMemo(() => (view === 'diff' ? diffHeat(d) : undefined), [d, view]);
+  const next = useNextSpot(post.id);
 
   const head = (
     <div className="ans-head">
@@ -64,8 +70,14 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
     </div>
   );
 
+  const nextLink = typeof next === 'string' && (
+    <Link to={`/s/${next}`} className="btn">
+      次の Spot
+    </Link>
+  );
   const aggregate = (
     <div className="res-agg">
+      <ActualBox detail={d} />
       <Tabs label="集計の表示" items={tabs} value={view} onChange={setView} />
       {empty ? (
         <div className="list-empty">
@@ -73,19 +85,22 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
         </div>
       ) : (
         <>
-          {ratios && <ComboBar keys={post.keys} names={names} ratios={ratios} />}
-          <ResultGrid views={views} selected={selected} actual={actualCell(d)} onSelect={setSelected} />
+          <div className="cbars">
+            {view !== 'mine' && allRatios && <ComboBar keys={post.keys} names={names} ratios={allRatios} label="全体" />}
+            {myRatios && <ComboBar keys={post.keys} names={names} ratios={myRatios} label="自分" />}
+          </div>
+          <ResultGrid views={views} selected={selected} actual={actualCell(d)} onSelect={setSelected} heat={heat} />
           <BreakdownPanel detail={d} view={view} idx={selected} />
         </>
       )}
-      <ActualBox detail={d} />
       <Operations detail={d} />
+      {!mobile && nextLink}
     </div>
   );
   // リプレイの位置はスマホのタブを切り替えても残す
   const frames = useMemo(() => resultFrames(d), [d]);
   const replay = useReplay(d.hand.actions.length, { atEnd: true });
-  const hand = <ResultReplay detail={d} frames={frames} c={replay} />;
+  const hand = <ResultReplay detail={d} frames={frames} c={replay} logInModal={mobile} />;
 
   if (!mobile) {
     return (
@@ -93,7 +108,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
         {head}
         <div className="ans-grid">
           <div className="ans-col">
-            <h2 className="sec-h">ハンドヒストリー</h2>
+            <h2 className="sec-h">Hand History</h2>
             {hand}
           </div>
           <div className="ans-col">
@@ -106,12 +121,13 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   }
 
   return (
-    <section className="screen ans res sp">
+    <section className={`screen ans res sp tab-${tab}${nextLink ? ' has-next' : ''}`}>
       {head}
       <div className="ans-top">
         <Tabs label="表示" items={MOBILE_TABS} value={tab} onChange={setTab} />
       </div>
       {tab === 'agg' ? aggregate : hand}
+      {nextLink && <div className="ans-bottom">{nextLink}</div>}
     </section>
   );
 }
@@ -119,18 +135,27 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
 /** 選んだマスの内訳（06 章 §5.2）。 */
 function BreakdownPanel(props: { detail: PostDetail; view: ResultView; idx: number }): JSX.Element {
   const b = breakdown(props.detail, props.view, props.idx);
+  const keys = props.detail.post.keys;
+  const shares = cellShares(props.detail, props.idx);
   return (
     <div className="res-detail" aria-live="polite">
       <div className="res-detail-head">
         <b className="res-detail-lbl num">{b.label}</b>
         {b.kind === 'all' ? (
           <span className="res-detail-sub num">
-            レンジ内 {b.n} / {b.total}人
+            Range 内 {b.n} / {b.total}人
           </span>
         ) : (
           <span className="res-detail-sub num">{b.text}</span>
         )}
+        {b.kind === 'all' && b.diff !== undefined && <span className="res-detail-diff num">差 {b.diff}%</span>}
       </div>
+      {b.kind === 'all' && (
+        <div className="res-bars" aria-hidden="true">
+          {shares.all && <MiniBar label="全体" keys={keys} shares={shares.all} />}
+          {shares.mine && <MiniBar label="自分" keys={keys} shares={shares.mine} />}
+        </div>
+      )}
       {b.kind === 'all' && b.rows.length > 0 && (
         <ul className="res-rows">
           {b.rows.map((r) => (
@@ -149,6 +174,20 @@ function BreakdownPanel(props: { detail: PostDetail; view: ResultView; idx: numb
   );
 }
 
+/** マスの割合の細いバー（全体 / 自分。空きはレンジに入れなかった割合） */
+function MiniBar(props: { label: string; keys: readonly AnswerKey[]; shares: Shares }): JSX.Element {
+  return (
+    <div className="res-bar">
+      <span className="res-bar-lbl">{props.label}</span>
+      <span className="cbar-track">
+        {props.keys.map((k) => (
+          <i key={k} className={`cseg ${k}`} style={{ width: `${props.shares[k] * 100}%` }} />
+        ))}
+      </span>
+    </div>
+  );
+}
+
 /** Villain の実際のアクションとハンド（06 章 §5.3）。 */
 function ActualBox(props: { detail: PostDetail }): JSX.Element {
   const { detail: d } = props;
@@ -159,7 +198,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
       <span className="brk tl" aria-hidden="true" />
       <span className="brk br" aria-hidden="true" />
       <div className="res-actual-act">
-        <span className="res-actual-lbl">Villain（{d.post.villain}）実際のアクション</span>
+        <span className="res-actual-lbl">Villain（{d.post.villain}）実際の Action</span>
         <b className="res-actual-name">{a ? actionText(a) : '—'}</b>
       </div>
       <div className="res-actual-hand">
@@ -171,7 +210,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
             <span className="num">{labelOfCards(h[0] as Card, h[1] as Card)}</span>
           </>
         ) : (
-          <span className="res-actual-unknown">{h === 'muck' ? 'マック' : 'ハンド不明'}</span>
+          <span className="res-actual-unknown">{h === 'muck' ? 'Muck' : 'Hand 不明'}</span>
         )}
       </div>
     </div>
@@ -219,14 +258,25 @@ function Operations(props: { detail: PostDetail }): JSX.Element | null {
   );
 }
 
-/** ハンドヒストリーの再生（06 章 §5.4）: 最初から最後まで。初期表示は最後の状態。 */
-function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[]; c: ReplayControl }): JSX.Element {
+/** ハンドヒストリーの再生（06 章 §5.4）: 最初から最後まで。初期表示は最後の状態。スマホのログはモーダル（14 章） */
+function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[]; c: ReplayControl; logInModal: boolean }): JSX.Element {
   const { detail: d, frames, c } = props;
   const { hand, post } = d;
   const f = frames[c.step] ?? frames[frames.length - 1];
   if (!f) return <></>;
+  const log = (
+    <HandLog
+      setup={hand.setup}
+      actions={hand.actions.slice(0, c.step)}
+      board={f.board}
+      spotIndex={hand.spotIndex}
+      highlightLast={c.step < c.max}
+      actual={hand.stopIndex}
+    />
+  );
   return (
     <div className="replay">
+      {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
       <PokerTable
         seats={seatViews(f.state, { hero: post.hero, villain: post.villain, actor: f.actor })}
         pot={f.state.pot}
@@ -236,14 +286,7 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
         note={f.note}
       />
       <ReplayControls c={c} />
-      <HandLog
-        setup={hand.setup}
-        actions={hand.actions.slice(0, c.step)}
-        board={f.board}
-        spotIndex={hand.spotIndex}
-        highlightLast={c.step < c.max}
-        actual={hand.stopIndex}
-      />
+      {!props.logInModal && log}
     </div>
   );
 }

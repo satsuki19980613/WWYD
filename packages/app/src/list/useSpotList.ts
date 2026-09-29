@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { db } from '../backend/neon.ts';
-import { appendPage, fetchPostPage, type ListQuery, type PostRow, type RpcCaller } from './spotList.ts';
+import { appendPage, fetchPostPage, findNextSpot, type ListQuery, type PostRow, type RpcCaller } from './spotList.ts';
 
 export type SpotList = {
   rows: PostRow[];
@@ -97,4 +97,21 @@ export async function deletePost(postId: string): Promise<void> {
   const { data, error } = await db.from('posts').delete().eq('id', postId).select('id');
   if (error) throw new Error(error.message);
   if (!data || data.length !== 1) throw new Error('削除できませんでした');
+}
+
+/** 次に答えるスポットの ID（14 章）。探している間は undefined、無ければ null。失敗も null（ボタンを出さないだけ） */
+export function useNextSpot(currentId: string): string | null | undefined {
+  const [next, setNext] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    setNext(undefined);
+    findNextSpot(rpc, currentId).then(
+      (id) => alive && setNext(id),
+      () => alive && setNext(null),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [currentId]);
+  return next;
 }

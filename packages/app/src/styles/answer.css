@@ -27,16 +27,23 @@
 .ans-skel { display: flex; flex-direction: column; gap: var(--s3); }
 .ans-sk-block { height: 360px; width: 100%; }
 
-/* ---- テーブル（ICMCLEC のガラス卓を参照。縦に長いカプセル） ---- */
+/* ---- テーブル（ICMCLEC のガラス卓を参照） ---- */
+/*
+ * カードは卓の幅に合わせて大きく（2026-09-29 さつき。前の 2.5 倍の 60px 前後）。--bw = ボードの札の幅（5 枚が卓の幅の 86% に収まる）、
+ * --hw = 席のホールカードの幅（2 枚で席のプレートの幅）。横の席は卓の縁に重ねる。
+ */
 .ptable {
   position: relative;
   width: 100%;
-  height: 400px;
+  height: 440px;
   user-select: none;
+  container-type: inline-size;
+  --bw: min(64px, calc((86cqw - 16px) / 5));
+  --hw: min(36px, calc(var(--bw) * 0.58));
 }
 .ptable-felt {
   position: absolute;
-  inset: 40px 17% 56px;
+  inset: 9% 6%;
   border-radius: 50%;
   border: 1px solid rgba(190, 232, 255, 0.5);
   background:
@@ -61,7 +68,7 @@
 .ptable-mid {
   position: absolute;
   left: 50%;
-  top: 48%;
+  top: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
@@ -69,13 +76,25 @@
   gap: var(--s1);
   pointer-events: none;
 }
-.ptable-pot { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
-.ptable-pot b { font-size: 18px; color: var(--fg); text-shadow: 0 0 12px rgba(58, 230, 255, 0.5); }
-.ptable-board { display: flex; gap: 3px; }
+/* ボードを卓の中心に置き、ポットはその上・終わりの表示はその下に添える */
+.ptable-pot { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+/*
+ * 卓の文字の大きさ（2026-09-29 さつき。14 章 §3.8）。札のランク（約 30px）を頂点に、判断に使う順で段を付ける:
+ * ポット 24px > スタック・ベット額 17 / 16px > 直前のアクション 14px > 席名・タグ 13 / 12px。
+ * 腕を伸ばした距離（30〜40cm）で数字を一目で読める大きさ（本文 16px 前後。13px 未満は使わない、ラベルの 12px だけ例外）。
+ */
+.ptable-pot .mono-lbl { font-size: 12px; }
+.ptable-pot b { font-size: 24px; line-height: 1.1; color: var(--fg); text-shadow: 0 0 12px rgba(58, 230, 255, 0.5); }
+.ptable-board { display: flex; gap: 4px; }
+.ptable-slot, .ptable-board .pcard {
+  width: var(--bw);
+  height: calc(var(--bw) * 1.38);
+  font-size: calc(var(--bw) * 0.5);
+  border-radius: 4px;
+}
+.ptable-board .pcard { gap: 2px; }
+.ptable-board .pcard em { font-size: calc(var(--bw) * 0.38); }
 .ptable-slot {
-  width: 26px;
-  height: 36px;
-  border-radius: var(--r-sm);
   border: 1px solid rgba(190, 232, 255, 0.3);
   background: rgba(4, 14, 32, 0.42);
 }
@@ -92,10 +111,20 @@
 .pseat.a-c { transform: translate(-50%, -50%); }
 .pseat.a-l { left: 0; transform: translateY(-50%); }
 .pseat.a-r { right: 0; transform: translateY(-50%); }
-.pseat-cards { display: flex; gap: 2px; }
+/*
+ * ホールカード（とマック）はプレートの上に浮かせる（席の位置はプレートで決め、カードの有無で席が動かないようにする）。
+ * 上の席はプレートの右に置く（上に出すと卓からはみ出す）
+ */
+.pseat-hole { position: absolute; left: 50%; bottom: calc(100% + 3px); transform: translateX(-50%); }
+.pseat.top .pseat-hole { left: calc(100% + 4px); top: 0; bottom: auto; transform: none; }
+.pseat-cards { display: flex; gap: 3px; }
+.pseat-cards .pcard, .pback {
+  width: var(--hw);
+  height: calc(var(--hw) * 1.38);
+  font-size: calc(var(--hw) * 0.5);
+}
+.pseat-cards .pcard em { font-size: calc(var(--hw) * 0.38); }
 .pback {
-  width: 22px;
-  height: 30px;
   border-radius: 3px;
   background: repeating-linear-gradient(-45deg, rgba(252, 238, 10, 0.18) 0 2px, transparent 2px 5px), var(--surface-3);
   box-shadow: inset 0 0 0 1px var(--line-2);
@@ -106,22 +135,24 @@
   align-items: center;
   min-width: 84px;
   padding: 4px 8px;
+  line-height: 1.2;
   background: rgba(4, 10, 22, 0.9);
   border: 1px solid rgba(190, 232, 255, 0.3);
   clip-path: var(--chamfer-sm);
 }
 .pseat-top { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
-.pseat-pos { font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: 0.06em; }
-.pseat-tag { font-family: var(--disp); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.pseat-pos { font-family: var(--mono); font-size: 13px; font-weight: 400; letter-spacing: 0.06em; }
+.pseat-tag { font-family: var(--disp); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
 .pseat-tag.hero { color: var(--yellow); }
 .pseat-tag.villain { color: var(--cyan); }
-.pseat-stack { font-size: 14px; color: var(--fg); }
+.pseat-stack { font-size: 17px; color: var(--fg); }
 .pseat-last {
-  font-size: 11px;
-  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.3;
+  color: #d4d6c0;
   white-space: nowrap;
   padding: 0 6px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.6);
 }
 .pseat.folded .pseat-plate { opacity: 0.45; }
 .pseat.folded .pseat-last { color: var(--faint); }
@@ -139,16 +170,21 @@
   position: absolute;
   z-index: 1;
   transform: translate(-50%, -50%);
-  font-size: 12px;
+  font-size: 16px;
+  line-height: 1.2;
   color: var(--yellow);
-  padding: 1px 6px;
+  padding: 2px 7px;
   border: 1px solid rgba(252, 238, 10, 0.45);
   background: rgba(0, 0, 0, 0.7);
   white-space: nowrap;
 }
+/* 横の席のチップ: 席の中に置き、プレートの高さの中央で卓の内側の隣へ（プレートの幅が変わっても重ならない） */
+.pchip.side { top: 22px; transform: translateY(-50%); }
+.pseat.a-l .pchip.side { left: calc(100% + 8px); }
+.pseat.a-r .pchip.side { right: calc(100% + 8px); }
 
 /* ---- リプレイの操作 ---- */
-.replay { display: flex; flex-direction: column; gap: var(--s3); }
+.replay { position: relative; display: flex; flex-direction: column; gap: var(--s3); }
 .rp-ctrl { display: flex; flex-direction: column; gap: var(--s2); }
 .rp-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); }
 .rp-btns .btn { font-size: 14px; padding: 8px 4px; }
@@ -401,8 +437,14 @@
 .gauge::-moz-range-thumb { width: 16px; height: 22px; border: 0; border-radius: 0; background: var(--yellow); }
 .gauge:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-/* ---- 集計バー（1326 combos） ---- */
+/* ---- レンジのまとめ（大きさ＋レンジの中のアクションの割合。14 章） ---- */
 .cbar { display: flex; flex-direction: column; gap: var(--s2); }
+.cbar-top { display: flex; align-items: baseline; gap: var(--s3); font-size: 12px; color: var(--dim); }
+.cbar-lbl { font-family: var(--disp); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--fg); min-width: 2.5em; }
+.cbar-size { margin-left: auto; white-space: nowrap; }
+.cbar-size b { font-weight: 400; color: var(--fg); font-size: 14px; }
+.cbar-size i { font-style: normal; }
+.cbars { display: flex; flex-direction: column; gap: var(--s3); }
 .cbar-track { display: flex; height: 10px; background: var(--cell-off); overflow: hidden; }
 .cbar-track .cseg { height: 100%; }
 .cbar-legend {
@@ -437,6 +479,26 @@
   border-bottom: 1px solid var(--line);
 }
 .ans-panel { display: flex; flex-direction: column; gap: var(--s2); }
+/* スポットの要約（レンジタブの上。押すとリプレイへ） */
+.spot-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 40px;
+  padding: 4px var(--s2);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--dim);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.spot-strip:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.ss-board { display: flex; gap: 2px; flex: none; }
+.ss-line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.ss-line b { font-family: var(--mono); font-weight: 400; }
+.ss-tag { margin-left: 4px; font-family: var(--disp); font-size: 11px; font-weight: 700; color: var(--yellow); }
+.ss-pot { margin-left: auto; flex: none; color: var(--fg); }
 .ans.sp .brush { padding: 6px; gap: 6px; }
 /* スマホのタイルは 2 行（名前 / 頻度・額）にして上部固定パネルを低くする */
 .ans.sp .btile { min-height: 44px; padding: 3px 2px; gap: 0; }
@@ -446,11 +508,14 @@
 .ans.sp .mixbar { height: 24px; }
 .ans.sp .rcell-lbl { font-size: 9px; letter-spacing: -0.04em; }
 .ans.sp .rgrid { gap: 1px; }
-.ans.sp .ptable { height: 330px; }
-.ans.sp .pseat-plate { min-width: 72px; padding: 3px 6px; }
-.ans.sp .pseat-stack { font-size: 13px; }
-.ans.sp .ptable-felt { inset: 38px 20% 50px; }
-.ans.sp .ptable-slot, .ans.sp .ptable-board .pcard { width: 24px; height: 33px; }
+/*
+ * ログはモーダルなので、卓で画面の残りを埋める（14 章）。リプレイのタブの画面を画面の高さちょうどにして、卓を伸ばす
+ * （下の余白は下部固定のバーの高さ。.ans.sp の padding-bottom）。
+ */
+.ans.sp.tab-replay, .res.sp.tab-hand { min-height: var(--screen-fill-h); }
+.ans.sp.tab-replay > .replay, .res.sp.tab-hand > .replay { flex: 1 1 auto; }
+.ans.sp .replay > .ptable { flex: 1 1 auto; height: auto; min-height: 380px; }
+.ans.sp .pseat-plate { min-width: 76px; padding: 3px 6px; }
 .ans.sp .rp-btns .btn { font-size: 13px; }
 .ans-bottom {
   position: fixed;
@@ -471,20 +536,28 @@
 .ans-bottom .cbar-track { height: 8px; }
 .ans-bottom .cbar-legend { flex-wrap: nowrap; justify-content: space-between; gap: var(--s1); font-size: 10.5px; white-space: nowrap; }
 .ans-bottom .cbar-legend li { gap: 4px; }
-.ans-bottom .cbar-legend .mono-lbl { display: none; }
+.ans-bottom .cbar { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'size legend' 'track track'; align-items: center; gap: 6px var(--s3); }
+.ans-bottom .cbar-top { grid-area: size; }
+.ans-bottom .cbar-track { grid-area: track; }
+.ans-bottom .cbar-legend { grid-area: legend; justify-content: flex-end; gap: var(--s3); }
+.ans-bottom .cbar-size b { font-size: 12px; }
 .ans-bottom .cdot { width: 8px; height: 8px; }
 
 /* ---- 集計画面（06 章 §5） ---- */
 .ptable-note {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
   font-family: var(--disp);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--yellow);
   white-space: nowrap;
 }
 .pseat-muck {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--dim);
   padding: 2px 6px;
   border: 1px solid var(--line-2);
@@ -541,3 +614,15 @@
 .res-actual-unknown { font-size: 13px; color: var(--dim); }
 .res-ops { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .res.sp { gap: var(--s3); padding-bottom: var(--s4); }
+
+/* ---- 自分と全体の比較（14 章） ---- */
+/* 「自分との差」: 差の大きさを黄の濃さで出す（正解・不正解ではないので赤は使わない） */
+.cheat { position: absolute; inset: 0; background: var(--yellow); }
+.rcell.ink-heat { color: var(--yellow-ink); }
+.res-detail-diff { margin-left: auto; font-size: 14px; color: var(--yellow); }
+.res-bars { display: flex; flex-direction: column; gap: 6px; }
+.res-bar { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); align-items: center; gap: var(--s2); font-size: 12px; color: var(--dim); }
+.res-bar .cbar-track { height: 8px; }
+/* 次のスポット（スマホは下部に固定） */
+.res.sp.has-next { padding-bottom: calc(72px + var(--sab)); }
+.res-agg > .btn { align-self: stretch; }
