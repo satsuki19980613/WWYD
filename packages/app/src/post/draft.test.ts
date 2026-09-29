@@ -20,7 +20,9 @@ import {
   isLocked,
   neighborSeat,
   parseSettings,
+  NO_HERO_POSTFLOP,
   PLAYERS_REQUIRED,
+  PREFLOP_ALLIN,
   setPlayers,
   parseSize,
   phaseOf,
@@ -496,12 +498,38 @@ describe('オールインを含むハンドの Spot（2026-09-29「オールイ�
     expect(phaseOf(parseSettings(d).setup, d.actions, d.board).kind).toBe('done');
     const list = candidates(d);
     expect(list.map((x) => x.label)).toEqual(c.spots.map(([label]) => label));
+    // 候補が無い（Preflop の All-in）ハンドは投稿できないと伝える
+    if (list.length === 0) {
+      expect(buildSubmission({ ...d, title: allinTitle(c) })).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+    }
     // どの候補を選んでも投稿でき、送る本文は core の見本と一致する（サーバーと同じ検証も通る）
     for (const { index } of list) {
       const s = buildSubmission({ ...selectSpot(d, index), title: allinTitle(c) });
       expect(s.ok ? null : s.errors).toBeNull();
       if (s.ok) expect(s.body).toEqual(allinRaw(c, index));
     }
+  });
+});
+
+describe('Spot の候補が無いハンドの投稿のエラー', () => {
+  const pf = (line: string, stacks?: Record<string, number>): Draft => {
+    const raw = { ...hs1(), actions: acts({ pf: line }).map((a) => (a.to === undefined ? { ...a } : { ...a, to: a.to / 1000 })) };
+    return { ...play(stacks ? { ...raw, stacks } : raw), title: '見本' };
+  };
+  it('Hero が Preflop で All-in（Call 側でも）', () => {
+    expect(buildSubmission(pf('UTG..CO f, BTN r100, SB f, BB c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+    expect(buildSubmission(pf('UTG..CO f, BTN r2.5, SB f, BB r100, BTN c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+  });
+  it('相手の Preflop の All-in に、スタックの多い Hero が Call（それ以上 Action できない）', () => {
+    const d = pf('UTG..CO f, BTN r2.5, SB f, BB r30, BTN c', { ...hs1().stacks as Record<string, number>, BB: 30 });
+    expect(buildSubmission(d)).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+  });
+  it('Hero が Preflop で Fold、または Preflop で全員が Fold', () => {
+    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB r100, UTG c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+    expect(buildSubmission(pf('UTG..CO f, BTN r2.5, SB f, BB f'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+  });
+  it('Hero が Preflop で Fold したあと、ほかの席が All-in', () => {
+    expect(buildSubmission(pf('UTG..CO f, BTN f, SB r100, BB c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
   });
 });
 

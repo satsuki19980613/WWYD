@@ -22,6 +22,10 @@ Villain（Hero のアクションに答える相手の席）の概念をなく�
 - **実効スタック**: Hero と、その時点でハンドに残っている相手のうち最も深い席の、開始時のスタックの小さい方。
 - **答え合わせ**: Hero の実際のアクション（出題のアクション）と Hero のハンド（白枠）。Hero のアクションはいつも分かっているので、どの投稿でも答え合わせができる。
 - エラーコード `invalid_villain` はなくした（候補でないスポットは `invalid_spot`）。
+- **候補が無いハンド**（Flop 以降に Hero の手番が無い）は投稿できない。Spot の欄は「候補なし」。「投稿する」を押すとエラー（2026-09-29 さつき）:
+  Hero が Preflop で All-in になった（All-in に Call した、またはそれ以上 Action できない）ハンドは「Preflop で All-in になった Hand は投稿できません」、
+  それ以外（Hero の Preflop の Fold、Preflop で全員が Fold など）は「Flop 以降に Hero の Action が無い Hand は投稿できません」。
+- オールインは他のアクションと同じ扱い（Hero の All-in も、相手の All-in への Call / Fold も、その前の手番も候補）。22 通りの見本 `packages/core/src/post/allinFixtures.ts` で core・下書き・E2E を試験する。
 
 見本（`packages/core/src/post/postFixtures.ts`）:
 

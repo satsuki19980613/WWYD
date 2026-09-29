@@ -478,6 +478,20 @@ export function titleLength(title: string): number {
   return [...title].length;
 }
 
+export const PREFLOP_ALLIN = 'Preflop で All-in になった Hand は投稿できません';
+export const NO_HERO_POSTFLOP = 'Flop 以降に Hero の Action が無い Hand は投稿できません';
+
+/**
+ * 最後まで入れたハンドに Spot の候補が無いとき（Flop 以降に Hero の手番が無い）の投稿のエラー。候補があれば null。
+ * Hero が Preflop で All-in になって（All-in に Call して）ショーダウンまで進んだハンドはそう伝える（2026-09-29 さつき）。
+ */
+function noSpotError(d: Draft, phase: Extract<Phase, { kind: 'done' }>): string | null {
+  if (candidates(d).length > 0) return null;
+  const heroAllinPf =
+    phase.result.kind === 'showdown' && !phase.state.folded.has(d.hero) && d.actions.every((a) => a.street === 'pf');
+  return heroAllinPf ? PREFLOP_ALLIN : NO_HERO_POSTFLOP;
+}
+
 /**
  * 「投稿する」を押したときの検査。問題があればエラー文の一覧、なければ create-post に送る本文を返す。
  * 最後に packages/core の validateInput と verifyPost を通す（サーバーと同じ判定。03 章 §4）。
@@ -497,7 +511,7 @@ export function buildSubmission(d: Draft): Submission {
 
   const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
-  if (d.spotIndex === null) errors.push('Spot を選択してください');
+  if (d.spotIndex === null) errors.push((phase.kind === 'done' && noSpotError(d, phase)) || 'Spot を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };

@@ -98,6 +98,11 @@ for (const c of ALLIN_CASES) {
     if (c.spots.length === 0) {
       await expect(group).toHaveCount(0);
       await expect(page.getByText('候補なし')).toBeVisible();
+      // 投稿しようとすると、Preflop の All-in は投稿できないと伝える（create-post には送らない）
+      await page.getByPlaceholder(/タイトル/).fill(allinTitle(c));
+      await page.getByRole('button', { name: '投稿する' }).click();
+      await expect(page.getByRole('alert')).toHaveText('Preflop で All-in になった Hand は投稿できません');
+      expect(saved).toHaveLength(0);
       return;
     }
     const radios = group.getByRole('radio');

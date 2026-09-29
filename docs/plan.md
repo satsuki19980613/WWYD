@@ -733,5 +733,5 @@
   - 見本 `packages/core/src/post/allinFixtures.ts`（River / Turn / Flop / Preflop の All-in、Hero の All-in・相手の All-in への Call / Fold、Check-raise の All-in、短いスタック・足りない額の Call、3 人とサイドポット、Hero が BB、Heads-up、MTT）。
   - core `allin.test.ts`（候補・キー・サーバーと同じ検証）、下書き `draft.test.ts`（画面と同じ操作で入れ、候補の表示と送る本文）、E2E `e2e/allin.spec.ts`（画面を操作して入れ、候補を 1 つずつ選んで投稿。create-post は本物の処理に通し、DB の保存だけを偽にする）。
 - **確認**: 型検査・単体 586 件・E2E 90 件が通る。
-- **残課題**: dev の画面から実際に投稿するには、dev へのマイグレーションと create-post の dev への配備が要る（さつきの確認後）。
+- **残課題**: dev の画面から実際に投稿するには、dev へのマイグレーションと create-post の dev への配備が要る（さつきの確認後）。- **追記**: Preflop で All-in になったハンド（Spot の候補が無い）は、「投稿する」で「Preflop で All-in になった Hand は投稿できません」を出す（さつきの指示）。候補が無いそのほかのハンドは「Flop 以降に Hero の Action が無い Hand は投稿できません」。16 章に記録。
 
