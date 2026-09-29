@@ -29,6 +29,8 @@ export type AllinCase = {
   actions: Partial<Record<Street, string>>;
   /** 候補の表示とキー（`fold,call,s1` など） */
   spots: [label: string, keys: string][];
+  /** 投稿画面が受け付けない Action の添字（Preflop で All-in になる。E2E はここで止まることを確かめる） */
+  refusedAt?: number;
 };
 
 const SIX: Record<string, number> = { UTG: 100, HJ: 100, CO: 100, BTN: 100, SB: 100, BB: 100 };
@@ -97,6 +99,7 @@ export const ALLIN_CASES: AllinCase[] = [
     hero: 'BTN',
     actions: { pf: 'UTG..CO f, BTN r2.5, SB f, BB r11, BTN r100, BB c' },
     spots: [],
+    refusedAt: 6,
   },
   {
     name: '短い相手（30bb）が Turn で All-in、Hero が Call（実効 30）',

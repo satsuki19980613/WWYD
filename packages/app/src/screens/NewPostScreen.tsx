@@ -12,10 +12,12 @@ import {
   buildSubmission,
   canReplay,
   clearActions,
+  makesPreflopAllin,
   neighborSeat,
   normalizeSpot,
   parseSettings,
   phaseOf,
+  PREFLOP_ALLIN,
   removeBoardFrom,
   seatsOf,
   selectSpot,
@@ -75,9 +77,15 @@ export function NewPostScreen(): JSX.Element {
   const [future, setFuture] = useState<readonly Action[]>([]);
   const advanceFuture = (as: readonly Action[]): void =>
     setFuture((f) => (as.every((a, k) => sameAction(a, f[k])) ? f.slice(as.length) : []));
+  // Preflop で All-in になる Action は受け付けない（投稿できないハンドになる。2026-09-29 さつき）
+  const refused = (as: readonly Action[]): boolean => {
+    if (!makesPreflopAllin(getDraft(), as)) return false;
+    toast(PREFLOP_ALLIN);
+    return true;
+  };
   const redo = (): void => {
     const next = future[0];
-    if (!next || !canReplay(phase, next)) return;
+    if (!next || !canReplay(phase, next) || refused([next])) return;
     setFuture((f) => f.slice(1));
     update((x) => addAction(x, next));
   };
@@ -131,10 +139,12 @@ export function NewPostScreen(): JSX.Element {
       phase={phase}
       mobile={mobile}
       onAction={(a: Action) => {
+        if (refused([a])) return;
         advanceFuture([a]);
         update((x) => addAction(x, a));
       }}
       onActions={(as) => {
+        if (refused(as)) return;
         advanceFuture(as);
         update((x) => addActions(x, as));
       }}

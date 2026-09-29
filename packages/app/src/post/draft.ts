@@ -482,6 +482,25 @@ export const PREFLOP_ALLIN = 'Preflop で All-in になった Hand は投稿で�
 export const NO_HERO_POSTFLOP = 'Flop 以降に Hero の Action が無い Hand は投稿できません';
 
 /**
+ * `add` を入れると Preflop で All-in になる（Hero が Preflop で All-in になる、または Hero が残ったまま誰も
+ * Action できなくなりランアウトになる）か。そのハンドは Flop 以降に Hero の手番が無く投稿できないので、
+ * Action の入力で受け付けない（2026-09-29 さつき）。相手の Preflop の All-in そのものは受け付ける（Hero と別の席が続けられる）。
+ */
+export function makesPreflopAllin(d: Draft, add: readonly Action[]): boolean {
+  const setup = parseSettings(d).setup;
+  if (!setup || !add.some((a) => a.street === 'pf')) return false;
+  let s: State;
+  try {
+    const states = runActions(setup, [...d.actions, ...add]);
+    s = states[states.length - 1] as State;
+  } catch {
+    return false;
+  }
+  if (s.street !== 'pf' || s.folded.has(d.hero)) return false;
+  return s.stacks[d.hero] === 0 || status(s).kind === 'runout';
+}
+
+/**
  * 最後まで入れたハンドに Spot の候補が無いとき（Flop 以降に Hero の手番が無い）の投稿のエラー。候補があれば null。
  * Hero が Preflop で All-in になって（All-in に Call して）ショーダウンまで進んだハンドはそう伝える（2026-09-29 さつき）。
  */

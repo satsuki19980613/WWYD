@@ -18,6 +18,7 @@ import {
   emptyDraft,
   isDirty,
   isLocked,
+  makesPreflopAllin,
   neighborSeat,
   parseSettings,
   NO_HERO_POSTFLOP,
@@ -530,6 +531,40 @@ describe('Spot の候補が無いハンドの投稿のエラー', () => {
   });
   it('Hero が Preflop で Fold したあと、ほかの席が All-in', () => {
     expect(buildSubmission(pf('UTG..CO f, BTN f, SB r100, BB c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+  });
+});
+
+describe('Preflop で All-in になる Action は受け付けない（2026-09-29）', () => {
+  const at = (line: string, stacks?: Record<string, number>): { d: Draft; last: Action } => {
+    const all = acts({ pf: line });
+    const raw = { ...hs1(), actions: [], board: [], ...(stacks ? { stacks } : {}) };
+    let d = play(raw);
+    for (const a of all.slice(0, -1)) d = addAction(d, a);
+    return { d, last: all[all.length - 1] as Action };
+  };
+  const refused = (line: string, stacks?: Record<string, number>): boolean => {
+    const { d, last } = at(line, stacks);
+    return makesPreflopAllin(d, [last]);
+  };
+  const S = { ...(hs1().stacks as Record<string, number>) };
+
+  it('Hero の All-in の Raise・All-in の Call', () => {
+    expect(refused('UTG..CO f, BTN r100')).toBe(true);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN c')).toBe(true);
+  });
+  it('相手の All-in にスタックの多い Hero が Call し、誰も Action できなくなる', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r30, BTN c', { ...S, BB: 30 })).toBe(true);
+  });
+  it('短い UTG の All-in に Hero が Call し、最後の BB の Fold でランアウトになる', () => {
+    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB c', { ...S, UTG: 10 })).toBe(false);
+    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB f', { ...S, UTG: 10 })).toBe(true);
+  });
+  it('相手の Preflop の All-in そのもの・Hero の Fold・Flop 以降の All-in は受け付ける', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100')).toBe(false);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN f')).toBe(false);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB c')).toBe(false);
+    const d = play({ ...hs1(), actions: rawActs(hs1(), 'BB x') });
+    expect(makesPreflopAllin(d, [{ street: 'flop', pos: 'BTN', type: 'bet', to: 97500 }])).toBe(false);
   });
 });
 

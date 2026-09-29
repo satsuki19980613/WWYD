@@ -42,7 +42,8 @@ async function realCreatePost(page: Page, saved: InsertPayload[], last: () => bo
   });
 }
 
-async function enterHand(page: Page, c: AllinCase): Promise<void> {
+/** ハンドを入れる。受け付けない Action（`refusedAt`）で止まったら false */
+async function enterHand(page: Page, c: AllinCase): Promise<boolean> {
   const stacks = c.stacks ?? { UTG: 100, HJ: 100, CO: 100, BTN: 100, SB: 100, BB: 100 };
   const seats = Object.keys(stacks) as Pos[];
   await page.goto('/new');
@@ -69,9 +70,17 @@ async function enterHand(page: Page, c: AllinCase): Promise<void> {
     }
   };
 
-  for (const a of acts(c.actions)) {
+  for (const [i, a] of acts(c.actions).entries()) {
     await dealBoard();
     await expect(dock.locator('.ad-pos')).toHaveText(a.pos);
+    if (i === c.refusedAt) {
+      // Preflop で All-in になる Action は受け付けず、エラーを出して同じ手番のまま
+      await dock.getByLabel(/の額（/).fill(String(mbbToBb(a.to as number)));
+      await dock.locator('.act-btn.s1').click();
+      await expect(page.getByText('Preflop で All-in になった Hand は投稿できません')).toBeVisible();
+      await expect(dock.locator('.ad-pos')).toHaveText(a.pos);
+      return false;
+    }
     if (a.type === 'fold') await dock.getByRole('button', { name: 'Fold', exact: true }).click();
     else if (a.type === 'check') await dock.getByRole('button', { name: 'Check', exact: true }).click();
     else if (a.type === 'call') await dock.locator('.act-btn.call').click();
@@ -82,6 +91,7 @@ async function enterHand(page: Page, c: AllinCase): Promise<void> {
   }
   await dealBoard();
   expect(dealt).toBe(board.length);
+  return true;
 }
 
 for (const c of ALLIN_CASES) {
@@ -90,7 +100,7 @@ for (const c of ALLIN_CASES) {
     const saved: InsertPayload[] = [];
     let isLast = false;
     await realCreatePost(page, saved, () => isLast);
-    await enterHand(page, c);
+    if (!(await enterHand(page, c))) return;
     await expect(page.getByText(/Pot 獲得|Showdown/).first()).toBeVisible();
 
     // Spot の候補（Flop 以降の Hero の手番すべて）
@@ -98,11 +108,6 @@ for (const c of ALLIN_CASES) {
     if (c.spots.length === 0) {
       await expect(group).toHaveCount(0);
       await expect(page.getByText('候補なし')).toBeVisible();
-      // 投稿しようとすると、Preflop の All-in は投稿できないと伝える（create-post には送らない）
-      await page.getByPlaceholder(/タイトル/).fill(allinTitle(c));
-      await page.getByRole('button', { name: '投稿する' }).click();
-      await expect(page.getByRole('alert')).toHaveText('Preflop で All-in になった Hand は投稿できません');
-      expect(saved).toHaveLength(0);
       return;
     }
     const radios = group.getByRole('radio');
