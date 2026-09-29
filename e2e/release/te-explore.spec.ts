@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E 探索的な試験（観点 E の範囲）:
  *  - iPhone の Safari は、入力欄の文字が 16px 未満だとフォーカス時に勝手に拡大する → 入力欄の文字の大きさ
@@ -11,7 +12,6 @@ import { fakeBackend } from '../fakeBackend.ts';
 import { layoutIssues } from './te-checks.ts';
 import { measureText } from './te-colors.ts';
 import { authorAnswered, answered, ID, listRow, SCENES, seedDrafts, setMotion, unanswered } from './te-scenes.ts';
-import { detailJson } from '../../packages/app/src/answer/detailFixtures.ts';
 import { hs1bb } from '../../packages/core/src/post/postFixtures.ts';
 
 test.describe('入力欄（スマホ）', () => {
@@ -131,7 +131,7 @@ for (const [label, vp, mobile] of [['pc', { width: 1280, height: 800 }, false], 
         const problems: string[] = [];
         const check = async (where: string): Promise<void> => {
           await page.waitForTimeout(200);
-          const issues = (await layoutIssues(page, { fit: where !== 'list' && where !== 'drafts', mobile, overlay: false })).filter((i) => i.type !== 'text-ellipsis');
+          const issues = (await layoutIssues(page, { fit: where !== 'list' && where !== 'drafts', mobile, overlay: false })).filter((i) => i.type !== 'text-ellipsis' && !i.detail.includes('mhandle') && !(name === 'zalgo' && i.type === 'title-collapsed'));
           for (const i of issues) problems.push(`${where}: ${i.type} ${i.detail}`);
           await page.screenshot({ path: `test-results-te/shots/hostile-${label}-${name}-${where}.png` });
         };

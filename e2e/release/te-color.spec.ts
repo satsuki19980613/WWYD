@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E E-04: UI コンセプトの色の役割（赤 = Fold・エラー・削除だけ、黄 = 主要な操作・選択・アグレッシブな Action、シアン = 情報・操作系・パッシブな Action）。
  * 全場面（PC・スマホ）の計算した色（getComputedStyle）を集めて test-results-te/colors/*.json に残す。

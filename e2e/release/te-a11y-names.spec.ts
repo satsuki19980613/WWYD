@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E E-05（読み上げ）: 全場面のアクセシビリティツリー（Chromium の CDP）で、押せる要素・入力欄・画像に名前があること、
  * 見出しの構造（h1 が 1 つ）、main の存在、html の lang を確かめる。
@@ -19,7 +20,6 @@ type AxNode = {
   properties?: { name: string; value: { value: unknown } }[];
 };
 
-const NAMED_ROLES = new Set(['button', 'link', 'textbox', 'searchbox', 'combobox', 'slider', 'tab', 'menuitem', 'radio', 'checkbox', 'switch', 'spinbutton', 'img', 'gridcell', 'option', 'listbox', 'group', 'dialog', 'alertdialog', 'tablist', 'menu', 'navigation', 'table']);
 // 名前が要らない（あれば良い）役割は除く。group・table は名前があるのが望ましいが、必須ではない
 const REQUIRED = new Set(['button', 'link', 'textbox', 'searchbox', 'combobox', 'slider', 'tab', 'menuitem', 'radio', 'checkbox', 'switch', 'spinbutton', 'img', 'gridcell', 'dialog', 'alertdialog', 'option']);
 

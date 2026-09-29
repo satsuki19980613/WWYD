@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E E-07: 出題の局面の演出（SPOT の札・卓の縁・目盛り）、Hand History の横一列（投稿・回答・集計）、PC のカード選択ボード。
  * 17 章 §3.3〜§3.5。

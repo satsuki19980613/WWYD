@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E E-05（prefers-reduced-motion）・E-07（SPOT の演出の動き）。
  * 視差効果を減らす設定（reduce）では、動いているアニメーション・遷移が無いこと。減らさない設定（no-preference）では、

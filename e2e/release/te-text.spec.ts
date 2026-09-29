@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E E-02（不変条件 1: 画面に説明文を出さない）・E-03（不変条件 2: ポーカー用語は英語）。
  * 全場面（PC 1280x800・スマホ 390x844）の文字（見える文字・aria-label・placeholder・title）を集めて test-results-te/texts/*.json に残し、

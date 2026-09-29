@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E E-01: 10 種類の画面の大きさ × 全場面で、はみ出し・重なり・切れを機械的に確かめる。
  * PC の投稿・回答・集計は 1 画面に収まる（17 章 §3.0）。結果は test-results-te/e01/*.json に残す（te-summary.mjs でまとめる）。

@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E: すべての場面が PC・スマホで開けるか（場面の定義の確認）と、スクリーンショットの保存（test-results-te/shots）。
  */

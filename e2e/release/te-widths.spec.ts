@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 /**
  * T-E E-01（探索）: 10 種類の大きさの間の幅（スマホ用と PC 用の境界 700px の前後・320px・タブレットの幅）で、主要な場面のはみ出し・潰れを見る。
  * 結果は test-results-te/e01w/*.json。
