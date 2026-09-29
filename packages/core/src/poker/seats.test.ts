@@ -78,17 +78,17 @@ describe('ヘッズアップ（2 人。BTN が SB を払う）', () => {
   it('BTN がフォールドすると BB の勝ち', () => {
     expect(replay(su, acts({ pf: 'BTN f' }), 0).result).toEqual({ kind: 'over', winner: 'BB' });
   });
-  it('BTN のフロップ以降のアクションが出題の候補になる（Villain は BB）', () => {
+  it('BTN のフロップ以降のアクションが出題の候補になる', () => {
     const a = acts({ pf: 'BTN r2.5, BB c', flop: 'BB x, BTN b1.8, BB c' });
-    expect(spotCandidates(a, 'BTN')).toEqual([{ index: 3, villains: ['BB'] }]);
+    expect(spotCandidates(a, 'BTN')).toEqual([{ index: 3 }]);
   });
 });
 
 /** hs1 の形で、席と行動だけを差し替えた投稿（派生メタは spotView で作る） */
-function rawPost(stacks: Record<string, number>, actions: Action[], hero: string, spotIndex: number, villain: string) {
+function rawPost(stacks: Record<string, number>, actions: Action[], hero: string, spotIndex: number) {
   const full: Record<string, number> = { UTG: 0, HJ: 0, CO: 0, BTN: 0, SB: 0, BB: 0, ...stacks };
   const su = setup(full);
-  const v = spotView(su, actions, hero as 'BTN', spotIndex, villain as 'BB');
+  const v = spotView(su, actions, hero as 'BTN', spotIndex);
   const bb = (m: number | null) => (m === null ? null : mbbToBb(m));
   return {
     ...hs1(),
@@ -98,7 +98,6 @@ function rawPost(stacks: Record<string, number>, actions: Action[], hero: string
     board: ['Kh', '8d', '3c'],
     actions: actions.map((x) => (x.to === undefined ? { ...x } : { ...x, to: mbbToBb(x.to) })),
     spot_index: spotIndex,
-    villain,
     derived: {
       street: v.derived.street,
       keys: v.derived.keys,
@@ -124,18 +123,18 @@ const codeOf = (f: () => unknown): string | null => {
 describe('投稿の検証（2〜6 人）', () => {
   const hu = acts({ pf: 'BTN r2.5, BB c', flop: 'BB x, BTN b1.8, BB f' });
   it('ヘッズアップの投稿が通り、空席のスタックは 0', () => {
-    const p = validateInput(rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3, 'BB'));
+    const p = validateInput(rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3));
     expect(p.setup.stacks.UTG).toBe(0);
     expect(p.setup.stacks.BTN).toBe(mbb(100));
     expect(() => verifyPost(p)).not.toThrow();
   });
   it('人数ごとの席と一致しない席の組み合わせは invalid_settings', () => {
-    expect(codeOf(() => validateInput(rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3, 'BB')))).toBeNull();
-    const bad = { ...rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3, 'BB'), stacks: { SB: 100, BB: 100 } };
+    expect(codeOf(() => validateInput(rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3)))).toBeNull();
+    const bad = { ...rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3), stacks: { SB: 100, BB: 100 } };
     expect(codeOf(() => validateInput(bad))).toBe('invalid_settings');
   });
   it('座っていない Hero は invalid_settings、座っていない席のハンドは malformed', () => {
-    const base = rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3, 'BB');
+    const base = rawPost({ BTN: 100, BB: 100 }, hu, 'BTN', 3);
     expect(codeOf(() => validateInput({ ...base, hero: 'CO' }))).toBe('invalid_settings');
     expect(codeOf(() => validateInput({ ...base, known_cards: { SB: ['2c', '2d'] } }))).toBe('malformed');
   });

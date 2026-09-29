@@ -9,18 +9,18 @@ describe('get_post_detail の読み取り', () => {
     expect(d.viewer).toBe('unanswered');
     expect(d.post).toMatchObject({
       hero: 'BTN',
-      villain: 'BB',
       street: 'turn',
-      keys: ['fold', 'call', 's1'],
-      s1Label: 'raise',
-      minTo: 13000,
+      keys: ['check', 's1'],
+      s1Label: 'bet',
+      minTo: 1000,
       maxTo: 95700,
-      potBase: 22100,
+      potBase: 9100,
       effectiveStack: 100000,
     });
     expect(d.hand.setup).toMatchObject({ sb: 500, bb: 1000, ante: 0 });
     expect(d.hand.setup.stacks.BTN).toBe(100000);
-    expect(d.hand.actions).toHaveLength(11);
+    // 停止位置（出題の Hero の手番 10）より前だけ。Hero のアクションそのものは見せない
+    expect(d.hand.actions).toHaveLength(10);
     expect(d.hand.actions[3]).toEqual({ street: 'pf', pos: 'BTN', type: 'raise', to: 2500 });
     expect(d.hand.board).toEqual(['Kh', '8d', '3c', '2s']);
     expect(d.hand.truncated).toBe(true);

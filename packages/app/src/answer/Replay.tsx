@@ -151,7 +151,7 @@ const SLOTS_BY_COUNT: Record<number, readonly Slot[]> = {
 };
 
 /**
- * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Villain の席を手前に置く（席の並びは replayModel の seatOrder）。
+ * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Hero の席を手前に置く（席の並びは replayModel の seatOrder）。
  * `holes` は席ごとに見せるホールカード（表向き・裏向き・マック）。`note` は終了時の「ショーダウン」など。
  */
 export function PokerTable(props: {
@@ -159,7 +159,8 @@ export function PokerTable(props: {
   pot: Mbb;
   board: readonly Card[];
   holes: Partial<Record<Pos, Hole>>;
-  villainLabel: string;
+  /** Hero の席のタグ（回答画面は「Hero（あなた）」） */
+  heroLabel?: string;
   note?: string | null;
   /** ボードの中身を差し替える（投稿の入力でカードを押して選び直す） */
   boardContent?: ReactNode;
@@ -197,7 +198,7 @@ export function PokerTable(props: {
         return (
           <div key={seat.pos}>
             <div
-              className={`pseat a-${anchor}${y < 20 ? ' top' : ''}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
+              className={`pseat a-${anchor}${y < 20 ? ' top' : ''}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.you ? ' you' : ''}${seat.acting ? ' acting' : ''}`}
               style={{ top: `${y}%`, ...(anchor === 'c' ? { left: `${x}%` } : {}) }}
             >
               <HoleCards hole={props.holes[seat.pos]} />
@@ -206,8 +207,7 @@ export function PokerTable(props: {
                   <b className="pseat-pos" style={{ color: POS_VAR[seat.pos] }}>
                     {seat.pos}
                   </b>
-                  {seat.hero && <span className="pseat-tag hero">Hero</span>}
-                  {seat.villain && <span className="pseat-tag villain">{props.villainLabel}</span>}
+                  {seat.hero && <span className="pseat-tag hero">{props.heroLabel ?? 'Hero'}</span>}
                 </span>
                 <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
               </div>
@@ -242,7 +242,7 @@ function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
 
 /**
  * ハンドヒストリー（ストリートごとの列）。出題の Hero のアクションに「出題」、最新の 1 手を強調、
- * `actual`（集計画面の Villain の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
+ * `actual`（集計画面の Hero の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
  */
 export function HandLog(props: {
   setup: HandSetup;

@@ -92,7 +92,7 @@ export default function DevUiScreen(): JSX.Element {
         <div className="bracket-hero">
           <span className="brk tl" aria-hidden="true" />
           <span className="brk br" aria-hidden="true" />
-          <p className="mono-lbl">villain</p>
+          <p className="mono-lbl">hero</p>
           <p className="dev-word">RAISE</p>
         </div>
       </div>

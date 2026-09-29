@@ -24,7 +24,6 @@ export type PostInput = {
   board: Card[];
   actions: Action[];
   spotIndex: number;
-  villain: Pos;
   derived: Derived;
 };
 
@@ -144,7 +143,6 @@ export function validateInput(raw: unknown): PostInput {
 
   // スポット
   if (!isInt(raw.spot_index) || raw.spot_index < 0) fail('malformed', undefined, 'spot_index');
-  if (!isPos(raw.villain)) fail('malformed', undefined, 'villain');
 
   // クライアントが計算した派生メタ（照合は verifyPost で行う）
   const d = raw.derived;
@@ -177,7 +175,6 @@ export function validateInput(raw: unknown): PostInput {
     board,
     actions,
     spotIndex: raw.spot_index,
-    villain: raw.villain,
     derived,
   };
 }

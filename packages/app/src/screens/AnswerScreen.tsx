@@ -91,7 +91,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   const facing = post.keys.includes('call');
   const s1Name = post.s1Label === 'bet' || (post.s1Label === null && stop.currentBet === 0) ? 'Bet' : 'Raise';
   const names: KeyNames = { fold: 'Fold', check: 'Check', call: 'Call', s1: s1Name };
-  const callAmount = Math.min(stop.currentBet - stop.bets[post.villain], stop.stacks[post.villain]);
+  const callAmount = Math.min(stop.currentBet - stop.bets[post.hero], stop.stacks[post.hero]);
   const sizeSpot: SizeSpot | null =
     post.keys.includes('s1') && post.minTo !== null && post.maxTo !== null
       ? { currentBet: stop.currentBet, potBase: post.potBase, minTo: post.minTo, maxTo: post.maxTo }
@@ -193,7 +193,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
           board={hand.board.slice(0, BOARD_COUNT[stop.street])}
           spotIndex={hand.spotIndex}
           highlightLast
-          prompt={`▶ ${post.villain} to act`}
+          prompt={`▶ ${post.hero} to act`}
         />
       </HistoryButton>
     </>
@@ -314,13 +314,14 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
 }
 
 /**
- * スポットの要約（スマホのレンジタブ。14 章）: ボード・出題の Hero のアクション・ポット。
- * 塗りながらリプレイのタブへ戻らずに局面を確かめられるようにする。押すとリプレイのタブへ。
+ * スポットの要約（スマホのレンジタブ。14 章）: ボード・Hero が向き合っているアクション（このストリートの直前のアクション。
+ * 無ければ「▶ BTN to act」）・ポット。塗りながらリプレイのタブへ戻らずに局面を確かめられるようにする。押すとリプレイのタブへ。
  */
 function SpotStrip(props: { detail: PostDetail; state: State; onOpen: () => void }): JSX.Element {
   const { hand, post } = props.detail;
   const board = hand.board.slice(0, BOARD_COUNT[props.state.street]);
-  const a = hand.actions[hand.spotIndex];
+  const prev = hand.actions[hand.stopIndex - 1];
+  const a = prev && prev.street === post.street ? prev : null;
   return (
     <button type="button" className="spot-strip" aria-label="Replay を見る" onClick={props.onOpen}>
       <span className="ss-board">
@@ -328,11 +329,14 @@ function SpotStrip(props: { detail: PostDetail; state: State; onOpen: () => void
           <PlayingCard key={c} card={c} size="sm" />
         ))}
       </span>
-      {a && (
+      {a ? (
         <span className="ss-line">
-          <b style={{ color: POS_VAR[a.pos] }}>{a.pos}</b>
-          {a.pos === post.hero && <span className="ss-tag">Hero</span>} {ACTION_NAME[a.type]}
+          <b style={{ color: POS_VAR[a.pos] }}>{a.pos}</b> {ACTION_NAME[a.type]}
           {a.to !== undefined && <span className="num"> {formatBb(a.to)}</span>}
+        </span>
+      ) : (
+        <span className="ss-line num">
+          ▶ <b style={{ color: POS_VAR[post.hero] }}>{post.hero}</b> to act
         </span>
       )}
       <span className="ss-pot num">
@@ -360,7 +364,7 @@ function ReplayView(props: {
   const { hand, post } = d;
   const state = props.frames[c.step] ?? props.frames[props.frames.length - 1];
   if (!state) return <></>;
-  const actor = actorAt(hand.actions, c.step, hand.stopIndex, post.villain);
+  const actor = actorAt(hand.actions, c.step, hand.stopIndex, post.hero);
   const board = hand.board.slice(0, BOARD_COUNT[state.street]);
   // Hero のハンドは投稿者が自分の投稿に答えるときも伏せる（回答してから集計画面で見せる。2026-09-29 さつき。Q-14 を改める）
   const log = (
@@ -370,18 +374,18 @@ function ReplayView(props: {
       board={board}
       spotIndex={hand.spotIndex}
       highlightLast
-      prompt={c.step === hand.stopIndex ? `▶ ${post.villain} to act` : null}
+      prompt={c.step === hand.stopIndex ? `▶ ${post.hero} to act` : null}
     />
   );
   return (
     <div className="replay">
       {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
       <PokerTable
-        seats={seatViews(state, { hero: post.hero, villain: post.villain, actor })}
+        seats={seatViews(state, { hero: post.hero, actor, you: true })}
         pot={state.pot}
         board={board}
         holes={state.folded.has(post.hero) ? {} : { [post.hero]: 'back' }}
-        villainLabel="Villain（あなた）"
+        heroLabel="Hero（あなた）"
       />
       <ReplayControls c={c} />
       {!props.logInModal && log}

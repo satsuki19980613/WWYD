@@ -55,7 +55,6 @@ export type Draft = {
   actions: Action[];
   board: Card[];
   spotIndex: number | null;
-  villain: Pos | null;
   title: string;
 };
 
@@ -73,7 +72,6 @@ export function emptyDraft(): Draft {
     actions: [],
     board: [],
     spotIndex: null,
-    villain: null,
     title: '',
   };
 }
@@ -410,8 +408,8 @@ export function actionLog(setup: HandSetup, actions: readonly Action[]): LogItem
 
 // ---- 下書きの操作 ----
 
-/** スポットの候補（Hero のアクション）。表示「ターン / BTN ベット 6.5」 */
-export function candidates(d: Draft): { index: number; villains: Pos[]; label: string }[] {
+/** スポットの候補（Flop 以降の Hero の手番。2026-09-29）。表示「Turn / BTN Bet 6.5」（その手番で Hero が実際にしたアクション） */
+export function candidates(d: Draft): { index: number; label: string }[] {
   return spotCandidates(d.actions, d.hero).map((c) => {
     const a = d.actions[c.index] as Action;
     const size = a.to === undefined ? '' : ` ${formatBb(a.to)}`;
@@ -419,47 +417,14 @@ export function candidates(d: Draft): { index: number; villains: Pos[]; label: s
   });
 }
 
-/**
- * 候補から消えたスポット・Villain の選択を解除し、Villain が 1 席なら自動で選ぶ（06 章 §3.7）。
- * Hero のオールインは、ハンドが終わったらスポットに自動で選ぶ（allinSpot）。
- */
+/** 候補から消えたスポットの選択を解除する（06 章 §3.7）。 */
 export function normalizeSpot(d: Draft): Draft {
-  const all = candidates(d);
-  const c = all.find((x) => x.index === d.spotIndex);
-  if (!c) {
-    const auto = allinSpot(d, all);
-    if (auto) return { ...d, spotIndex: auto.index, villain: auto.villain };
-    return d.spotIndex === null && d.villain === null ? d : { ...d, spotIndex: null, villain: null };
-  }
-  if (c.villains.length === 1) return c.villains[0] === d.villain ? d : { ...d, villain: c.villains[0] as Pos };
-  if (d.villain !== null && !c.villains.includes(d.villain)) return { ...d, villain: null };
-  if (d.villain === null) {
-    const auto = allinSpot(d, all);
-    if (auto && auto.index === c.index) return { ...d, villain: auto.villain };
-  }
-  return d;
-}
-
-/**
- * Hero のオールイン（2026-09-29 さつき）。オールインの後に Hero のアクションは無いので、出題はそのアクションに決まる。
- * ハンドが終わっていて、Hero のオールインが候補にあれば、そのスポットと Villain を返す。
- * Villain が複数（マルチウェイ・オールインが重なった）ときは、最後まで残った（コールした）最初の席。
- * 残った席が無ければ（全員フォールド）、最初にアクションした席。どちらも Villain の欄で選び直せる。
- */
-function allinSpot(d: Draft, all: readonly { index: number; villains: Pos[] }[]): { index: number; villain: Pos } | null {
-  const { setup } = parseSettings(d);
-  if (!setup) return null;
-  const phase = phaseOf(setup, d.actions, d.board);
-  if (phase.kind !== 'done') return null;
-  const states = runActions(setup, d.actions);
-  const c = all.find((x) => (states[x.index + 1] as State | undefined)?.stacks[d.hero] === 0);
-  if (!c) return null;
-  const villain = c.villains.find((p) => !phase.state.folded.has(p)) ?? (c.villains[0] as Pos);
-  return { index: c.index, villain };
+  if (d.spotIndex === null || candidates(d).some((c) => c.index === d.spotIndex)) return d;
+  return { ...d, spotIndex: null };
 }
 
 export function selectSpot(d: Draft, index: number): Draft {
-  return normalizeSpot({ ...d, spotIndex: index, villain: d.spotIndex === index ? d.villain : null });
+  return normalizeSpot({ ...d, spotIndex: index });
 }
 
 export function addAction(d: Draft, action: Action): Draft {
@@ -483,12 +448,11 @@ export function truncateActions(d: Draft, index: number): Draft {
 
 /** 「すべて消す」: アクションとボードを消す（ロック解除） */
 export function clearActions(d: Draft): Draft {
-  return { ...d, actions: [], board: [], spotIndex: null, villain: null };
+  return { ...d, actions: [], board: [], spotIndex: null };
 }
 
 export function addBoardCard(d: Draft, card: Card): Draft {
-  // ボードが揃ってハンドが終わると、Hero のオールインのスポットを自動で選ぶことがある（normalizeSpot）
-  return d.board.length >= 5 ? d : normalizeSpot({ ...d, board: [...d.board, card] });
+  return d.board.length >= 5 ? d : { ...d, board: [...d.board, card] };
 }
 
 /** ボードの i 枚目を押す: そのカード以降のボードと、そのストリート以降のアクションを消す（確認なし） */
@@ -534,9 +498,8 @@ export function buildSubmission(d: Draft): Submission {
   const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
   if (d.spotIndex === null) errors.push('Spot を選択してください');
-  else if (d.villain === null) errors.push('Villain を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
-  if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null || d.villain === null) {
+  if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };
   }
 
@@ -548,7 +511,7 @@ export function buildSubmission(d: Draft): Submission {
   const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
 
   try {
-    const view = spotView(setup, d.actions, d.hero, d.spotIndex, d.villain);
+    const view = spotView(setup, d.actions, d.hero, d.spotIndex);
     // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
     const stacks: Record<string, number> = {};
     for (const p of seats) stacks[p] = mbbToBb(setup.stacks[p]);
@@ -567,7 +530,6 @@ export function buildSubmission(d: Draft): Submission {
       board: d.board.slice(0, phase.boardCount),
       actions: d.actions.map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) })),
       spot_index: d.spotIndex,
-      villain: d.villain,
       derived: {
         street: view.derived.street,
         keys: view.derived.keys,

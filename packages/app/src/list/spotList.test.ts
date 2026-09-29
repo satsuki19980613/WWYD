@@ -26,7 +26,6 @@ function row(over: Partial<PostRow> = {}): PostRow {
     title: 'BTN の 3bet',
     fmt: 'cash',
     hero: 'BTN',
-    villain: 'BB',
     street: 'flop',
     effective_stack: 100,
     answer_count: 3,

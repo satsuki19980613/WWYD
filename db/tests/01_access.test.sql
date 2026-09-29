@@ -43,8 +43,8 @@ select is(
 
 -- ---- DB-03 / DB-04 authenticated は posts に直接書けない・insert_post を実行できない ----
 select pg_temp.login(1);
-select throws_ok($$ insert into public.posts (author_uid, title, fmt, hero, villain, street, effective_stack, keys, pot_base)
-                   values (public.current_uid(), 't', 'cash', 'BTN', 'BB', 'pf', 100, '{check}', 1) $$,
+select throws_ok($$ insert into public.posts (author_uid, title, fmt, hero, street, effective_stack, keys, pot_base)
+                   values (public.current_uid(), 't', 'cash', 'BTN', 'pf', 100, '{check}', 1) $$,
   '42501', null, 'DB-03 posts に直接 insert できない');
 select throws_ok(format($$ update public.posts set title = 'x' where id = %L $$, :'post'), '42501', null, 'DB-03 posts を update できない');
 select throws_ok(format($$ select public.insert_post(%L, '{}') $$, pg_temp.uid(1)), '42501', null, 'DB-04 insert_post は authenticated から実行できない');

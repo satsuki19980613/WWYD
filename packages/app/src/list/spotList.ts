@@ -27,7 +27,6 @@ export type PostRow = {
   title: string;
   fmt: 'cash' | 'mtt';
   hero: Pos;
-  villain: Pos;
   street: Street;
   effective_stack: number;
   answer_count: number;

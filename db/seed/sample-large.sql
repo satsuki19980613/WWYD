@@ -20,23 +20,23 @@ on conflict (id) do nothing;
 
 create temp table seed_spot (street text, spot_index int, stop_index int, min_to numeric, max_to numeric, pot_base numeric);
 insert into seed_spot values
-  ('flop',  7,  8,  3.6, 97.5, 9.1),
-  ('turn',  10, 11, 13,  95.7, 22.1),
-  ('river', 13, 14, 30,  89.2, 52.1);
+  ('flop',  7,  7,  1, 97.5, 5.5),
+  ('turn',  10, 10, 1, 95.7, 9.1),
+  ('river', 13, 13, 1, 89.2, 22.1);
 
 create temp table seed_title (i int, title text);
 insert into seed_title values
   (0, '試験 BTN vs BB のシングルレイズドポット'),
-  (1, '試験 ドライボードでのチェックレイズ頻度'),
-  (2, '試験 ターンのバレルにどう応じる？'),
+  (1, '試験 ドライボードでの C-bet 頻度'),
+  (2, '試験 ターンで 2 バレル目を打つ？'),
   (3, '試験 リバーのポラライズドベット'),
   (4, '試験 とても長いタイトルの例。二行に収まらないときは省略記号で切られるはず');
 
 -- H-S1 のスポットを 1 件作る（DB の所有者として insert_post を呼ぶ。create-post と同じ）
 create function pg_temp.seed_post(author uuid, title text, sp seed_spot, fmt text) returns uuid language sql as $$
   select public.insert_post(author, jsonb_build_object(
-    'title', title, 'fmt', fmt, 'hero', 'BTN', 'villain', 'BB', 'street', sp.street,
-    'effective_stack', 100, 'keys', '["fold","call","s1"]'::jsonb, 's1_label', 'raise',
+    'title', title, 'fmt', fmt, 'hero', 'BTN', 'street', sp.street,
+    'effective_stack', 100, 'keys', '["check","s1"]'::jsonb, 's1_label', 'bet',
     'min_to', sp.min_to, 'max_to', sp.max_to, 'pot_base', sp.pot_base,
     'sb', 0.5, 'bb', 1, 'ante', 0, 'rake', case when fmt = 'cash' then 5 end,
     'stacks', '{"UTG":100,"HJ":100,"CO":100,"BTN":100,"SB":100,"BB":100}'::jsonb,
@@ -93,29 +93,29 @@ declare
   v_size numeric;
   v_min numeric;
   v_max numeric;
+  v_pot numeric;
 begin
   for b in select * from big_post order by no loop
-    select min_to, max_to into v_min, v_max from seed_spot where spot_index = b.spot_index;
+    select min_to, max_to, pot_base into v_min, v_max, v_pot from seed_spot where spot_index = b.spot_index;
     for u in 1..b.answers loop
       t := b.base + (random() - 0.5) * b.spread;
-      -- マスごと: レンジ内か（強さ＋ばらつき > 基準）。レンジ内なら余裕の大きさでレイズ / コール / フォールドを混ぜる（合計 20）
+      -- マスごと: レンジ内か（強さ＋ばらつき > 基準）。レンジ内なら余裕の大きさでベット / チェックを混ぜる（合計 20。キーは check / s1）
       select decode(string_agg(
-               lpad(to_hex(f), 2, '0') || '00' || lpad(to_hex(case when inr then 20 - f - r else 0 end), 2, '0') || lpad(to_hex(r), 2, '0'),
+               '00' || lpad(to_hex(case when inr then 20 - r else 0 end), 2, '0') || '00' || lpad(to_hex(r), 2, '0'),
                '' order by idx), 'hex')
         into v_paint
       from (
         select idx, inr,
-          -- 余裕が小さい: コールとフォールドを混ぜる / 中くらい: ほぼコール / 大きい: ほぼレイズ
-          case when inr and m <= 0.1 then 5 * floor(k * 4) else 0 end::int as f,
+          -- 余裕が小さい: チェック / 中くらい: チェックとベットを混ぜる / 大きい: ほぼベット
           case when not inr or m <= 0.1 then 0 when m <= 0.35 then 5 * floor(k * 2) else 10 + 5 * floor(k * 3) end::int as r
         from (
           select idx, m, random() as k, (idx = 0 or m > 0) as inr
           from (select idx, s + (random() - 0.5) * b.noise - t as m from cell_strength) x
         ) y
       ) z;
-      -- レイズを含むならサイズ（min〜min の 3 倍、上限まで）
+      -- ベットを含むならサイズ（ポットの 33〜120%。min〜max に収める）
       v_size := case when exists (select 1 from generate_series(0, 168) i where get_byte(v_paint, i * 4 + 3) > 0)
-                     then round(v_min + random()::numeric * (least(v_max, v_min * 3) - v_min), 1) end;
+                     then round(least(v_max, greatest(v_min, v_pot * (0.33 + random()::numeric * 0.87))), 1) end;
       perform set_config('request.jwt.claims',
         json_build_object('sub', '00000000-0000-0000-5eed-' || lpad((1000 + u)::text, 12, '0'), 'role', 'authenticated')::text, true);
       insert into public.answers (post_id, paint, size) values (b.id, v_paint, v_size);

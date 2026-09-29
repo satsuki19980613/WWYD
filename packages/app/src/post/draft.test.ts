@@ -52,7 +52,7 @@ const six = (): Draft => ({ ...emptyDraft(), players: 6 });
 /** 見本（03 章 §3.1 の形）を画面の操作どおりに入力した下書き。ボードはストリートが進むたびに足す。 */
 function enter(raw: Raw): Draft {
   const d = selectSpot(play(raw), raw.spot_index as number);
-  return { ...d, villain: raw.villain as Pos, title: raw.title as string };
+  return { ...d, title: raw.title as string };
 }
 
 /** 見本のアクションとボードを入れるだけ（スポットは選ばない） */
@@ -379,7 +379,7 @@ describe('Hand の進行（06 章 §3.6）', () => {
 
   it('すべて消す: Action・Board・Spot を消す', () => {
     const c = clearActions(enter(hs1()));
-    expect(c).toMatchObject({ actions: [], board: [], spotIndex: null, villain: null });
+    expect(c).toMatchObject({ actions: [], board: [], spotIndex: null });
     expect(c.hands.BTN).toBe('AdKd');
   });
 
@@ -412,50 +412,27 @@ describe('Spot（06 章 §3.7）', () => {
     ]);
   });
 
-  it('Villain が 1 席なら自動で選ぶ。複数なら未選択', () => {
-    const d = { ...enter(hs1()), spotIndex: null, villain: null };
-    expect(selectSpot(d, 10).villain).toBe('BB');
-    const mw = { ...enter(hmw()), spotIndex: null, villain: null }; // CO b3 の区間は BTN・BB
-    expect(selectSpot(mw, 7)).toMatchObject({ spotIndex: 7, villain: null });
+  it('候補は Flop 以降の Hero のアクションすべて（Fold・ハンドの最後のアクションも。2026-09-29）', () => {
+    const fold = play({ ...hs1(), actions: rawActs(hs1(), 'BB b3, BTN f'), board: ['Kh', '8d', '3c'] });
+    expect(candidates(fold).map((c) => c.label)).toEqual(['Flop / BTN Fold']);
+    const mw = play(hmw());
+    expect(candidates(mw).map((c) => c.index)).toEqual([7, 10, 13, 15]);
   });
 
-  describe('Hero のオールインは、ハンドが終わったらスポットに自動で選ぶ（2026-09-29）', () => {
-    const shove = (flop: string, base: Raw = hs1()): Raw => ({ ...base, actions: rawActs(base, flop) });
-
-    it('ヘッズアップ: Villain はコールした席', () => {
-      const d = play(shove('BB x, BTN b97.5, BB c'));
-      expect(d).toMatchObject({ spotIndex: 7, villain: 'BB' });
-      expect(candidates(d).find((c) => c.index === 7)?.label).toBe('Flop / BTN Bet 97.5');
-    });
-
-    it('マルチウェイ: Villain は最後まで残った最初の席（選び直せる）', () => {
-      const d = play(shove('BB x, CO b97.5, BTN f, BB c', hmw()));
-      expect(d).toMatchObject({ spotIndex: 7, villain: 'BB' });
-      expect(candidates(d).find((c) => c.index === 7)?.villains).toEqual(['BTN', 'BB']);
-    });
-
-    it('オールインが重なった（2 人がコール）: 最初にコールした席', () => {
-      const d = play(shove('BB x, CO b97.5, BTN c, BB c', hmw()));
-      expect(d).toMatchObject({ spotIndex: 7, villain: 'BTN' });
-    });
-
-    it('全員フォールド: 最初にアクションした席', () => {
-      const d = play(shove('BB x, CO b97.5, BTN f, BB f', hmw()));
-      expect(d).toMatchObject({ spotIndex: 7, villain: 'BTN' });
-    });
-
-    it('ハンドが終わる前は選ばない。自分で選んだスポットは変えない', () => {
-      const raw = shove('BB x, CO b97.5, BTN f, BB c', hmw());
-      const partial = { ...raw, actions: (raw.actions as Raw[]).slice(0, -1), board: (raw.board as string[]).slice(0, 3) };
-      expect(play(partial)).toMatchObject({ spotIndex: null, villain: null });
-    });
+  it('スポットは自動では選ばない（Hero のオールインでも。投稿者が選ぶ）', () => {
+    const shove = play({ ...hs1(), actions: rawActs(hs1(), 'BB x, BTN b97.5, BB c') });
+    expect(shove.spotIndex).toBeNull();
+    expect(candidates(shove).map((c) => c.label)).toEqual(['Flop / BTN Bet 97.5']);
+    expect(selectSpot(shove, 7).spotIndex).toBe(7);
   });
 
   it('Action を戻して候補が消えたら選択を解除', () => {
-    const d = enter(hs1()); // スポット 10 / BB
+    const d = enter(hs1()); // スポット 10（ターンの BTN b6.5）
     let u = d;
-    for (let i = 0; i < 4; i++) u = undoAction(u); // 11 番目（BB コール）まで消す
-    expect(u).toMatchObject({ spotIndex: null, villain: null });
+    for (let i = 0; i < 4; i++) u = undoAction(u); // 11 番目（BB コール）まで消す: スポット 10 は残る
+    expect(u.spotIndex).toBe(10);
+    u = undoAction(u); // 10 番目（BTN b6.5）を消す
+    expect(u.spotIndex).toBeNull();
   });
 });
 
@@ -494,10 +471,10 @@ describe('投稿（06 章 §3.8）', () => {
     });
   });
 
-  it('Hand が途中・Villain 未選択', () => {
+  it('Hand が途中', () => {
     const d = enter(hs1());
-    const s = buildSubmission({ ...undoAction(d), spotIndex: 3, villain: null });
-    expect(s).toEqual({ ok: false, errors: ['Hand を最後まで入力してください', 'Villain を選択してください'] });
+    const s = buildSubmission(undoAction(d));
+    expect(s).toEqual({ ok: false, errors: ['Hand を最後まで入力してください'] });
   });
 
   it('タイトルの前後の空白は除いて送る', () => {
@@ -517,7 +494,7 @@ describe('エラーコードの文言（06 章 §7）', () => {
     ['hand_incomplete', undefined, 'Action の内容を確認してください'],
     ['duplicate_card', undefined, '入力内容を確認してください'],
     ['daily_limit', undefined, '本日の投稿上限（5件）に達しました'],
-    ['invalid_villain', undefined, 'Spot を選び直してください'],
+    ['invalid_spot', undefined, 'Spot を選び直してください'],
     ['derived_mismatch', undefined, '投稿できませんでした。再読み込みしてやり直してください'],
     ['network', undefined, '通信に失敗しました'],
     ['internal', undefined, 'エラーが発生しました'],

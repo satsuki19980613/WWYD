@@ -5,14 +5,15 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { emptyPaint, encodePaint, toHex } from '../packages/core/src/index.ts';
 import { detailJson } from '../packages/app/src/answer/detailFixtures.ts';
+import { hs1bb } from '../packages/core/src/post/postFixtures.ts';
 import { DUPLICATE, fakeBackend, type Backend } from './fakeBackend.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
 const ANSWER = `/s/${ID}/answer`;
 const RESULT = `/s/${ID}/result`;
 
-const unanswered = (): Record<string, unknown> => detailJson(undefined, { viewer: 'unanswered', id: ID });
-const answered = (): Record<string, unknown> => detailJson(undefined, { viewer: 'answered', id: ID, answerCount: 1 });
+const unanswered = (): Record<string, unknown> => detailJson(hs1bb(), { viewer: 'unanswered', id: ID });
+const answered = (): Record<string, unknown> => detailJson(hs1bb(), { viewer: 'answered', id: ID, answerCount: 1 });
 
 /** 回答画面を開く（視差効果を減らす設定にして、リプレイは停止位置から始める） */
 async function open(page: Page, detail: Record<string, unknown> | null = unanswered(), path = ANSWER): Promise<Backend> {
@@ -108,11 +109,13 @@ test.describe('Replay（06 章 §4.3）', () => {
     await open(page);
     await expect(page.getByText('11 / 11 手目')).toBeVisible();
     await expect(page.getByText('▶ BB to act')).toBeVisible();
-    await expect(page.getByText('Villain（あなた）')).toBeVisible();
+    // 回答者は Hero の席（2026-09-29。Villain の概念は無い）
+    await expect(page.getByText('Hero（あなた）')).toBeVisible();
     // Hero のハンドは裏向き、ボードはターンまで
     await expect(page.locator('.pback')).toHaveCount(2);
     await expect(page.locator('.ptable-board .pcard')).toHaveCount(4);
-    await expect(page.locator('.hlog-tag')).toHaveText('出題');
+    // ログは出題の手番の前まで（Hero のアクションそのものは回答まで見せない）
+    await expect(page.locator('.hlog-tag')).toHaveCount(0);
   });
 
   test('開くと停止位置まで自動再生し、操作できる', async ({ page }) => {
@@ -400,20 +403,20 @@ test.describe('送信（06 章 §4.9）', () => {
 });
 
 test.describe('投稿者の回答（06 章 §4.2・§4.9。投稿者も回答者の 1 人）', () => {
-  const author = (): Record<string, unknown> => detailJson(undefined, { viewer: 'author', id: ID });
+  const author = (): Record<string, unknown> => detailJson(hs1bb(), { viewer: 'author', id: ID });
 
   test('自分の投稿でも空の表から回答し、確認ダイアログ → 送信 → 集計へ', async ({ page }) => {
     const be = await open(page, author());
-    be.afterInsert = detailJson(undefined, {
+    be.afterInsert = detailJson(hs1bb(), {
       viewer: 'author',
       id: ID,
       answerCount: 1,
       myAnswer: { paint: toHex(encodePaint(emptyPaint())), size: null },
     });
-    // Hero のハンドは自分の投稿でも伏せる（回答してから集計で見せる。2026-09-29）。席は他の回答者と同じ「Villain（あなた）」
+    // Hero のハンドは自分の投稿でも伏せる（回答してから集計で見せる。2026-09-29）。席は他の回答者と同じ「Hero（あなた）」
     await expect(page.locator('.pback')).toHaveCount(2);
-    await expect(page.getByLabel('Diamond の A')).toHaveCount(0);
-    await expect(page.getByText('Villain（あなた）')).toBeVisible();
+    await expect(page.getByLabel('Spade の K')).toHaveCount(0);
+    await expect(page.getByText('Hero（あなた）')).toBeVisible();
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA Range 外');
     await expect(page.getByRole('button', { name: /^Raise Size/ })).toContainText('17.55bb');
 

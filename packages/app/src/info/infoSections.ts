@@ -18,7 +18,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     items: [
       {
         term: 'WWYD',
-        desc: 'Hand の 1 場面（Spot）で、Villain ならどんな Range でどう行動するかを、Player の回答から集合知として見るアプリ。',
+        desc: 'Hand の Hero の手番（Spot）で、ほかの Player ならどんな Range でどう行動するかを、回答から集合知として見るアプリ。',
       },
       {
         term: 'ログイン',
@@ -43,7 +43,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     id: 'answer',
     title: 'Range 入力',
     items: [
-      { term: '視点', desc: 'Villain（あなた）の席から、Hero の Action に対する Villain の Range を入力する。' },
+      { term: '視点', desc: 'Hero（あなた）の席に座り、この Spot での Hero の Range を入力する（Hand ごとに、どの Action をどの割合で取るか）。' },
       { term: 'Replay', desc: 'Spot までの Action を再生する。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。Hero の Hand は回答後に公開される。' },
       { term: 'Spot の要約', desc: 'Range の上の行は Board・Hero の Action・Pot。押すと Replay に戻る。' },
       {
@@ -83,7 +83,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         desc: 'マス内の色の割合が Action 頻度を表す（その Hand を Range 内とした回答者の平均）。赤は Fold、シアンは Check と Call、黄は Bet と Raise。',
       },
       { term: '濃さ', desc: 'その Hand を Range 内に含めた回答者の割合を 20% ごとの 5 段階で表す。薄いほど Range 外とした回答者が多い。' },
-      { term: '白枠', desc: 'Villain の実際の Hand。Showdown がない、または Muck の場合は表示されない。' },
+      { term: '白枠', desc: 'Hero の実際の Hand。' },
       {
         term: '上部のバー',
         desc: '全体と自分の Range の大きさ（combos と 1326 combos に対する %）と、Range の中の各 Action の割合。全体は Range 内とした回答者の割合で重み付けしている。',
@@ -128,7 +128,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       {
         term: 'Spot',
-        desc: 'Hero の Flop 以降の Action を 1 つと Villain を 1 つ選ぶ（Preflop は出題できない）。回答対象はその後の Villain の最初の Action。Fold した席も Villain に選べる。',
+        desc: 'Hero の Flop 以降の手番を 1 つ選ぶ（Preflop は出題できない）。回答者はその手番で Hero の席から Range を答え、回答後に Hero が実際に取った Action と Hand が表示される。',
       },
       {
         term: '下書き',

@@ -1,6 +1,6 @@
 import { idxOf, mbbToBb, type Action } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
-import { hmw, hs1 } from '../../../core/src/post/postFixtures.ts';
+import { hmw, hs1bb } from '../../../core/src/post/postFixtures.ts';
 import { acts } from '../../../core/src/poker/testHelpers.ts';
 import { aggregateHex, detailJson, paintHexOf, paintOf, type DetailOpts } from './detailFixtures.ts';
 import { parsePostDetail, type PostDetail } from './postDetail.ts';
@@ -15,14 +15,15 @@ import {
   initialCell,
   resultFrames,
   resultTabs,
-  villainHand,
+  heroHand,
 } from './resultModel.ts';
 
 /** 05 章 PAINT-12 の 2 件（A: AA call 20、B: AA call 10 / s1 10、KK fold 20） */
 const PAINT_A = paintOf({ AA: { call: 20 } });
 const PAINT_B = paintOf({ AA: { call: 10, s1: 10 }, KK: { fold: 20 } });
 
-function detail(o: Partial<DetailOpts> = {}, raw = hs1()): PostDetail {
+/** H-S1 を BB の手番で出題した形（Fold / Call / Raise。Hero = BB の Ks Js） */
+function detail(o: Partial<DetailOpts> = {}, raw = hs1bb()): PostDetail {
   return parsePostDetail(
     detailJson(raw, {
       viewer: 'answered',
@@ -44,21 +45,13 @@ describe('タブと初期表示（06 章 §5.2）', () => {
     expect(resultTabs(detail({ answerCount: 0, aggregate: undefined })).map((t) => t.value)).toEqual(['all', 'mine']);
   });
 
-  it('初期選択マスは Villain の実際の Hand（白枠）、無ければ AA', () => {
+  it('初期選択マスは Hero の実際の Hand（白枠。答え合わせ）', () => {
     const d = detail();
-    expect(villainHand(d)).toEqual(['Ks', 'Js']);
+    expect(heroHand(d)).toEqual(['Ks', 'Js']);
     expect(actualCell(d)).toBe(idxOf('KJs'));
     expect(initialCell(d)).toBe(idxOf('KJs'));
-    const unknown = detail({}, hmw());
-    expect(villainHand(unknown)).toBeNull();
-    expect(actualCell(unknown)).toBeNull();
-    expect(initialCell(unknown)).toBe(idxOf('AA'));
-  });
-
-  it('Muck は白枠なし', () => {
-    const d = detail({}, { ...hs1(), known_cards: { BB: 'muck' } });
-    expect(villainHand(d)).toBe('muck');
-    expect(actualCell(d)).toBeNull();
+    const mw = detail({}, hmw());
+    expect(actualCell(mw)).toBe(idxOf('QQ'));
   });
 });
 
@@ -123,7 +116,7 @@ describe('マスと内訳（05 章 §4）', () => {
 });
 
 describe('実際の Action（06 章 §5.3）', () => {
-  it('H-S1 の BB は Call', () => {
+  it('Hero（BB）の実際の Action は Call', () => {
     const a = actualAction(detail());
     expect(a).toEqual({ street: 'turn', pos: 'BB', type: 'call' });
     expect(actionText(a as Action)).toBe('Call');
@@ -140,10 +133,10 @@ describe('Hand History の再生（06 章 §5.4）', () => {
     const d = detail();
     const frames = resultFrames(d);
     expect(frames).toHaveLength(d.hand.actions.length + 1);
-    expect(frames[0]).toMatchObject({ holes: { BTN: ['Ad', 'Kd'] }, board: [], actor: 'UTG', note: null });
+    expect(frames[0]).toMatchObject({ holes: { BB: ['Ks', 'Js'] }, board: [], actor: 'UTG', note: null });
     const end = frames[frames.length - 1];
     expect(end?.note).toBe('Showdown');
-    expect(end?.holes).toEqual({ BTN: ['Ad', 'Kd'], BB: ['Ks', 'Js'] });
+    expect(end?.holes).toEqual({ BB: ['Ks', 'Js'], BTN: ['Ad', 'Kd'] });
     expect(end?.board).toEqual(['Kh', '8d', '3c', '2s', '7h']);
     expect(end?.actor).toBeNull();
     expect(Object.values(end?.state.bets ?? {})).toEqual([0, 0, 0, 0, 0, 0]);
@@ -164,12 +157,12 @@ describe('Hand History の再生（06 章 §5.4）', () => {
       flop: 'BB x, BTN b1.8, BB c',
       turn: 'BB x, BTN b6.5, BB r20, BTN f',
     }).map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) }));
-    const raw = { ...hs1(), actions, board: ['Kh', '8d', '3c', '2s'], known_cards: {} };
+    const raw = { ...hs1bb(), actions, board: ['Kh', '8d', '3c', '2s'], known_cards: {} };
     const frames = resultFrames(detail({}, raw));
     const end = frames[frames.length - 1];
     expect(end?.note).toBe('BB Pot 獲得');
-    // Hero はフォールドしていても終了時は公開する。ボードは到達したターンまで
-    expect(end?.holes).toEqual({ BTN: ['Ad', 'Kd'] });
+    // Hero の Hand は終了時も公開する。ボードは到達したターンまで
+    expect(end?.holes).toEqual({ BB: ['Ks', 'Js'] });
     expect(end?.board).toHaveLength(4);
     expect(actionText(actualAction(detail({}, raw)) as Action)).toBe('Raise 20bb');
   });

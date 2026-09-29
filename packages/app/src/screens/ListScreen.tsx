@@ -167,10 +167,6 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
         Hero{' '}
         <b className="pos" style={{ color: POS_VAR[row.hero] }}>
           {row.hero}
-        </b>{' '}
-        vs Villain{' '}
-        <b className="pos" style={{ color: POS_VAR[row.villain] }}>
-          {row.villain}
         </b>
       </p>
       <div className="spot-foot">

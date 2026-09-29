@@ -361,7 +361,7 @@
 .pf-muck { font-size: 12px; color: var(--dim); }
 
 /* ---- スポット ---- */
-/* 候補が無いときも欄の形を保つ（下の Villain・タイトルと揃える） */
+/* 候補が無いときも欄の形を保つ（下のタイトルと揃える） */
 .pf-none {
   min-height: 44px;
   display: flex;

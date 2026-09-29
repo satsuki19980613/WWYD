@@ -1,11 +1,11 @@
 /**
  * 集計画面の E2E（詳細仕様 06 章 §5。plan.md P7 の完了条件）。バックエンドは偽物（fakeBackend.ts）。
- * 投稿は H-S1（BTN が出題、Villain は BB。BB の実際のアクションはコール、ハンドは Ks Js でショーダウン）。
+ * 投稿は H-S1 を BB の手番で出題した形（hs1bb。Hero = BB が BTN の 6.5 ベットに向き合う。実際はコール、ハンドは Ks Js でショーダウン）。
  * 集計は 05 章 PAINT-12 の 2 件（A: AA call 100%、B: AA call 50% / s1 50%・KK fold 100%）。自分の回答は A。
  */
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { aggregateHex, detailJson, paintHexOf, paintOf, type DetailOpts } from '../packages/app/src/answer/detailFixtures.ts';
-import { hs1 } from '../packages/core/src/post/postFixtures.ts';
+import { hs1bb } from '../packages/core/src/post/postFixtures.ts';
 import { DATA, fakeBackend, type Backend } from './fakeBackend.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
@@ -15,7 +15,7 @@ const AGG = aggregateHex([paintOf({ AA: { call: 20 } }), paintOf({ AA: { call: 1
 const MY = { paint: paintHexOf({ AA: { call: 20 } }), size: null };
 
 function detail(o: Partial<DetailOpts> = {}): Record<string, unknown> {
-  return detailJson(undefined, { viewer: 'answered', id: ID, answerCount: 2, aggregate: AGG, myAnswer: MY, ...o });
+  return detailJson(hs1bb(), { viewer: 'answered', id: ID, answerCount: 2, aggregate: AGG, myAnswer: MY, ...o });
 }
 
 /** 自分の投稿（投稿者も回答済み。自分の回答は QQ fold 25% / s1 75%） */
@@ -52,7 +52,7 @@ test.describe('集計 Range（06 章 §5.2）', () => {
     await expect(all.locator('.cbar-legend')).toContainText('Raise 16.7%');
     await expect(page.locator('.cbar').nth(1)).toContainText('6 combos');
 
-    // 初期選択は Villain の実際のハンド（KJs、白枠）
+    // 初期選択は Hero の実際のハンド（KJs、白枠。答え合わせ）
     await expect(cell(page, 'KJs')).toHaveAttribute('aria-pressed', 'true');
     await expect(cell(page, 'KJs')).toHaveClass(/actual/);
     await expect(detailBox(page)).toContainText('KJs');
@@ -122,19 +122,19 @@ test.describe('集計 Range（06 章 §5.2）', () => {
 });
 
 test.describe('実際の Action と Hand History（06 章 §5.3・§5.4）', () => {
-  test('Villain の実際の Action と Hand', async ({ page }) => {
+  test('答え合わせ: Hero の実際の Action と Hand', async ({ page }) => {
     await open(page);
     const box = page.locator('.res-actual');
-    await expect(box).toContainText('Villain（BB）実際の Action');
+    await expect(box).toContainText('Hero（BB）実際の Action');
     await expect(box).toContainText('Call');
     await expect(box).toContainText('KJs');
     await expect(box.getByLabel('Spade の K')).toBeVisible();
   });
 
-  test('Muck と不明', async ({ page }) => {
-    await open(page, detailJson({ ...hs1(), known_cards: { BB: 'muck' } }, { viewer: 'answered', id: ID, answerCount: 2, aggregate: AGG, myAnswer: MY }));
-    await expect(page.locator('.res-actual')).toContainText('Muck');
-    await expect(cell(page, 'AA')).toHaveAttribute('aria-pressed', 'true');
+  test('Showdown で Hand を見せなかった席は「Muck」。答え合わせの Hand は Hero のもの', async ({ page }) => {
+    await open(page, detailJson({ ...hs1bb(), known_cards: { BTN: 'muck' } }, { viewer: 'answered', id: ID, answerCount: 2, aggregate: AGG, myAnswer: MY }));
+    await expect(page.locator('.res-actual')).toContainText('KJs');
+    await expect(cell(page, 'KJs')).toHaveAttribute('aria-pressed', 'true');
     await expect(table(page)).toContainText('Muck');
   });
 
@@ -143,18 +143,19 @@ test.describe('実際の Action と Hand History（06 章 §5.3・§5.4）', () 
     await expect(page.getByText('15 / 15 手目')).toBeVisible();
     await expect(table(page)).toContainText('Showdown');
     await expect(table(page)).toContainText('52.1bb');
-    // 終了時は Hero と Villain のハンドを公開
+    // 終了時は Hero と、Showdown で見せた席のハンドを公開
     await expect(table(page).getByLabel('Diamond の A')).toBeVisible();
     await expect(table(page).getByLabel('Spade の J')).toBeVisible();
     await expect(page.locator('.hlog-tag')).toHaveText('出題');
-    await expect(page.locator('.hlog-list li.actual')).toHaveText('BB Call 6.5');
+    // 出題の手番が Hero の実際の Action（出題タグと強調が同じ行）
+    await expect(page.locator('.hlog-list li.actual')).toHaveText('BB Call 6.5出題');
 
     await page.getByRole('button', { name: '最初から' }).click();
     await expect(page.getByText('0 / 15 手目')).toBeVisible();
     await expect(table(page)).not.toContainText('Showdown');
-    // Hero のハンドは表向きのまま、Villain は伏せる
-    await expect(table(page).getByLabel('Diamond の A')).toBeVisible();
-    await expect(table(page).getByLabel('Spade の J')).toHaveCount(0);
+    // Hero（BB）のハンドは表向きのまま、ほかの席は伏せる
+    await expect(table(page).getByLabel('Spade の J')).toBeVisible();
+    await expect(table(page).getByLabel('Diamond の A')).toHaveCount(0);
     await expect(page.locator('.hlog-list li')).toHaveCount(0);
 
     await page.getByRole('button', { name: '1手進む' }).click();
@@ -170,7 +171,6 @@ test.describe('次の Spot（14 章）', () => {
     title: 't',
     fmt: 'cash',
     hero: 'BTN',
-    villain: 'BB',
     street: 'turn',
     effective_stack: 100,
     answer_count: 0,
@@ -271,7 +271,6 @@ test.describe('スクロールしても固定する部分（2026-09-29）', () =
       title: `t${i}`,
       fmt: 'cash',
       hero: 'BTN',
-      villain: 'BB',
       street: 'turn',
       effective_stack: 100,
       answer_count: 0,

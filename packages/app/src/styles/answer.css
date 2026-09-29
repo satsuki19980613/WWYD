@@ -149,7 +149,6 @@
 .pseat-pos { font-family: var(--mono); font-size: 13px; font-weight: 400; letter-spacing: 0.06em; }
 .pseat-tag { font-family: var(--disp); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
 .pseat-tag.hero { color: var(--yellow); }
-.pseat-tag.villain { color: var(--cyan); }
 .pseat-stack { font-size: 17px; color: var(--fg); }
 .pseat-last {
   font-size: 14px;
@@ -161,15 +160,15 @@
 }
 .pseat.folded .pseat-plate { opacity: 0.45; }
 .pseat.folded .pseat-last { color: var(--faint); }
-/* Villain（あなた）= シアンの枠（仕様書の「青枠」）。Hero = 黄のラベル */
-.pseat.villain .pseat-plate { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+/* 回答者（あなた）の席 = シアンの枠。回答画面では Hero の席（2026-09-29）。Hero = 黄のラベル */
+.pseat.you .pseat-plate { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
 /* to act = 黄のグロー */
 .pseat.acting .pseat-plate {
   border-color: var(--yellow);
   box-shadow: 0 0 14px rgba(252, 238, 10, 0.45), inset 0 0 0 1px var(--yellow);
   animation: act-glow 1.4s var(--ease) infinite alternate;
 }
-.pseat.acting.villain .pseat-plate { box-shadow: 0 0 14px rgba(252, 238, 10, 0.45), inset 0 0 0 2px var(--cyan); }
+.pseat.acting.you .pseat-plate { box-shadow: 0 0 14px rgba(252, 238, 10, 0.45), inset 0 0 0 2px var(--cyan); }
 @keyframes act-glow { from { filter: brightness(0.9); } to { filter: brightness(1.15); } }
 .pchip {
   position: absolute;
@@ -525,7 +524,6 @@
 .ss-board { display: flex; gap: 2px; flex: none; }
 .ss-line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
 .ss-line b { font-family: var(--mono); font-weight: 400; }
-.ss-tag { margin-left: 4px; font-family: var(--disp); font-size: 11px; font-weight: 700; color: var(--yellow); }
 .ss-pot { margin-left: auto; flex: none; color: var(--fg); }
 .ans.sp .brush { padding: 6px; gap: 6px; }
 /* スマホのタイルは 2 行（名前 / 頻度・額）にして上部固定パネルを低くする */
@@ -631,7 +629,7 @@
 .rgrid.result { touch-action: manipulation; }
 .rgrid.result .rcell[aria-pressed='true'] { outline: 2px solid var(--yellow); outline-offset: 1px; z-index: 1; }
 .rgrid.result .rcell[aria-pressed='true']:focus-visible { outline-color: var(--cyan); }
-/* Villain の実際のハンド = 白枠（仕様書 §5.4.2） */
+/* Hero の実際のハンド = 白枠（答え合わせ。2026-09-29） */
 .rgrid.result .rcell.actual { box-shadow: inset 0 0 0 2px var(--fg); }
 .res-detail {
   display: flex;

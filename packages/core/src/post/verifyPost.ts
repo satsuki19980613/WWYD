@@ -42,7 +42,7 @@ export function verifyPost(input: PostInput): VerifiedPost {
   const r = replay(input.setup, input.actions, input.board.length);
 
   // 5〜6. スポットと派生メタの再計算・照合（金額は mbb の整数で比較）
-  const view = spotView(input.setup, input.actions, input.hero, input.spotIndex, input.villain);
+  const view = spotView(input.setup, input.actions, input.hero, input.spotIndex);
   if (!sameDerived(view.derived, input.derived)) fail('derived_mismatch');
 
   // 7. ショーダウンに残った Hero 以外の席でカードが無ければマック

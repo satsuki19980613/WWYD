@@ -104,7 +104,7 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
   if (board.length < rv.board.length || (board.length > 0 && board.length < 3)) issues.push('Board が正しくありません');
   if (board.length > 0 && board.length < 3) board.length = 0;
 
-  let draft: Draft = applyT4Game({ ...base, hero: rv.hero, hands, board, actions: [], spotIndex: null, villain: null }, rv.game);
+  let draft: Draft = applyT4Game({ ...base, hero: rv.hero, hands, board, actions: [], spotIndex: null }, rv.game);
   const { setup } = parseSettings(draft);
   const views: RowView[] = rv.rows.map(() => ({ pos: null, street: null, ok: false, mismatch: false }));
   if (!setup) {

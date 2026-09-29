@@ -50,7 +50,6 @@ export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unkn
       title: raw.title,
       fmt: raw.fmt,
       hero: raw.hero,
-      villain: raw.villain,
       street: d.street,
       effective_stack: d.effective_stack,
       keys: d.keys,

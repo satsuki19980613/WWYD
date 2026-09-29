@@ -109,7 +109,7 @@ async function concurrency(url) {
     .map((u, i) => `('${u}', 'c${i}', 'c${i}@example.test', false, now(), now())`).join(',')};`);
   try {
     const post = (await psql(url, '-At -f -', `select public.insert_post('${uid(0)}', jsonb_build_object(
-      'title','DB-19','fmt','cash','hero','BTN','villain','BB','street','turn','effective_stack',100,
+      'title','DB-19','fmt','cash','hero','BTN','street','turn','effective_stack',100,
       'keys','["fold","call","s1"]'::jsonb,'s1_label','raise','min_to',13,'max_to',95.7,'pot_base',22.1,
       'sb',0.5,'bb',1,'ante',0,'rake',null,'stacks','{"UTG":100,"HJ":100,"CO":100,"BTN":100,"SB":100,"BB":100}'::jsonb,
       'board','[]'::jsonb,'actions','[]'::jsonb,'spot_index',10,'stop_index',11,'hero_cards','["Ad","Kd"]'::jsonb));`)).trim();

@@ -10,13 +10,13 @@ const { setup, actions, stopIndex } = d.hand;
 describe('Replay（06 章 §4.3）', () => {
   const frames = answerFrames(setup, actions, stopIndex, d.post.street);
 
-  it('0 手目〜停止位置。停止位置は Villain の手番', () => {
+  it('0 手目〜停止位置。停止位置は Hero の手番', () => {
     expect(frames).toHaveLength(stopIndex + 1);
     const full = parsePostDetail(detailJson(undefined, { viewer: 'author' }));
-    const v = spotView(setup, full.hand.actions, 'BTN', 10, 'BB');
+    const v = spotView(setup, full.hand.actions, 'BTN', 10);
     expect(frames[stopIndex]).toEqual(v.state);
-    expect(actorAt(actions, stopIndex, stopIndex, 'BB')).toBe('BB');
-    expect(actorAt(actions, 0, stopIndex, 'BB')).toBe('UTG');
+    expect(actorAt(actions, stopIndex, stopIndex, 'BTN')).toBe('BTN');
+    expect(actorAt(actions, 0, stopIndex, 'BTN')).toBe('UTG');
   });
 
   it('Board は到達した Street の分', () => {
@@ -24,17 +24,18 @@ describe('Replay（06 章 §4.3）', () => {
     expect(boardCountOf(frames[stopIndex]!)).toBe(4);
   });
 
-  it('Villain を手前に時計回り', () => {
+  it('手前の席から時計回り', () => {
     expect(seatOrder('BB')).toEqual(['BB', 'UTG', 'HJ', 'CO', 'BTN', 'SB']);
     expect(seatOrder('UTG')).toEqual(['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB']);
   });
 
-  it('席の表示（停止位置: BTN が 6.5 Bet、BB の手番）', () => {
-    const seats = seatViews(frames[stopIndex]!, { hero: 'BTN', villain: 'BB', actor: 'BB' });
+  it('席の表示（停止位置: ターンで BB が Check、Hero = BTN の手番。回答者は Hero の席）', () => {
+    const seats = seatViews(frames[stopIndex]!, { hero: 'BTN', actor: 'BTN', you: true });
+    expect(seats[0]?.pos).toBe('BTN');
     const btn = seats.find((s) => s.pos === 'BTN')!;
     const bb = seats.find((s) => s.pos === 'BB')!;
-    expect(btn).toMatchObject({ hero: true, bet: 6500, last: 'Bet 6.5', stack: 100000 - 2500 - 1800 - 6500 });
-    expect(bb).toMatchObject({ villain: true, acting: true, bet: 0, last: 'Check' });
+    expect(btn).toMatchObject({ hero: true, you: true, acting: true, bet: 0, stack: 100000 - 2500 - 1800 });
+    expect(bb).toMatchObject({ hero: false, you: false, acting: false, bet: 0, last: 'Check' });
     expect(seats.find((s) => s.pos === 'UTG')).toMatchObject({ folded: true, last: 'Fold' });
   });
 

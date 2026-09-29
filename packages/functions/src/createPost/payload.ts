@@ -8,7 +8,6 @@ export type InsertPayload = {
   title: string;
   fmt: 'cash' | 'mtt';
   hero: string;
-  villain: string;
   street: string;
   effective_stack: number;
   keys: string[];
@@ -44,7 +43,6 @@ export function toInsertPayload(v: VerifiedPost): InsertPayload {
     title: v.title,
     fmt: v.fmt,
     hero: v.hero,
-    villain: v.villain,
     street: d.street,
     effective_stack: mbbToBb(d.effectiveStack),
     keys: [...d.keys],

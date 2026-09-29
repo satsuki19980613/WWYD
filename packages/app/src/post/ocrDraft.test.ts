@@ -56,6 +56,8 @@ const summary = (d: Draft): string[] => d.actions.map((a) => `${a.street} ${a.po
 describe('ocrPostability（読み込みの時点ではじく）', () => {
   it('Hero の Flop 以降の Action に出題できるものがあれば読み込む', () => {
     expect(ocrPostability(hs1)).toBe('ok');
+    // フロップの Hero のベットが最後のアクションでも出題できる（2026-09-29。Hero の手番そのものを出題する）
+    expect(ocrPostability({ ...hs1, actions: hs1.actions.slice(0, 8) })).toBe('ok');
   });
 
   it('Preflop で終わった Hand・Hero が Flop 以降に Action していない Hand ははじく', () => {
@@ -65,8 +67,7 @@ describe('ocrPostability（読み込みの時点ではじく）', () => {
     expect(ocrPostability(allin)).toBe('no_spot');
     // Hero が先にフォールドし、他の席でフロップ以降が続いた
     expect(ocrPostability({ ...hs1, hero: 'UTG' })).toBe('no_spot');
-    // フロップの Hero のベットが最後のアクション（後に誰もアクションしない）
-    expect(ocrPostability({ ...hs1, actions: hs1.actions.slice(0, 8) })).toBe('no_spot');
+
   });
 
   it('Flop 以降の Action があるのに Flop が読めなければ、読み取れない', () => {
@@ -93,13 +94,13 @@ describe('reviewFromOcr', () => {
 
 describe('evaluateReview', () => {
   it('そのまま反映すると、Hero・全席の Hand・Board・Action と T4 の Game の設定が入り、最後まで再生できる', () => {
-    const base: Draft = { ...emptyDraft(), fmt: 'mtt', sb: '0.4', ante: '0.2', title: '残る', spotIndex: 3, villain: 'BB' };
+    const base: Draft = { ...emptyDraft(), fmt: 'mtt', sb: '0.4', ante: '0.2', title: '残る', spotIndex: 3 };
     const ev = evaluateReview(base, reviewFromOcr(allin, 'normal', 'BTN'));
     // プリフロップのオールインで終わったので、出題できるアクションは無い（読み込みの時点ではじく種類）
     expect(ev.issues).toEqual([NO_SPOT_MESSAGE]);
     expect(ev.rows.every((r) => r.ok && !r.mismatch)).toBe(true);
     const d = ev.draft;
-    expect([d.fmt, d.sb, d.ante, d.rake, d.title, d.spotIndex, d.villain, d.hero]).toEqual(['cash', '0.5', '0', '5', '残る', null, null, 'SB']);
+    expect([d.fmt, d.sb, d.ante, d.rake, d.title, d.spotIndex, d.hero]).toEqual(['cash', '0.5', '0', '5', '残る', null, 'SB']);
     expect(d.hands).toEqual({ UTG: 'AhAd', HJ: 'JsTd', CO: '9d4h', BTN: 'Jc3s', SB: 'AsKs', BB: '7d2c' });
     expect(d.board).toEqual(allin.board);
     expect(summary(d)).toEqual([

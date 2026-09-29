@@ -165,7 +165,6 @@ export function NewPostScreen(): JSX.Element {
     <SpotSection
       draft={d}
       onSelectSpot={(i) => update((x) => selectSpot(x, i))}
-      onVillain={(v) => update((x) => ({ ...x, villain: v }))}
       onTitle={(title) => update((x) => ({ ...x, title }))}
     />
   );
@@ -269,7 +268,7 @@ function submissionErrors(d: Draft): string[] {
 function stepDone(d: Draft, handDone: boolean): boolean[] {
   const settingsOk = parseSettings(d).invalid.length === 0;
   const handsOk = d.players !== null && seatsOf(d).every((p) => isHandComplete(d.hands[p])) && d.hands[d.hero].length === 4;
-  return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.villain !== null && d.title.trim() !== ''];
+  return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.title.trim() !== ''];
 }
 
 function sameAction(a: Action, b: Action | undefined): boolean {
