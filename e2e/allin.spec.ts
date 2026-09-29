@@ -1,6 +1,6 @@
 /**
  * オールインを含むハンドの投稿の E2E（2026-09-29 さつき「オールインも他のアクションと変わらない」）。
- * 見本（packages/core/src/post/allinFixtures.ts の 22 通り）を画面の操作どおりに入れ、
+ * 見本（packages/core/src/post/allinFixtures.ts の 23 通り）を画面の操作どおりに入れ、
  * Spot の候補が Flop 以降の Hero の手番すべて（オールインも、その前の手番も）になることと、
  * どの候補を選んでも投稿できることを確かめる。
  * 投稿は本物の create-post の処理（createPostHandler。検証は packages/core）に通し、DB への保存だけを偽にする。

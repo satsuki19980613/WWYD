@@ -1,7 +1,7 @@
 import type { OcrAction, OcrResult } from '@wwyd/ocr';
 import { describe, expect, it } from 'vitest';
-import { emptyDraft, parseSettings, phaseOf, type Draft } from './draft.ts';
-import { evaluateReview, NO_SPOT_MESSAGE, ocrPostability, reviewFromOcr, type Review, type ReviewRow } from './ocrDraft.ts';
+import { emptyDraft, parseSettings, phaseOf, PREFLOP_ALLIN, type Draft } from './draft.ts';
+import { evaluateReview, ocrPostability, reviewFromOcr, type Review, type ReviewRow } from './ocrDraft.ts';
 
 const act = (street: OcrAction['street'], pos: OcrAction['pos'], verb: OcrAction['verb'], amount: number | null = null): OcrAction => ({
   street,
@@ -54,30 +54,71 @@ const row = (verb: ReviewRow['verb'], amount: number | null = null): ReviewRow =
 const summary = (d: Draft): string[] => d.actions.map((a) => `${a.street} ${a.pos} ${a.type} ${a.to ?? ''}`.trim());
 
 describe('ocrPostability（読み込みの時点ではじく）', () => {
+  const postable = (r: OcrResult, base: Draft = emptyDraft()): ReturnType<typeof ocrPostability> => ocrPostability(r, base, 'normal');
+
   it('Hero の Flop 以降の Action に出題できるものがあれば読み込む', () => {
-    expect(ocrPostability(hs1)).toBe('ok');
+    expect(postable(hs1)).toBe('ok');
     // フロップの Hero のベットが最後のアクションでも出題できる（2026-09-29。Hero の手番そのものを出題する）
-    expect(ocrPostability({ ...hs1, actions: hs1.actions.slice(0, 8) })).toBe('ok');
+    expect(postable({ ...hs1, actions: hs1.actions.slice(0, 8) })).toBe('ok');
   });
 
   it('Preflop で終わった Hand・Hero が Flop 以降に Action していない Hand ははじく', () => {
     const pfOnly: OcrResult = { ...hs1, board: [], actions: hs1.actions.slice(0, 5).concat(act('pf', 'BB', 'fold')) };
-    expect(ocrPostability(pfOnly)).toBe('no_spot');
-    // プリフロップのオールインでボードが開いても、Hero のフロップ以降のアクションは無い
-    expect(ocrPostability(allin)).toBe('no_spot');
+    expect(postable(pfOnly)).toBe('no_spot');
     // Hero が先にフォールドし、他の席でフロップ以降が続いた
-    expect(ocrPostability({ ...hs1, hero: 'UTG' })).toBe('no_spot');
+    expect(postable({ ...hs1, hero: 'UTG' })).toBe('no_spot');
 
   });
 
   it('Flop 以降の Action があるのに Flop が読めなければ、読み取れない', () => {
-    expect(ocrPostability({ ...hs1, board: [] })).toBe('unreadable');
-    expect(ocrPostability({ ...hs1, board: ['Qh', '8c'] })).toBe('unreadable');
+    expect(postable({ ...hs1, board: [] })).toBe('unreadable');
+    expect(postable({ ...hs1, board: ['Qh', '8c'] })).toBe('unreadable');
   });
 
   it('Hero やどこかの席が読めなければ、はじかずに確認画面で直してもらう', () => {
-    expect(ocrPostability({ ...hs1, hero: null })).toBe('ok');
-    expect(ocrPostability({ ...hs1, hero: 'UTG', actions: [act('pf', null, 'fold'), ...hs1.actions.slice(1)] })).toBe('ok');
+    expect(postable({ ...hs1, hero: null })).toBe('ok');
+    expect(postable({ ...hs1, hero: 'UTG', actions: [act('pf', null, 'fold'), ...hs1.actions.slice(1)] })).toBe('ok');
+  });
+});
+
+describe('ocrPostability: Preflop の All-in ははじく（Hero でもほかの席でも。2026-09-29 さつき）', () => {
+  const postable = (r: OcrResult, base: Draft = emptyDraft()): ReturnType<typeof ocrPostability> => ocrPostability(r, base, 'normal');
+  const pf = (hero: OcrResult['hero'], lines: [OcrAction['pos'], OcrAction['verb'], number?][], rest: OcrAction[] = []): OcrResult => ({
+    hero,
+    hands: {},
+    board: ['Qh', '8c', '2h', '7s', '3d'],
+    actions: [...lines.map(([pos, verb, amount]) => act('pf', pos, verb, amount ?? null)), ...rest],
+    problems: [],
+  });
+
+  it('Hero の All-in（T4 は 100bb の All-in を「Raise 100bb」と書く）', () => {
+    expect(postable(allin)).toBe('preflop_allin');
+  });
+  it('Hero が Fold したあと、ほかの席が All-in と Call', () => {
+    const r = pf('BB', [['UTG', 'raise', 2], ['HJ', 'raise', 6.5], ['CO', 'raise', 16.25], ['BTN', 'raise', 100], ['SB', 'fold'], ['BB', 'fold'], ['UTG', 'fold'], ['HJ', 'fold'], ['CO', 'call', 100]]);
+    expect(postable(r)).toBe('preflop_allin');
+  });
+  it('All-in と書かれた行', () => {
+    expect(postable(pf('BTN', [['UTG', 'allin', 100], ['HJ', 'fold'], ['CO', 'fold'], ['BTN', 'fold'], ['SB', 'fold'], ['BB', 'fold']]))).toBe('preflop_allin');
+  });
+  it('短いスタックの All-in に Hero が Call し、Flop 以降を別の席と続けた（サイドポット）', () => {
+    const base: Draft = { ...emptyDraft(), stacks: { ...emptyDraft().stacks, UTG: '10' } };
+    const r = pf('BTN', [['UTG', 'raise', 10], ['HJ', 'fold'], ['CO', 'fold'], ['BTN', 'call', 10], ['SB', 'fold'], ['BB', 'call', 10]], [
+      act('flop', 'BB', 'check'),
+      act('flop', 'BTN', 'bet', 5),
+      act('flop', 'BB', 'fold'),
+    ]);
+    expect(postable(r, base)).toBe('preflop_allin');
+    // スタックが画像と合わなければ（全員 100bb）All-in ではない
+    expect(postable(r)).toBe('ok');
+  });
+  it('Flop 以降の All-in ははじかない', () => {
+    const r = pf('BTN', [['UTG', 'fold'], ['HJ', 'fold'], ['CO', 'fold'], ['BTN', 'raise', 2.5], ['SB', 'fold'], ['BB', 'call']], [
+      act('flop', 'BB', 'check'),
+      act('flop', 'BTN', 'raise', 97.5),
+      act('flop', 'BB', 'call'),
+    ]);
+    expect(postable(r)).toBe('ok');
   });
 });
 
@@ -96,8 +137,8 @@ describe('evaluateReview', () => {
   it('そのまま反映すると、Hero・全席の Hand・Board・Action と T4 の Game の設定が入り、最後まで再生できる', () => {
     const base: Draft = { ...emptyDraft(), fmt: 'mtt', sb: '0.4', ante: '0.2', title: '残る', spotIndex: 3 };
     const ev = evaluateReview(base, reviewFromOcr(allin, 'normal', 'BTN'));
-    // プリフロップのオールインで終わったので、出題できるアクションは無い（読み込みの時点ではじく種類）
-    expect(ev.issues).toEqual([NO_SPOT_MESSAGE]);
+    // プリフロップのオールインで終わった（読み込みの時点ではじく種類）
+    expect(ev.issues).toEqual([PREFLOP_ALLIN]);
     expect(ev.rows.every((r) => r.ok && !r.mismatch)).toBe(true);
     const d = ev.draft;
     expect([d.fmt, d.sb, d.ante, d.rake, d.title, d.spotIndex, d.hero]).toEqual(['cash', '0.5', '0', '5', '残る', null, 'SB']);

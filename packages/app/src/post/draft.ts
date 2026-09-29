@@ -4,6 +4,7 @@ import {
   BOARD_COUNT,
   bbToMbb,
   formatBb,
+  hasPreflopAllin,
   legal,
   mbbToBb,
   POSITIONS,
@@ -408,8 +409,12 @@ export function actionLog(setup: HandSetup, actions: readonly Action[]): LogItem
 
 // ---- 下書きの操作 ----
 
-/** スポットの候補（Flop 以降の Hero の手番。2026-09-29）。表示「Turn / BTN Bet 6.5」（その手番で Hero が実際にしたアクション） */
+/**
+ * スポットの候補（Flop 以降の Hero の手番。2026-09-29）。表示「Turn / BTN Bet 6.5」（その手番で Hero が実際にしたアクション）。
+ * Preflop でだれかが All-in になったハンドは候補なし（投稿できない。2026-09-29 さつき）。
+ */
 export function candidates(d: Draft): { index: number; label: string }[] {
+  if (preflopAllinOf(d)) return [];
   return spotCandidates(d.actions, d.hero).map((c) => {
     const a = d.actions[c.index] as Action;
     const size = a.to === undefined ? '' : ` ${formatBb(a.to)}`;
@@ -478,37 +483,34 @@ export function titleLength(title: string): number {
   return [...title].length;
 }
 
-export const PREFLOP_ALLIN = 'Preflop で All-in になった Hand は投稿できません';
-export const NO_HERO_POSTFLOP = 'Flop 以降に Hero の Action が無い Hand は投稿できません';
+export const PREFLOP_ALLIN = messageForCode('preflop_allin');
+export const NO_HERO_POSTFLOP = messageForCode('no_spot');
 
-/**
- * `add` を入れると Preflop で All-in になる（Hero が Preflop で All-in になる、または Hero が残ったまま誰も
- * Action できなくなりランアウトになる）か。そのハンドは Flop 以降に Hero の手番が無く投稿できないので、
- * Action の入力で受け付けない（2026-09-29 さつき）。相手の Preflop の All-in そのものは受け付ける（Hero と別の席が続けられる）。
- */
-export function makesPreflopAllin(d: Draft, add: readonly Action[]): boolean {
+/** 下書きのハンドで Preflop にだれかが All-in になったか（core の hasPreflopAllin。再生できなければ false） */
+function preflopAllinOf(d: Draft, add: readonly Action[] = []): boolean {
   const setup = parseSettings(d).setup;
-  if (!setup || !add.some((a) => a.street === 'pf')) return false;
-  let s: State;
+  if (!setup) return false;
   try {
-    const states = runActions(setup, [...d.actions, ...add]);
-    s = states[states.length - 1] as State;
+    return hasPreflopAllin(setup, [...d.actions, ...add]);
   } catch {
     return false;
   }
-  if (s.street !== 'pf' || s.folded.has(d.hero)) return false;
-  return s.stacks[d.hero] === 0 || status(s).kind === 'runout';
 }
 
 /**
- * 最後まで入れたハンドに Spot の候補が無いとき（Flop 以降に Hero の手番が無い）の投稿のエラー。候補があれば null。
- * Hero が Preflop で All-in になって（All-in に Call して）ショーダウンまで進んだハンドはそう伝える（2026-09-29 さつき）。
+ * `add` を入れると Preflop でだれかが All-in になる（Hero でもほかの席でも）か。そのハンドは投稿できないので、
+ * Action の入力で受け付けない（2026-09-29 さつき）。すでに All-in があるハンド（前の版の下書きなど）は止めない。
  */
-function noSpotError(d: Draft, phase: Extract<Phase, { kind: 'done' }>): string | null {
-  if (candidates(d).length > 0) return null;
-  const heroAllinPf =
-    phase.result.kind === 'showdown' && !phase.state.folded.has(d.hero) && d.actions.every((a) => a.street === 'pf');
-  return heroAllinPf ? PREFLOP_ALLIN : NO_HERO_POSTFLOP;
+export function makesPreflopAllin(d: Draft, add: readonly Action[]): boolean {
+  return add.some((a) => a.street === 'pf') && !preflopAllinOf(d) && preflopAllinOf(d, add);
+}
+
+/**
+ * 最後まで入れたハンドに Spot の候補が無いときの投稿のエラー（2026-09-29 さつき）。
+ * Preflop でだれかが All-in になったハンドはそう伝え、それ以外（Hero の Preflop の Fold など）は Flop 以降に Hero の Action が無いと伝える。
+ */
+function noSpotError(d: Draft): string {
+  return preflopAllinOf(d) ? PREFLOP_ALLIN : NO_HERO_POSTFLOP;
 }
 
 /**
@@ -517,7 +519,7 @@ function noSpotError(d: Draft, phase: Extract<Phase, { kind: 'done' }>): string 
  */
 export function buildSubmission(d: Draft): Submission {
   const errors: string[] = [];
-  const { setup, rake, invalid } = parseSettings(d);
+  const { setup, invalid } = parseSettings(d);
   const seats = seatsOf(d);
   if (d.players === null) errors.push(PLAYERS_REQUIRED);
   for (const f of invalid) errors.push(`${FIELD_LABEL[f]} の値が正しくありません`);
@@ -530,54 +532,80 @@ export function buildSubmission(d: Draft): Submission {
 
   const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
-  if (d.spotIndex === null) errors.push((phase.kind === 'done' && noSpotError(d, phase)) || 'Spot を選択してください');
+  if (d.spotIndex === null) errors.push(phase.kind === 'done' && candidates(d).length === 0 ? noSpotError(d) : 'Spot を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };
   }
 
-  const known: Record<string, Card[]> = {};
-  for (const p of seats) {
-    const cards = handCards(d.hands[p]);
-    if (p !== d.hero && cards.length === 2) known[p] = cards;
-  }
-  const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
-
   try {
-    const view = spotView(setup, d.actions, d.hero, d.spotIndex);
-    // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
-    const stacks: Record<string, number> = {};
-    for (const p of seats) stacks[p] = mbbToBb(setup.stacks[p]);
-    const body: Record<string, unknown> = {
-      title: d.title.trim(),
-      fmt: d.fmt,
-      sb: mbbToBb(setup.sb),
-      bb: mbbToBb(setup.bb),
-      ante: mbbToBb(setup.ante),
-      rake: d.fmt === 'cash' ? rake : null,
-      stacks,
-      hero: d.hero,
-      hero_cards: heroCards,
-      known_cards: known,
-      // 到達したストリートより後のボード（「1つ戻す」で残ったカード）は送らない
-      board: d.board.slice(0, phase.boardCount),
-      actions: d.actions.map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) })),
-      spot_index: d.spotIndex,
-      derived: {
-        street: view.derived.street,
-        keys: view.derived.keys,
-        s1_label: view.derived.s1Label,
-        min_to: bb(view.derived.minTo),
-        max_to: bb(view.derived.maxTo),
-        pot_base: mbbToBb(view.derived.potBase),
-        effective_stack: mbbToBb(view.derived.effectiveStack),
-        stop_index: view.derived.stopIndex,
-      },
-    };
+    const body = submissionBody(d);
     verifyPost(validateInput(body));
     return { ok: true, body };
   } catch (e) {
     if (e instanceof ValidationError) return { ok: false, errors: [messageForCode(e.code, e.index)] };
     throw e;
   }
+}
+
+/**
+ * 下書きから create-post に送る本文を作る（画面の検査はしない。入力のまま送り、正しくなければサーバーが断る）。
+ * 画面のエラーはすべてサーバーも返す（2026-09-29 さつき）ことを、この本文をサーバーと同じ検証にかけて試験する（draft.test）。
+ */
+export function submissionBody(d: Draft): Record<string, unknown> {
+  const { setup } = parseSettings(d);
+  const seats = seatsOf(d);
+  // 数の欄は、読めれば core の丸めを通した値、読めなければ入力のまま数にする（サーバーが断る）
+  const num = (text: string, parsed: Mbb | undefined): number => (parsed !== undefined ? mbbToBb(parsed) : Number(text.trim()));
+  const stacks: Record<string, number> = {};
+  for (const p of seats) stacks[p] = num(d.stacks[p], setup?.stacks[p]);
+  const known: Record<string, Card[]> = {};
+  for (const p of seats) {
+    const cards = handCards(d.hands[p]);
+    if (p !== d.hero && cards.length > 0) known[p] = cards;
+  }
+  let board = d.board;
+  let derived: Record<string, unknown> | null = null;
+  if (setup) {
+    try {
+      const phase = phaseOf(setup, d.actions, d.board);
+      // 到達したストリートより後のボード（「1つ戻す」で残ったカード）は送らない
+      if (phase.kind === 'done') board = d.board.slice(0, phase.boardCount);
+      if (d.spotIndex !== null) {
+        const v = spotView(setup, d.actions, d.hero, d.spotIndex).derived;
+        const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
+        derived = {
+          street: v.street,
+          keys: v.keys,
+          s1_label: v.s1Label,
+          min_to: bb(v.minTo),
+          max_to: bb(v.maxTo),
+          pot_base: mbbToBb(v.potBase),
+          effective_stack: mbbToBb(v.effectiveStack),
+          stop_index: v.stopIndex,
+        };
+      }
+    } catch (e) {
+      if (!(e instanceof ValidationError)) throw e;
+    }
+  }
+  const rake = d.rake.trim();
+  return {
+    title: d.title.trim(),
+    fmt: d.fmt,
+    sb: num(d.sb, setup?.sb),
+    bb: 1,
+    ante: d.ante.trim() === '' ? 0 : num(d.ante, setup?.ante),
+    rake: d.fmt === 'cash' && rake !== '' ? Number(rake) : null,
+    // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
+    stacks,
+    hero: d.hero,
+    hero_cards: handCards(d.hands[d.hero]),
+    known_cards: known,
+    board,
+    actions: d.actions.map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) })),
+    spot_index: d.spotIndex,
+    // スポットが決まらなければ派生メタは null（サーバーは malformed で断る）
+    derived,
+  };
 }

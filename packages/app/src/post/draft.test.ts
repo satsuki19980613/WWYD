@@ -1,4 +1,4 @@
-import { bbToMbb, playerCountOf, type Action, type HandSetup, type Pos } from '@wwyd/core';
+import { bbToMbb, playerCountOf, validateInput, ValidationError, verifyPost, type Action, type HandSetup, type Pos } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
 import { ALLIN_CASES, allinHand, allinRaw, allinTitle } from '../../../core/src/post/allinFixtures.ts';
 import { hmw, hs1, hs3, type Raw } from '../../../core/src/post/postFixtures.ts';
@@ -29,6 +29,7 @@ import {
   phaseOf,
   removeBoardFrom,
   selectSpot,
+  submissionBody,
   sizeNote,
   sizePresets,
   sliderStep,
@@ -526,15 +527,28 @@ describe('Spot の候補が無いハンドの投稿のエラー', () => {
     expect(buildSubmission(d)).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
   });
   it('Hero が Preflop で Fold、または Preflop で全員が Fold', () => {
-    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB r100, UTG c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB f'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
     expect(buildSubmission(pf('UTG..CO f, BTN r2.5, SB f, BB f'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
   });
-  it('Hero が Preflop で Fold したあと、ほかの席が All-in', () => {
-    expect(buildSubmission(pf('UTG..CO f, BTN f, SB r100, BB c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+  it('Hero が Preflop で Fold したあと、ほかの席が All-in（2026-09-29 さつき: Hero でもほかの席でも）', () => {
+    expect(buildSubmission(pf('UTG..CO f, BTN f, SB r100, BB c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB r100, UTG c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+  });
+  it('短い UTG の Preflop の All-in のあと、Hero が Flop 以降を続けた（サイドポット）も候補なし', () => {
+    const raw = {
+      ...hs1(),
+      stacks: { ...(hs1().stacks as Record<string, number>), UTG: 10 },
+      actions: acts({ pf: 'UTG r10, HJ..CO f, BTN c, SB f, BB c', flop: 'BB x, BTN b5, BB f' }).map((a) =>
+        a.to === undefined ? { ...a } : { ...a, to: a.to / 1000 },
+      ),
+    };
+    const d = { ...play(raw), title: '見本' };
+    expect(candidates(d)).toEqual([]);
+    expect(buildSubmission(d)).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
   });
 });
 
-describe('Preflop で All-in になる Action は受け付けない（2026-09-29）', () => {
+describe('Preflop で All-in になる Action は受け付けない（2026-09-29。Hero でもほかの席でも）', () => {
   const at = (line: string, stacks?: Record<string, number>): { d: Draft; last: Action } => {
     const all = acts({ pf: line });
     const raw = { ...hs1(), actions: [], board: [], ...(stacks ? { stacks } : {}) };
@@ -548,23 +562,92 @@ describe('Preflop で All-in になる Action は受け付けない（2026-09-29
   };
   const S = { ...(hs1().stacks as Record<string, number>) };
 
-  it('Hero の All-in の Raise・All-in の Call', () => {
+  it('Hero の All-in の Raise', () => {
     expect(refused('UTG..CO f, BTN r100')).toBe(true);
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN c')).toBe(true);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r10, BTN r100')).toBe(true);
   });
-  it('相手の All-in にスタックの多い Hero が Call し、誰も Action できなくなる', () => {
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r30, BTN c', { ...S, BB: 30 })).toBe(true);
+  it('相手の All-in の Raise（100bb でも、短いスタックでも）', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100')).toBe(true);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r30', { ...S, BB: 30 })).toBe(true);
+    expect(refused('UTG r10', { ...S, UTG: 10 })).toBe(true);
   });
-  it('短い UTG の All-in に Hero が Call し、最後の BB の Fold でランアウトになる', () => {
-    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB c', { ...S, UTG: 10 })).toBe(false);
-    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB f', { ...S, UTG: 10 })).toBe(true);
+  it('短いスタックの Call で All-in になる', () => {
+    expect(refused('UTG..CO f, BTN r20, SB f, BB c', { ...S, BB: 15 })).toBe(true);
   });
-  it('相手の Preflop の All-in そのもの・Hero の Fold・Flop 以降の All-in は受け付ける', () => {
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100')).toBe(false);
-    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN f')).toBe(false);
+  it('Hero の Fold・All-in にならない Action・Flop 以降の All-in は受け付ける', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB f')).toBe(false);
     expect(refused('UTG..CO f, BTN r2.5, SB f, BB c')).toBe(false);
     const d = play({ ...hs1(), actions: rawActs(hs1(), 'BB x') });
     expect(makesPreflopAllin(d, [{ street: 'flop', pos: 'BTN', type: 'bet', to: 97500 }])).toBe(false);
+  });
+  it('すでに Preflop の All-in があるハンド（前の版の下書きなど）は、続きの Action を止めない', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN f')).toBe(false);
+  });
+});
+
+describe('画面のエラーはすべてサーバーも返す（2026-09-29 さつき）', () => {
+  /** 本文をサーバー（create-post）と同じ検証にかけたエラーコード。通れば null */
+  const serverCode = (body: Record<string, unknown>): string | null => {
+    try {
+      verifyPost(validateInput(body));
+      return null;
+    } catch (e) {
+      if (e instanceof ValidationError) return e.code;
+      throw e;
+    }
+  };
+  const ok = (): Draft => enter(hs1());
+  /** 画面が Spot の選択を許さないハンドに、画面を通さずスポットを付けて送った本文（派生メタは形だけ整える） */
+  const forced = (d: Draft, spotIndex: number): Record<string, unknown> => ({ ...submissionBody({ ...d, spotIndex }), derived: hs1().derived });
+  const pfAllin = ALLIN_CASES.find((c) => c.refusedAt === 0) as (typeof ALLIN_CASES)[number];
+
+  it('正しい下書きは画面もサーバーも通る', () => {
+    expect(buildSubmission(ok()).ok).toBe(true);
+    expect(serverCode(submissionBody(ok()))).toBeNull();
+  });
+
+  it.each<[string, () => Draft, string, string]>([
+    ['人数を選んでいない', () => ({ ...ok(), players: null }), PLAYERS_REQUIRED, 'invalid_settings'],
+    ['SB が BB より大きい', () => ({ ...ok(), sb: '2' }), 'SB の値が正しくありません', 'invalid_settings'],
+    ['SB が数でない', () => ({ ...ok(), sb: 'abc' }), 'SB の値が正しくありません', 'malformed'],
+    ['Ante が負', () => ({ ...ok(), ante: '-1' }), 'Ante の値が正しくありません', 'invalid_settings'],
+    ['Rake が 100 を超える', () => ({ ...ok(), rake: '101' }), 'Rake の値が正しくありません', 'invalid_settings'],
+    ['Rake の小数が 3 桁', () => ({ ...ok(), rake: '1.234' }), 'Rake の値が正しくありません', 'malformed'],
+    ['Stack が 0', () => ({ ...ok(), stacks: { ...ok().stacks, CO: '0' } }), 'CO の Stack の値が正しくありません', 'invalid_settings'],
+    ['Hero の Hand が無い', () => ({ ...ok(), hands: { ...ok().hands, BTN: '' } }), 'Hero（BTN）の Hand を入力してください', 'hero_cards_required'],
+    ['ほかの席の Hand が途中', () => ({ ...ok(), hands: { ...ok().hands, CO: 'Ah' } }), 'CO の Hand が途中です', 'malformed'],
+    ['同じカードを 2 度使う', () => ({ ...ok(), hands: { ...ok().hands, CO: 'AdQs' } }), '入力内容を確認してください', 'duplicate_card'],
+    ['Hand が最後まで無い', () => undoAction(ok()), 'Hand を最後まで入力してください', 'hand_incomplete'],
+    ['Spot を選んでいない', () => ({ ...ok(), spotIndex: null }), 'Spot を選択してください', 'malformed'],
+    ['タイトルが無い', () => ({ ...ok(), title: '  ' }), 'タイトルを入力してください', 'invalid_title'],
+    ['タイトルが 41 文字', () => ({ ...ok(), title: 'あ'.repeat(41) }), messageForCode('invalid_title'), 'invalid_title'],
+  ])('%s', (_, make, message, code) => {
+    const d = make();
+    const s = buildSubmission(d);
+    expect(s.ok ? [] : s.errors).toContain(message);
+    expect(serverCode(submissionBody(d))).toBe(code);
+  });
+
+  it('Flop 以降に Hero の Action が無い: 画面と同じ文言をサーバーも返す（no_spot）', () => {
+    const d = { ...play({ ...hs1(), hero: 'UTG', hero_cards: ['Qs', 'Qd'] }), title: '見本' };
+    expect(buildSubmission(d)).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+    expect(serverCode(forced(d, 0))).toBe('no_spot');
+    expect(messageForCode('no_spot')).toBe(NO_HERO_POSTFLOP);
+  });
+
+  it('Preflop で All-in: 画面と同じ文言をサーバーも返す（Hero が Flop 以降を続けても。preflop_allin）', () => {
+    const d = { ...play(allinHand(pfAllin)), title: '見本' };
+    expect(buildSubmission(d)).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+    const heroFlop = d.actions.findIndex((a) => a.pos === d.hero && a.street !== 'pf');
+    expect(serverCode(forced(d, heroFlop))).toBe('preflop_allin');
+    expect(messageForCode('preflop_allin')).toBe(PREFLOP_ALLIN);
+  });
+
+  it('入力で受け付けない額（画面はトースト）もサーバーが断る', () => {
+    const d = ok();
+    const actions = d.actions.map((a, i) => (i === 3 ? { ...a, to: 1500 } : a)); // BTN の Raise を最小額 2bb より小さく
+    const body = { ...submissionBody(d), actions: actions.map((a) => (a.to === undefined ? { ...a } : { ...a, to: a.to / 1000 })) };
+    expect(serverCode(body)).toBe('amount_out_of_range');
   });
 });
 

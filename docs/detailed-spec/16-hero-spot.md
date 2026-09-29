@@ -22,13 +22,18 @@ Villain（Hero のアクションに答える相手の席）の概念をなく�
 - **実効スタック**: Hero と、その時点でハンドに残っている相手のうち最も深い席の、開始時のスタックの小さい方。
 - **答え合わせ**: Hero の実際のアクション（出題のアクション）と Hero のハンド（白枠）。Hero のアクションはいつも分かっているので、どの投稿でも答え合わせができる。
 - エラーコード `invalid_villain` はなくした（候補でないスポットは `invalid_spot`）。
-- **候補が無いハンド**（Flop 以降に Hero の手番が無い）は投稿できない。Spot の欄は「候補なし」。「投稿する」を押すとエラー（2026-09-29 さつき）:
-  Hero が Preflop で All-in になった（All-in に Call した、またはそれ以上 Action できない）ハンドは「Preflop で All-in になった Hand は投稿できません」、
-  それ以外（Hero の Preflop の Fold、Preflop で全員が Fold など）は「Flop 以降に Hero の Action が無い Hand は投稿できません」。
-- **Preflop で All-in になる Action は入力で受け付けない**（2026-09-29 さつき）。押すとエラー「Preflop で All-in になった Hand は投稿できません」を出し、手番はそのまま（`makesPreflopAllin`）。
-  対象は、Hero が Preflop で All-in になる Action（All-in の Raise・All-in の Call）と、Hero が残ったまま誰も Action できなくなる Action（相手の All-in にスタックの多い Hero が Call して終わる、最後の席の Fold でランアウトになる など）。
-  相手の Preflop の All-in そのものは受け付ける（Hero と別の席が Flop 以降を続けられる）。OCR で読み込んだハンドなどで入ってしまった場合は、上の投稿時のエラーで止める。
-- オールインは他のアクションと同じ扱い（Hero の All-in も、相手の All-in への Call / Fold も、その前の手番も候補）。22 通りの見本 `packages/core/src/post/allinFixtures.ts` で core・下書き・E2E を試験する。
+- **Preflop でだれかが All-in になったハンドは投稿できない**（Hero でもほかの席でも。サイドポットで Hero が Flop 以降を続けたハンドも。2026-09-29 さつき）。
+  判定は core の `hasPreflopAllin`（Preflop のアクションのあとでスタックが 0 の席がある）の 1 つだけで、次のすべてがこれを使う:
+  - サーバー: `verifyPost` が 422 `preflop_allin`（画面の文言「Preflop で All-in になった Hand は投稿できません」）。
+  - 投稿画面の Spot の候補: 「候補なし」。
+  - **Action の入力で受け付けない**: 押すとエラー「Preflop で All-in になった Hand は投稿できません」を出し、手番はそのまま（`makesPreflopAllin`）。All-in の Raise・All-in になる Call（短いスタック）のどちらも。すでに Preflop の All-in があるハンド（前の版の下書きなど）は続きを止めない（投稿時のエラーで止める）。
+  - T4 の画像の読み込み: 確認画面を開かずにエラー（06 章 §3.9）。
+- **候補が無いハンド**は投稿できない。Spot の欄は「候補なし」。「投稿する」を押すとエラー: Preflop の All-in は「Preflop で All-in になった Hand は投稿できません」、
+  それ以外（Hero の Preflop の Fold、Preflop で全員が Fold など）は「Flop 以降に Hero の Action が無い Hand は投稿できません」。サーバーも同じ文言になるコードを返す（`preflop_allin` / `no_spot`）。
+- **投稿画面のエラーはすべてサーバーも返す**（2026-09-29 さつき）。画面の検査は送る前の案内で、正はサーバー（`validateInput`・`verifyPost`）。
+  画面を通さずに送った本文（`submissionBody`）でも、画面が出すエラーごとにサーバーが 422 で断ることを `draft.test.ts`「画面のエラーはすべてサーバーも返す」と create-post の `handler.test.ts` で試験する。
+  文言が画面と同じになるのは `preflop_allin`・`no_spot`・`invalid_title`・`duplicate_card` 等。人数・基本設定・途中の Hand・Spot の未選択は、画面の文言の方が細かい（サーバーは `invalid_settings` / `malformed`。画面を通さない送信だけが受けるので、細かく分けない）。
+- Flop 以降のオールインは他のアクションと同じ扱い（Hero の All-in も、相手の All-in への Call / Fold も、その前の手番も候補）。23 通りの見本 `packages/core/src/post/allinFixtures.ts` で core・下書き・E2E を試験する。
 
 見本（`packages/core/src/post/postFixtures.ts`）:
 
@@ -50,6 +55,7 @@ Villain（Hero のアクションに答える相手の席）の概念をなく�
 
 ## 4. DB（01・02 章を改める）
 
+- 停止位置の制約を `stop_index = spot_index` に置き換えた（`20260929000001_stop_is_spot.sql`。以前は `stop_index > spot_index`）。
 - `posts.villain` 列と `posts_hero_ne_villain` 制約を外した。`insert_post` は `villain` を受け取らない。`list_posts`・`get_post_detail` は `villain` を返さない。
 - 試験データ（`db/seed/*.sql`）: H-S1 の BTN の手番 7 / 10 / 13（キー check / s1）。回答は AA を Bet、22 を Check（大量の試験データは Check と Bet を混ぜる）。
 - create-post（Neon Function）も `villain` を送らない・保存しない形に変わったので、**dev・本番に配備し直す**（マイグレーションと同時に）。

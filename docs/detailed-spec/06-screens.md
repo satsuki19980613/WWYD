@@ -282,6 +282,8 @@ A  2  3  [♠]
 - **投稿できないハンドは読み込みの時点ではじく**（2026-09-28 さつき）。確認画面を開かず、ボタンの下にエラー表示。フォームは変えない。判定は画像で読んだ席・ストリート・ボードのまま（再生しない。`ocrPostability`）。
   - フロップが開いていない、または Hero のフロップ以降のアクションに出題できるもの（§3.7）が無い: 「フロップ以降の Hero のアクションがないハンドです」。
   - フロップ以降のアクションがあるのにフロップが読めない（スクリーンショットなど）: 「読み取れませんでした」（その画像はあきらめてもらう）。
+  - **Preflop でだれかが All-in になった**（Hero でもほかの席でも。サイドポットで Hero が Flop 以降を続けたハンドも）: 「Preflop で All-in になった Hand は投稿できません」（2026-09-29 さつき）。
+    これだけは Preflop の行を先頭から再生して判定する（T4 は 100bb の All-in を「Raise 100bb」と書くため。スタックは読み込む前の入力、基本設定は選んだ T4 のゲーム）。確認画面で直して Preflop の All-in になったときも同じエラーで反映できない。
   - Hero の席やどこかの行の席が読めないときは、はじかずに確認画面で直してもらう。
 - 成功: **確認画面「読み取り結果」**を全面に出す（2026-09-28 さつきの指示。OCR は 100% とは限らないため）。
   - PC は左に画像・右に結果、スマホはタブ「結果 / 画像」。上部に「やめる」「反映する」。画像はメモリから表示するだけで、閉じたら破棄する。
@@ -446,6 +448,8 @@ A  2  3  [♠]
 | `malformed` / `invalid_settings` / `invalid_title` / `hero_cards_required` / `duplicate_card` | 投稿 | 「入力内容を確認してください」 | — |
 | `illegal_action` / `not_your_turn` / `amount_out_of_range` / `street_mismatch` / `action_after_end` / `hand_incomplete` / `board_mismatch` | 投稿 | 「アクションの内容を確認してください（{n}手目）」 | — |
 | `invalid_spot` / `invalid_villain` | 投稿 | 「スポットを選び直してください」 | — |
+| `preflop_allin` | 投稿 | 「Preflop で All-in になった Hand は投稿できません」（16 章） | — |
+| `no_spot` | 投稿 | 「Flop 以降に Hero の Action が無い Hand は投稿できません」（16 章） | — |
 | `derived_mismatch` | 投稿 | 「投稿できませんでした。再読み込みしてやり直してください」 | — |
 | `not_admin` / `update_forbidden` / `aggregate_overflow` / `internal` | 全般 | 「エラーが発生しました」 | — |
 | 通信失敗 | 全般 | 「通信に失敗しました」 | 再試行ボタン |

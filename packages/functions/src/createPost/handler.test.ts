@@ -4,6 +4,7 @@
  * ここでは、その結果が HTTP の応答と insert_post の引数にどう写るかを確かめる。
  */
 import { describe, expect, it, vi } from 'vitest';
+import { ALLIN_CASES, allinRaw } from '../../../core/src/post/allinFixtures.ts';
 import { hmw, hs1, hs3, type Raw } from '../../../core/src/post/postFixtures.ts';
 import { createPostHandler, DbError, MAX_BODY_BYTES, type CreatePostDeps } from './handler.ts';
 import type { InsertPayload } from './payload.ts';
@@ -114,6 +115,25 @@ describe('検証エラーは 422（EF-01）', () => {
     const raw = hs1();
     raw.derived = { ...(raw.derived as Raw), pot_base: 22 };
     expect(await json(await handler(post(raw)))).toEqual({ error: 'derived_mismatch' });
+    expect(insertPost).not.toHaveBeenCalled();
+  });
+
+  it('Preflop でだれかが All-in になったハンドは preflop_allin で、保存しない（Hero が Flop 以降を続けても）', async () => {
+    const { handler, insertPost } = setup();
+    const c = ALLIN_CASES.find((x) => x.refusedAt === 0);
+    if (!c) throw new Error('見本がない');
+    const res = await handler(post(allinRaw(c, 7))); // 7 = Flop の BTN の Bet
+    expect(res.status).toBe(422);
+    expect(await json(res)).toEqual({ error: 'preflop_allin' });
+    expect(insertPost).not.toHaveBeenCalled();
+  });
+
+  it('Flop 以降に Hero の手番が無いハンドは no_spot で、保存しない', async () => {
+    const { handler, insertPost } = setup();
+    const raw = { ...hs1(), hero: 'UTG', known_cards: { BB: ['Ks', 'Js'], BTN: ['Qs', 'Qd'] }, spot_index: 0 };
+    const res = await handler(post(raw));
+    expect(res.status).toBe(422);
+    expect(await json(res)).toEqual({ error: 'no_spot' });
     expect(insertPost).not.toHaveBeenCalled();
   });
 });
