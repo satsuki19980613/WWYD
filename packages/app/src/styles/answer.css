@@ -193,6 +193,7 @@
 .rp-ctrl { display: flex; flex-direction: column; gap: var(--s2); }
 .rp-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); }
 .rp-btns .btn { font-size: 14px; padding: 8px 4px; }
+.rp-btns .rp-icon svg { width: 22px; height: 22px; }
 .rp-prog { display: flex; align-items: center; gap: var(--s3); }
 .rp-bar { flex: 1; height: 4px; background: var(--surface-3); overflow: hidden; }
 .rp-bar i { display: block; height: 100%; background: var(--cyan); transition: width 200ms var(--ease); }

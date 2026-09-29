@@ -96,3 +96,42 @@ export function DraftIcon(): JSX.Element {
     </svg>
   );
 }
+
+/** リプレイの 1手戻る（棒＋左向きの三角） */
+export function StepBackIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <rect x="4" y="4.5" width="2" height="11" rx="0.5" fill="currentColor" />
+      <path d="M16 4.8v10.4a.6.6 0 0 1-.9.5L7.6 10.5a.6.6 0 0 1 0-1l7.5-5.2a.6.6 0 0 1 .9.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** リプレイの 1手進む（右向きの三角＋棒） */
+export function StepForwardIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M4 4.8v10.4a.6.6 0 0 0 .9.5l7.5-5.2a.6.6 0 0 0 0-1L4.9 4.3a.6.6 0 0 0-.9.5Z" fill="currentColor" />
+      <rect x="14" y="4.5" width="2" height="11" rx="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** リプレイの再生（右向きの三角） */
+export function PlayIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M6 3.8v12.4a.7.7 0 0 0 1 .6l9.3-6.2a.7.7 0 0 0 0-1.2L7 3.2a.7.7 0 0 0-1 .6Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** リプレイの一時停止（2 本の棒） */
+export function PauseIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <rect x="5" y="4" width="3.4" height="12" rx="0.6" fill="currentColor" />
+      <rect x="11.6" y="4" width="3.4" height="12" rx="0.6" fill="currentColor" />
+    </svg>
+  );
+}

@@ -43,7 +43,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     title: 'Range 入力',
     items: [
       { term: '視点', desc: 'Villain（あなた）の席から、Hero の Action に対する Villain の Range を入力する。' },
-      { term: 'Replay', desc: 'Spot までの Action を再生する。Hero の Hand は回答後に公開される。' },
+      { term: 'Replay', desc: 'Spot までの Action を再生する。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。Hero の Hand は回答後に公開される。' },
       { term: 'Spot の要約', desc: 'Range の上の行は Board・Hero の Action・Pot。押すと Replay に戻る。' },
       {
         term: 'ブラシ',
@@ -93,7 +93,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         desc: '自分と全体の頻度（Range 外を含む）の違いの大きさを黄の濃さで表す。0% は全体と同じ、100% はまったく違う。正解・不正解ではない。',
       },
       { term: '次の Spot', desc: '未回答の Spot のうち最も新しいものへ進む。' },
-      { term: 'Hand History', desc: 'Hand を最後まで再生し、Showdown の Hand を確認できる。' },
+      { term: 'Hand History', desc: 'Hand を最後まで再生し、Showdown の Hand を確認できる。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。' },
     ],
   },
   new: {

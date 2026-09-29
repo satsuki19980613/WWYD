@@ -1,6 +1,6 @@
 import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
 import { useEffect, useState, type ReactNode } from 'react';
-import { HistoryIcon } from '../components/Icons.tsx';
+import { HistoryIcon, PauseIcon, PlayIcon, StepBackIcon, StepForwardIcon } from '../components/Icons.tsx';
 import { Modal } from '../components/Modal.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
@@ -70,6 +70,7 @@ export function useReplay(max: number, opts: { atEnd?: boolean } = {}): ReplayCo
   };
 }
 
+/** 再生の操作。「最初から」は文字、1手戻る・再生 / 一時停止・1手進むはマーク（名前は読み上げに。2026-09-29 さつき） */
 export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
   const { c } = props;
   return (
@@ -78,14 +79,14 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
         <button type="button" className="btn ghost" onClick={c.first}>
           最初から
         </button>
-        <button type="button" className="btn ghost" disabled={c.step <= 0} onClick={c.back}>
-          1手戻る
+        <button type="button" className="btn ghost rp-icon" aria-label="1手戻る" disabled={c.step <= 0} onClick={c.back}>
+          <StepBackIcon />
         </button>
-        <button type="button" className="btn ghost" onClick={c.toggle}>
-          {c.playing ? '一時停止' : '再生'}
+        <button type="button" className="btn ghost rp-icon" aria-label={c.playing ? '一時停止' : '再生'} onClick={c.toggle}>
+          {c.playing ? <PauseIcon /> : <PlayIcon />}
         </button>
-        <button type="button" className="btn ghost" disabled={c.step >= c.max} onClick={c.forward}>
-          1手進む
+        <button type="button" className="btn ghost rp-icon" aria-label="1手進む" disabled={c.step >= c.max} onClick={c.forward}>
+          <StepForwardIcon />
         </button>
       </div>
       <div className="rp-prog">
