@@ -83,7 +83,7 @@ export function App(): JSX.Element {
   let body: ReactNode;
   if (isLegal) body = <RouteScreen route={route} />;
   else if (state === 'signedOut')
-    body = <LoginScreen onLogin={auth.signIn} busy={auth.signingIn} failed={auth.loginFailed} />;
+    body = <LoginScreen onLogin={auth.signIn} busy={auth.signingIn} failed={auth.loginFailed} expired={auth.sessionExpired} />;
   else if (state === 'unavailable')
     body = (
       <StatusScreen title="このアカウントは利用できません" actionLabel="ログアウト" tone="error" onAction={() => void auth.signOut()} />
@@ -101,6 +101,7 @@ export function App(): JSX.Element {
       <Header
         title={state === 'ready' || isLegal ? SCREEN_TITLE[route.name] : undefined}
         back={showBack}
+        nav={state === 'ready' ? (route.name === 'list' ? 'list' : route.name === 'new' ? 'new' : null) : undefined}
         showAccount={state === 'ready'}
         drafts={state === 'ready' ? drafts.length : undefined}
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}

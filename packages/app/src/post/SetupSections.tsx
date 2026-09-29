@@ -4,7 +4,7 @@ import { ChipGroup } from '../components/ChipGroup.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { handSlots } from './cardInput.ts';
-import { isLocked, seatsOf, type Draft, type SettingField } from './draft.ts';
+import { seatsOf, type Draft, type SettingField } from './draft.ts';
 
 const FMT_ITEMS = [
   { value: 'cash', label: 'Cash' },
@@ -41,21 +41,20 @@ function NumField(props: {
   );
 }
 
-/** 基本設定（06 章 §3.3）。アクションを入れるとロック。 */
+/** 基本設定（06 章 §3.3）。Action を入れたあとも変えられる（2026-09-29）。 */
 export function SettingsSection(props: {
   draft: Draft;
   invalid: readonly SettingField[];
   onChange: (patch: Partial<Draft>) => void;
 }): JSX.Element {
   const { draft: d } = props;
-  const locked = isLocked(d);
   const bad = (f: SettingField): boolean => props.invalid.includes(f);
   return (
     <section className="pf-sec" aria-labelledby="pf-settings">
       <h2 id="pf-settings" className="sec-h">
         基本設定
       </h2>
-      <fieldset className="pf-fieldset" disabled={locked}>
+      <fieldset className="pf-fieldset">
         {/* 見出しは他の欄と同じく上に置く（横に置くと欄の左端が揃わない） */}
         <div className="pf-field">
           <span className="mono-lbl" aria-hidden="true">
@@ -93,7 +92,7 @@ const COUNT_ITEMS = PLAYER_COUNTS.map((n) => ({ value: String(n) as `${PlayerCou
 
 /**
  * プレイヤーとハンド（06 章 §3.4）。人数（2〜6）を選ぶまで席の表は出さない（必須）。
- * 人数・スタック・Hero はロック対象、ハンドはいつでも入力できる。
+ * すべて Action を入れたあとも変えられる（2026-09-29。合法でなくなった Action は外す。draft の settleActions）。
  */
 export function PlayersSection(props: {
   draft: Draft;
@@ -104,14 +103,13 @@ export function PlayersSection(props: {
   onOpenHand: (seat: Pos) => void;
 }): JSX.Element {
   const { draft: d } = props;
-  const locked = isLocked(d);
   const seats = seatsOf(d);
   return (
     <section className="pf-sec" aria-labelledby="pf-players">
       <h2 id="pf-players" className="sec-h">
         Player と Hand
       </h2>
-      <fieldset className="pf-fieldset" disabled={locked}>
+      <fieldset className="pf-fieldset">
         <div className="pf-field">
           <span className="mono-lbl" aria-hidden="true">
             人数
@@ -155,7 +153,6 @@ export function PlayersSection(props: {
                   autoComplete="off"
                   aria-label={`${p} の Stack（bb）`}
                   value={d.stacks[p]}
-                  disabled={locked}
                   aria-invalid={props.invalid.includes(p) || undefined}
                   onChange={(e) => props.onChange({ stacks: { ...d.stacks, [p]: e.target.value } })}
                 />
@@ -170,7 +167,6 @@ export function PlayersSection(props: {
                   aria-checked={hero}
                   aria-label={`Hero を ${p} にする`}
                   className="pf-radio"
-                  disabled={locked}
                   onClick={() => props.onChange({ hero: p })}
                 >
                   <span className="pf-radio-dot" />

@@ -46,6 +46,7 @@
   **2026-09-28 に作成（P9）**。connect-src は本番の Neon の 3 つの URL（`.env.production` と同じ。変えたら両方直す）。OCR の Worker は Blob URL を使わないので `worker-src 'self'`。
   `font-src data:` はビルドが小さな書体を CSS に埋め込むため。`npm run preview` も同じヘッダーを付ける（`vite.config.ts`）ので、手元で CSP の違反を確かめられる。
 - メンテナンス表示（§8 休止時）は同じ静的サイト内の画面で出す（06 章 §0.3）。
+- **Pages Functions（2026-09-29）**: `functions/api/auth/[[path]].ts` が `/api/auth/*` を Neon Auth へ中継し、ログインのクッキーを自サイトのものにする（12 章 §7.2）。ほかのパスは静的配信のまま（関数を通らない）。Workers の無料枠（1 日 10 万回）。
 
 ## 4. Supabase の休止への対応【Q-12】
 

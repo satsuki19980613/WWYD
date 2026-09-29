@@ -1,7 +1,7 @@
 -- DB-01〜04・11・12: 権限と閲覧制限（詳細仕様 02 章 §5）
 begin;
 \ir helpers/setup.psql
-select plan(36);
+select plan(37);
 
 select pg_temp.create_user(1);  -- 投稿者
 select pg_temp.create_user(2);  -- 回答者
@@ -85,6 +85,7 @@ update public.app_settings set allowlist_enabled = true;
 insert into public.app_allowlist (uid) values (pg_temp.uid(2));
 select pg_temp.login(3);
 select is((select count(*)::int from public.posts), 0, 'DB-02 リスト外は posts を読めない');
+select is((select count(*)::int from public.list_posts()), 0, 'DB-02 リスト外は list_posts も空（security definer でも許可リストを見る）');
 select throws_ok(format($$ select public.get_post_detail(%L) $$, :'post'), 'P0001', 'not_allowed', 'DB-02 リスト外の get_post_detail は not_allowed');
 select is((select public.whoami()), '{"admin": false, "allowed": false}'::jsonb, 'DB-02 whoami の allowed = false');
 select pg_temp.logout();

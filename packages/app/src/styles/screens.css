@@ -308,3 +308,129 @@ a.btn { text-decoration: none; }
 .legal th, .legal td { padding: var(--s2); border: 1px solid var(--line); text-align: left; vertical-align: top; }
 .legal th { background: var(--surface); color: var(--dim); font-weight: 500; }
 .legal code { font-family: var(--mono); font-size: 0.92em; padding: 0 4px; background: var(--surface-2); border: 1px solid var(--line); }
+
+/* ---- PC の一覧（17 章）: 左に絞り込みの列、右に 1 行 1 投稿の表 ---- */
+.list-screen.pc {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--s6);
+  align-items: start;
+}
+.list-rail {
+  position: sticky;
+  top: calc(var(--hdr-h) + var(--sat) + var(--s4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.chip-row.rail { flex-direction: column; align-items: stretch; gap: var(--s2); }
+.chip-row.rail .chips { flex-direction: column; gap: 0; border-left: 1px solid var(--line); }
+.chip-row.rail .chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  margin-left: -1px;
+  border-left: 2px solid transparent;
+}
+.chip-row.rail .chip:hover { color: var(--fg); background: var(--surface); }
+.chip-row.rail .chip[aria-pressed='true'] { color: var(--yellow); border-left-color: var(--yellow); background: rgba(252, 238, 10, 0.05); }
+.chip-row.rail .chip:focus-visible { outline-offset: -2px; }
+.list-main { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+
+/* 表の列: Board / Title（下に Game・人数・札）/ Hero / 回答 / 投稿 / 操作 / 削除。行は 144px（2026-09-29 さつき: 前の約 3 倍） */
+.spot-table { border: 1px solid var(--line); background: var(--surface); }
+.st-row {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 64px 80px 92px 124px 40px;
+  align-items: center;
+  gap: var(--s4);
+  min-height: 144px;
+  padding: 0 var(--s4);
+}
+.st-head {
+  position: sticky;
+  top: calc(var(--hdr-h) + var(--sat));
+  z-index: 5;
+  min-height: 38px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--line-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim2);
+}
+.st-num { text-align: right; justify-self: end; }
+.st-sort {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--dim2);
+  cursor: pointer;
+}
+.st-sort:hover { color: var(--fg); }
+.st-sort[aria-pressed='true'] { color: var(--yellow); }
+.st-sort[aria-pressed='true']::after { content: ' ▼'; font-size: 9px; }
+.st-sort:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.st-body { margin: 0; padding: 0; list-style: none; }
+.spot-row { position: relative; border-top: 1px solid var(--line); transition: background 150ms var(--ease); }
+.spot-row:first-child { border-top: 0; }
+.spot-row:hover { background: var(--surface-2); }
+/* キーボードで選んだ行は左にシアンの線 */
+.spot-row:has(.spot-link:focus-visible) { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--cyan); }
+.spot-row.done .spot-link { color: var(--dim); }
+/* タイトルの下に「自分の投稿」「回答済み」（タイトルの幅を削らない） */
+.st-title { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; padding: var(--s3) 0; }
+.st-title .spot-link {
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.st-meta { font-size: 13px; color: var(--dim); }
+.st-title .spot-tag { margin-left: 0; font-size: 11px; }
+.st-pos { font-family: var(--disp); font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
+.st-count { font-size: 22px; color: var(--fg); }
+.st-ago { font-size: 13px; color: var(--dim); white-space: nowrap; }
+.st-row > .spot-go { font-size: 14px; }
+.st-del { display: flex; justify-content: center; }
+.st-del .spot-del { margin: 0; }
+.st-row.skeleton { border-top: 1px solid var(--line); }
+/* 1200px 未満は絞り込みの列を狭め、Game の列を隠す */
+@media (max-width: 1199.98px) {
+  .list-screen.pc { grid-template-columns: 160px minmax(0, 1fr); gap: var(--s4); }
+  .st-row { grid-template-columns: 200px minmax(0, 1fr) 52px 64px 76px 108px 36px; gap: var(--s3); padding: 0 var(--s3); }
+}
+/* 1100px 未満（タブレットの縦・小さいノート PC など）は、絞り込みを表の上に横に並べ、投稿の経過時間の列を隠して Title の幅を残す
+   （リリース前テスト T-E F-001: 700〜920px で Title の列が 0 になり、表が横にはみ出していた） */
+@media (max-width: 1099.98px) {
+  .list-screen.pc { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+  .list-rail { position: static; flex-direction: row; flex-wrap: wrap; gap: var(--s3) var(--s5); }
+  .chip-row.rail .chips { flex-direction: row; flex-wrap: wrap; border-left: 0; border-bottom: 1px solid var(--line); }
+  .chip-row.rail .chip { margin-left: 0; margin-bottom: -1px; border-left: 0; border-bottom: 2px solid transparent; }
+  .chip-row.rail .chip[aria-pressed='true'] { border-bottom-color: var(--yellow); }
+  .st-row { grid-template-columns: 200px minmax(0, 1fr) 52px 64px 108px 36px; }
+  .st-row > :nth-child(5) { display: none; }
+}
+.list-screen.pc .list-empty { border: 1px solid var(--line); background: var(--surface); padding: var(--s6); }
+
+/* Street と Board（17 章）。PC の表は Street の下に大きい札、スマホのカードは横に小さい札 */
+.spot-board { display: inline-flex; align-items: center; gap: var(--s2); min-width: 0; }
+.spot-board-cards { display: inline-flex; gap: 3px; }
+.spot-board.big { flex-direction: column; align-items: flex-start; gap: var(--s2); }
+.spot-board.big .spot-board-cards { gap: 4px; }
+@media (max-width: 1199.98px) {
+  .spot-board.big .pcard.big { width: 34px; height: 46px; font-size: 17px; }
+  .spot-board.big .pcard.big em { font-size: 13px; }
+}

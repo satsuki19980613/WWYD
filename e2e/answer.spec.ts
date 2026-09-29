@@ -139,6 +139,53 @@ test.describe('Replay（06 章 §4.3）', () => {
     await page.getByRole('button', { name: '一時停止' }).click();
     await expect(page.getByRole('button', { name: '再生' })).toBeVisible();
   });
+
+  test('PC: Spot の見出し（Street・Hero・向き合う Action）と、出題の局面で卓に SPOT（17 章）', async ({ page }) => {
+    await open(page);
+    const banner = page.getByRole('group', { name: 'Spot' });
+    await expect(banner).toContainText('Turn');
+    await expect(banner).toContainText('Hero BB');
+    await expect(banner).toContainText('vs BTN Bet');
+    await expect(banner.locator('.pcard')).toHaveCount(4);
+    // 停止位置（出題の局面）では卓に SPOT。1 手戻すと消える
+    await expect(page.locator('.ptable.at-spot .pseat-spot')).toBeVisible();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('.pseat-spot')).toHaveCount(0);
+  });
+
+  test('PC: 小さい画面でもページはスクロールせず、全体が同じ比率で縮む（17 章）', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 640 });
+    await open(page);
+    await expect(page.getByText('11 / 11 手目')).toBeVisible();
+    const fits = await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight);
+    expect(fits).toBe(true);
+    const zoom = await page.locator('.fit-stage').evaluate((el) => Number((el as HTMLElement).style.zoom));
+    expect(zoom).toBeGreaterThan(0.5);
+    expect(zoom).toBeLessThan(1);
+  });
+
+  test('PC のキー: ← → Home End で動かし、Hand History の 1 手でその時点へ。Ctrl+Z・Ctrl+Y で塗りを戻す（17 章）', async ({ page }) => {
+    await open(page);
+    await expect(page.getByText('11 / 11 手目')).toBeVisible();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByText('10 / 11 手目')).toBeVisible();
+    await page.keyboard.press('Home');
+    await expect(page.getByText('0 / 11 手目')).toBeVisible();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByText('1 / 11 手目')).toBeVisible();
+    await page.keyboard.press('End');
+    await expect(page.getByText('11 / 11 手目')).toBeVisible();
+    // ログの 1 手目（UTG の Fold）を押すと、その Action の直後へ
+    await page.locator('.hlog-pick').first().click();
+    await expect(page.getByText('1 / 11 手目')).toBeVisible();
+
+    await cell(page, 'AA').click();
+    await expect(cell(page, 'AA')).not.toHaveAccessibleName('AA Range 外');
+    await page.keyboard.press('Control+z');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Range 外');
+    await page.keyboard.press('Control+y');
+    await expect(cell(page, 'AA')).not.toHaveAccessibleName('AA Range 外');
+  });
 });
 
 test.describe('塗り・道具（06 章 §4.5・§4.6）', () => {
@@ -518,4 +565,16 @@ test.describe('スマホ（06 章 §4.1）', () => {
     await page.getByRole('tab', { name: 'Range' }).click();
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA Call 100%');
   });
+});
+
+test('PC の Hand History は卓の下に横一列で、停止位置の「▶ to act」まで（2026-09-29）', async ({ page }) => {
+  await fakeBackend(page, detailJson(hs1bb(), { viewer: 'unanswered', id: '00000000-0000-4000-8000-000000000001' }));
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/s/00000000-0000-4000-8000-000000000001/answer');
+  await page.keyboard.press('End');
+  const strip = page.locator('.ans-replay .hlog.strip');
+  await expect(strip).toContainText('BB to act');
+  const tops = await strip.locator('li').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  await expect(strip.getByText(/BB to act/)).toBeInViewport();
 });

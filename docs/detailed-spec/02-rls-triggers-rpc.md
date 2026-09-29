@@ -367,6 +367,8 @@ grant execute on function public.insert_post(uuid, jsonb) to service_role;
 
 ### 4.2 `list_posts`（一覧。§5.1）
 
+> **2026-09-29 追記（17 章）**: 戻り値に `players`（人数）と `board`（スポットの Street までの Board）を足した（マイグレーション `20260929000002_list_board.sql`）。`post_hands` を読むため security definer にした（返す行は呼んだ人で絞るので、見える範囲は変わらない）。下の定義より、このマイグレーションが正。
+
 ```sql
 create or replace function public.list_posts(
   p_tab    text    default 'all',     -- 'all' | 'mine'

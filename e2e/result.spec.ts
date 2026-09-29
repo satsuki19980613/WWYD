@@ -97,9 +97,9 @@ test.describe('集計 Range（06 章 §5.2）', () => {
     await expect(detailBox(page)).toContainText('差 50%');
   });
 
-  test('答え合わせ（実際の Action）を集計の先頭に出す', async ({ page }) => {
+  test('答え合わせ（実際の Action）を右の列の先頭に出す（PC。17 章）', async ({ page }) => {
     await open(page);
-    const first = page.locator('.res-agg > *').first();
+    const first = page.locator('.res-side > *').first();
     await expect(first).toContainText('実際の Action');
   });
 
@@ -161,6 +161,20 @@ test.describe('実際の Action と Hand History（06 章 §5.3・§5.4）', () 
     await page.getByRole('button', { name: '1手進む' }).click();
     await expect(page.getByText('1 / 15 手目')).toBeVisible();
     await expect(page.locator('.hlog-list li.latest')).toHaveText('UTG Fold');
+  });
+
+  test('River まで続くハンドの途中の Spot: 出題の局面（Hero の Call の直前）だけ卓に SPOT（17 章）', async ({ page }) => {
+    await open(page);
+    // 最後の状態（River の Showdown）では出さない
+    await expect(page.getByText('15 / 15 手目')).toBeVisible();
+    await expect(page.locator('.pseat-spot')).toHaveCount(0);
+    await page.keyboard.press('Home');
+    for (let i = 0; i < 11; i++) await page.keyboard.press('ArrowRight');
+    await expect(page.getByText('11 / 15 手目')).toBeVisible();
+    await expect(page.locator('.ptable.at-spot .pseat-spot')).toBeVisible();
+    await expect(page.locator('.ptable-board .pcard')).toHaveCount(4);
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.pseat-spot')).toHaveCount(0);
   });
 });
 
@@ -293,4 +307,23 @@ test.describe('スクロールしても固定する部分（2026-09-29）', () =
     await expect(page.getByRole('button', { name: 'River' })).toBeInViewport();
     await expect(page.getByRole('button', { name: '回答が多い順' })).toBeInViewport();
   });
+});
+
+test('PC の Hand History は卓の下に横一列（横にスクロール。押すとその時点へ。2026-09-29）', async ({ page }) => {
+  await open(page);
+  const strip = page.locator('.ans-replay .hlog.strip');
+  // 最初は最後の手（River の BB の Call）まで出して、そこへ送ってある
+  await expect(strip.locator('li').last()).toContainText('BB Call');
+  await expect(strip.locator('li').last()).toBeInViewport();
+  const tops = await strip.locator('li').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  // 最後の手まで送ってある
+  const m = await strip.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, left: e.scrollLeft }));
+  // FitStage の zoom で scrollLeft は小数になるので 2px まで許す（post.spec.ts と同じ）
+  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 2);
+  // 卓は縦長にしない（460px まで）
+  const t = await page.locator('.ans-replay .ptable').boundingBox();
+  expect(t!.height).toBeLessThanOrEqual(461);
+  await strip.getByRole('button', { name: 'BTN Bet 1.8' }).click();
+  await expect(page.getByText('8 / 15 手目')).toBeVisible();
 });

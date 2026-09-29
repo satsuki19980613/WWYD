@@ -33,3 +33,12 @@ describe('INFO_SECTIONS', () => {
     }
   });
 });
+
+describe('INFO_SECTIONS は必要最小限（2026-09-29 さつき: 情報が多すぎる）', () => {
+  it('1 節は 7 項目まで、本文は 1 項目 70 文字まで', () => {
+    for (const section of Object.values(INFO_SECTIONS)) {
+      expect(section.items.length).toBeLessThanOrEqual(7);
+      for (const item of section.items) expect([...item.desc].length, item.term).toBeLessThanOrEqual(70);
+    }
+  });
+});

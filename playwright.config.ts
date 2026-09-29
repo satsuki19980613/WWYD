@@ -3,9 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * E2E（Playwright）。Google ログインは自動化できないので、Neon（Auth・Data API・Functions）への通信は
  * すべて偽の応答に差し替え（e2e/fakeBackend.ts）、画面の操作だけを確かめる。本物のバックエンドには接続しない。
- * 開発サーバーは 5174 番で起動し、接続先の URL を存在しない偽のホストにする（.env.development より優先される）。
+ * 開発サーバーは 5174 番（環境変数 E2E_PORT で変えられる）で起動し、接続先の URL を存在しない偽のホストにする（.env.development より優先される）。
+ * E2E_PORT は、複数の試験を同時に動かすときに番号がぶつからないようにするため（release-test-plan.md 1-3）。
  */
-const PORT = 5174;
+const PORT = Number(process.env.E2E_PORT ?? 5174);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -21,6 +22,15 @@ export default defineConfig({
     // テスト名に @sp を付けたものはスマホ（幅 412px・タッチ）で、それ以外は PC で実行する
     { name: 'pc', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } }, grepInvert: /@sp/ },
     { name: 'sp', use: { ...devices['Pixel 7'] }, grep: /@sp/ },
+    // E2E_ALL_BROWSERS=1 のときだけ WebKit（Safari 相当。iPhone も）と Firefox でも回す（release-test-plan.md §3 G）。
+    // 事前に `npx playwright install webkit firefox` が要る。Firefox はスマホの端末の再現（isMobile）に対応しないので PC だけ
+    ...(process.env.E2E_ALL_BROWSERS
+      ? [
+          { name: 'pc-webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 900 } }, grepInvert: /@sp/ },
+          { name: 'sp-webkit', use: { ...devices['iPhone 14'] }, grep: /@sp/ },
+          { name: 'pc-firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 } }, grepInvert: /@sp/ },
+        ]
+      : []),
   ],
   webServer: {
     command: `npm run dev -w @wwyd/app -- --port ${PORT} --strictPort`,

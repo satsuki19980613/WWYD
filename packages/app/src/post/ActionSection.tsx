@@ -102,6 +102,11 @@ export function ActionSection(props: {
       <BoardDock draft={d} tools={tools} onOpen={openPicker} domRef={dockRef} />
     ) : null;
 
+  const invalid = phase.kind === 'invalid' && (
+    <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
+  );
+  // 手番が無い（終わった）ときは台が無いので、ここに 1つ戻す・すべて消す
+  const undo = !dock && phase.kind !== 'invalid' && <div className="pf-undo">{tools}</div>;
   const log = props.setup && d.actions.length > 0 && (
     <HandLog
       setup={props.setup}
@@ -109,6 +114,7 @@ export function ActionSection(props: {
       board={d.board}
       spotIndex={d.spotIndex ?? -1}
       highlightLast
+      strip={!props.mobile}
       onPick={(i) => {
         setHistoryOpen(false);
         setRewind(i);
@@ -121,9 +127,7 @@ export function ActionSection(props: {
       <h2 id="pf-actions" className="sec-h">
         Action 入力
       </h2>
-      {phase.kind === 'invalid' && (
-        <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
-      )}
+      {props.mobile && invalid}
       {props.mobile && phase.kind !== 'invalid' && (
         <button type="button" className="hist-btn" disabled={d.actions.length === 0} onClick={() => setHistoryOpen(true)}>
           <HistoryIcon />
@@ -131,12 +135,21 @@ export function ActionSection(props: {
         </button>
       )}
       <LiveTable draft={d} phase={phase} onOpen={openPicker} onRemoveFrom={props.onBoardRemoveFrom} />
-      {/* PC は台を卓の下に置く（スマホは画面の下に固定） */}
-      {!props.mobile && dock}
-      {!props.mobile && log}
-      {/* 手番が無い（終わった）ときは台が無いので、ここに 1つ戻す・すべて消す */}
-      {!dock && phase.kind !== 'invalid' && <div className="pf-undo">{tools}</div>}
-      {props.mobile && dock}
+      {props.mobile ? (
+        <>
+          {undo}
+          {dock}
+        </>
+      ) : (
+        // PC は卓・台・History の 3 段を決まった高さで区切る（台の大きさや History の手数で卓が動かない。2026-09-29 さつき）
+        <>
+          <div className="pf-dockslot">
+            {invalid}
+            {dock ?? undo}
+          </div>
+          <div className="pf-logslot">{log}</div>
+        </>
+      )}
       {historyOpen && log && (
         <Modal title="Hand History" tone="info" onClose={() => setHistoryOpen(false)}>
           {log}

@@ -266,6 +266,7 @@
 @media (min-width: 700px) {
   .modal-backdrop { align-items: center; }
   .modal { max-width: 520px; padding-bottom: 0; clip-path: var(--chamfer); }
+  .modal.wide { max-width: 720px; }
 }
 .modal-head {
   flex: none;

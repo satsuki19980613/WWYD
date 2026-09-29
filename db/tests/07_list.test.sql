@@ -1,7 +1,7 @@
 -- DB-18: list_posts（タブ・ストリート・並び順・ページング・answered_by_me / can_delete）
 begin;
 \ir helpers/setup.psql
-select plan(14);
+select plan(17);
 
 select pg_temp.create_user(n) from generate_series(1, 5) as n;
 insert into public.app_admins (uid) values (pg_temp.uid(5));
@@ -50,6 +50,13 @@ select pg_temp.logout();
 
 select pg_temp.login(5);
 select is((select count(*)::int from public.list_posts() where can_delete), 5, 'DB-18 管理者は全件 can_delete');
+select pg_temp.logout();
+
+-- 人数と Board（スポットの Street まで。E はフロップのスポット、ほかはターン。17 章）
+select pg_temp.login(1);
+select is((select players from public.list_posts() where title = 'A'), 6, 'DB-18 人数');
+select is((select board from public.list_posts() where title = 'A'), array['Kh','8d','3c','2s'], 'DB-18 Board はスポットの Street（ターン）まで');
+select is((select board from public.list_posts() where title = 'E'), array['Kh','8d','3c'], 'DB-18 Board はスポットの Street（フロップ）まで');
 select pg_temp.logout();
 
 -- author_uid は返さない

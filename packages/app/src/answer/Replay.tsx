@@ -1,5 +1,5 @@
 import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { HistoryIcon, PauseIcon, PlayIcon, StepBackIcon, StepForwardIcon } from '../components/Icons.tsx';
 import { Modal } from '../components/Modal.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
@@ -20,6 +20,10 @@ export type ReplayControl = {
   back: () => void;
   toggle: () => void;
   forward: () => void;
+  /** 最後（回答画面はスポット、集計画面はハンドの終わり）へ */
+  last: () => void;
+  /** `n` 手目へ（ハンドヒストリーの 1 手を押したとき。17 章） */
+  goto: (n: number) => void;
 };
 
 /**
@@ -67,11 +71,49 @@ export function useReplay(max: number, opts: { atEnd?: boolean } = {}): ReplayCo
       setPlaying(false);
       setStep((s) => Math.min(max, s + 1));
     },
+    last: () => {
+      setPlaying(false);
+      setStep(max);
+    },
+    goto: (n: number) => {
+      setPlaying(false);
+      setStep(Math.min(max, Math.max(0, n)));
+    },
   };
 }
 
+/** 入力欄やモーダルを操作中か（ショートカットを効かせない） */
+export function typingOrModal(e: KeyboardEvent): boolean {
+  const t = e.target;
+  if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable)) return true;
+  return document.querySelector('.modal-backdrop') !== null;
+}
+
+/**
+ * PC のリプレイのキー（17 章。PT4・HM3・Lichess と同じ）: ← → で 1 手、Home で最初、End で最後。
+ * 入力欄を操作中・モーダルを開いている間は効かせない。
+ */
+export function useReplayKeys(c: ReplayControl, enabled: boolean): void {
+  const live = useRef(c);
+  live.current = c;
+  useEffect(() => {
+    if (!enabled) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      // 表のマスなど、矢印キーを自分で使う部品が先に処理したら何もしない
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || typingOrModal(e)) return;
+      const r = live.current;
+      const f = { ArrowLeft: r.back, ArrowRight: r.forward, Home: r.first, End: r.last }[e.key];
+      if (!f) return;
+      e.preventDefault();
+      f();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [enabled]);
+}
+
 /** 再生の操作。「最初から」は文字、1手戻る・再生 / 一時停止・1手進むはマーク（名前は読み上げに。2026-09-29 さつき） */
-export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
+export function ReplayControls(props: { c: ReplayControl; /** 出題の局面の手数（進み具合のバーに黄の目盛り。17 章） */ spot?: number }): JSX.Element {
   const { c } = props;
   return (
     <div className="rp-ctrl">
@@ -92,6 +134,7 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
       <div className="rp-prog">
         <span className="rp-bar" aria-hidden="true">
           <i style={{ width: `${c.max > 0 ? (c.step / c.max) * 100 : 100}%` }} />
+          {props.spot !== undefined && c.max > 0 && <b className="rp-spot" style={{ left: `${(props.spot / c.max) * 100}%` }} />}
         </span>
         <span className="num rp-count" aria-live="polite">
           {c.step} / {c.max} 手目
@@ -164,10 +207,16 @@ export function PokerTable(props: {
   note?: string | null;
   /** ボードの中身を差し替える（投稿の入力でカードを押して選び直す） */
   boardContent?: ReactNode;
+  /** 出題の局面（Hero の手番）を表示中。卓の縁を 1 回光らせ、Hero の席を脈打たせて「SPOT」の札を出す（17 章） */
+  spot?: boolean;
 }): JSX.Element {
   const interactive = props.boardContent !== undefined;
   return (
-    <div className={`ptable${interactive ? ' live' : ''}`} role={interactive ? 'group' : 'img'} aria-label="Table">
+    <div
+      className={`ptable${interactive ? ' live' : ''}${props.spot ? ' at-spot' : ''}`}
+      role={interactive ? 'group' : 'img'}
+      aria-label={props.spot ? 'Table（Spot）' : 'Table'}
+    >
       <div className="ptable-felt" />
       <div className="ptable-mid">
         <div className="ptable-pot">
@@ -211,6 +260,11 @@ export function PokerTable(props: {
                 </span>
                 <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
               </div>
+              {props.spot && seat.hero && (
+                <span className="pseat-spot" aria-hidden="true">
+                  Spot
+                </span>
+              )}
               {seat.last && <span className="pseat-last">{seat.last}</span>}
               {anchor !== 'c' && chip}
             </div>
@@ -243,6 +297,7 @@ function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
 /**
  * ハンドヒストリー（ストリートごとの列）。出題の Hero のアクションに「出題」、最新の 1 手を強調、
  * `actual`（集計画面の Hero の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
+ * `strip` は横一列（ストリートの見出しと 1 手ずつのカードを横に並べ、横にスクロール。新しい手が入ったら右端へ）。PC の投稿（17 章 §3.4）。
  */
 export function HandLog(props: {
   setup: HandSetup;
@@ -254,8 +309,14 @@ export function HandLog(props: {
   prompt?: string | null;
   /** 1 手を押したとき（投稿の入力の「ここから入れ直す」）。無ければ押せない */
   onPick?: (index: number) => void;
+  strip?: boolean;
 }): JSX.Element {
   const items = actionLog(props.setup, props.actions);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (props.strip && el) el.scrollLeft = el.scrollWidth;
+  }, [props.strip, items.length, props.board.length]);
   const last = items.length - 1;
   const streets = STREETS.filter((s) => items.some((it) => it.street === s));
   const boardOf: Record<Street, readonly Card[]> = {
@@ -265,7 +326,7 @@ export function HandLog(props: {
     river: props.board.slice(4, 5),
   };
   return (
-    <div className="hlog">
+    <div ref={ref} className={props.strip ? 'hlog strip' : 'hlog'}>
       {streets.map((s) => (
         <div key={s} className="hlog-col">
           <div className="hlog-head">

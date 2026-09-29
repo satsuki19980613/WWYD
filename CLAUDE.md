@@ -54,7 +54,7 @@
 | フロントエンド | React 18 + Vite + TypeScript（ICMCLEC と同じ）。バックエンドとの通信は `packages/app/src/backend/neon.ts`（Neon Auth の REST を直接呼び、Data API は `@supabase/postgrest-js`） | **確定** |
 | モノレポ | npm workspaces（`packages/*`） | **確定** |
 | テスト | Vitest（TS）、pgTAP（Neon の一時ブランチで実行。`npm run test:db`）、Playwright（E2E） | **確定** |
-| 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ） | **確定**（無料枠は 2026-09-27 に再確認済み。詳細仕様 08 章） |
+| 静的ホスティング | Cloudflare Pages（ICMCLEC と同じ）。`/api/auth/*` だけ Pages Functions で Neon Auth へ中継し、ログインのクッキーを自サイトのものにする（2026-09-29。詳細仕様 12 章 §7.2） | **確定**（無料枠は 2026-09-27 に再確認済み。詳細仕様 08 章） |
 | OCR | 流用元 `tenfour_watcher` を TypeScript に移植、本文認識は tesseract.js を自サイトから配信 | **確定**（詳細仕様 07 章） |
 | Node.js | 22（`.node-version`） | **確定** |
 
@@ -81,6 +81,7 @@ WWYD/
 │   ├── app/                      # フロントエンド（React + Vite）
 │   └── ocr/                      # 端末内 OCR（純 TS。画像処理と本文の解釈。文字認識は tesseract.js をアプリが渡す）
 ├── packages/functions/           # Neon Functions（投稿の再生と検証 create-post。P5 で作成）
+├── functions/                    # Cloudflare Pages Functions（/api/auth/* を Neon Auth へ中継。ログインを保つ。12 章 §7.2）
 ├── db/
 │   ├── migrations/               # DDL・RLS・トリガ・RPC（SQL。scripts/db.mjs で適用）
 │   └── tests/                    # pgTAP テスト（03_paint_vectors は生成物）

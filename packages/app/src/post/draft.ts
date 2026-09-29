@@ -82,9 +82,22 @@ export function isDirty(d: Draft): boolean {
   return JSON.stringify(d) !== JSON.stringify(emptyDraft());
 }
 
-/** アクションを 1 つでも入れたら、基本設定・人数・スタック・Hero の席はロック（06 章 §3.3）。 */
-export function isLocked(d: Draft): boolean {
-  return d.actions.length > 0;
+/**
+ * 基本設定・人数・Stack・Hero は Action を入れたあとも変えられる（2026-09-29 さつき。前はロックしていた）。
+ * 変えた設定で合法に再生できる Action だけを残す（途中の手が合法でなくなったら、その手から後を外す）。
+ * 設定が読めない間（入力の途中）は外さない。画面はこの結果を出し、Action を操作したときに確定する。
+ */
+export function settleActions(d: Draft): Draft {
+  const setup = parseSettings(d).setup;
+  if (!setup || d.actions.length === 0) return d;
+  let n = d.actions.length;
+  try {
+    runActions(setup, d.actions);
+  } catch (e) {
+    if (!(e instanceof ValidationError)) throw e;
+    n = e.index ?? 0;
+  }
+  return n === d.actions.length ? d : normalizeSpot({ ...d, actions: d.actions.slice(0, n) });
 }
 
 /** 座っている席（人数を選ぶまでは空）。プリフロップのアクション順 */
@@ -97,6 +110,19 @@ export function neighborSeat(seats: readonly Pos[], seat: Pos, dir: 1 | -1): Pos
   const i = seats.indexOf(seat);
   if (i < 0 || seats.length === 0) return seat;
   return seats[(i + dir + seats.length) % seats.length] as Pos;
+}
+
+/**
+ * `seat` の次から順に巡って、ハンドがまだ空の席（なければ null）。PC のカード選択ボードで 2 枚そろったら
+ * 次の空の席へ進む（17 章。エクイティ計算機の「次の空きスロットへ」に倣う）。
+ */
+export function nextOpenSeat(seats: readonly Pos[], hands: Readonly<Record<Pos, string>>, seat: Pos): Pos | null {
+  let p = seat;
+  for (let k = 1; k < seats.length; k++) {
+    p = neighborSeat(seats, p, 1);
+    if (hands[p] === '') return p;
+  }
+  return null;
 }
 
 /**

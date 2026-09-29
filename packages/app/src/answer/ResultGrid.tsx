@@ -32,6 +32,8 @@ export const ResultGrid = memo(function ResultGrid(props: {
   selected: number;
   actual: number | null;
   onSelect: (idx: number) => void;
+  /** PC でマウスを乗せたマス（離れたら null）。内訳を乗せたマスに切り替える（17 章） */
+  onHover?: (idx: number | null) => void;
   /** 「自分との差」のタブ: マスごとの差（0〜1）。あれば色の代わりに差の濃さで塗る（14 章） */
   heat?: readonly number[];
 }): JSX.Element {
@@ -59,7 +61,19 @@ export const ResultGrid = memo(function ResultGrid(props: {
   };
 
   return (
-    <div ref={grid} className="rgrid result" role="group" aria-label="Range 表" onKeyDown={onKeyDown}>
+    <div
+      ref={grid}
+      className="rgrid result"
+      role="group"
+      aria-label="Range 表"
+      onKeyDown={onKeyDown}
+      onPointerLeave={() => props.onHover?.(null)}
+      onPointerOver={(e) => {
+        if (!props.onHover || e.pointerType !== 'mouse') return;
+        const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-idx]');
+        if (cell) props.onHover(Number(cell.dataset.idx));
+      }}
+    >
       {Array.from({ length: CELL_COUNT }, (_, idx) => {
         const view = props.views[idx] ?? { ratio: null, opacity: 0 };
         const selected = idx === props.selected;

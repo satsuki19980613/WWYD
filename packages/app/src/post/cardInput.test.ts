@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  pickCard,
   applyCardKey,
   flickDirection,
   handCards,
@@ -119,5 +120,24 @@ describe('パソコンのキーボード', () => {
     ['Enter', null],
   ])('%s → %s', (key, expected) => {
     expect(keyFromKeyboard(key)).toBe(expected);
+  });
+});
+
+describe('PC のカード選択ボード（pickCard）', () => {
+  it('2 枚に満たなければ足す', () => {
+    expect(pickCard('', 'As')).toBe('As');
+    expect(pickCard('As', 'Kd')).toBe('AsKd');
+  });
+  it('選んである札を押すと外す', () => {
+    expect(pickCard('AsKd', 'As')).toBe('Kd');
+    expect(pickCard('AsKd', 'Kd')).toBe('As');
+    expect(pickCard('As', 'As')).toBe('');
+  });
+  it('2 枚そろっていれば 2 枚目を置き換える', () => {
+    expect(pickCard('AsKd', 'Qh')).toBe('AsQh');
+  });
+  it('スート待ちのランクだけの入力は捨てる', () => {
+    expect(pickCard('AsK', 'Qh')).toBe('AsQh');
+    expect(pickCard('K', 'Qh')).toBe('Qh');
   });
 });

@@ -1,10 +1,14 @@
-import { STREETS, type Action, type Card, type Pos } from '@wwyd/core';
-import { useEffect, useState } from 'react';
+import { STREETS, type Action, type Card, type PlayerCount, type Pos } from '@wwyd/core';
+import { useEffect, useRef, useState } from 'react';
+import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
+import { typingOrModal } from '../answer/Replay.tsx';
+import { FitStage } from '../components/FitStage.tsx';
 import { cardText } from '../components/PlayingCard.tsx';
 import { useToast } from '../components/Toast.tsx';
 import { ActionSection } from '../post/ActionSection.tsx';
 import { applyCardKey, isHandComplete, type CardKey } from '../post/cardInput.ts';
 import { CardKeyboard } from '../post/CardKeyboard.tsx';
+import { HandPicker } from '../post/HandPicker.tsx';
 import {
   addAction,
   addActions,
@@ -14,6 +18,7 @@ import {
   clearActions,
   makesPreflopAllin,
   neighborSeat,
+  nextOpenSeat,
   normalizeSpot,
   parseSettings,
   phaseOf,
@@ -22,6 +27,7 @@ import {
   seatsOf,
   selectSpot,
   setPlayers,
+  settleActions,
   truncateActions,
   undoAction,
   usedCards,
@@ -45,16 +51,22 @@ const ACTION_STEP = STEPS.indexOf('Action');
  * スポット投稿（06 章 §3。仕様書 §5.2）。
  * PC は 3 列（基本設定・プレイヤー / アクション / スポット＋エラー＋投稿）、スマホは 4 ステップ。
  * 下書きはメモリのストア（draftStore）に持つ。
+ * 基本設定・人数・Stack・Hero は Action を入れたあとも変えられる（2026-09-29 さつき）。画面は変えた設定で合法な Action までを出し（settleActions）、
+ * Action を操作したときにそれを確定する（Stack を打っている途中の値で Action を消さない）。
  */
 export function NewPostScreen(): JSX.Element {
-  const d = useDraft();
+  const raw = useDraft();
+  const d = settleActions(raw);
   const mobile = useIsMobile();
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [seat, setSeat] = useState<Pos | null>(null);
+  const [ocrSlot, setOcrSlot] = useState<HTMLDivElement | null>(null);
   const [attempted, setAttempted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 人数を変えると Action が外れるときの確認（2026-09-29）
+  const [recount, setRecount] = useState<{ n: PlayerCount; dropped: number } | null>(null);
   // スマホの戻る・次へのバーの高さ（画面の下の余白に使う）
   const barRef = useHeightVar('.pf', '--bar-h');
 
@@ -62,7 +74,7 @@ export function NewPostScreen(): JSX.Element {
   const phase = phaseOf(setup, d.actions, d.board);
 
   // 入力が変わったらサーバーのエラーは消す（投稿前の一覧はその場で計算し直す）
-  useEffect(() => setServerError(null), [d]);
+  useEffect(() => setServerError(null), [raw]);
 
   // キーボードを開いた欄が隠れないよう、画面の中ほどへスクロールする
   useEffect(() => {
@@ -70,7 +82,7 @@ export function NewPostScreen(): JSX.Element {
     document.querySelector(`[data-seat="${seat}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [seat]);
 
-  const update = (f: (x: Draft) => Draft): void => setDraft(f);
+  const update = (f: (x: Draft) => Draft): void => setDraft((x) => f(settleActions(x)));
 
   // 1つ進む（14 章 §3.1）: 1つ戻す・入れ直しで取り消したアクションを先頭から順に持つ。
   // 取り消したものと同じアクションを入れたら先へ進め、違うアクションを入れたら捨てる
@@ -79,7 +91,7 @@ export function NewPostScreen(): JSX.Element {
     setFuture((f) => (as.every((a, k) => sameAction(a, f[k])) ? f.slice(as.length) : []));
   // Preflop で All-in になる Action は受け付けない（投稿できないハンドになる。2026-09-29 さつき）
   const refused = (as: readonly Action[]): boolean => {
-    if (!makesPreflopAllin(getDraft(), as)) return false;
+    if (!makesPreflopAllin(settleActions(getDraft()), as)) return false;
     toast(PREFLOP_ALLIN);
     return true;
   };
@@ -89,7 +101,36 @@ export function NewPostScreen(): JSX.Element {
     setFuture((f) => f.slice(1));
     update((x) => addAction(x, next));
   };
-  const patch = (p: Partial<Draft>): void => update((x) => normalizeSpot({ ...x, ...p }));
+  const undoLast = (): void => {
+    const last = settleActions(getDraft()).actions.at(-1);
+    if (!last) return;
+    setFuture((f) => [last, ...f]);
+    update(undoAction);
+  };
+  // 設定の欄は打っている途中でも Action を確定しない（外すのは画面の上だけ。直せば戻る）
+  const patch = (p: Partial<Draft>): void => setDraft((x) => normalizeSpot({ ...x, ...p }));
+  const changePlayers = (n: PlayerCount): void => {
+    const dropped = d.actions.length - settleActions(setPlayers(d, n)).actions.length;
+    if (dropped > 0) setRecount({ n, dropped });
+    else update((x) => setPlayers(x, n));
+  };
+
+  // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）
+  const keys = useRef({ undoLast, redo });
+  keys.current = { undoLast, redo: canReplay(phase, future[0]) ? redo : () => undefined };
+  useEffect(() => {
+    if (mobile) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || typingOrModal(e)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) keys.current.undoLast();
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) keys.current.redo();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobile]);
 
   const onKey = (key: CardKey): void => {
     if (!seat) return;
@@ -128,7 +169,7 @@ export function NewPostScreen(): JSX.Element {
       invalid={invalid}
       activeSeat={seat}
       onChange={patch}
-      onPlayers={(n) => update((x) => setPlayers(x, n))}
+      onPlayers={changePlayers}
       onOpenHand={(p) => setSeat(p)}
     />
   );
@@ -148,11 +189,7 @@ export function NewPostScreen(): JSX.Element {
         advanceFuture(as);
         update((x) => addActions(x, as));
       }}
-      onUndo={() => {
-        const last = d.actions[d.actions.length - 1];
-        if (last) setFuture((f) => [last, ...f]);
-        update(undoAction);
-      }}
+      onUndo={undoLast}
       onRedo={canReplay(phase, future[0]) ? redo : null}
       onTruncate={(i) => {
         setFuture((f) => [...d.actions.slice(i), ...f]);
@@ -183,7 +220,24 @@ export function NewPostScreen(): JSX.Element {
       {busy ? '投稿中…' : '投稿する'}
     </button>
   );
-  const keyboard = seat && (
+  // PC はカード選択ボード、スマホはカードキーボード（2026-09-29 さつき）
+  const keyboard = seat && !mobile && (
+    <HandPicker
+      seat={seat}
+      hand={d.hands[seat]}
+      used={usedCards(d, seat)}
+      onChange={(hand) => update((x) => ({ ...x, hands: { ...x.hands, [seat]: hand } }))}
+      onUsed={(c) => toast(`${cardText(c)} は使用済み`)}
+      onFilled={() => {
+        const next = nextOpenSeat(seatsOf(d), d.hands, seat);
+        if (next) setSeat(next);
+      }}
+      onClose={() => setSeat(null)}
+      onPrev={() => setSeat(neighborSeat(seatsOf(d), seat, -1))}
+      onNext={() => setSeat(neighborSeat(seatsOf(d), seat, 1))}
+    />
+  );
+  const mobileKeyboard = seat && mobile && (
     <CardKeyboard
       seat={seat}
       onKey={onKey}
@@ -192,31 +246,58 @@ export function NewPostScreen(): JSX.Element {
       onNext={() => setSeat(neighborSeat(seatsOf(d), seat, 1))}
     />
   );
-  // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ。
+  const recountDialog = recount && (
+    <ConfirmDialog
+      title={`人数を ${recount.n} 人にしますか`}
+      body={recount.dropped === d.actions.length ? "入れた Action をすべて消します。" : `後ろの ${recount.dropped} 個の Action を消します。`}
+      confirmLabel="変更する"
+      destructive
+      onConfirm={() => {
+        setFuture([]);
+        update((x) => setPlayers(x, recount.n));
+        setRecount(null);
+      }}
+      onCancel={() => setRecount(null)}
+    />
+  );
+  // 画像の読み込みは PC とスマホで同じ位置（画面の外側の最初の子）に置き、幅が変わってレイアウトが切り替わっても
+  // 読み込み・確認の途中の状態を保つ（06 章 §3.9。リリース前テスト T-A F2）。ボタンだけを画面の中の置き場所へ映す。
   // 反映したらスマホはアクションのステップへ（読み込んだアクションとスポットの確認に進む。2026-09-29）
-  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => {
-    setFuture([]);
-    setStep(ACTION_STEP);
-  }} />;
+  const ocrImport = (
+    <OcrImport
+      key="ocr"
+      button={!mobile || step === 0}
+      slot={ocrSlot}
+      onApplied={() => {
+        setFuture([]);
+        setStep(ACTION_STEP);
+      }}
+    />
+  );
+  const ocrPlace = <div ref={setOcrSlot} className="pf-ocr-slot" />;
 
   if (!mobile) {
     return (
-      <section className={`screen pf ${seat ? 'kb-open' : ''}`}>
-        {ocr(true)}
-        <div className="pf-grid">
-          <div className="pf-col">
-            {settings}
-            {players}
+      <>
+        {ocrImport}
+        <FitStage className="screen pf">
+          {ocrPlace}
+          <div className="pf-grid">
+            <div className="pf-col">
+              {settings}
+              {players}
+            </div>
+            <div className="pf-col">{actions}</div>
+            <div className="pf-col">
+              {spot}
+              <ErrorList errors={errors} />
+              {submitButton}
+            </div>
           </div>
-          <div className="pf-col">{actions}</div>
-          <div className="pf-col">
-            {spot}
-            <ErrorList errors={errors} />
-            {submitButton}
-          </div>
-        </div>
-        {keyboard}
-      </section>
+          {keyboard}
+          {recountDialog}
+        </FitStage>
+      </>
     );
   }
 
@@ -226,46 +307,50 @@ export function NewPostScreen(): JSX.Element {
   const docked = step === ACTION_STEP && (phase.kind === 'act' || phase.kind === 'board');
   const fill = !seat && step === ACTION_STEP && phase.kind !== 'invalid';
   return (
-    <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
-      <nav className="pf-steps" aria-label="ステップ">
-        {STEPS.map((name, i) => (
-          <button
-            key={name}
-            type="button"
-            className={`pf-step ${done[i] ? 'done' : ''}`}
-            aria-current={i === step ? 'step' : undefined}
-            onClick={() => setStep(i)}
-          >
-            <span className="num">{i + 1}</span>
-            {name}
-          </button>
-        ))}
-      </nav>
-      {ocr(step === 0)}
-      {step === 0 && settings}
-      {step === 1 && players}
-      {step === 2 && actions}
-      {step === 3 && spot}
-      {/* 台を出している間は戻る・次へを隠す（13 章） */}
-      {!seat && !docked && (
-        <div className="pf-bar" ref={barRef}>
-          <ErrorList errors={errors} />
-          <div className="btn-row">
-            <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
-              Back
+    <>
+      {ocrImport}
+      <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
+        <nav className="pf-steps" aria-label="ステップ">
+          {STEPS.map((name, i) => (
+            <button
+              key={name}
+              type="button"
+              className={`pf-step ${done[i] ? 'done' : ''}`}
+              aria-current={i === step ? 'step' : undefined}
+              onClick={() => setStep(i)}
+            >
+              <span className="num">{i + 1}</span>
+              {name}
             </button>
-            {last ? (
-              submitButton
-            ) : (
-              <button type="button" className="btn" onClick={() => setStep((s) => s + 1)}>
-                次へ：{STEPS[step + 1]}
+          ))}
+        </nav>
+        {ocrPlace}
+        {step === 0 && settings}
+        {step === 1 && players}
+        {step === 2 && actions}
+        {step === 3 && spot}
+        {/* 台を出している間は戻る・次へを隠す（13 章） */}
+        {!seat && !docked && (
+          <div className="pf-bar" ref={barRef}>
+            <ErrorList errors={errors} />
+            <div className="btn-row">
+              <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+                Back
               </button>
-            )}
+              {last ? (
+                submitButton
+              ) : (
+                <button type="button" className="btn" onClick={() => setStep((s) => s + 1)}>
+                  次へ：{STEPS[step + 1]}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-      {keyboard}
-    </section>
+        )}
+        {mobileKeyboard}
+        {recountDialog}
+      </section>
+    </>
   );
 }
 

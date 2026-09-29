@@ -236,6 +236,11 @@ describe('VAL 投稿の検証', () => {
     expect(codeOf({ ...hs1(), title })).toBe('invalid_title');
   });
 
+  // DB（jsonb）が受け付けない文字。通すと insert で落ちて 500 になっていた（リリース前テスト TB-2）
+  it.each(['ab\u0000cd', 'ab\ud800cd', 'ab\udc00cd', '\ud83d'])('VAL-17 DB に保存できない文字（NUL・対のないサロゲート）%j', (title) => {
+    expect(codeOf({ ...hs1(), title })).toBe('invalid_title');
+  });
+
   it('VAL-17 40 文字ちょうど（サロゲートペアも 1 文字）は通る', () => {
     expect(codeOf({ ...hs1(), title: 'あ'.repeat(40) })).toBeNull();
     expect(codeOf({ ...hs1(), title: '🂡'.repeat(40) })).toBeNull();

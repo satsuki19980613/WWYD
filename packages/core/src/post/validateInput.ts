@@ -65,6 +65,8 @@ function cardPair(v: unknown): [Card, Card] | null {
   return Array.isArray(v) && v.length === 2 && isCard(v[0]) && isCard(v[1]) ? [v[0], v[1]] : null;
 }
 
+const UNSTORABLE = /\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
 export function validateInput(raw: unknown): PostInput {
   if (!isObj(raw)) fail('malformed', undefined, '本文がオブジェクトでない');
 
@@ -73,6 +75,8 @@ export function validateInput(raw: unknown): PostInput {
   const title = raw.title.trim();
   const titleLength = [...title].length;
   if (titleLength < 1 || titleLength > TITLE_MAX) fail('invalid_title');
+  // DB（jsonb）が受け付けない文字（NUL・対のないサロゲート）。通すと保存で落ちるので入力の誤りとして断る（リリース前テスト TB-2）
+  if (UNSTORABLE.test(title)) fail('invalid_title');
 
   // 基本設定
   if (raw.fmt !== 'cash' && raw.fmt !== 'mtt') fail('malformed', undefined, 'fmt');

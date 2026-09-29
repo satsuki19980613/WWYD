@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **UI の整備**（さつきと画面ごとに。P9 までは本番反映済み）。P5〜P8 はスマホ実機（iPhone）のみ残り |
-| 直近で完了したこと | **Preflop の All-in を投稿できなくし（T4 の読み込み・手入力・サーバー）、投稿画面のエラーをすべてサーバーも返す**（PR #21 をマージ・本番反映済み。create-post は版 5）。（「T4 の読み込みが失敗する」は読み違いではなく、Hero が Flop 以降に Action していないハンドを正しくはじいていたと確認）。**出題を Hero の手番に変えた版を本番に反映**（PR #20 をマージ。本番のマイグレーション 2 件と create-post の配備はさつきが実行、サイトは Cloudflare Pages が配備。本番の投稿はすべて消えた）。dev も切り替え済み（試験データを入れ直した）。オールインの 22 通りの試験、Preflop の All-in の入力拒否と投稿時のエラー、停止位置の制約の修正（`20260929000001_stop_is_spot.sql`）。**出題を Hero の手番に変え、Villain をなくした**（16 章。core・create-post・DB のマイグレーション `20260929000000_hero_spot.sql`（投稿をすべて消す）・画面・テスト。ブランチ `feat/hero-spot`、未 push）。**固定する部分とスクロールしない画面**（一覧の絞り込み・集計の表示の切り替え・投稿のステップを固定、回答の 2 タブはスクロールなし、レンジタブの道具の行に Size と Hand History のモーダル、卓の札をグレーに、再生の操作をマークに、画面名「List」「Post」・投稿のボタン「＋ Post」・「Back」、削除をカードの右上へ、Hero のオールインのスポットを自動で選ぶ。ブランチ `ui/fixed-layout`、未 push）。**PR #19 をマージし本番に反映**（2026-09-29。wwyd.pages.dev の配信がマージ後のビルドと一致）。create-post は dev に配備済み（createpost/3）、本番は未（さつきが実行）。セッション 7（最後の続き）: **卓の文字を大きく**（ポット 24px・スタック 17px・ベット額 16px・アクション 14px、チップの置き場所）、**卓とカードを大きく**（ボードの札を 2.5 倍、横の席を縁に重ねる、卓で画面の残りを埋める）、自分の投稿に回答するときも Hero のハンドを伏せる。セッション 7（最後）: **下書き（1 人 3 件・端末内）**、**画面のポーカー用語を英語に**（15 章）、回答・集計のログもモーダル、ハザードティックをやめた、オールインだけの額の行を出さない。セッション 7（終盤）: **類似アプリの調査と反映**（14 章。入力中の卓・ログからの入れ直し・オープン / 3bet / リンプのボタン名、回答のスポットの要約とレンジのまとめ（combos・%）、集計の答え合わせを先頭・全体と自分のバー・「自分との差」・次のスポット、一覧のカード全体を押せる）。同じブランチ（未 push）。セッション 7（後半）: **2〜6 人のハンド**（core・投稿の検証・投稿画面・テーブル表示）、カードキーボードの ← →、**アクション入力の作り直し**（アクションの台。13 章に考え方と試験の記録。P-1 は 35 → 20 タップ）。ブランチ `feat/players-and-action-input`（未 push。さつきの確認待ち）。セッション 7（前半）: ヘッダー・一覧・全画面のスマホの並び・カードキーボード（PR #14〜#18 マージ・本番反映済み）。セッション 6: P9 OCR（端末内 OCR・読み取り結果の確認画面・T4 のゲームの選択・CSP）。仕様変更 3 件（すべて決定ログ）: ① スポットは Hero のフロップ以降のアクションだけ（投稿できない画像は読み込みではじく。create-post を dev・本番に配備済み）② 集計の濃さはレンジに入れた人の割合の 5 段 ③ Hero の想定レンジを廃止し、投稿者も自分の投稿に回答（マイグレーション `20260928000000_author_answers.sql` を dev・本番に適用済み）。試験データのコマンド（`db:sample` / `db:sample-large` / `db:sample-clean`。本番の試験データは消去済み）。単体 496 件・E2E 51 件・pgTAP 140 件 |
-| 次にやること | 1. スマホ実機での確認（本番。投稿・回答・集計を Hero の手番の形で）<br>2. 本番に試験データが要るなら `db:sample`（さつきの指示があるときだけ）<br>3. 13 章 §5.4 の残した判断 |
+| 現在のフェーズ | **P10 仕上げとリリース**（リリース前の総合テストとレビューを実施済み。さつきの判断 → 本番への反映 → 本番のスモーク・実機の確認が残り）。P5〜P8 はスマホ実機（iPhone）のみ残り |
+| 直近で完了したこと | **リリース前の総合テストとレビュー**（[release-test/report.md](release-test/report.md)。2026-09-29〜30）: テスト担当 6（Sonnet 5.5）・レビュー 3（Opus 5.5）。S1 は 0 件。S2 は 6 件のうち 5 件を直した（list_posts の許可リスト、下書きを開き直すと Action が消える、get-session の 5xx、使っている途中のセッション切れ、タブレットの幅の一覧）。S3・S4 の一部も直した（題名の NUL、OCR の後始末と幅の切り替え、ヘッダーのナビの強調、ログアウト時の入力、視差効果の設定、使わない書体）。自動の試験: 単体 983・E2E 395（＋fixme 1）・pgTAP 306・型検査・ビルド・OCR 100%。モンキー 444 本・88,774 手で例外 0。WebKit 104/105・Firefox 105/105。dev にマイグレーション `20260929000003_list_posts_allowlist.sql` を適用済み。以前の経緯はセッションログ |
+| 次にやること | 2. push → PR → マージ → 本番のスモーク（release-test-plan.md §3 H）→ 実機の確認（§3 G）<br>3. 確認待ちの判断と、残した S3・S4（findings.md）。worktree 6 つの削除（さつきの承認） |
 | ブロッカー | なし |
-| さつきの確認待ち | 13 章 §5.4 の残した判断。wwyd-ui-concept のシグネチャー 3 の記述を消してよいか。「投稿する」を Post にするか。Replay の「最初から」をマークにするか。iPhone 実機の確認（保留） |
+| さつきの確認待ち | **リリース前テスト**（findings.md）: F-006 posts の author_uid を誰でも読める（列を絞るか）、F-012 CI の NEON_API_KEY を PR でも渡している、F-021 無料枠の compute の監視と `/api/auth` の大量アクセス、F-029 一覧のタブレットの幅の見た目、F-032〜F-034（iPhone の入力欄の拡大・FitStage の縮小しすぎ・コントラストとタップの大きさ）、F-037 Pot の上限、F-028・F-036（仕様の確認 Q-1〜Q-5）。以前から: wwyd-ui-concept の 420px、13 章 §5.4、シグネチャー 3、「投稿する」を Post に、Replay の「最初から」、iPhone 実機 |
 
 ---
 
@@ -166,8 +166,8 @@
 
 | ID | 内容 | 依存 | 完了条件 | 状態 | 担当 | 詳細仕様 |
 |---|---|---|---|---|---|---|
-| T-1001 | リリース前チェックリスト作成と実施（不変条件 10 項目、a11y、CSP、秘密情報の混入なし、無料枠の見積もり。**プライバシーポリシー 1.3（OCR）の記述が実装と一致し、外部通信が無いこと**） | P1〜P9 | すべて満たす | 未着手 | | CLAUDE.md §7 |
-| T-1002 | E2E 総点検（PC / スマホ、主要フロー） | P4〜P8 | Playwright 緑 | 未着手 | | 06 |
+| T-1001 | リリース前チェックリスト作成と実施（計画は [release-test-plan.md](release-test-plan.md)。不変条件 10 項目、a11y、CSP、秘密情報の混入なし、無料枠の見積もり。**プライバシーポリシー 1.3（OCR）の記述が実装と一致し、外部通信が無いこと**） | P1〜P9 | すべて満たす | 実施済み（本番のスモークと実機は残り） | | CLAUDE.md §7 |
+| T-1002 | E2E 総点検（PC / スマホ、主要フロー。モンキーテストを含む。release-test-plan.md §3） | P4〜P8 | Playwright 緑 | 実施済み（本番のスモークと実機は残り） | | 06 |
 | T-1003 | 休止対策（Q-12 で採用する場合） | T-006(Q-12) | 定期実行の成功を確認 | 未着手 | | 08 §4 |
 | M-05b | OAuth 同意画面を本番に公開、URL（ホーム・規約・プライバシー）を登録 | M-08, T-803 | 公開ステータスが本番 | 完了（2026-09-28。さつきが実施。誰でも Google でログインできる状態） | さつき | 10 M-05 |
 | M-12 | 運用手順（休止からの再開・容量整理・許可リスト）の確認 | T-1001 | さつきが手順を把握 | 未着手 | さつき | 10 M-12 |
@@ -303,6 +303,17 @@
 | 2026-09-29 | **戻る導線はヘッダーの左の「＜」**（本文の「← 一覧へ」の行をやめる）。画面名は回答「回答」・集計「結果」・規約「利用規約」「プライバシーポリシー」も出す（一覧だけハザードティック）。入力欄の見出しは欄の上、択一の切り替えは等分のつながったボタン列（ゲーム形式・T4 のゲーム・集計の全体 / 自分）。スマホの投稿画面は節の見出しを出さない（ステップ表示と重なる）。見出しの大文字化で bb が BB になるのを止めた（06 章 §0.2・§3.1） | さつきの指示（投稿画面とその他の画面も一覧と同じ要領で）。細部は Claude | さつき（指示）・Claude（配置） |
 | 2026-09-29 | **T4 の画像の読み込みで、Preflop でだれかが All-in になったハンドをはじく**（Hero でもほかの席でも。サイドポットで Hero が Flop 以降を続けたハンドも）。エラーは「Preflop で All-in になった Hand は投稿できません」（06 章 §3.9・16 章）。続けて**手入力とサーバーも同じに**: Action の入力で Preflop の All-in になる Action（相手の All-in も）を受け付けず、`verifyPost` は 422 `preflop_allin`。判定は core の `hasPreflopAllin` 1 つ（16 章） | さつきの指示 | さつき |
 | 2026-09-29 | **投稿画面のエラーはすべてサーバーも返す**。Flop 以降に Hero の手番が無いハンドはサーバーも 422 `no_spot`（画面と同じ文言）。画面を通さない本文でも画面のエラーごとにサーバーが断ることを試験で固定する（16 章） | さつきの指示 | さつき |
+| 2026-09-29 | **PC（700px 以上）の UI を 17 章の構成にする**: ヘッダーの左に List・＋ Post のナビ（PC は「＜」を出さない）、アプリ面の最大幅 1440px。一覧は左の絞り込みの列と 1 行 1 投稿の表（↑↓ で移動）。回答・集計は 1200px 以上でリプレイ｜レンジ表｜道具の 3 列、画面の高さに収める。集計はマスにマウスを乗せると内訳。**PC のハンドは Card の選択ボード**（4 段 × 13 列、2 枚で次の空の席へ）。キー操作（← → Home End、Ctrl+Z / Y、B / E）は ⓘ にだけ書く | さつきの指示（PC の UI を完璧に。調査してから。PC はハンド選択ボード）。調査（GTO Wizard・PioViewer・PT4 / HM3・Lichess・NN/g など）から型を選んだのは Claude | さつき（指示）・Claude（構成） |
+| 2026-09-29 | **PC の投稿・回答・集計は必ず 1 画面に収め、各要素の比率を一定にする**: 1376×800 の設計の大きさで組み、画面に合わせて全体を拡大縮小（`FitStage`、CSS の zoom）。長いものは枠の中でスクロール。**一覧の行は 144px（前の約 3 倍）、Board（スポットの Street まで）と人数を出す**（PC・スマホ。`list_posts` に `players`・`board`。security definer に）。**削除は専用の列**。**回答にスポットの見出し**（PC は帯、スマホは既存の 1 行を同じ内容に。行は増やさない）。**Replay の出題の局面**は卓の縁の光・Hero の席の脈動・「SPOT」の札・バーの目盛り（17 章） | さつきの指示（スクロールしないと見えない・行が小さい・状況が分からない・ごみ箱で列が乱れる・どこのスポットか分からない）。表し方は Claude | さつき（指示）・Claude（表し方） |
+
+| 2026-09-29 | **基本設定・人数・Stack・Hero は Action を入れたあとも変えられる**（ロックをやめる。仕様書 §5.2 の「ロック」を改める）。変えた設定で合法に再生できる Action だけ残し（`settleActions`）、欄を打っている途中の値では消さない（次に Action を操作したときに確定）。人数の変更で Action が外れるときは確認ダイアログ（06 章 §3.3） | さつきの指示（下書きを登録したとき確定した内容を編集できない）。外し方・確定の時機・確認は Claude | さつき（指示）・Claude（細部） |
+| 2026-09-29 | **ⓘ は必要最小限に**: 画面を見れば分かることは書かず、隠れた操作・記号と色の意味・規則・キー操作だけを 1 項目 1 行（70 文字まで・1 節 7 項目まで。試験で検査）。仕様書 §10 の本文から削る（09 章） | さつきの指示（情報が多すぎる） | さつき（指示）・Claude（文言） |
+| 2026-09-29 | 規約を見直した: 利用規約は変更なし。プライバシーポリシーに「投稿の下書きは、その端末のブラウザにだけ保存します。」を足した（下書きの機能が後から入ったため） | さつきの指示（仕様が変わったので見直す。足すことが無ければそのまま） | さつき（指示）・Claude（1 文） |
+
+| 2026-09-29 | **ログインを保つため、セッションの確認・JWT・ログアウトを自サイトの `/api/auth/*`（Cloudflare Pages Functions。開発は Vite の proxy）から Neon Auth へ中継し、セッションのクッキーを自サイトのものにする**。ログインの開始（照合用のクッキーを付ける）も中継する。切り替え後に 1 回だけログインし直し（12 章 §7.2） | さつき「数日使わないとログインし直しになる」。原因は Neon Auth のクッキーが他サイトのものでブラウザが消すこと。Bearer 方式は Neon Auth が受け付けない（dev で確認）。中継は AskUserQuestion で承認（推奨案） | さつき |
+| 2026-09-30 | **リリース前テストの指摘の直し方（指揮役の判断。仕様の範囲）**: ① get-session の 5xx・通信エラーはメンテナンス中（オフライン）、4xx は未ログイン（06 章 §0.3。F-025）② 使っている途中のセッション切れ（Data API の 401・not_authenticated・JWT を取り直せない）はログイン画面に「ログインし直してください」（06 章 §7。回答の送信時も同じで、塗りは残らない。F-026）③ ログアウト・アカウント削除で入力中の投稿（メモリの中だけ）を捨てる（保存先がなく、確認を出しても保存できないため。F-024）④ 保存した下書きを開き直すときも画面と同じく settleActions で合わなくなった手から後だけを外し、Board は残す（F-003）⑤ 題名に NUL・対のないサロゲートがあれば invalid_title（jsonb に保存できないため。F-010）⑥ PC の一覧は 1100px 未満で絞り込みを表の上に横並びにし、投稿の経過時間の列を隠す（F-029）⑦ 使っていない書体の太さ 900 を読み込まない（F-019） | release-test/findings.md。⑥ は見た目の変更なので、さつきの確認を得たい |
+| 2026-09-30 | E2E を WebKit・Firefox でも回せるようにした（`E2E_ALL_BROWSERS=1`。通常の `npm run e2e` は Chromium だけのまま）。T-A・T-B・T-C の試験を取り込み、T-D（モンキー。数時間かかる）・T-E（確認待ちの判断を含む）・T-F（本番ビルドが要る）・T-C の C-06（同）は各 worktree のブランチに残す | 指揮役 |
+| 2026-09-30 | ⓘ のログインの文言を「Google でログインする。表示名とメールアドレスは投稿や回答と一緒には保存しない。」に戻す（2026-09-29 の簡素化で「保存しない」に戻っていた。実際は Neon Auth が保存する。Q-26）。create-post を dev に配備し直した（createpost/6、許可するオリジン `http://localhost:5173`。題名の検証 F-010） | さつきの判断（推奨どおり。F-002）。本番のマイグレーション `20260929000003_list_posts_allowlist.sql` はさつきが実行 |
 
 ---
 
@@ -753,3 +764,81 @@
   変更したファイル: `packages/core/src/{errors.ts,post/verifyPost.ts,post/post.test.ts}`、`packages/app/src/post/{draft.ts,draft.test.ts,errorMessages.ts}`、`packages/functions/src/createPost/handler.test.ts`、`docs/detailed-spec/{03-server-replay,06-screens,16-hero-spot}.md`。型検査・単体 627 件・E2E 91 件が通る。
 - **追記（配備）**: PR #21 を作成（CI 4 件が通る）。create-post の配備は Claude Code の安全機能で止められたため、さつきが dev・本番に実行した（どちらも版 5、2026-09-29 09:12 UTC）。
 - **追記（マージ）**: さつきの指示で PR #21 をマージした（61f231b）。本番のサイト（wwyd.pages.dev）が新しいビルド（`preflop_allin` を含む）を配っていることを確かめた。
+
+### 2026-09-29（セッション 7 の続き・PC の UI の全面改修）
+
+- **行ったこと**: さつきの依頼（PC の UI を完璧に。まず調査。PC のハンドはスマホ用のキーボードではなく選択ボード）で、デスクトップ版の類似アプリを調べ（17 章 §1〜2）、PC（700px 以上）の画面を作り直した。
+  - ヘッダー: List・＋ Post のナビと画面名（パンくず）。最大幅 1440px、1200px 以上は左右の余白 32px。
+  - 一覧: 左の絞り込みの列（ChipGroup の `rail`）と表（`SpotTable`）。見出しで並び替え、↑↓（j k）で行を移る。1200px 未満は Game の列を隠す。
+  - 回答: リプレイ｜レンジ表（正方形・最大 760px）｜道具（300px）。1200px 以上は画面の高さに収める。← → Home End（`useReplayKeys`）、Hand History の 1 手でその時点へ（`goto`）、Ctrl+Z / Y、B / E。
+  - 集計: 同じ 3 列。マスにマウスを乗せると内訳（`ResultGrid` の `onHover`）。答え合わせは右の列の先頭。
+  - 投稿: PC は Card の選択ボード（`HandPicker`。`pickCard`・`nextOpenSeat`）、ボードのピッカーも広いダイアログ（`Modal` の `wide`）。右の列を固定、1200px 未満は 2 列。Ctrl+Z / Y で Action。
+  - ⓘ に「キー操作（PC）」「Card の選択ボード（PC）」を足した（09 章も同じ文言）。
+- **変更したファイル**: `packages/app/src/{App.tsx,components/{Header,ChipGroup,Modal}.tsx,screens/{ListScreen,AnswerScreen,ResultScreen,NewPostScreen}.tsx,answer/{Replay,ResultGrid}.tsx,post/{HandPicker.tsx（新規）,CardPicker.tsx,OcrReview.tsx,cardInput.ts,cardInput.test.ts,draft.ts,draft.test.ts},info/infoSections.ts,styles/{tokens,base,components,screens,answer,post}.css}`、`e2e/{post,answer,result,drafts}.spec.ts`、`docs/detailed-spec/{00-index,06-screens,09-info-modal,17-pc-ui（新規）}.md`、`docs/plan.md`
+- **確認**: 型検査・単体 631 件・E2E 93 件が通る。1440×900 と 1024×768 で一覧・投稿・回答・集計を画面で確かめた（1440×900 の回答・集計はページのスクロールなし）。dev の試験投稿「試験 自分の投稿 2」に回答した（集計の画面を見るため）。
+- **残課題**: さつきの確認 → push・PR・マージ。wwyd-ui-concept の「アプリ面は縦長カラム」の記述に PC の最大幅を足すか（Skill の変更なので確認待ち）。
+
+### 2026-09-29（セッション 7 の続き・PC の UI の指摘への対応）
+
+- **行ったこと**: さつきの指摘に対応した（17 章 §3.0・§3.2・§3.5）。
+  - 投稿・回答・集計（PC）: `FitStage`（1376×800 で組み、`zoom` で画面に合わせる）。1200px の切り替えをやめ、どの大きさでも同じ並び・同じ比率。1134×760 などでもページはスクロールしない。
+  - 一覧: 行 144px、Board（札）と人数、タイトル 2 行、削除の専用の列。スマホのカードにも Board と人数。
+  - DB: マイグレーション `20260929000002_list_board.sql`（`list_posts` に `players`・`board`（スポットの Street まで）。`post_hands` を読むため security definer）。pgTAP を 3 件足した。dev に適用した。
+  - 回答: スポットの見出し（`SpotBanner`。PC）と、スマホのスポットの要約（`SpotStrip`）を同じ内容に。
+  - Replay: `PokerTable` の `spot`（卓の縁の光・Hero の席の脈動・SPOT の札）、`ReplayControls` の `spot`（黄の目盛り）。回答・集計・PC・スマホ。
+  - ⓘ（09 章も）: Spot・Board と Players・Replay の SPOT。
+- **変更したファイル**: `db/migrations/20260929000002_list_board.sql`（新規）、`db/tests/07_list.test.sql`、`packages/app/src/{components/FitStage.tsx（新規）,screens/{List,Answer,Result,NewPost}Screen.tsx,answer/Replay.tsx,list/spotList.ts,info/infoSections.ts,styles/{base,screens,answer,post}.css}`、`e2e/{fakeBackend,answer.spec,list.spec（新規）}.ts`、`docs/detailed-spec/{09-info-modal,17-pc-ui}.md`、`docs/plan.md`
+- **確認**: 型検査・単体 631 件・E2E 97 件・pgTAP 144 件が通る。1134×760（さつきの画面の幅）とスマホ（375×812）で一覧・投稿・回答・集計を画面で確かめた。
+- **残課題**: 本番へのマイグレーションの適用（マージの前に。さつき）。さつきの確認 → push・PR・マージ。
+- **追記（さつきの確認）**: 出題の局面の演出を静かにした（縁の光は薄く 1 回、席の光は 2.8 秒周期で淡く、SPOT の札は黄の枠と文字、フェードで出す）。
+  River まで入れたハンドで Flop の Hero の手番を出題した場合を dev で確かめた: 一覧の Board は Flop の 3 枚、回答画面の Replay は Flop の Hero の手番の直前で止まり（7 / 7 手目。Turn・River は出ない。サーバーも返さない＝pgTAP DB-13）、
+  回答後の集計は River まで再生でき、Spot の位置（7 / 15 手目）で SPOT の札とバーの目盛り、ログに「出題」。E2E に集計の途中の Spot の試験を足した（98 件）。
+
+### 2026-09-29（セッション 7 の続き・確定した内容の編集、ⓘ の整理、規約の見直し）
+
+- **行ったこと**: さつきの PC の UI の確認（問題なし）のあと、3 件に対応した。
+  - 投稿: 基本設定・人数・Stack・Hero のロックをやめた。`settleActions`（draft.ts）が変えた設定で合法な Action までを残す（途中の手が合法でなくなったらその手から後。Board は残す。外れた Spot は選択を外す）。
+    画面はその結果を出し、Action を操作したときに確定する（Stack を打っている途中の値で消さない）。人数の変更で Action が外れるときは確認ダイアログ。下書き・T4 の読み込みから開いたときも同じ。
+  - ⓘ: 全節を 1 項目 1 行に書き直した（List 3 項目・Range 入力 7・集計 6・Post 7 など）。09 章も同じ文言に。
+  - 規約: 利用規約は今の仕様（Hero の手番の出題・下書き・Preflop の All-in の拒否・PC の UI）と食い違いが無いので変えない。プライバシーポリシーに下書きの保存先の 1 文。
+- **変更したファイル**: `packages/app/src/{post/{draft.ts,draft.test.ts,SetupSections.tsx},screens/NewPostScreen.tsx,info/{infoSections.ts,infoSections.test.ts},legal/privacy.md,styles/post.css}`、`e2e/{post,drafts}.spec.ts`、`docs/detailed-spec/{06-screens,09-info-modal}.md`、`docs/plan.md`
+- **確認**: 型検査・単体 640 件・E2E 102 件が通る（設定の変更は単体 8 件・E2E 4 件（PC・スマホ・下書きを開き直す・確定の時機））。dev の画面で、Action を入れたあとの Stack の欄が押せることと ⓘ を確かめた。
+- **残課題**: 本番へのマイグレーション `20260929000002_list_board.sql` の適用（マージの前に。さつき）→ push・PR・マージ。
+
+### 2026-09-29（セッション 7 の続き・ログインを保つ中継）
+
+- **行ったこと**: さつき「数日使わないと Google にログインし直し」に対応した（12 章 §7.2）。
+  - 調査: dev のセッションはサーバー側で 7 日（使うと延びる）。クッキーは Neon Auth のドメインのもので、アプリから見て他サイトのクッキー。Bearer（セッションの値を送る）は Neon Auth が受け付けないことを dev で確かめた。
+  - `packages/app/src/backend/authProxy.ts`（中継の中身）、`functions/api/auth/[[path]].ts`（Pages Functions）、`vite.config.ts`（開発・プレビューの proxy）。`neon.ts` はセッション・JWT・ログアウト・ヘルスチェックを `/api/auth` へ。ログインの開始は直接のまま。
+  - E2E の偽の応答は `/api/auth/*` にも答え、Neon Auth へ直接のセッションの確認があれば記録する（既存の試験が完全一致で比べるので、直接に戻れば落ちる）。
+- **変更したファイル**: `functions/{api/auth/[[path]].ts,tsconfig.json}`（新規）、`packages/app/src/backend/{authProxy.ts,authProxy.test.ts}`（新規）、`packages/app/src/{backend/neon.ts,auth/useAuth.ts}`、`packages/app/vite.config.ts`、`e2e/fakeBackend.ts`、`package.json`（typecheck に functions）、`CLAUDE.md`（技術構成・ディレクトリ）、`docs/detailed-spec/{08-hosting,12-neon-migration}.md`、`docs/plan.md`
+- **確認**: 型検査・単体 647 件・E2E 102 件・ビルドが通る。dev で `/api/auth/ok`・`get-session` が中継され、中継しない API は 404。
+- **追記（dev での確認）**: 最初の版ではログインできなかった（ログインの開始を Neon Auth に直接にしていて、照合用のクッキー `__Secure-neon-auth.session_challenge` が自サイトに無かった。名前も `neon-auth.` を通していなかった）。開始も中継し、両方の名前を通すように直した → さつきがログインでき、再読み込みでも続くことを確かめた。単体 647 件・E2E 102 件。
+- **残課題**: 本番は push → Cloudflare Pages が関数ごと配備。本番で 1 回ログインし直して確かめる（プレビューの枝は Neon の trusted domains に無いのでログインできない）。
+
+### 2026-09-29（セッション 7 の続き・PC の投稿の中央の列）
+
+- **行ったこと**: さつきの指摘（PC の投稿画面に違和感。卓とボタンの台を固定し、History は縦ではなく横に並べて横スクロール）に対応した（17 章 §3.4）。
+  中央の列を grid の 4 段（見出し・卓・台 236px・History 104px）にし、台は段いっぱいの枠でボタンを下に揃えた。History は `HandLog` に `strip`（横一列のカード、最新へ自動で送る）を足した。
+- **変更したファイル**: `packages/app/src/{post/ActionSection.tsx,answer/Replay.tsx,styles/post.css}`、`e2e/post.spec.ts`、`docs/detailed-spec/17-pc-ui.md`、`docs/plan.md`
+- **確認**: 型検査・E2E 103 件（卓・台の枠・ボタンの位置が UTG / Open 後 / Board / Turn で同じ、History が 1 行で横にスクロールし最新が見える）。1440×900 で画面を確かめた。- **追記（回答・集計）**: さつき「回答画面とプレビュー画面も横ヒストリーのほうが見やすい」。PC の回答・集計のリプレイの列も、Hand History を列の下の 104px の段で横一列（`strip`）に。卓は残りの高さで 460px まで。strip の CSS は answer.css（HandLog の基本と同じ所）へ移した。E2E を 2 件足した（105 件）。
+
+### 2026-09-29（セッション 7 の続き・総合テストの計画）
+
+- **行ったこと**: さつきの指示で、リリース前の総合テストとレビューの計画書 `docs/release-test-plan.md` を作った。
+  合否の基準（S1・S2 が 0、自動の試験が緑、モンキーで例外 0、不変条件の対応表が埋まる、実機・本番のスモーク）、体制（Opus 5.5 の指揮役、Sonnet 5.5 × 6 の T-A〜T-F、Opus 5.5 × 2 の R2・R3、指揮役が R1）、
+  観点 A〜H（機能・ポーカーロジックと境界値・サーバーの強制とセキュリティ・モンキー・画面とアクセシビリティ・性能と無料枠・互換性と実機・本番のスモーク）、レビューの 3 観点（仕様と不変条件・セキュリティ・正しさと保守性）、指摘の形と重大度、進め方、報告書の目次。
+- **変更したファイル**: `docs/release-test-plan.md`（新規）、`docs/plan.md`
+- **次のセッション**: release-test-plan.md の §1 から始める。
+- **追記**: さつきが本番にマイグレーション `20260929000002_list_board.sql` を適用した（`npm run db:migrate -- --branch production`）。push・マージは総合テストに合格してから（release-test-plan.md §7）。
+
+
+### 2026-09-29〜30（セッション 8・リリース前の総合テストとレビュー）
+
+- **行ったこと**: release-test-plan.md のとおりに実施（さつき「すべて計画通り進めて」）。段 0（RC1 `2aa3f8a` の固定、`E2E_PORT`、基準の実行、dev の試験データ、`docs/release-test/`）→ T-A〜T-F（Sonnet 5.5 × 6、worktree）と R2・R3（Opus 5.5 × 2）を同時に起動 → 指揮役は R1・C-08（本物の dev で Data API を直接呼ぶ）・F-03（回答 400〜2000 件の集計の速さ。さつきの承認で dev の試験投稿 4 件に回答）・G（さつきの承認で WebKit・Firefox をダウンロードし E2E）→ 指摘を 1 件ずつ再現して重大度を決め、S2 を再現の試験 → 修正の順で直した → 全部の自動の試験をもう一度 → 報告書。
+- **変更したファイル**: `db/migrations/20260929000003_list_posts_allowlist.sql`（新規）、`packages/core/src/post/validateInput.ts`、`packages/app/src/{auth/useAuth.ts,auth/resolveAppState.ts,backend/neon.ts,components/Link.tsx,post/savedDrafts.ts,post/OcrImport.tsx,screens/NewPostScreen.tsx,screens/LoginScreen.tsx,App.tsx,main.tsx,styles/{base,post,screens}.css}`、試験（`db/tests/`、`packages/**/release.*.test.ts`、`e2e/release/ta-*`）、`playwright.config.ts`、`package.json`、`docs/release-test/`（新規）、`docs/plan.md`
+- **注意**: サブエージェントの worktree は main から作られる（全員が自分で RC1 へ進めてから試験した）。worktree は `.claude/worktrees/` に 6 つ（OneDrive の中。node_modules 込み）残っている。削除はさつきの承認後。
+- **残課題**: 確認待ちの判断、本番のマイグレーションと create-post の配備、push・本番のスモーク・実機、S3・S4 の残り。
+- **追記（2026-09-30）**: さつきが本番にマイグレーション `20260929000003_list_posts_allowlist.sql` を実行（Claude の本番の読み取りは安全機能で止められ、適用の確認はさつきの出力による）。さつきの判断で ⓘ のログインの文言を戻した（F-002。09 章→コード→E2E）。create-post を dev に配備し直した（createpost/6）。dev のログインが切れていたため、配備した版の動作は画面から確かめていない。
+- **追記（2026-09-30）**: さつきが create-post を本番に配備し直した（createpost/6、active。Claude が neonctl functions get で確認。題名の検証 F-010 が本番に反映）。
+- **追記（2026-09-30）**: 本番のマイグレーション `20260929000003_list_posts_allowlist.sql` の適用を、さつきの出力（「1 件を適用しました」）で確認。さつきの承認で ui/pc-layout を push し PR を作る（マージは CI を見てから判断）。

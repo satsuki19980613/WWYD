@@ -12,6 +12,8 @@ export const UID = '11111111-1111-4111-8111-111111111111';
 type Json = Record<string, unknown> | unknown[] | null;
 
 export type Backend = {
+  /** list_posts の応答（無ければ空の一覧） */
+  listRows?: Record<string, unknown>[];
   /** get_post_detail の応答（テストの途中で差し替えられる）。null なら post_not_found */
   detail: Json;
   /** answers への insert の本文 */
@@ -60,9 +62,11 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
   const signedIn = opts.signedIn ?? true;
   const be: Backend = { detail, inserts: [], insertError: null, afterInsert: null, deletes: [], calls: [], deleteAccountError: null };
 
-  await page.route(`${AUTH}/**`, async (route) => {
+  // Neon Auth へは自サイトの中継（/api/auth/*。12 章 §7.2）を通す。直接の要求があれば記録する（既存の試験の calls の一致で落ちる）
+  const auth = async (route: Route): Promise<void> => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors(route) });
-    const path = new URL(route.request().url()).pathname;
+    const path = new URL(route.request().url()).pathname.replace(/^\/api\/auth/, '');
+    if (route.request().url().startsWith(AUTH)) be.calls.push(`direct:${path}`);
     if (path === '/ok') return json(route, 200, { ok: true });
     if (path === '/get-session') return json(route, 200, signedIn ? { user: { id: UID }, session: { userId: UID } } : null);
     if (path === '/token') return json(route, 200, { token: fakeJwt() });
@@ -71,7 +75,9 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
       return json(route, 200, { success: true });
     }
     return json(route, 404, { message: 'not found' });
-  });
+  };
+  await page.route(`${AUTH}/**`, auth);
+  await page.route('**/api/auth/**', auth);
 
   await page.route(`${DATA}/**`, async (route) => {
     const req = route.request();
@@ -95,7 +101,7 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
       be.deletes.push(id);
       return json(route, 200, [{ id }]);
     }
-    if (path === '/rpc/list_posts') return json(route, 200, []);
+    if (path === '/rpc/list_posts') return json(route, 200, be.listRows ?? []);
     if (path === '/rpc/delete_my_account') {
       be.calls.push('delete_my_account');
       if (be.deleteAccountError) return json(route, be.deleteAccountError.status, be.deleteAccountError.body);

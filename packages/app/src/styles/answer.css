@@ -235,6 +235,49 @@
 .hlog-box[open] > summary::after { content: '−'; }
 .hlog-box[open] .hlog { padding: 0 var(--s2) var(--s2); }
 
+/* History の横一列（HandLog の strip。PC の投稿・回答・集計。17 章）: ストリートごとに 見出し（名前と Board）＋ 1 手ずつのカード */
+.hlog.strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--s2);
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.hlog.strip .hlog-col { flex: none; flex-direction: row; align-items: stretch; gap: var(--s2); }
+.hlog.strip .hlog-head {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--s1);
+  min-height: 0;
+  padding-right: var(--s2);
+  border-right: 1px solid var(--line);
+}
+.hlog.strip .hlog-list { flex-direction: row; align-items: stretch; gap: 6px; }
+.hlog.strip .hlog-list li {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+.hlog.strip .hlog-list li.latest { border-color: rgba(58, 230, 255, 0.55); }
+.hlog.strip .hlog-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.hlog.strip .hlog-pick b { font-size: 14px; }
+.hlog.strip .hlog-tag { margin: 4px 0 0; }
+.hlog.strip .hlog-list li.actual { border-color: rgba(252, 238, 10, 0.6); }
+/* 停止位置の「▶ BTN to act」は列の最後に */
+.hlog.strip .hlog-next { flex: none; align-self: center; padding: 0 var(--s3); white-space: nowrap; }
+
 /* ---- ブラシパネル ---- */
 .brush {
   display: flex;
@@ -673,3 +716,113 @@
 /* 次のスポット（スマホは下部に固定） */
 .res.sp.has-next { padding-bottom: calc(72px + var(--sab)); }
 .res-agg > .btn { align-self: stretch; }
+
+/* ---- PC の回答・集計（17 章）: 設計の大きさ（FitStage。1376×800）で組み、画面に合わせて全体を拡大縮小する ---- */
+/* 回答: リプレイ ｜ スポットの見出し / レンジ表（620px 角）｜ 道具（300px） */
+.ans.pc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 620px 300px;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: 'replay banner banner' 'replay range tools';
+  gap: var(--s4) var(--s5);
+}
+.ans.pc .ans-replay { grid-area: replay; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; min-height: 0; }
+/* Hand History は列の下の決まった高さの段で横一列（横にスクロール。投稿と同じ。2026-09-29 さつき）。
+   卓は残りの高さを使うが、縦長の楕円にならないよう 460px まで */
+.ans.pc .ans-replay > .replay { flex: 1 1 auto; min-height: 0; }
+.ans.pc .ans-replay .ptable { flex: 1 1 auto; height: auto; min-height: 0; max-height: 460px; }
+.ans.pc .ans-replay .hlog.strip { flex: none; height: 104px; margin-top: auto; }
+.ans.pc .ans-range { grid-area: range; min-width: 0; min-height: 0; }
+/* ミックスバーのハンドル（端で 16px はみ出す）が横のスクロールにならないよう、右に余白を取って同じだけ外へ出す */
+.ans.pc .ans-tools {
+  grid-area: tools;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 16px;
+  margin-right: -16px;
+}
+.ans-send { display: flex; flex-direction: column; gap: var(--s2); }
+.ans.pc .ans-send { margin-top: auto; }
+.ans.pc .rcell-lbl { font-size: 12px; }
+/* 集計: リプレイ ｜ 表示の切り替えとレンジ表 ｜ 答え合わせ・内訳・操作 */
+.res.pc { grid-template-rows: minmax(0, 1fr); grid-template-areas: 'replay range tools'; }
+.res.pc .ans-range { display: flex; flex-direction: column; gap: var(--s3); }
+
+/* ---- スポットの見出し（PC。17 章）: どの局面の Hero の Range を答えるか ---- */
+.spot-banner {
+  grid-area: banner;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  min-height: 72px;
+  padding: var(--s3) var(--s5);
+  border: 1px solid rgba(252, 238, 10, 0.35);
+}
+.spot-banner .sp-lbl { color: var(--yellow); }
+.sp-street { font-family: var(--disp); font-size: 22px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg); }
+.sp-board { display: flex; gap: 4px; }
+.sp-q { display: flex; align-items: baseline; gap: var(--s3); min-width: 0; font-family: var(--disp); font-size: 20px; font-weight: 700; letter-spacing: 0.03em; }
+.sp-hero { color: var(--fg); white-space: nowrap; }
+.sp-facing { color: var(--dim); white-space: nowrap; }
+.sp-facing b, .sp-hero b { font-weight: 700; }
+.sp-nums { display: flex; gap: var(--s4); margin-left: auto; font-size: 17px; color: var(--fg); white-space: nowrap; }
+.sp-nums .mono-lbl { margin-right: 4px; font-style: normal; }
+
+/* ---- 出題の局面（17 章。2026-09-29 さつき: どこが出題か分かるようにアニメで。派手すぎないよう静かに） ----
+ * 卓の縁を黄で 1 回うっすら光らせ、Hero の席をゆっくり淡く光らせ、席の右に「SPOT」の札（黄の枠と文字）を出す。
+ * 進み具合のバーには黄の目盛り。視差効果を減らす設定ではアニメを止め、枠と札だけを出す（base.css）。 */
+.ptable.at-spot::after {
+  content: '';
+  position: absolute;
+  inset: 9% 6%;
+  border-radius: 50%;
+  border: 1px solid rgba(252, 238, 10, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  animation: spot-ring 1600ms var(--ease) 1;
+}
+@keyframes spot-ring {
+  0% { opacity: 0; }
+  30% { opacity: 0.45; }
+  100% { opacity: 0; }
+}
+/* 席のプレートは面取り（clip-path）で影が切れるので、光は席全体の drop-shadow で出す */
+.ptable.at-spot .pseat.hero .pseat-plate { border-color: rgba(252, 238, 10, 0.7); }
+.ptable.at-spot .pseat.hero { animation: spot-pulse 2800ms ease-in-out infinite; }
+@keyframes spot-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(252, 238, 10, 0.2)); }
+  50% { filter: drop-shadow(0 0 6px rgba(252, 238, 10, 0.45)); }
+}
+.pseat-spot {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 1px 7px;
+  border: 1px solid rgba(252, 238, 10, 0.6);
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--yellow);
+  font-family: var(--disp);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: spot-in 500ms var(--ease) both;
+}
+@keyframes spot-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.rp-bar { position: relative; overflow: visible; }
+.rp-bar i { overflow: hidden; }
+.rp-spot { position: absolute; top: -3px; width: 2px; height: 10px; margin-left: -1px; background: var(--yellow); opacity: 0.8; }
+
+/* スマホのスポットの要約も、出題の局面だと分かるよう黄の枠（PC の見出しと同じ。17 章） */
+.spot-strip { border-color: rgba(252, 238, 10, 0.4); }
+.spot-strip .sp-facing { color: var(--dim); }
