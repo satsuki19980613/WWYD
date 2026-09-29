@@ -9,7 +9,7 @@ import { acts } from '../../packages/core/src/poker/testHelpers.ts';
 import { detailJson } from '../../packages/app/src/answer/detailFixtures.ts';
 import { ALLIN_CASES, allinRaw } from '../../packages/core/src/post/allinFixtures.ts';
 import { hmw, hs1, hs1bb, hs3 } from '../../packages/core/src/post/postFixtures.ts';
-import { DUPLICATE, fakeBackend, type Backend } from '../fakeBackend.ts';
+import { fakeBackend, type Backend } from '../fakeBackend.ts';
 import { DATA, fulfillJson, watchErrors } from './taKit.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
@@ -27,12 +27,6 @@ async function open(page: Page, raw: Record<string, unknown> = hs1bb(), path = A
   if ((page.viewportSize()?.width ?? 1280) < 700) await expect(page.getByRole('tab', { name: 'Range' })).toBeVisible();
   else await expect(page.getByRole('button', { name: '回答する' })).toBeVisible();
   return be;
-}
-
-const isSp = (page: Page): boolean => (page.viewportSize()?.width ?? 1280) < 700;
-/** スマホは Range のタブへ移る */
-async function toRange(page: Page): Promise<void> {
-  if (isSp(page)) await page.getByRole('tab', { name: 'Range' }).click();
 }
 
 const cell = (page: Page, label: string): Locator => page.getByRole('button', { name: new RegExp(`^${label} `) });
@@ -507,5 +501,23 @@ test.describe('A-07 スマホ（@sp）', () => {
     await page.getByRole('tab', { name: 'Range' }).click();
     await expect(page.getByRole('button', { name: '回答する' })).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
+  });
+});
+
+test.describe('A-07 観察（仕様の確認が必要）', () => {
+  test('塗ったまま一覧へ移る（アプリ内の移動・ブラウザの戻る）と、確認なしで塗りが失われる。Post は確認する（06 章 §3.2）が回答は beforeunload だけ（§4.9）', async ({ page }) => {
+    await open(page);
+    let unloadAsked = false;
+    page.on('dialog', (d) => {
+      unloadAsked = true;
+      void d.dismiss();
+    });
+    await cell(page, 'AA').click();
+    await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: 'List' }).click();
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    expect(unloadAsked).toBe(false);
+    await page.goBack();
+    await expect(page.locator('.rcell.on')).toHaveCount(0); // 塗りは残っていない
   });
 });

@@ -12,7 +12,6 @@ import {
   errorsBox,
   isMobile,
   openNew,
-  pickBoard,
   playSrpTurn,
   S_ACTION,
   S_PLAYER,

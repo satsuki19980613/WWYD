@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import { AUTH, DATA, fakeBackend } from './taKit.ts';
-import { diffReview, heroHasPostflop, importImage, loadSamples, NO_SPOT, PREFLOP_ALLIN, readReview, UNREADABLE, type Sample } from './taOcr.ts';
+import { diffReview, heroHasPostflop, importImage, loadSamples, PREFLOP_ALLIN, readReview, UNREADABLE, type Sample } from './taOcr.ts';
 
 async function sweep(page: import('@playwright/test').Page, baseURL: string | undefined, samples: Sample[], label: string): Promise<void> {
   test.setTimeout(20 * 60_000);

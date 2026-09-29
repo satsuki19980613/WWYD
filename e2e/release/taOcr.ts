@@ -75,19 +75,19 @@ export async function readReview(review: Locator): Promise<ReviewView> {
     const hands: Record<string, string[]> = {};
     root.querySelectorAll('.ocr-rv-seat').forEach((seat) => {
       const pos = seat.querySelector('.ocr-rv-pos')?.textContent ?? '';
-      hands[pos] = [...seat.querySelectorAll('.pf-hand .pcard')].map(label);
+      hands[pos] = Array.from(seat.querySelectorAll('.pf-hand .pcard')).map(label);
     });
     const heroBtn = root.querySelector('[role=radio][aria-checked=true]');
     return {
       hero: heroBtn ? (/^Hero を (\S+) にする$/.exec(label(heroBtn))?.[1] ?? null) : null,
       hands,
-      board: [...root.querySelectorAll('.pf-board .pf-bslot.filled .pcard')].map(label),
-      actions: [...root.querySelectorAll('.ocr-rv-row')].map((row) => ({
+      board: Array.from(root.querySelectorAll('.pf-board .pf-bslot.filled .pcard')).map(label),
+      actions: Array.from(root.querySelectorAll('.ocr-rv-row')).map((row) => ({
         pos: row.querySelector('.ocr-rv-actor')?.textContent ?? '',
         verb: row.querySelector('.select-trigger span')?.textContent ?? '',
         amount: (row.querySelector('.ocr-rv-amt input') as HTMLInputElement | null)?.value ?? '',
       })),
-      issues: [...root.querySelectorAll('.pf-errors li')].map((li) => li.textContent ?? ''),
+      issues: Array.from(root.querySelectorAll('.pf-errors li')).map((li) => li.textContent ?? ''),
     };
   }).then((v) => ({
     ...v,

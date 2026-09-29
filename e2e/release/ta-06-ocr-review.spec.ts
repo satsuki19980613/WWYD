@@ -4,7 +4,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { fakeBackend, fakeCreatePost } from './taKit.ts';
-import { acting, isMobile, pickSpot, S_ACTION, S_PLAYER, S_SETTINGS, setTitle, step, submit } from './taPost.ts';
+import { isMobile, S_PLAYER, S_SETTINGS, setTitle, step, submit } from './taPost.ts';
 import { diffReview, heroHasPostflop, importImage, loadSamples, NO_SPOT, PREFLOP_ALLIN, readReview, UNREADABLE, type Sample } from './taOcr.ts';
 
 const pc = loadSamples('pc');
