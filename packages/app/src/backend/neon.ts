@@ -1,9 +1,11 @@
 import { PostgrestClient } from '@supabase/postgrest-js';
+import { AUTH_PROXY_PREFIX } from './authProxy.ts';
 
 /**
  * Neon のバックエンドへの接続（詳細仕様 12 章）。
- * - ログイン: Neon Auth（Managed Better Auth）の REST を直接呼ぶ。セッションは Neon Auth のドメインのクッキー
- *   （HttpOnly・SameSite=None・Partitioned）で、アプリからは読めない。
+ * - ログイン: Neon Auth（Managed Better Auth）の REST を呼ぶ。Google へのログインの開始だけ Neon Auth に直接、
+ *   セッションの確認・JWT・ログアウトは自サイトの `/api/auth/*` の中継を通す（authProxy.ts）。セッションは自サイトの
+ *   HttpOnly のクッキーになり、他サイトのクッキーを消すブラウザでもログインが続く（2026-09-29。12 章 §7.2）。アプリからは読めない。
  * - データ: Neon Data API（PostgREST 互換）。Neon Auth が発行する JWT（15 分）を Authorization に付ける。
  * 公式 SDK（@neondatabase/neon-js / auth）は Next.js を必須の依存に持ち Vite では入らないため、
  * SDK が内部で行っている手順（sign-in/social → session verifier → get-session → token）を同じ順で行う。
@@ -12,14 +14,22 @@ export const AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? '';
 export const DATA_API_URL = import.meta.env.VITE_NEON_DATA_API_URL ?? '';
 export const CREATE_POST_URL = import.meta.env.VITE_NEON_CREATE_POST_URL ?? '';
 export const configured = Boolean(AUTH_URL && DATA_API_URL);
+/** セッションの確認・JWT・ログアウト・ヘルスチェックの入口（自サイトの中継。本番は Pages Functions、開発は Vite の proxy） */
+export const SESSION_URL = AUTH_PROXY_PREFIX;
 
 /** OAuth から戻った URL に Neon Auth が付けるパラメータ（セッションを受け取るための一回限りの値） */
 export const SESSION_VERIFIER_PARAM = 'neon_auth_session_verifier';
 
 export type AuthUser = { id: string };
 
+/** Neon Auth に直接（Google へのログインの開始だけ） */
 function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
   return fetch(`${AUTH_URL}${path}`, { ...init, credentials: 'include' });
+}
+
+/** 自サイトの中継を通す（セッションのクッキーは自サイトのもの） */
+function sessionFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(`${SESSION_URL}${path}`, { ...init, credentials: 'same-origin' });
 }
 
 /**
@@ -62,7 +72,7 @@ export async function getSessionUser(verifier: string | null): Promise<AuthUser 
 const verifierExchanges = new Map<string, Promise<AuthUser | null>>();
 
 async function fetchSession(query: string): Promise<AuthUser | null> {
-  const res = await authFetch(`/get-session${query}`);
+  const res = await sessionFetch(`/get-session${query}`);
   if (!res.ok) throw Object.assign(new Error(`get-session ${res.status}`), { status: res.status });
   const body = (await res.json()) as { user?: { id?: string } } | null;
   return body?.user?.id ? { id: body.user.id } : null;
@@ -70,7 +80,7 @@ async function fetchSession(query: string): Promise<AuthUser | null> {
 
 export async function signOut(): Promise<void> {
   cachedToken = null;
-  await authFetch('/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  await sessionFetch('/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
 }
 
 // ---- Data API 用の JWT（15 分。切れる 30 秒前に取り直す） ----
@@ -88,7 +98,7 @@ function expOf(jwt: string): number {
 
 export async function getToken(): Promise<string | null> {
   if (cachedToken && cachedToken.exp - 30_000 > Date.now()) return cachedToken.token;
-  const res = await authFetch('/token');
+  const res = await sessionFetch('/token');
   if (res.status === 401) return null;
   if (!res.ok) throw Object.assign(new Error(`token ${res.status}`), { status: res.status });
   const { token } = (await res.json()) as { token?: string };

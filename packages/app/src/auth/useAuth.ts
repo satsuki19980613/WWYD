@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppState, Reachability } from '../appState.ts';
-import { AUTH_URL, configured, db, getSessionUser, signInWithGoogle, signOut as neonSignOut } from '../backend/neon.ts';
+import { configured, SESSION_URL, db, getSessionUser, signInWithGoogle, signOut as neonSignOut } from '../backend/neon.ts';
 import { navigate } from '../router.ts';
 import { checkHealth, cleanAuthParams, resolveAppState, type Whoami } from './resolveAppState.ts';
 
@@ -50,7 +50,7 @@ export function useAuth(): Auth {
       return;
     }
     const r = await resolveAppState({
-      health: () => checkHealth(`${AUTH_URL}/ok`),
+      health: () => checkHealth(`${SESSION_URL}/ok`),
       online: () => navigator.onLine,
       hasSession: async () => {
         try {

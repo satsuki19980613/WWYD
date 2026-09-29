@@ -14,7 +14,7 @@
     "preview": "npm run preview -w @wwyd/app",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/ocr && tsc --noEmit -p packages/app && tsc --noEmit -p packages/functions && tsc --noEmit -p tsconfig.tools.json && tsc --noEmit -p e2e",
+    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/ocr && tsc --noEmit -p packages/app && tsc --noEmit -p packages/functions && tsc --noEmit -p tsconfig.tools.json && tsc --noEmit -p functions && tsc --noEmit -p e2e",
     "test:coverage": "vitest run --coverage",
     "gen:db-vectors": "node scripts/genPaintVectorsSql.mjs",
     "check:db-vectors": "node scripts/genPaintVectorsSql.mjs --check",

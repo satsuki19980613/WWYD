@@ -62,9 +62,11 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
   const signedIn = opts.signedIn ?? true;
   const be: Backend = { detail, inserts: [], insertError: null, afterInsert: null, deletes: [], calls: [], deleteAccountError: null };
 
-  await page.route(`${AUTH}/**`, async (route) => {
+  // セッション・JWT・ログアウト・ヘルスチェックは自サイトの中継（/api/auth/*。12 章 §7.2）、ログインの開始は Neon Auth に直接
+  const auth = async (route: Route): Promise<void> => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors(route) });
-    const path = new URL(route.request().url()).pathname;
+    const path = new URL(route.request().url()).pathname.replace(/^\/api\/auth/, '');
+    if (route.request().url().startsWith(AUTH) && path !== '/sign-in/social') be.calls.push(`direct:${path}`);
     if (path === '/ok') return json(route, 200, { ok: true });
     if (path === '/get-session') return json(route, 200, signedIn ? { user: { id: UID }, session: { userId: UID } } : null);
     if (path === '/token') return json(route, 200, { token: fakeJwt() });
@@ -73,7 +75,9 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
       return json(route, 200, { success: true });
     }
     return json(route, 404, { message: 'not found' });
-  });
+  };
+  await page.route(`${AUTH}/**`, auth);
+  await page.route('**/api/auth/**', auth);
 
   await page.route(`${DATA}/**`, async (route) => {
     const req = route.request();
