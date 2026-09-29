@@ -132,13 +132,15 @@
 - **原因**: Neon Auth のセッションのクッキー（`__Secure-neonauth.session_token`。HttpOnly・SameSite=None・Partitioned）は Neon Auth のドメインに付く。
   アプリ（wwyd.pages.dev）から見ると他サイトのクッキーで、Safari（ITP）・ホーム画面のアプリなどは消す・閉じ込める。サーバー側のセッションは 7 日（使うと延びる）で残っていても、ブラウザがクッキーを失うとログインし直しになる。
 - **採らなかった方法**: セッションの値を localStorage に置き Bearer で送る（Neon Auth は受け付けない。2026-09-29 に dev で確かめた。同じ試みの事例も同じ結論）。独自ドメインで Neon Auth を同じサイトにする（ドメインの費用がかかる）。
-- **方式**（Neon 公式の Next.js 版の `auth.handler()` と同じ考え方）: セッションの確認・JWT・ログアウト・ヘルスチェック（`get-session`・`token`・`sign-out`・`ok`）を
+- **方式**（Neon 公式の Next.js 版の `auth.handler()` と同じ考え方）: ログインの開始・セッションの確認・JWT・ログアウト・ヘルスチェック（`sign-in/social`・`get-session`・`token`・`sign-out`・`ok`）を
   自サイトの `/api/auth/*` から Neon Auth へ中継し、応答の Set-Cookie を自サイトのクッキーにする（Domain・Partitioned を外し SameSite=Lax。期限・HttpOnly・Secure はそのまま）。
   - 本番: Cloudflare Pages Functions（`functions/api/auth/[[path]].ts`。中継先は上の Auth URL を書く。変えたら `.env.production`・`public/_headers` と合わせて直す。単体テストで `_headers` と照合）。
     Pages Functions は Workers の無料枠（1 日 10 万回）に数える。起動 1 回で 3 回（ok・get-session・token）＋ 15 分ごとの token。静的なファイルは関数を通らない（不変条件 3 の範囲）。
   - 開発・プレビュー: Vite の proxy（`vite.config.ts`。接続先は `VITE_NEON_AUTH_URL`）。E2E は `/api/auth/*` も偽の応答にする。
-  - 中身は `packages/app/src/backend/authProxy.ts`（中継する API の許可リスト、Neon Auth のクッキーだけを送る、Set-Cookie の書き換え）。
-- **Google へのログインの開始（`sign-in/social`）は Neon Auth に直接**: OAuth の state は、Google から戻る Neon Auth のドメインで確かめるため。戻ったあとの `get-session?neon_auth_session_verifier=…` を中継で呼び、自サイトにセッションのクッキーを受け取る。
+  - 中身は `packages/app/src/backend/authProxy.ts`（中継する API の許可リスト、Neon Auth のクッキー（名前は `neon-auth.` と `neonauth.` の両方）だけを送る、Set-Cookie の書き換え）。
+- **ログインの開始（`sign-in/social`）も中継する**: Neon Auth はそこで照合用のクッキー `__Secure-neon-auth.session_challenge`（10 分）を付け、Google から戻ったあとの `get-session?neon_auth_session_verifier=…` でそれと照合してセッションを渡す。
+  最初は開始だけ Neon Auth に直接にしていて、照合用のクッキーが自サイトに無くログインできなかった（2026-09-29 に dev で発生・修正）。Google から戻る先（callback）は Neon Auth のドメインのまま（OAuth の state はサーバー側）。
+- **確認（2026-09-29、dev）**: さつきが中継経由で Google にログイン → 再読み込みしてもログインが続く。中継のセッションは Neon Auth に直接のクッキーのセッションとは別の新しいもの（自サイトのクッキー）。
 - **切り替え時**: 今までのクッキーは Neon Auth のドメインにあり中継からは読めないので、切り替え後に 1 回だけログインし直しになる。
 - **期限**: サーバー側のセッションは 7 日で、使うと延びる（Better Auth の既定。1 日に 1 回以上使えば延長）。7 日より長く使わなければログインし直し。
 

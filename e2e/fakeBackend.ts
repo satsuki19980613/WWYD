@@ -62,11 +62,11 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
   const signedIn = opts.signedIn ?? true;
   const be: Backend = { detail, inserts: [], insertError: null, afterInsert: null, deletes: [], calls: [], deleteAccountError: null };
 
-  // セッション・JWT・ログアウト・ヘルスチェックは自サイトの中継（/api/auth/*。12 章 §7.2）、ログインの開始は Neon Auth に直接
+  // Neon Auth へは自サイトの中継（/api/auth/*。12 章 §7.2）を通す。直接の要求があれば記録する（既存の試験の calls の一致で落ちる）
   const auth = async (route: Route): Promise<void> => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors(route) });
     const path = new URL(route.request().url()).pathname.replace(/^\/api\/auth/, '');
-    if (route.request().url().startsWith(AUTH) && path !== '/sign-in/social') be.calls.push(`direct:${path}`);
+    if (route.request().url().startsWith(AUTH)) be.calls.push(`direct:${path}`);
     if (path === '/ok') return json(route, 200, { ok: true });
     if (path === '/get-session') return json(route, 200, signedIn ? { user: { id: UID }, session: { userId: UID } } : null);
     if (path === '/token') return json(route, 200, { token: fakeJwt() });

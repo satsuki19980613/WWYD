@@ -17,12 +17,14 @@ describe('Neon Auth の中継（12 章 §7.2。2026-09-29）', () => {
   });
   it('送るのは Neon Auth のクッキーだけ', () => {
     expect(authCookies('a=1; __Secure-neonauth.session_token=x; neonauth.state=y; b=2')).toBe('__Secure-neonauth.session_token=x; neonauth.state=y');
+    // ログインの開始で付く照合用のクッキー（名前は neon-auth.）も送る
+    expect(authCookies('__Secure-neon-auth.session_challenge=c; x=1')).toBe('__Secure-neon-auth.session_challenge=c');
     expect(authCookies('a=1')).toBeNull();
     expect(authCookies(null)).toBeNull();
   });
-  it('中継するのはセッション・JWT・ログアウト・ヘルスチェックだけ（ログインの開始は Neon Auth に直接）', () => {
-    for (const p of ['get-session', '/token', 'sign-out/', 'ok']) expect(isProxiedPath(p)).toBe(true);
-    for (const p of ['sign-in/social', 'callback/google', 'admin/list-users', '', '../x']) expect(isProxiedPath(p)).toBe(false);
+  it('中継するのはログインの開始・セッション・JWT・ログアウト・ヘルスチェックだけ', () => {
+    for (const p of ['sign-in/social', 'get-session', '/token', 'sign-out/', 'ok']) expect(isProxiedPath(p)).toBe(true);
+    for (const p of ['sign-in/email', 'callback/google', 'admin/list-users', '', '../x']) expect(isProxiedPath(p)).toBe(false);
   });
 
   it('要求を Neon Auth へ作り直し、応答の Set-Cookie を自サイトのものにする', async () => {

@@ -3,8 +3,7 @@ import { AUTH_PROXY_PREFIX } from './authProxy.ts';
 
 /**
  * Neon のバックエンドへの接続（詳細仕様 12 章）。
- * - ログイン: Neon Auth（Managed Better Auth）の REST を呼ぶ。Google へのログインの開始だけ Neon Auth に直接、
- *   セッションの確認・JWT・ログアウトは自サイトの `/api/auth/*` の中継を通す（authProxy.ts）。セッションは自サイトの
+ * - ログイン: Neon Auth（Managed Better Auth）の REST を、自サイトの `/api/auth/*` の中継を通して呼ぶ（authProxy.ts）。セッションは自サイトの
  *   HttpOnly のクッキーになり、他サイトのクッキーを消すブラウザでもログインが続く（2026-09-29。12 章 §7.2）。アプリからは読めない。
  * - データ: Neon Data API（PostgREST 互換）。Neon Auth が発行する JWT（15 分）を Authorization に付ける。
  * 公式 SDK（@neondatabase/neon-js / auth）は Next.js を必須の依存に持ち Vite では入らないため、
@@ -14,18 +13,13 @@ export const AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? '';
 export const DATA_API_URL = import.meta.env.VITE_NEON_DATA_API_URL ?? '';
 export const CREATE_POST_URL = import.meta.env.VITE_NEON_CREATE_POST_URL ?? '';
 export const configured = Boolean(AUTH_URL && DATA_API_URL);
-/** セッションの確認・JWT・ログアウト・ヘルスチェックの入口（自サイトの中継。本番は Pages Functions、開発は Vite の proxy） */
+/** Neon Auth の入口（自サイトの中継。本番は Pages Functions、開発は Vite の proxy） */
 export const SESSION_URL = AUTH_PROXY_PREFIX;
 
 /** OAuth から戻った URL に Neon Auth が付けるパラメータ（セッションを受け取るための一回限りの値） */
 export const SESSION_VERIFIER_PARAM = 'neon_auth_session_verifier';
 
 export type AuthUser = { id: string };
-
-/** Neon Auth に直接（Google へのログインの開始だけ） */
-function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(`${AUTH_URL}${path}`, { ...init, credentials: 'include' });
-}
 
 /** 自サイトの中継を通す（セッションのクッキーは自サイトのもの） */
 function sessionFetch(path: string, init: RequestInit = {}): Promise<Response> {
@@ -39,7 +33,7 @@ function sessionFetch(path: string, init: RequestInit = {}): Promise<Response> {
 export async function signInWithGoogle(callbackURL: string): Promise<void> {
   const failURL = new URL(callbackURL);
   failURL.searchParams.set('error', 'login_failed');
-  const res = await authFetch('/sign-in/social', {
+  const res = await sessionFetch('/sign-in/social', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ provider: 'google', callbackURL, errorCallbackURL: failURL.toString(), disableRedirect: true }),
