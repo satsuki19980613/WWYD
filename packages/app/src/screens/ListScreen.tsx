@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { ChipGroup } from '../components/ChipGroup.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { ChevronIcon, TrashIcon } from '../components/Icons.tsx';
@@ -57,17 +57,65 @@ export function ListScreen(): JSX.Element {
 
   const now = Date.now();
 
+  const more = list.status === 'ready' && list.rows.length > 0 && (
+    <>
+      {list.hasMore && list.more === 'idle' && <MoreSentinel onVisible={list.loadMore} />}
+      {list.more === 'loading' && (
+        <div className="list-more" role="status" aria-label="読み込み中">
+          <span className="spinner" />
+        </div>
+      )}
+      {list.more === 'error' && <LoadError onRetry={list.retry} />}
+    </>
+  );
+  const deleteDialog = deleting && (
+    <ConfirmDialog
+      title="この投稿を削除しますか"
+      body="集まった回答もすべて削除されます。元には戻せません。"
+      confirmLabel="削除する"
+      busyLabel="削除中…"
+      destructive
+      busy={deleting.busy}
+      onConfirm={confirmDelete}
+      onCancel={() => setDeleting(null)}
+    />
+  );
+
+  if (!mobile) {
+    // PC: 左に絞り込みの列、右に 1 行 1 投稿の表（17 章。GTO Wizard の Analyzer・LeetCode の問題一覧に倣う）
+    return (
+      <section className="screen list-screen pc">
+        <aside className="list-rail" aria-label="絞り込み">
+          <ChipGroup label="範囲" variant="rail" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
+          <ChipGroup label="Street" variant="rail" items={STREET_ITEMS} value={query.street} onChange={(street) => setQuery({ street })} />
+          <ChipGroup label="並び替え" variant="rail" items={SORT_ITEMS} value={query.sort} onChange={(sort) => setQuery({ sort })} />
+        </aside>
+        <div className="list-main">
+          {list.status !== 'error' && !(list.status === 'ready' && list.rows.length === 0) && (
+            <SpotTable
+              rows={list.status === 'ready' ? list.rows : []}
+              loading={list.status === 'loading'}
+              now={now}
+              sort={query.sort}
+              onSort={(sort) => setQuery({ sort })}
+              onDelete={(id) => setDeleting({ id, busy: false })}
+            />
+          )}
+          {list.status === 'error' && <LoadError onRetry={list.retry} />}
+          {list.status === 'ready' && list.rows.length === 0 && <Empty query={query} />}
+          {more}
+        </div>
+        {deleteDialog}
+      </section>
+    );
+  }
+
   return (
-    <section className={`screen list-screen ${mobile ? 'sp' : ''}`}>
-      {/* 画面名はヘッダーに出す。PC は投稿ボタンをタブの右に置く。タブと絞り込みはスクロールしても上に固定する */}
+    <section className="screen list-screen sp">
+      {/* 画面名はヘッダーに出す。タブと絞り込みはスクロールしても上に固定する */}
       <div className="list-top">
         <div className="list-head">
           <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
-          {!mobile && (
-            <Link to="/new" className="btn auto">
-              ＋ Post
-            </Link>
-          )}
         </div>
 
         <div className="list-filters">
@@ -99,43 +147,120 @@ export function ListScreen(): JSX.Element {
       {list.status === 'ready' && list.rows.length === 0 && <Empty query={query} />}
 
       {list.status === 'ready' && list.rows.length > 0 && (
-        <>
-          <div className="spot-grid">
-            {list.rows.map((row) => (
-              <SpotCard key={row.id} row={row} now={now} onDelete={() => setDeleting({ id: row.id, busy: false })} />
-            ))}
-          </div>
-          {list.hasMore && list.more === 'idle' && <MoreSentinel onVisible={list.loadMore} />}
-          {list.more === 'loading' && (
-            <div className="list-more" role="status" aria-label="読み込み中">
-              <span className="spinner" />
-            </div>
-          )}
-          {list.more === 'error' && <LoadError onRetry={list.retry} />}
-        </>
-      )}
-
-      {mobile && (
-        <div className="list-fab">
-          <Link to="/new" className="btn">
-            ＋ Post
-          </Link>
+        <div className="spot-grid">
+          {list.rows.map((row) => (
+            <SpotCard key={row.id} row={row} now={now} onDelete={() => setDeleting({ id: row.id, busy: false })} />
+          ))}
         </div>
       )}
+      {more}
 
-      {deleting && (
-        <ConfirmDialog
-          title="この投稿を削除しますか"
-          body="集まった回答もすべて削除されます。元には戻せません。"
-          confirmLabel="削除する"
-          busyLabel="削除中…"
-          destructive
-          busy={deleting.busy}
-          onConfirm={confirmDelete}
-          onCancel={() => setDeleting(null)}
-        />
-      )}
+      <div className="list-fab">
+        <Link to="/new" className="btn">
+          ＋ Post
+        </Link>
+      </div>
+
+      {deleteDialog}
     </section>
+  );
+}
+
+/**
+ * PC の一覧の表（17 章）。1 行 1 投稿で、行全体を押せる（タイトルのリンクを行いっぱいに広げる）。
+ * 見出しの「回答」「投稿」を押すと並び替える。↑↓（j / k）で行を移り、Enter で開く。
+ */
+function SpotTable(props: {
+  rows: readonly PostRow[];
+  loading: boolean;
+  now: number;
+  sort: ListQuery['sort'];
+  onSort: (sort: ListQuery['sort']) => void;
+  onDelete: (id: string) => void;
+}): JSX.Element {
+  const ref = useRef<HTMLOListElement>(null);
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLOListElement>): void => {
+    const down = e.key === 'ArrowDown' || e.key === 'j';
+    const up = e.key === 'ArrowUp' || e.key === 'k';
+    if (!down && !up) return;
+    const links = [...(ref.current?.querySelectorAll<HTMLAnchorElement>('.spot-link') ?? [])];
+    const i = links.findIndex((l) => l === document.activeElement);
+    const next = links[i < 0 ? 0 : Math.min(links.length - 1, Math.max(0, i + (down ? 1 : -1)))];
+    if (!next) return;
+    e.preventDefault();
+    next.focus();
+  };
+  const sortHead = (value: ListQuery['sort'], label: string): JSX.Element => (
+    <button type="button" className="st-sort" aria-pressed={props.sort === value} onClick={() => props.onSort(value)}>
+      {label}
+    </button>
+  );
+  return (
+    <div className="spot-table">
+      <div className="st-row st-head">
+        <span>Street</span>
+        <span>Title</span>
+        <span>Game</span>
+        <span>Hero</span>
+        <span className="st-num">{sortHead('many', '回答')}</span>
+        <span className="st-num">{sortHead('new', '投稿')}</span>
+        <span />
+      </div>
+      {props.loading && (
+        <div aria-busy="true">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="st-row skeleton" aria-hidden="true">
+              <span className="sk sk-s" />
+              <span className="sk sk-l" />
+            </div>
+          ))}
+        </div>
+      )}
+      {props.rows.length > 0 && (
+        <ol ref={ref} className="st-body" onKeyDown={onKeyDown}>
+          {props.rows.map((row) => (
+            <SpotRow key={row.id} row={row} now={props.now} onDelete={() => props.onDelete(row.id)} />
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JSX.Element {
+  const { row } = props;
+  const status = cardStatus(row);
+  const action = cardAction(row);
+  return (
+    <li className={`st-row spot-row${action.primary ? '' : ' done'}`}>
+      <span>
+        <span className="street-badge">{STREET_LABEL[row.street]}</span>
+      </span>
+      <span className="st-title">
+        <Link to={action.to} className="spot-link">
+          {row.title}
+        </Link>
+        {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
+        {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
+      </span>
+      <span className="spot-fmt num">{formatLabel(row)}</span>
+      <b className="st-pos" style={{ color: POS_VAR[row.hero] }}>
+        {row.hero}
+      </b>
+      <span className="st-num num st-count">{row.answer_count}</span>
+      <span className="st-num st-ago">{formatAgo(row.created_at, props.now)}</span>
+      <span className="st-go">
+        <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
+          {action.label}
+          <ChevronIcon />
+        </span>
+        {row.can_delete && (
+          <button type="button" className="spot-del" aria-label="削除" onClick={props.onDelete}>
+            <TrashIcon />
+          </button>
+        )}
+      </span>
+    </li>
   );
 }
 

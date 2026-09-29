@@ -1,10 +1,12 @@
 import { STREETS, type Action, type Card, type Pos } from '@wwyd/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { typingOrModal } from '../answer/Replay.tsx';
 import { cardText } from '../components/PlayingCard.tsx';
 import { useToast } from '../components/Toast.tsx';
 import { ActionSection } from '../post/ActionSection.tsx';
 import { applyCardKey, isHandComplete, type CardKey } from '../post/cardInput.ts';
 import { CardKeyboard } from '../post/CardKeyboard.tsx';
+import { HandPicker } from '../post/HandPicker.tsx';
 import {
   addAction,
   addActions,
@@ -14,6 +16,7 @@ import {
   clearActions,
   makesPreflopAllin,
   neighborSeat,
+  nextOpenSeat,
   normalizeSpot,
   parseSettings,
   phaseOf,
@@ -89,7 +92,30 @@ export function NewPostScreen(): JSX.Element {
     setFuture((f) => f.slice(1));
     update((x) => addAction(x, next));
   };
+  const undoLast = (): void => {
+    const last = getDraft().actions.at(-1);
+    if (!last) return;
+    setFuture((f) => [last, ...f]);
+    update(undoAction);
+  };
   const patch = (p: Partial<Draft>): void => update((x) => normalizeSpot({ ...x, ...p }));
+
+  // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）
+  const keys = useRef({ undoLast, redo });
+  keys.current = { undoLast, redo: canReplay(phase, future[0]) ? redo : () => undefined };
+  useEffect(() => {
+    if (mobile) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || typingOrModal(e)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) keys.current.undoLast();
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) keys.current.redo();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobile]);
 
   const onKey = (key: CardKey): void => {
     if (!seat) return;
@@ -148,11 +174,7 @@ export function NewPostScreen(): JSX.Element {
         advanceFuture(as);
         update((x) => addActions(x, as));
       }}
-      onUndo={() => {
-        const last = d.actions[d.actions.length - 1];
-        if (last) setFuture((f) => [last, ...f]);
-        update(undoAction);
-      }}
+      onUndo={undoLast}
       onRedo={canReplay(phase, future[0]) ? redo : null}
       onTruncate={(i) => {
         setFuture((f) => [...d.actions.slice(i), ...f]);
@@ -183,7 +205,24 @@ export function NewPostScreen(): JSX.Element {
       {busy ? '投稿中…' : '投稿する'}
     </button>
   );
-  const keyboard = seat && (
+  // PC はカード選択ボード、スマホはカードキーボード（2026-09-29 さつき）
+  const keyboard = seat && !mobile && (
+    <HandPicker
+      seat={seat}
+      hand={d.hands[seat]}
+      used={usedCards(d, seat)}
+      onChange={(hand) => update((x) => ({ ...x, hands: { ...x.hands, [seat]: hand } }))}
+      onUsed={(c) => toast(`${cardText(c)} は使用済み`)}
+      onFilled={() => {
+        const next = nextOpenSeat(seatsOf(d), d.hands, seat);
+        if (next) setSeat(next);
+      }}
+      onClose={() => setSeat(null)}
+      onPrev={() => setSeat(neighborSeat(seatsOf(d), seat, -1))}
+      onNext={() => setSeat(neighborSeat(seatsOf(d), seat, 1))}
+    />
+  );
+  const mobileKeyboard = seat && mobile && (
     <CardKeyboard
       seat={seat}
       onKey={onKey}
@@ -201,7 +240,7 @@ export function NewPostScreen(): JSX.Element {
 
   if (!mobile) {
     return (
-      <section className={`screen pf ${seat ? 'kb-open' : ''}`}>
+      <section className="screen pf">
         {ocr(true)}
         <div className="pf-grid">
           <div className="pf-col">
@@ -264,7 +303,7 @@ export function NewPostScreen(): JSX.Element {
           </div>
         </div>
       )}
-      {keyboard}
+      {mobileKeyboard}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { HistoryIcon, PauseIcon, PlayIcon, StepBackIcon, StepForwardIcon } from '../components/Icons.tsx';
 import { Modal } from '../components/Modal.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
@@ -20,6 +20,10 @@ export type ReplayControl = {
   back: () => void;
   toggle: () => void;
   forward: () => void;
+  /** 最後（回答画面はスポット、集計画面はハンドの終わり）へ */
+  last: () => void;
+  /** `n` 手目へ（ハンドヒストリーの 1 手を押したとき。17 章） */
+  goto: (n: number) => void;
 };
 
 /**
@@ -67,7 +71,45 @@ export function useReplay(max: number, opts: { atEnd?: boolean } = {}): ReplayCo
       setPlaying(false);
       setStep((s) => Math.min(max, s + 1));
     },
+    last: () => {
+      setPlaying(false);
+      setStep(max);
+    },
+    goto: (n: number) => {
+      setPlaying(false);
+      setStep(Math.min(max, Math.max(0, n)));
+    },
   };
+}
+
+/** 入力欄やモーダルを操作中か（ショートカットを効かせない） */
+export function typingOrModal(e: KeyboardEvent): boolean {
+  const t = e.target;
+  if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable)) return true;
+  return document.querySelector('.modal-backdrop') !== null;
+}
+
+/**
+ * PC のリプレイのキー（17 章。PT4・HM3・Lichess と同じ）: ← → で 1 手、Home で最初、End で最後。
+ * 入力欄を操作中・モーダルを開いている間は効かせない。
+ */
+export function useReplayKeys(c: ReplayControl, enabled: boolean): void {
+  const live = useRef(c);
+  live.current = c;
+  useEffect(() => {
+    if (!enabled) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      // 表のマスなど、矢印キーを自分で使う部品が先に処理したら何もしない
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || typingOrModal(e)) return;
+      const r = live.current;
+      const f = { ArrowLeft: r.back, ArrowRight: r.forward, Home: r.first, End: r.last }[e.key];
+      if (!f) return;
+      e.preventDefault();
+      f();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [enabled]);
 }
 
 /** 再生の操作。「最初から」は文字、1手戻る・再生 / 一時停止・1手進むはマーク（名前は読み上げに。2026-09-29 さつき） */

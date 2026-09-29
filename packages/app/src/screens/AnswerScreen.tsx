@@ -40,7 +40,16 @@ import {
 } from '../answer/paintEditor.ts';
 import { answerErrorMessage, type PostDetail } from '../answer/postDetail.ts';
 import { RangeGrid } from '../answer/RangeGrid.tsx';
-import { HandLog, HistoryButton, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
+import {
+  HandLog,
+  HistoryButton,
+  PokerTable,
+  ReplayControls,
+  typingOrModal,
+  useReplay,
+  useReplayKeys,
+  type ReplayControl,
+} from '../answer/Replay.tsx';
 import { actorAt, answerFrames, seatViews } from '../answer/replayModel.ts';
 import { SizeButton, SizeControl } from '../answer/SizeControl.tsx';
 import { STREET_LABEL } from '../list/spotList.ts';
@@ -85,6 +94,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
     [hand.setup, hand.actions, hand.stopIndex, post.street],
   );
   const replay = useReplay(hand.stopIndex);
+  useReplayKeys(replay, !mobile);
   const stop = frames[hand.stopIndex] as (typeof frames)[number];
 
   // ---- アクションの名前とサイズ ----
@@ -145,6 +155,24 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   const errors = [...(attempted ? submitErrors(editor.paint, post.keys, to, sizeSpot) : []), ...(serverError ? [serverError] : [])];
 
   useEffect(() => setServerError(null), [editor.paint, sizeText]);
+
+  // PC の塗りのキー（17 章）: Ctrl+Z で元に戻す、Ctrl+Y・Ctrl+Shift+Z でやり直す、E で消しゴム・B でブラシ
+  useEffect(() => {
+    if (mobile) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.altKey || typingOrModal(e)) return;
+      const k = e.key.toLowerCase();
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && k === 'z' && !e.shiftKey) setEditor(undo);
+      else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) setEditor(redo);
+      else if (!mod && k === 'e') setTool('eraser');
+      else if (!mod && k === 'b') setTool('brush');
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobile]);
 
   // 塗りを変えたまま画面を離れるとき、ブラウザの離脱確認を出す（06 章 §4.9）
   const initialKey = useMemo(() => paintKey(initialPaint), [initialPaint]);
@@ -258,20 +286,24 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   );
 
   if (!mobile) {
+    // PC（17 章）: 左にリプレイ、中央にレンジ表、右に道具と送信。1200px 以上は画面の高さに収めてスクロールさせない。
+    // 1200px 未満はリプレイとレンジの 2 列（レンジの列に道具を重ねる）
     return (
-      <section className="screen ans">
-        {head}
-        <div className="ans-grid">
-          <div className="ans-col">
-            <h2 className="sec-h">Replay</h2>
-            {replayView}
-          </div>
-          <div className="ans-col">
-            <h2 className="sec-h">Range</h2>
-            {brushPanel}
-            {grid}
-            {size}
-            {bar}
+      <section className="screen ans pc">
+        <div className="ans-replay">
+          {head}
+          <h2 className="sr-only">Replay</h2>
+          {replayView}
+        </div>
+        <div className="ans-range">
+          <h2 className="sr-only">Range</h2>
+          {grid}
+        </div>
+        <div className="ans-tools">
+          {brushPanel}
+          {size}
+          {bar}
+          <div className="ans-send">
             <ErrorList errors={errors} />
             {submitButton}
           </div>
@@ -375,6 +407,7 @@ function ReplayView(props: {
       spotIndex={hand.spotIndex}
       highlightLast
       prompt={c.step === hand.stopIndex ? `▶ ${post.hero} to act` : null}
+      onPick={props.logInModal ? undefined : (i) => c.goto(i + 1)}
     />
   );
   return (

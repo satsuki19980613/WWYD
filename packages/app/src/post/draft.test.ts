@@ -20,6 +20,7 @@ import {
   isLocked,
   makesPreflopAllin,
   neighborSeat,
+  nextOpenSeat,
   parseSettings,
   NO_HERO_POSTFLOP,
   PLAYERS_REQUIRED,
@@ -158,6 +159,11 @@ describe('人数（06 章 §3.4。2026-09-29）', () => {
     const six6 = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'] as const;
     expect(neighborSeat(six6, 'UTG', -1)).toBe('BB');
     expect(neighborSeat(six6, 'BB', 1)).toBe('UTG');
+    // 次の空の席（PC のカード選択ボード。17 章）
+    const hands = { ...emptyDraft().hands, UTG: 'AsKd', HJ: '', CO: 'QhQd', BTN: '', SB: '', BB: '' };
+    expect(nextOpenSeat(six6, hands, 'UTG')).toBe('HJ');
+    expect(nextOpenSeat(six6, hands, 'HJ')).toBe('BTN');
+    expect(nextOpenSeat(six6, { ...hands, BTN: '2c2d', SB: '3c3d', BB: '4c4d' }, 'HJ')).toBeNull();
     expect(neighborSeat(six6, 'CO', 1)).toBe('BTN');
     expect(neighborSeat(['BTN', 'BB'], 'BB', 1)).toBe('BTN');
     expect(neighborSeat(['BTN', 'BB'], 'BTN', -1)).toBe('BB');

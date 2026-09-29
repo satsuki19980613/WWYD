@@ -101,6 +101,7 @@ export function App(): JSX.Element {
       <Header
         title={state === 'ready' || isLegal ? SCREEN_TITLE[route.name] : undefined}
         back={showBack}
+        nav={state === 'ready' ? (route.name === 'list' ? 'list' : route.name === 'new' ? 'new' : null) : undefined}
         showAccount={state === 'ready'}
         drafts={state === 'ready' ? drafts.length : undefined}
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}

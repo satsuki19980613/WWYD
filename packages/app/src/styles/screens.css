@@ -308,3 +308,104 @@ a.btn { text-decoration: none; }
 .legal th, .legal td { padding: var(--s2); border: 1px solid var(--line); text-align: left; vertical-align: top; }
 .legal th { background: var(--surface); color: var(--dim); font-weight: 500; }
 .legal code { font-family: var(--mono); font-size: 0.92em; padding: 0 4px; background: var(--surface-2); border: 1px solid var(--line); }
+
+/* ---- PC の一覧（17 章）: 左に絞り込みの列、右に 1 行 1 投稿の表 ---- */
+.list-screen.pc {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--s6);
+  align-items: start;
+}
+.list-rail {
+  position: sticky;
+  top: calc(var(--hdr-h) + var(--sat) + var(--s4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.chip-row.rail { flex-direction: column; align-items: stretch; gap: var(--s2); }
+.chip-row.rail .chips { flex-direction: column; gap: 0; border-left: 1px solid var(--line); }
+.chip-row.rail .chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  margin-left: -1px;
+  border-left: 2px solid transparent;
+}
+.chip-row.rail .chip:hover { color: var(--fg); background: var(--surface); }
+.chip-row.rail .chip[aria-pressed='true'] { color: var(--yellow); border-left-color: var(--yellow); background: rgba(252, 238, 10, 0.05); }
+.chip-row.rail .chip:focus-visible { outline-offset: -2px; }
+.list-main { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+
+/* 表の列: Street / Title / Game / Hero / 回答 / 投稿 / 操作 */
+.spot-table { border: 1px solid var(--line); background: var(--surface); }
+.st-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 120px 56px 72px 88px 150px;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 52px;
+  padding: 0 var(--s4);
+}
+.st-head {
+  position: sticky;
+  top: calc(var(--hdr-h) + var(--sat));
+  z-index: 5;
+  min-height: 38px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--line-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim2);
+}
+.st-num { text-align: right; justify-self: end; }
+.st-sort {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--dim2);
+  cursor: pointer;
+}
+.st-sort:hover { color: var(--fg); }
+.st-sort[aria-pressed='true'] { color: var(--yellow); }
+.st-sort[aria-pressed='true']::after { content: ' ▼'; font-size: 9px; }
+.st-sort:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.st-body { margin: 0; padding: 0; list-style: none; }
+.spot-row { position: relative; border-top: 1px solid var(--line); transition: background 150ms var(--ease); }
+.spot-row:first-child { border-top: 0; }
+.spot-row:hover { background: var(--surface-2); }
+/* キーボードで選んだ行は左にシアンの線 */
+.spot-row:has(.spot-link:focus-visible) { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--cyan); }
+.spot-row.done .spot-link { color: var(--dim); }
+/* タイトルの下に「自分の投稿」「回答済み」（タイトルの幅を削らない） */
+.st-title { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; padding: 6px 0; }
+.st-title .spot-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+}
+.st-title .spot-tag { margin-left: 0; font-size: 10px; }
+.st-pos { font-family: var(--disp); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
+.st-count { font-size: 16px; color: var(--fg); }
+.st-ago { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.st-go { display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); }
+.st-go .spot-del { margin: 0 -8px 0 0; }
+.st-row.skeleton { border-top: 1px solid var(--line); }
+/* 1200px 未満は絞り込みの列を狭め、Game の列を隠す */
+@media (max-width: 1199.98px) {
+  .list-screen.pc { grid-template-columns: 160px minmax(0, 1fr); gap: var(--s4); }
+  .st-row { grid-template-columns: 64px minmax(0, 1fr) 52px 60px 76px 132px; gap: var(--s2); padding: 0 var(--s3); }
+  .st-row > :nth-child(3) { display: none; }
+}
+.list-screen.pc .list-empty { border: 1px solid var(--line); background: var(--surface); padding: var(--s6); }

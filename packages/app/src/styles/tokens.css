@@ -80,9 +80,9 @@
   --hdr-h: 52px;
 }
 
-/* PC（700px 以上）はレンジ表とテーブルを並べるため、アプリ面を広げる（06 章 §0.2） */
+/* PC（700px 以上）は画面の幅を使う（最大 1440px。17 章。前は 1120px で中央に寄せていた） */
 @media (min-width: 700px) {
-  :root { --app-w: 1120px; }
+  :root { --app-w: 1440px; }
 }
 
 @supports (top: env(safe-area-inset-top)) {

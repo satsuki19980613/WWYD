@@ -673,3 +673,42 @@
 /* 次のスポット（スマホは下部に固定） */
 .res.sp.has-next { padding-bottom: calc(72px + var(--sab)); }
 .res-agg > .btn { align-self: stretch; }
+
+/* ---- PC の回答（17 章）: リプレイ | レンジ表 | 道具と送信 ---- */
+.ans.pc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: 'replay range' 'replay tools';
+  gap: var(--s4) var(--s5);
+  align-items: start;
+}
+.ans.pc .ans-replay { grid-area: replay; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+.ans.pc .ans-range { grid-area: range; min-width: 0; }
+.ans.pc .ans-tools { grid-area: tools; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+.ans-send { display: flex; flex-direction: column; gap: var(--s2); }
+/* 1200px 以上は画面の高さに収める: レンジ表は正方形で高さいっぱい（最大 760px）、リプレイは残りの幅、道具は 300px */
+@media (min-width: 1200px) {
+  .ans.pc {
+    --gsz: min(var(--screen-fill-h), 760px, calc(min(100vw, var(--app-w)) - 2 * var(--s6) - 380px - 300px - 2 * var(--s5)));
+    grid-template-columns: minmax(380px, 1fr) var(--gsz) 300px;
+    grid-template-areas: 'replay range tools';
+    height: var(--screen-fill-h);
+    align-items: stretch;
+  }
+  .ans.pc .ans-replay { min-height: 0; }
+  .ans.pc .ans-replay > .replay { flex: 1 1 auto; min-height: 0; }
+  .ans.pc .ans-replay .ptable { flex: 1 1 auto; height: auto; min-height: 280px; }
+  .ans.pc .ans-replay .hlog { flex: none; max-height: 26vh; overflow-y: auto; }
+  .ans.pc .ans-range { align-self: start; }
+  /* ミックスバーのハンドル（端で 16px はみ出す）が横のスクロールにならないよう、右に余白を取って同じだけ外へ出す */
+  .ans.pc .ans-tools { min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 16px; margin-right: -16px; }
+  .ans.pc .ans-send { margin-top: auto; }
+  .ans.pc .rcell-lbl { font-size: 12px; }
+}
+
+/* ---- PC の集計（17 章）: 再生 | 表示の切り替えと表 | 答え合わせ・内訳・操作。回答の画面と同じ 3 列 ---- */
+.res.pc .ans-range { display: flex; flex-direction: column; gap: var(--s3); }
+@media (min-width: 1200px) {
+  /* 表の上に表示の切り替え（約 56px）を置くので、その分だけ表を小さく */
+  .res.pc { --gsz: min(calc(var(--screen-fill-h) - 56px), 760px, calc(min(100vw, var(--app-w)) - 2 * var(--s6) - 380px - 300px - 2 * var(--s5))); }
+}

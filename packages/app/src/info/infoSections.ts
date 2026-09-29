@@ -31,12 +31,13 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     title: 'List',
     items: [
       { term: 'タブ', desc: '「すべて」と「自分の投稿」。' },
-      { term: 'フィルタ', desc: 'Spot の Street（Flop〜River）で絞り込み、新着順または回答数順に並び替え。' },
+      { term: 'フィルタ', desc: 'Spot の Street（Flop〜River）で絞り込み、新着順または回答数順に並び替え。PC は左の列で選ぶ。表の見出しの「回答」「投稿」を押しても並び替えられる。' },
       {
         term: '遷移',
-        desc: 'Card を押すと、未回答の Spot は回答画面へ、回答済みの Spot は集計画面へ進む。自分の投稿にも回答でき、集計は回答するまで見られない。',
+        desc: 'Card（PC は行）を押すと、未回答の Spot は回答画面へ、回答済みの Spot は集計画面へ進む。自分の投稿にも回答でき、集計は回答するまで見られない。',
       },
-      { term: '削除', desc: '自分の投稿は Card の右上のごみ箱のマークから削除できる（回答もまとめて消える。元に戻せない）。' },
+      { term: '削除', desc: '自分の投稿は Card の右上（PC は行の右端）のごみ箱のマークから削除できる（回答もまとめて消える。元に戻せない）。' },
+      { term: 'キー操作（PC）', desc: '↑ ↓（または j k）で行を移り、Enter で開く。' },
     ],
   },
   answer: {
@@ -72,6 +73,10 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         term: '送信',
         desc: '回答は 1 Spot につき 1 回で、送信後は変更できない。自分の投稿への回答も、他の回答者と同じく全体の集計に含まれる。',
       },
+      {
+        term: 'キー操作（PC）',
+        desc: '← → で 1手戻る・進む、Home で最初、End で Spot。Hand History の Action を押すとその時点へ。Ctrl+Z で元に戻す、Ctrl+Y でやり直す。B でブラシ、E で消しゴム。',
+      },
     ],
   },
   result: {
@@ -95,6 +100,10 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       { term: '次の Spot', desc: '未回答の Spot のうち最も新しいものへ進む。' },
       { term: 'Hand History', desc: 'Hand を最後まで再生し、Showdown の Hand を確認できる。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。' },
+      {
+        term: 'キー操作（PC）',
+        desc: '← → で 1手戻る・進む、Home で最初、End で最後。Hand History の Action を押すとその時点へ。表のマスにマウスを乗せると内訳がそのマスになる（押すと固定）。',
+      },
     ],
   },
   new: {
@@ -111,11 +120,15 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       {
         term: 'Player と Hand',
-        desc: '最初に人数（2〜6 人）を選ぶ。人数を減らすと早い席から空く（2 人は BTN と BB で、BTN が SB を払う）。分かっている Hand のみ入力する。Hero の Hand は必須。Fold した席でも判明していれば入力できる。Hand 欄を押すと Card キーボードが表示される。',
+        desc: '最初に人数（2〜6 人）を選ぶ。人数を減らすと早い席から空く（2 人は BTN と BB で、BTN が SB を払う）。分かっている Hand のみ入力する。Hero の Hand は必須。Fold した席でも判明していれば入力できる。Hand 欄を押すと Card キーボード（PC は Card の選択ボード）が表示される。',
       },
       {
         term: 'Card キーボード',
         desc: 'Q キーはタップで Q、押したまま上で K・左で T・下で J。♠ キーはタップで ♠、上で ♥・左で ♦・下で ♣。C で席の Hand をクリア、⌫ で 1 文字削除。← → で前後の席へ移る。使用済みの Card は入力できない。',
+      },
+      {
+        term: 'Card の選択ボード（PC）',
+        desc: '押した Card が入り、2 枚そろうと次の Hand が空の席へ進む。選んだ Card をもう一度押すと外れる。キーでも打てる（例 A → s）。← → で前後の席、Enter で閉じる。使用済みの Card は押せない。',
       },
       { term: 'Showdown', desc: 'Hand が入力されていない席は Muck として扱う。' },
       {
@@ -124,7 +137,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       {
         term: '卓とログ',
-        desc: '入力中の Hand を卓に表示する（Hero が手前、手番の席が光る）。卓の Board の Card を押すとその Card 以降を、ログの Action を押すとその Action 以降を入れ直せる。スマホのログは「History」で開く。台の ↶ で 1 つ戻し、↷ で戻した Action を入れ直す。ごみ箱ですべて消す。',
+        desc: '入力中の Hand を卓に表示する（Hero が手前、手番の席が光る）。卓の Board の Card を押すとその Card 以降を、ログの Action を押すとその Action 以降を入れ直せる。スマホのログは「History」で開く。台の ↶ で 1 つ戻し、↷ で戻した Action を入れ直す。ごみ箱ですべて消す。PC は Ctrl+Z で 1 つ戻し、Ctrl+Y で入れ直す。',
       },
       {
         term: 'Spot',

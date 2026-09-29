@@ -13,7 +13,7 @@ export function CardPicker(props: {
   onClose: () => void;
 }): JSX.Element {
   return (
-    <Modal title={props.title} tone="info" onClose={props.onClose}>
+    <Modal title={props.title} tone="info" wide onClose={props.onClose}>
       <div className="picker" role="grid" aria-label="Card">
         {[...SUITS].map((s) => (
           <div key={s} className="picker-row" role="row">

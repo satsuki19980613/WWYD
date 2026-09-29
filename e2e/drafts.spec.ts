@@ -54,10 +54,10 @@ test('離れるときに保存 → ヘッダーの下書き → 開くと続き�
 
 test('保存しない → 入力は空に。やめる → 留まる', async ({ page }) => {
   await startPost(page, 'すてる');
-  await page.getByRole('link', { name: '一覧へ' }).click();
+  await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: 'List' }).click();
   await leaveDialog(page).getByRole('button', { name: 'やめる' }).click();
   await expect(page).toHaveURL('/new');
-  await page.getByRole('link', { name: '一覧へ' }).click();
+  await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: 'List' }).click();
   await leaveDialog(page).getByRole('button', { name: '保存しない' }).click();
   await expect(page).toHaveURL('/');
   await expect(draftsButton(page)).toHaveAccessibleName('下書き（0件）');
@@ -85,7 +85,7 @@ test('3 件あれば、どれかを消してから保存する', async ({ page }
   }));
   await page.addInitScript(([k, v]) => localStorage.setItem(k as string, v as string), [KEY, JSON.stringify(saved)]);
   await startPost(page, '新しい下書き');
-  await page.getByRole('link', { name: '一覧へ' }).click();
+  await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: 'List' }).click();
   await leaveDialog(page).getByRole('button', { name: '保存する' }).click();
   const full = page.getByRole('alertdialog', { name: '下書きがいっぱいです' });
   await expect(full.getByRole('listitem')).toHaveCount(3);

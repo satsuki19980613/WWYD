@@ -11,7 +11,8 @@ import { useIsMobile } from '../useMediaQuery.ts';
 import { applyCardKey, handCards, type CardKey } from './cardInput.ts';
 import { CardKeyboard } from './CardKeyboard.tsx';
 import { CardPicker } from './CardPicker.tsx';
-import { neighborSeat, STREET_NAME, type Draft } from './draft.ts';
+import { HandPicker } from './HandPicker.tsx';
+import { neighborSeat, nextOpenSeat, STREET_NAME, type Draft } from './draft.ts';
 import { evaluateReview, type Review, type ReviewRow } from './ocrDraft.ts';
 import { HandButton } from './SetupSections.tsx';
 import { ErrorList } from './SpotSection.tsx';
@@ -250,7 +251,24 @@ export function OcrReview(props: {
         {(!mobile || tab === 'image') && image}
         {(!mobile || tab === 'result') && result}
       </div>
-      {seat && (
+      {/* PC はカード選択ボード、スマホはカードキーボード（2026-09-29 さつき） */}
+      {seat && !mobile && (
+        <HandPicker
+          seat={seat}
+          hand={hands[seat]}
+          used={used(seat)}
+          onChange={(hand) => setHands((cur) => ({ ...cur, [seat]: hand }))}
+          onUsed={() => undefined}
+          onFilled={() => {
+            const next = nextOpenSeat(POSITIONS, hands, seat);
+            if (next) setSeat(next);
+          }}
+          onClose={() => setSeat(null)}
+          onPrev={() => setSeat(neighborSeat(POSITIONS, seat, -1))}
+          onNext={() => setSeat(neighborSeat(POSITIONS, seat, 1))}
+        />
+      )}
+      {seat && mobile && (
         <CardKeyboard
           seat={seat}
           onKey={onKey}

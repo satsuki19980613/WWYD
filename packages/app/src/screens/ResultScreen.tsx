@@ -2,7 +2,7 @@ import { aggregateBar, labelOfCards, paintBar, type AnswerKey, type Card } from 
 import { useMemo, useState } from 'react';
 import { ComboBar } from '../answer/ComboBar.tsx';
 import type { PostDetail } from '../answer/postDetail.ts';
-import { HandLog, HistoryButton, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
+import { HandLog, HistoryButton, PokerTable, ReplayControls, useReplay, useReplayKeys, type ReplayControl } from '../answer/Replay.tsx';
 import { seatViews } from '../answer/replayModel.ts';
 import { ResultGrid } from '../answer/ResultGrid.tsx';
 import {
@@ -52,6 +52,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
 
   const [view, setView] = useState<ResultView>('all');
   const [selected, setSelected] = useState(() => initialCell(d));
+  const [hover, setHover] = useState<number | null>(null);
   const [tab, setTab] = useState<MobileTab>('agg');
 
   const tabs = resultTabs(d);
@@ -102,20 +103,56 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   // リプレイの位置はスマホのタブを切り替えても残す
   const frames = useMemo(() => resultFrames(d), [d]);
   const replay = useReplay(d.hand.actions.length, { atEnd: true });
+  useReplayKeys(replay, !mobile);
   const hand = <ResultReplay detail={d} frames={frames} c={replay} logInModal={mobile} />;
 
   if (!mobile) {
+    // PC（17 章）: 左にハンドヒストリーの再生、中央に集計の表と表示の切り替え、右に答え合わせ・バー・マスの内訳・操作。
+    // マスにマウスを乗せると内訳がそのマスになる（押すと固定。GTO Wizard の Hand matrix・PioViewer に倣う）
+    const shown = hover ?? selected;
     return (
-      <section className="screen ans res">
-        {head}
-        <div className="ans-grid">
-          <div className="ans-col">
-            <h2 className="sec-h">Hand History</h2>
-            {hand}
-          </div>
-          <div className="ans-col">
-            <h2 className="sec-h">集計</h2>
-            {aggregate}
+      <section className="screen ans res pc">
+        <div className="ans-replay">
+          {head}
+          <h2 className="sr-only">Hand History</h2>
+          {hand}
+        </div>
+        <div className="ans-range res-agg">
+          <h2 className="sr-only">集計</h2>
+          {viewTabs}
+          {empty ? (
+            <div className="list-empty">
+              <p className="list-empty-label">{empty}</p>
+            </div>
+          ) : (
+            <ResultGrid
+              views={views}
+              selected={selected}
+              actual={actualCell(d)}
+              // 押す・キーで選んだマスを出す（マウスを乗せたままでも、選び直したマスを優先する）
+              onSelect={(i) => {
+                setSelected(i);
+                setHover(null);
+              }}
+              onHover={setHover}
+              heat={heat}
+            />
+          )}
+        </div>
+        <div className="ans-tools res-side">
+          <ActualBox detail={d} />
+          {!empty && (
+            <>
+              <div className="cbars">
+                {view !== 'mine' && allRatios && <ComboBar keys={post.keys} names={names} ratios={allRatios} label="全体" />}
+                {myRatios && <ComboBar keys={post.keys} names={names} ratios={myRatios} label="自分" />}
+              </div>
+              <BreakdownPanel detail={d} view={view} idx={shown} />
+            </>
+          )}
+          <div className="ans-send">
+            <Operations detail={d} />
+            {nextLink}
           </div>
         </div>
       </section>
@@ -275,6 +312,7 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
       spotIndex={hand.spotIndex}
       highlightLast={c.step < c.max}
       actual={hand.spotIndex}
+      onPick={props.logInModal ? undefined : (i) => c.goto(i + 1)}
     />
   );
   return (

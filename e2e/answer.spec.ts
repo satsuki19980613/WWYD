@@ -139,6 +139,29 @@ test.describe('Replay（06 章 §4.3）', () => {
     await page.getByRole('button', { name: '一時停止' }).click();
     await expect(page.getByRole('button', { name: '再生' })).toBeVisible();
   });
+
+  test('PC のキー: ← → Home End で動かし、Hand History の 1 手でその時点へ。Ctrl+Z・Ctrl+Y で塗りを戻す（17 章）', async ({ page }) => {
+    await open(page);
+    await expect(page.getByText('11 / 11 手目')).toBeVisible();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByText('10 / 11 手目')).toBeVisible();
+    await page.keyboard.press('Home');
+    await expect(page.getByText('0 / 11 手目')).toBeVisible();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByText('1 / 11 手目')).toBeVisible();
+    await page.keyboard.press('End');
+    await expect(page.getByText('11 / 11 手目')).toBeVisible();
+    // ログの 1 手目（UTG の Fold）を押すと、その Action の直後へ
+    await page.locator('.hlog-pick').first().click();
+    await expect(page.getByText('1 / 11 手目')).toBeVisible();
+
+    await cell(page, 'AA').click();
+    await expect(cell(page, 'AA')).not.toHaveAccessibleName('AA Range 外');
+    await page.keyboard.press('Control+z');
+    await expect(cell(page, 'AA')).toHaveAccessibleName('AA Range 外');
+    await page.keyboard.press('Control+y');
+    await expect(cell(page, 'AA')).not.toHaveAccessibleName('AA Range 外');
+  });
 });
 
 test.describe('塗り・道具（06 章 §4.5・§4.6）', () => {

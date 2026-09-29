@@ -100,6 +100,19 @@ export function neighborSeat(seats: readonly Pos[], seat: Pos, dir: 1 | -1): Pos
 }
 
 /**
+ * `seat` の次から順に巡って、ハンドがまだ空の席（なければ null）。PC のカード選択ボードで 2 枚そろったら
+ * 次の空の席へ進む（17 章。エクイティ計算機の「次の空きスロットへ」に倣う）。
+ */
+export function nextOpenSeat(seats: readonly Pos[], hands: Readonly<Record<Pos, string>>, seat: Pos): Pos | null {
+  let p = seat;
+  for (let k = 1; k < seats.length; k++) {
+    p = neighborSeat(seats, p, 1);
+    if (hands[p] === '') return p;
+  }
+  return null;
+}
+
+/**
  * 人数を選ぶ（06 章 §3.4）。席は早い席から削る（04 章 §2.1）。空席になった席のハンドは消し、
  * Hero が空席になったら BTN（どの人数にもある席）にする。
  */

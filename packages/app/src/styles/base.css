@@ -87,6 +87,43 @@ a { color: var(--cyan); }
 }
 .hdr-actions { display: flex; align-items: center; gap: var(--s1); }
 
+/* PC のナビ（List・＋ Post）と、ナビに無い画面の画面名（パンくず）。2026-09-29 */
+.hdr-nav { display: flex; align-items: center; gap: var(--s2); margin-right: var(--s4); }
+.hdr-nav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  font-family: var(--disp);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-decoration: none;
+  transition: color 150ms var(--ease);
+}
+.hdr-nav-item:hover { color: var(--fg); }
+.hdr-nav-item[aria-current='page'] { color: var(--yellow); }
+/* いまいる項目はヘッダーの下線に重ねて黄の線 */
+.hdr-nav-item[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc((var(--hdr-h) - 34px) / -2);
+  height: 2px;
+  background: var(--yellow);
+}
+.hdr-nav-item.post { color: var(--yellow); border: 1px solid rgba(252, 238, 10, 0.45); clip-path: var(--chamfer-xs); }
+.hdr-nav-item.post:hover { background: rgba(252, 238, 10, 0.08); }
+.hdr-nav-item.post[aria-current='page'] { background: var(--yellow); color: var(--yellow-ink); border-color: var(--yellow); }
+.hdr-nav-item.post[aria-current='page']::after { display: none; }
+.hdr-nav-item:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.hdr-title.crumb { font-size: 15px; color: var(--fg); }
+.hdr-title.crumb::before { content: '/'; margin-right: 2px; color: var(--dim2); font-family: var(--mono); font-weight: 400; }
+
 /* ---- アプリ面 ---- */
 /* 画面の中身を画面の高さちょうどにするときの高さ（ヘッダーとその下線 1px、.app-main の上下の余白を除く。卓で残りを埋める画面が使う） */
 :root { --screen-fill-h: calc(100dvh - var(--hdr-h) - var(--sat) - 1px - var(--s4) - var(--s6) - var(--sab)); }
@@ -94,4 +131,9 @@ a { color: var(--cyan); }
   max-width: var(--app-w);
   margin: 0 auto;
   padding: var(--s4) max(var(--s4), var(--safe-r)) calc(var(--s6) + var(--sab)) max(var(--s4), var(--safe-l));
+}
+/* 広い PC は左右の余白を 32px に（17 章） */
+@media (min-width: 1200px) {
+  .app-main { padding-left: var(--s6); padding-right: var(--s6); }
+  .hdr-inner { padding-left: var(--s6); padding-right: var(--s6); }
 }

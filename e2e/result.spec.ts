@@ -97,9 +97,9 @@ test.describe('集計 Range（06 章 §5.2）', () => {
     await expect(detailBox(page)).toContainText('差 50%');
   });
 
-  test('答え合わせ（実際の Action）を集計の先頭に出す', async ({ page }) => {
+  test('答え合わせ（実際の Action）を右の列の先頭に出す（PC。17 章）', async ({ page }) => {
     await open(page);
-    const first = page.locator('.res-agg > *').first();
+    const first = page.locator('.res-side > *').first();
     await expect(first).toContainText('実際の Action');
   });
 

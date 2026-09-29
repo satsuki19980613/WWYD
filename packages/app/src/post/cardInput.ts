@@ -45,6 +45,18 @@ export function applyCardKey(hand: string, key: CardKey, used: ReadonlySet<Card>
   return { hand };
 }
 
+/**
+ * PC のカード選択ボード（06 章 §3.5）で 1 枚を押したときの新しいハンド。
+ * 選んである札を押すと外す。2 枚に満たなければ足し、2 枚そろっていれば 2 枚目を置き換える
+ * （スート待ちのランクだけの入力は捨てる）。使用済みの札はボードで押せないので、ここでは見ない。
+ */
+export function pickCard(hand: string, card: Card): string {
+  const cards = handCards(hand);
+  if (cards.includes(card)) return cards.filter((c) => c !== card).join('');
+  if (cards.length < 2) return [...cards, card].join('');
+  return [cards[0] as Card, card].join('');
+}
+
 /** 入力済みのカード（完成した分だけ）。 */
 export function handCards(hand: string): Card[] {
   const cards: Card[] = [];

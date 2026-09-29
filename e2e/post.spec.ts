@@ -144,3 +144,30 @@ test('額は縦のスライダーで選ぶ（キーボードを出さない） @
   await page.keyboard.press('Escape');
   await expect(slider).toHaveCount(0);
 });
+
+test('PC の Hand は Card の選択ボードで選び、2 枚そろうと次の空の席へ進む（17 章）', async ({ page }) => {
+  await fakeBackend(page, null);
+  await page.goto('/new');
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' }).click();
+  await page.getByRole('button', { name: 'BTN の Hand' }).click();
+  // スマホ用の Card キーボードではなく、選択ボード（ダイアログ）が開く
+  await expect(page.getByRole('group', { name: 'Card キーボード' })).toHaveCount(0);
+  const board = page.getByRole('dialog', { name: 'BTN の Hand' });
+  await board.getByRole('gridcell', { name: 'A♠' }).click();
+  // 選んだ Card は押すと外れる
+  await board.getByRole('gridcell', { name: 'A♠' }).click();
+  await expect(board.getByRole('gridcell', { name: 'A♠' })).toHaveAttribute('aria-selected', 'false');
+  await board.getByRole('gridcell', { name: 'A♠' }).click();
+  await board.getByRole('gridcell', { name: 'K♦' }).click();
+  // 次の空の席（SB）へ進み、使った Card は押せない
+  const sb = page.getByRole('dialog', { name: 'SB の Hand' });
+  await expect(sb).toBeVisible();
+  await expect(sb.getByRole('gridcell', { name: 'A♠' })).toBeDisabled();
+  // キーでも打てる。Enter で閉じる
+  for (const k of ['q', 'h', 'q', 'd']) await page.keyboard.press(k);
+  await expect(page.getByRole('dialog', { name: 'BB の Hand' })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'BTN の Hand' })).toContainText('A');
+  await expect(page.getByRole('button', { name: 'SB の Hand' })).toContainText('Q');
+});

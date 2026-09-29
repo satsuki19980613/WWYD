@@ -16,6 +16,8 @@ export function Modal(props: {
   initialFocus?: RefObject<HTMLElement | null>;
   role?: 'dialog' | 'alertdialog';
   showClose?: boolean;
+  /** PC で幅を広げる（カードの選択ボードなど） */
+  wide?: boolean;
 }): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -25,7 +27,7 @@ export function Modal(props: {
     <div className="modal-backdrop" role="presentation" onClick={props.onClose}>
       <div
         ref={ref}
-        className={`modal tone-${props.tone}`}
+        className={`modal tone-${props.tone}${props.wide ? ' wide' : ''}`}
         role={props.role ?? 'dialog'}
         aria-modal="true"
         aria-labelledby={titleId}
