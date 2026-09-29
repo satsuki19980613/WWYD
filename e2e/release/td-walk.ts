@@ -281,7 +281,16 @@ export async function walkHand(env: WalkEnv, seed: number, hand: number, opts: {
   }
   if (env.posts.length === before) {
     const errs = (await page.getByRole('alert').allInnerTexts()).join(' | ').slice(0, 300);
-    return res('blocked', phase.actions, `候補ありで Spot・タイトルを入れたのに送られない。画面のエラー: ${errs}`);
+    // 何を断られたか: 画面が送るはずの本文を取り出し、サーバーと同じ判定に通して理由を出す
+    const body = await page
+      .evaluate(`(async () => {
+        const store = await import('/src/post/draftStore.ts');
+        const dr = await import('/src/post/draft.ts');
+        return dr.submissionBody(dr.settleActions(store.getDraft()));
+      })()`)
+      .catch(() => null);
+    const j = body ? serverJudge(body) : null;
+    return res('blocked', phase.actions, `候補ありで Spot・タイトルを入れたのに送られない。画面のエラー: ${errs} / 本文をサーバーの判定に通すと: ${j ? (j.ok ? 'ok' : j.message) : '本文なし'}`);
   }
   const last = env.judged[env.judged.length - 1];
   if (!last || !last.ok) return res('server-reject', phase.actions, `${last?.message ?? '判定なし'}`);

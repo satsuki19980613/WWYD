@@ -19,6 +19,8 @@ const SEEDS = Number(process.env.TD_WALK_SEEDS ?? 20);
 const HANDS = Number(process.env.TD_HANDS ?? 25);
 const BASE = Number(process.env.TD_WALK_BASE ?? 0);
 const ONLY = process.env.TD_WALK_ONLY ? Number(process.env.TD_WALK_ONLY) : null;
+/** 1 ハンドだけ再現する（TD_WALK_ONLY と合わせる。ハンドの乱数は種とハンド番号だけで決まる） */
+const HAND_ONLY = process.env.TD_WALK_HAND ? Number(process.env.TD_WALK_HAND) : null;
 const SIZES = (process.env.TD_WALK_SIZES ?? 'pc,sp').split(',');
 
 test.describe.configure({ mode: 'parallel' });
@@ -48,6 +50,7 @@ for (const size of SIZES) {
       const env: WalkEnv = { page, mobile: size === 'sp', posts: ctx.posts, judged };
       const results: WalkResult[] = [];
       for (let h = 1; h <= HANDS; h++) {
+        if (HAND_ONLY !== null && h !== HAND_ONLY) continue;
         let r: WalkResult;
         try {
           r = await walkHand(env, seed, h);

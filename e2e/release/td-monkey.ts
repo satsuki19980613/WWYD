@@ -166,6 +166,8 @@ export type Ctx = {
   fn: { mode: 'ok' | 'reject' | 'server500' | 'abort' | 'slow' };
   /** 直近の本文を返すときの検証の結果 */
   fnValidate?: (body: unknown) => { status: number; body: unknown };
+  /** 遅延・失敗を混ぜている最中の要求の数（点検の前に 0 になるまで待つ） */
+  inflight: number;
 };
 
 const AGG_SETS = [
@@ -278,25 +280,40 @@ export async function setupBackend(page: Page, cfg: Cfg, seed: number, validate?
   be.insertError = rng.pick([null, null, null, DUPLICATE, { status: 500, body: { code: 'XX000', message: 'boom' } }, { status: 403, body: { code: '42501', message: 'denied' } }]);
   if (rng.chance(0.15)) be.deleteAccountError = { status: 500, body: { code: 'XX000', message: 'boom' } };
 
-  const ctx: Ctx = { be, net: { mode: 'ok', rng: mulberry32(seed * 31 + 5), failedRequests: 0 }, posts: [], fn: { mode: 'ok' } };
+  const ctx: Ctx = { be, net: { mode: 'ok', rng: mulberry32(seed * 31 + 5), failedRequests: 0 }, posts: [], fn: { mode: 'ok' }, inflight: 0 };
   if (validate) ctx.fnValidate = validate;
 
-  // 通信の失敗・遅延の混ぜ込み（あとから登録した route が先に呼ばれる。通すときは fallback で偽のバックエンドへ）
+  // 通信の失敗・遅延の混ぜ込み（あとから登録した route が先に呼ばれる。通すときは fallback で偽のバックエンドへ）。
+  // 失敗は経路ごとの通し番号で決める（並行する要求の到着順で結果が変わらないように）。処理中の要求は ctx.inflight で数える
+  const counts = new Map<string, number>();
+  const roll = (path: string): number => {
+    const n = (counts.get(path) ?? 0) + 1;
+    counts.set(path, n);
+    let h = seed;
+    for (const ch of path) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
+    return mulberry32(h + n * 977).next();
+  };
   await page.route(`${DATA}/**`, async (route) => {
-    const { mode } = ctx.net;
-    if (route.request().method() === 'OPTIONS' || mode === 'ok' || mode === 'authdown') return route.fallback();
-    if (mode === 'slow') {
-      await new Promise((r) => setTimeout(r, 1500));
-      return route.fallback().catch(() => undefined);
+    ctx.inflight++;
+    try {
+      const { mode } = ctx.net;
+      if (route.request().method() === 'OPTIONS' || mode === 'ok' || mode === 'authdown') return await route.fallback();
+      if (mode === 'slow') {
+        await new Promise((r) => setTimeout(r, 1500));
+        return await route.fallback().catch(() => undefined);
+      }
+      const r = roll(new URL(route.request().url()).pathname);
+      if (mode === 'flaky' && r < 0.6) return await route.fallback();
+      ctx.net.failedRequests++;
+      if (mode === 'abort' || (mode === 'flaky' && r < 0.72)) return await route.abort('failed').catch(() => undefined);
+      return await route.fulfill({
+        status: r < 0.5 ? 500 : r < 0.8 ? 502 : 503,
+        headers: { ...cors(route), 'content-type': 'application/json' },
+        body: JSON.stringify({ code: 'XX000', message: 'boom' }),
+      });
+    } finally {
+      ctx.inflight--;
     }
-    if (mode === 'flaky' && !ctx.net.rng.chance(0.4)) return route.fallback();
-    ctx.net.failedRequests++;
-    if (mode === 'abort' || (mode === 'flaky' && ctx.net.rng.chance(0.3))) return route.abort('failed').catch(() => undefined);
-    return route.fulfill({
-      status: ctx.net.rng.pick([500, 502, 503]),
-      headers: { ...cors(route), 'content-type': 'application/json' },
-      body: JSON.stringify({ code: 'XX000', message: 'boom' }),
-    });
   });
   await page.route('**/api/auth/**', async (route) => {
     if (ctx.net.mode !== 'authdown' || route.request().method() === 'OPTIONS') return route.fallback();
@@ -318,7 +335,11 @@ export async function setupBackend(page: Page, cfg: Cfg, seed: number, validate?
     }
     const h = { ...cors(route), 'content-type': 'application/json' };
     if (ctx.fn.mode === 'abort') return route.abort('failed').catch(() => undefined);
-    if (ctx.fn.mode === 'slow') await new Promise((r) => setTimeout(r, 1500));
+    if (ctx.fn.mode === 'slow') {
+      ctx.inflight++;
+      await new Promise((r) => setTimeout(r, 1500));
+      ctx.inflight--;
+    }
     if (ctx.fn.mode === 'server500') {
       ctx.posts.push({ body, status: 500 });
       return route.fulfill({ status: 500, headers: { ...h, 'content-type': 'text/html' }, body: '<html>Bad gateway</html>' });
@@ -373,6 +394,8 @@ export type Snapshot = {
   mobile: boolean;
   dialogs: number;
   menus: number;
+  dtitles?: string;
+  dbusy?: boolean;
   els: Elt[];
   problems: { kind: string; detail: string }[];
   stat: { a: number; b: number; h: number; s: boolean; t: boolean; done: boolean } | null;
@@ -381,6 +404,13 @@ export type Snapshot = {
 /** ブラウザの中で動く。引数は無し（文字列で渡して評価する） */
 export const SNAPSHOT_JS = `(async () => {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  // フォントの読み込みと、走っている CSS の動き（遷移・アニメーション）が終わるのを待つ（座標が揺れると同じ種で同じ操作にならない）
+  try { await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* 無視 */ }
+  for (let i = 0; i < 12; i++) {
+    const running = document.getAnimations().filter((a) => a.playState === 'running' && (a.effect && a.effect.getTiming().iterations !== Infinity));
+    if (running.length === 0) break;
+    await new Promise((r) => setTimeout(r, 50));
+  }
   // 起動中（BootScreen）は待つ。6 秒たっても出なければ真っ白として扱う
   for (let i = 0; i < 60 && !document.querySelector('.hdr'); i++) await new Promise((r) => setTimeout(r, 100));
   const problems = [];
@@ -473,6 +503,8 @@ export const SNAPSHOT_JS = `(async () => {
     path, search: location.search, w, h, mobile,
     dialogs: document.querySelectorAll('[role=dialog],[role=alertdialog]').length,
     menus: document.querySelectorAll('[role=menu]').length,
+    dtitles: [...document.querySelectorAll('[role=dialog],[role=alertdialog],[role=menu]')].map((d) => (d.querySelector('.modal-title') ? d.querySelector('.modal-title').textContent : d.getAttribute('aria-label') || d.className)).join(' / ').slice(0, 120),
+    dbusy: [...document.querySelectorAll('[role=dialog],[role=alertdialog]')].some((d) => /(中…|読み取り)/.test(d.textContent || '')),
     els: els.slice(0, 400), problems, stat,
   };
 })()`;
@@ -494,6 +526,8 @@ export type RunResult = {
   ops: Record<string, number>;
   hung: boolean;
   ms: number;
+  /** 操作列のハッシュ（同じ種の再実行で一致すれば、同じ操作を行った） */
+  trace?: string;
   /** 到達した状態（探索の広さの目安） */
   cover: { maxActions: number; maxBoard: number; maxHands: number; handDone: number; spotSelected: number; titled: number; paths: string[]; dialogsMax: number; posts: number; inserts: number; deletes: number };
 };
@@ -542,6 +576,7 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
   const res: RunResult = { screen: cfg.screen, size, seed, steps: 0, violations: [], consoleErrors: [], ops: {}, hung: false, ms: 0, cover: { maxActions: 0, maxBoard: 0, maxHands: 0, handDone: 0, spotSelected: 0, titled: 0, paths: [], dialogsMax: 0, posts: 0, inserts: 0, deletes: 0 } };
   let step = 0;
   let lastOp = 'start';
+  let prevOp = 'start';
   let netUntil = 0;
 
   page.on('dialog', (d) => void d.accept().catch(() => undefined));
@@ -564,11 +599,19 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
     res.violations.push({ kind, detail, step, op: lastOp, path, viewport: vp ? `${vp.width}x${vp.height}` : '?' });
   }
 
+  // 操作の痕跡の要約（同じ種で同じ操作列になったかを見る）
+  let traceHash = 0;
+  const traceLog: string[] = [];
+  const trace = (op: string): void => {
+    if (process.env.TD_TRACE) traceLog.push(`${step} ${op} | ${s ? s.path + ' d=' + s.dialogs + ' n=' + s.els.length : '-'}`);
+    for (let i = 0; i < op.length; i++) traceHash = (Math.imul(traceHash, 31) + op.charCodeAt(i)) | 0;
+  };
   const count = (op: string): void => {
     res.ops[op] = (res.ops[op] ?? 0) + 1;
   };
 
   async function snap(): Promise<Snapshot | null> {
+    await quiet();
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const r = await withTimeout(page.evaluate(SNAPSHOT_JS) as Promise<Snapshot>, 20000);
@@ -591,6 +634,17 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
     return null;
   }
 
+  // 通信が静まるのを待つ（読み込みの途中で要素の数が揺れると、同じ種で同じ操作にならない）
+  let pending = 0;
+  page.on('request', () => pending++);
+  page.on('requestfinished', () => pending--);
+  page.on('requestfailed', () => pending--);
+  async function quiet(): Promise<void> {
+    for (let round = 0; round < 2; round++) {
+      for (let i = 0; i < 100 && (pending > 0 || ctx.inflight > 0); i++) await page.waitForTimeout(40);
+      await page.waitForTimeout(30);
+    }
+  }
   async function gotoStart(): Promise<void> {
     await page.goto(cfg.start, { waitUntil: 'domcontentloaded' }).catch((e) => addViolation('goto-failed', String(e.message).slice(0, 200)));
   }
@@ -651,6 +705,7 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
     }
     const els = s.els;
     const modalEls = els.filter((e) => e.modal);
+    prevOp = lastOp;
     const opName = rng.weighted(OPS as unknown as readonly (readonly [string, number])[]);
     // 要素を選ぶ（モーダル・メニューが出ていれば、その中を多めに。chrome は上のバーを多めに）
     const chooseEl = (filter?: (e: Elt) => boolean): Elt | null => {
@@ -802,8 +857,11 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
           await page.keyboard.press('Escape');
           await page.waitForTimeout(80);
           const after = await snap();
-          if (after && after.dialogs + after.menus >= before) {
-            addViolation('esc-no-close', `Esc でモーダルが閉じない（${before} → ${after.dialogs + after.menus}）`, after.path);
+          // 数が同じでも別のダイアログに替わった（例: 「下書きがいっぱいです」→「下書きに保存しますか」）なら、Esc は効いている
+          // 「削除中…」「投稿中…」などの処理中は、Esc で閉じないのが仕様（二重送信を防ぐ）。読み取り中はキャンセルになるので除かない
+          const busyDialog = s.dbusy === true && !/読み取り/.test(s.dtitles ?? '');
+          if (after && !busyDialog && after.dialogs + after.menus >= before && after.dtitles === s.dtitles) {
+            addViolation('esc-no-close', `Esc でモーダルが閉じない（${before} → ${after.dialogs + after.menus}）: ${s.dtitles ?? ''} 直前の操作 ${prevOp}`, after.path);
           }
           s = after;
           if (s) check(s);
@@ -833,10 +891,13 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
     }
     count(opName);
     res.steps = step;
+    trace(lastOp);
     s = await snap();
     if (s) check(s);
   }
   res.ms = Date.now() - t0;
+  res.trace = (traceHash >>> 0).toString(16);
+  if (process.env.TD_TRACE) appendFileSync(process.env.TD_TRACE, `# ${cfg.screen} ${size} ${seed}\n${traceLog.join('\n')}\n`);
   res.cover.posts = ctx.posts.length;
   res.cover.inserts = ctx.be.inserts.length;
   res.cover.deletes = ctx.be.deletes.length;

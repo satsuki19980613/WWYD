@@ -15,6 +15,8 @@
  * 投稿の画面は、種の 3 分の 2 で「合法手のランダムウォークで途中まで入れた状態」から始める（深い状態を探るため。td-walk.ts）。
  * 投稿の画面から create-post に届いた本文は、サーバーと同じ判定（validateInput + verifyPost）に通し、断られたら違反にする。
  */
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { makeCfg, runMonkey, saveResult, setupBackend, SCREENS, SIZES, summarize, type ScreenId, type SizeClass } from './td-monkey.ts';
 import { serverJudge, walkHand, type WalkEnv } from './td-walk.ts';
@@ -25,6 +27,19 @@ const BASE = Number(process.env.TD_SEED_BASE ?? 0);
 const only = process.env.TD_ONLY?.split(':');
 const screens = (process.env.TD_SCREENS?.split(',') as ScreenId[] | undefined) ?? SCREENS;
 const sizes = (process.env.TD_SIZES?.split(',') as SizeClass[] | undefined) ?? (['pc1280', 'pc1024', 'sp'] as SizeClass[]);
+
+/** OCR の確認画面から始める種の入力画像（sample/ は個人の対戦画像で、リポジトリの管理外。手元で読むだけ。無ければ ocr の試験は飛ばす） */
+const SAMPLE_DIR = process.env.TD_SAMPLE_DIR ?? resolve(process.cwd(), '../../../sample');
+function sampleImages(kind: 'pc' | 'sp'): string[] {
+  try {
+    return readdirSync(resolve(SAMPLE_DIR, kind))
+      .filter((f) => f.endsWith('.png'))
+      .sort()
+      .map((f) => resolve(SAMPLE_DIR, kind, f));
+  } catch {
+    return [];
+  }
+}
 
 test.describe.configure({ mode: 'parallel' });
 
@@ -45,6 +60,21 @@ for (const size of sizes) {
         });
         let skip = false;
         let prefix = '';
+        if (screen === 'ocr') {
+          const images = sampleImages(size === 'sp' ? 'sp' : 'pc');
+          test.skip(images.length === 0, `sample/ に画像が無い（${SAMPLE_DIR}）`);
+          await page.setViewportSize(SIZES[size]);
+          if (cfg.reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+          const image = images[seed % images.length] as string;
+          await page.goto('/new', { waitUntil: 'domcontentloaded' });
+          await page.getByTestId('ocr-file').setInputFiles(image);
+          // 読み取り中 → 確認画面（またはエラー）
+          const busy = page.getByRole('dialog', { name: '読み取り中…' });
+          await busy.waitFor({ timeout: 10_000 }).catch(() => undefined);
+          await busy.waitFor({ state: 'detached', timeout: 150_000 }).catch(() => undefined);
+          prefix = `ocr=${image.split(/[\\/]/).pop()} review=${(await page.getByRole('dialog').count()) > 0}`;
+          skip = true;
+        }
         if (screen === 'post' && seed % 3 !== 0) {
           // 出発点: 合法手のランダムウォークで途中（または最後）まで入れた投稿
           await page.setViewportSize(SIZES[size]);
