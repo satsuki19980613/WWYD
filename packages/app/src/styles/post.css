@@ -181,8 +181,6 @@
   backdrop-filter: blur(12px);
 }
 .pf.sp .act-dock > * { width: 100%; max-width: 480px; margin: 0 auto; }
-/* 台の下に隠れないよう、ログの下に余白 */
-.pf.sp .pf-actsec.has-dock { padding-bottom: 200px; }
 /* 道具の行（14 章 §3.1）: 手番（席の上にストリート）・1つ戻す・1つ進む・すべて消す、右に額。ポット・残りは卓に出ている */
 .ad-toolrow { display: flex; align-items: center; gap: var(--s2); min-height: 44px; }
 .ad-turn { display: flex; flex-direction: column; justify-content: center; flex: none; min-width: 52px; line-height: 1.1; }
@@ -327,13 +325,12 @@
 .pf.sp .pf-board .pf-bslot { width: 100%; max-width: 56px; }
 
 /* ---- 入力中の卓（14 章）: 回答画面の卓と同じ部品。ボードの枠は押せる ---- */
-.pf .ptable { height: 360px; }
+.pf .ptable { height: 420px; }
 .ptable.live .ptable-mid { pointer-events: auto; }
-.ptable.live .ptable-slot, .ptable.live .ptable-board .pcard { width: 30px; height: 42px; font-size: 16px; }
 .pf-bslot {
   flex: none;
-  width: 30px;
-  height: 42px;
+  width: var(--bw);
+  height: calc(var(--bw) * 1.38);
   display: grid;
   place-items: center;
   padding: 0;
@@ -342,7 +339,7 @@
   background: rgba(4, 14, 32, 0.6);
   box-shadow: 0 0 10px rgba(58, 230, 255, 0.35);
   color: var(--cyan);
-  font-size: 18px;
+  font-size: calc(var(--bw) * 0.45);
   cursor: pointer;
 }
 .pf-bslot.filled { border: 0; background: none; box-shadow: none; }
@@ -408,7 +405,8 @@
 }
 
 /* ---- スマホ: 4 ステップ ---- */
-.pf.sp { padding-bottom: 96px; }
+/* 下の余白 = 戻る・次へのバーの実際の高さ（NewPostScreen の useBarHeight が --bar-h を入れる） */
+.pf.sp { padding-bottom: calc(var(--bar-h, 128px) - var(--s6) - var(--sab) + var(--s2)); }
 .pf-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
 .pf-step {
   display: flex;
@@ -686,12 +684,16 @@
   .ocr-rv-row { grid-template-columns: 20px 32px minmax(0, 1fr) 84px 32px 32px; gap: var(--s1); }
 }
 
-/* 入力中の卓（スマホ。回答画面の卓と同じ詰め方） */
-/* 背の高い画面では卓を大きく（ログはモーダルなので、台の上の空きを卓に使う） */
-.pf.sp .ptable { height: clamp(300px, calc(100dvh - 440px), 400px); margin-bottom: var(--s3); }
+/*
+ * 入力中の卓（スマホ。回答画面の卓と同じ詰め方）。ログはモーダルなので、卓で画面の残りを埋める（画面を画面の高さちょうどにする）。
+ * 台を出している間の下の余白は台の高さ --dock-h（ActionSection の useDockHeight）、終わった後は戻る・次へのバーの高さ（--bar-h）。
+ */
+.pf.sp.fill { min-height: var(--screen-fill-h); }
+.pf.sp.docked { padding-bottom: calc(var(--dock-h, 200px) - var(--s6) - var(--sab) + var(--s2)); }
+.pf.sp.fill > .pf-actsec { flex: 1 1 auto; }
+.pf.sp.fill .pf-actsec > .ptable { flex: 1 1 auto; height: auto; min-height: 340px; }
 .pf.sp .pseat-plate { min-width: 72px; padding: 3px 6px; }
 .pf.sp .pseat-stack { font-size: 13px; }
-.pf.sp .ptable-felt { inset: 38px 20% 50px; }
 
 .pf-actsec { position: relative; }
 .modal .hlog { grid-template-columns: 1fr; }

@@ -410,9 +410,9 @@ test.describe('投稿者の回答（06 章 §4.2・§4.9。投稿者も回答者
       answerCount: 1,
       myAnswer: { paint: toHex(encodePaint(emptyPaint())), size: null },
     });
-    // Hero のハンドは自分のハンドなので表向き。席は他の回答者と同じ「Villain（あなた）」
-    await expect(page.getByLabel('Diamond の A')).toBeVisible();
-    await expect(page.getByLabel('Diamond の K')).toBeVisible();
+    // Hero のハンドは自分の投稿でも伏せる（回答してから集計で見せる。2026-09-29）。席は他の回答者と同じ「Villain（あなた）」
+    await expect(page.locator('.pback')).toHaveCount(2);
+    await expect(page.getByLabel('Diamond の A')).toHaveCount(0);
     await expect(page.getByText('Villain（あなた）')).toBeVisible();
     await expect(cell(page, 'AA')).toHaveAccessibleName('AA Range 外');
     await expect(page.getByRole('button', { name: /^Raise Size/ })).toContainText('17.55bb');

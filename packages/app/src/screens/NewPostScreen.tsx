@@ -33,6 +33,7 @@ import { sendPost } from '../post/sendPost.ts';
 import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
 import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
 import { navigate } from '../router.ts';
+import { useHeightVar } from '../useHeightVar.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 
 const STEPS = ['基本設定', 'Player', 'Action', 'Spot'] as const;
@@ -52,6 +53,8 @@ export function NewPostScreen(): JSX.Element {
   const [attempted, setAttempted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // スマホの戻る・次へのバーの高さ（画面の下の余白に使う）
+  const barRef = useHeightVar('.pf', '--bar-h');
 
   const { setup, invalid } = parseSettings(d);
   const phase = phaseOf(setup, d.actions, d.board);
@@ -210,8 +213,11 @@ export function NewPostScreen(): JSX.Element {
 
   const done = stepDone(d, phase.kind === 'done');
   const last = step === STEPS.length - 1;
+  // アクションのステップは卓で画面の残りを埋める。ハンドを入れている間は、下にアクションの台を出す（14 章）
+  const docked = step === ACTION_STEP && (phase.kind === 'act' || phase.kind === 'board');
+  const fill = !seat && step === ACTION_STEP && phase.kind !== 'invalid';
   return (
-    <section className={`screen pf sp ${seat ? 'kb-open' : ''}`}>
+    <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
       <nav className="pf-steps" aria-label="ステップ">
         {STEPS.map((name, i) => (
           <button
@@ -231,9 +237,9 @@ export function NewPostScreen(): JSX.Element {
       {step === 1 && players}
       {step === 2 && actions}
       {step === 3 && spot}
-      {/* アクションのステップでハンドを入れている間は、下にアクションの台を出すので戻る・次へを隠す（13 章） */}
-      {!seat && !(step === ACTION_STEP && (phase.kind === 'act' || phase.kind === 'board')) && (
-        <div className="pf-bar">
+      {/* 台を出している間は戻る・次へを隠す（13 章） */}
+      {!seat && !docked && (
+        <div className="pf-bar" ref={barRef}>
           <ErrorList errors={errors} />
           <div className="btn-row">
             <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>

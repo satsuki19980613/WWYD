@@ -121,7 +121,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   }
 
   return (
-    <section className={`screen ans res sp${nextLink ? ' has-next' : ''}`}>
+    <section className={`screen ans res sp tab-${tab}${nextLink ? ' has-next' : ''}`}>
       {head}
       <div className="ans-top">
         <Tabs label="表示" items={MOBILE_TABS} value={tab} onChange={setTab} />

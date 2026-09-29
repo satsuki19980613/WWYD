@@ -9,6 +9,7 @@ import { Modal } from '../components/Modal.tsx';
 import { PlayingCard, cardText } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { useToast } from '../components/Toast.tsx';
+import { useHeightVar } from '../useHeightVar.ts';
 import { handCards } from './cardInput.ts';
 import { CardPicker } from './CardPicker.tsx';
 import {
@@ -83,10 +84,13 @@ export function ActionSection(props: {
       onClear={() => setClearing(true)}
     />
   );
+  // スマホの台（画面の下に固定）の高さ。卓で台のすぐ上までを埋める（14 章）
+  const dockRef = useHeightVar('.pf', '--dock-h', { keepMax: true });
   const dock =
     phase.kind === 'act' ? (
       <ActDock
         key={d.actions.length}
+        domRef={dockRef}
         phase={phase}
         actions={d.actions}
         mobile={props.mobile}
@@ -95,7 +99,7 @@ export function ActionSection(props: {
         onActions={props.onActions}
       />
     ) : phase.kind === 'board' ? (
-      <BoardDock draft={d} tools={tools} onOpen={openPicker} />
+      <BoardDock draft={d} tools={tools} onOpen={openPicker} domRef={dockRef} />
     ) : null;
 
   const log = props.setup && d.actions.length > 0 && (
@@ -113,7 +117,7 @@ export function ActionSection(props: {
   );
 
   return (
-    <section className={`pf-sec pf-actsec ${dock && props.mobile ? 'has-dock' : ''}`} aria-labelledby="pf-actions">
+    <section className="pf-sec pf-actsec" aria-labelledby="pf-actions">
       <h2 id="pf-actions" className="sec-h">
         Action 入力
       </h2>
@@ -211,6 +215,7 @@ function ToolRow(props: { pos?: Pos; title: string; tools: JSX.Element; right?: 
 }
 
 function ActDock(props: {
+  domRef: (el: HTMLElement | null) => void;
   phase: ActPhase;
   actions: readonly Action[];
   mobile: boolean;
@@ -282,7 +287,7 @@ function ActDock(props: {
   const showChips = presets.some((p) => !p.allin);
 
   return (
-    <div className="act-dock" role="group" aria-label="Action">
+    <div className="act-dock" role="group" aria-label="Action" ref={props.domRef}>
       {showChips && (
         <div className="ad-chips" role="group" aria-label={raiseLabel ? 'Raise の額' : 'Bet の額'}>
           {presets.map((p) => (
@@ -336,10 +341,15 @@ function ActDock(props: {
 }
 
 /** ボードを待つ間の台: 道具の行（「フロップのカード」）＋ピッカーを開き直すボタン */
-function BoardDock(props: { draft: Draft; tools: JSX.Element; onOpen: () => void }): JSX.Element {
+function BoardDock(props: {
+  draft: Draft;
+  tools: JSX.Element;
+  onOpen: () => void;
+  domRef: (el: HTMLElement | null) => void;
+}): JSX.Element {
   const street = cardStreet(props.draft.board.length);
   return (
-    <div className="act-dock" role="group" aria-label="Board">
+    <div className="act-dock" role="group" aria-label="Board" ref={props.domRef}>
       <ToolRow title={`${STREET_NAME[street]} の Card`} tools={props.tools} />
       <div className="ad-btns one">
         <button type="button" className="btn ghost" onClick={props.onOpen}>

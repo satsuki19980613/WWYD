@@ -45,6 +45,7 @@ import { actorAt, answerFrames, seatViews } from '../answer/replayModel.ts';
 import { SizeControl } from '../answer/SizeControl.tsx';
 import { STREET_LABEL } from '../list/spotList.ts';
 import { ErrorList } from '../post/SpotSection.tsx';
+import { useHeightVar } from '../useHeightVar.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 
 type MobileTab = 'replay' | 'range';
@@ -178,7 +179,8 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
 
   // ---- 部品 ----
   const [tab, setTab] = useState<MobileTab>('replay');
-  const bottomRef = useBottomBarHeight();
+  // スマホの下部固定バーの高さを --ans-bottom-h に（いちばん下までスクロールしたとき、レンジ表の最後の行がバーのすぐ上に来る）
+  const bottomRef = useHeightVar('.ans', '--ans-bottom-h');
   const s1Sub = sizeSpot ? sizeSummary(to, sizeSpot) : null;
   const brushPanel = (
     <BrushPanel
@@ -295,24 +297,6 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
 }
 
 /**
- * スマホの下部固定バーの高さを `--ans-bottom-h` に入れる（画面の下の余白をバーの高さに合わせ、
- * いちばん下までスクロールしたときにレンジ表の最後の行がバーのすぐ上に来るようにする）。
- */
-function useBottomBarHeight(): (el: HTMLDivElement | null) => void {
-  const observer = useRef<ResizeObserver | null>(null);
-  return useCallback((el: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    observer.current = null;
-    if (!el) return;
-    const root = el.closest<HTMLElement>('.ans');
-    const set = (): void => root?.style.setProperty('--ans-bottom-h', `${el.offsetHeight}px`);
-    set();
-    observer.current = new ResizeObserver(set);
-    observer.current.observe(el);
-  }, []);
-}
-
-/**
  * スポットの要約（スマホのレンジタブ。14 章）: ボード・出題の Hero のアクション・ポット。
  * 塗りながらリプレイのタブへ戻らずに局面を確かめられるようにする。押すとリプレイのタブへ。
  */
@@ -361,8 +345,7 @@ function ReplayView(props: {
   if (!state) return <></>;
   const actor = actorAt(hand.actions, c.step, hand.stopIndex, post.villain);
   const board = hand.board.slice(0, BOARD_COUNT[state.street]);
-  // 投稿者は自分のハンドなので表向き（Q-14）
-  const author = d.viewer === 'author';
+  // Hero のハンドは投稿者が自分の投稿に答えるときも伏せる（回答してから集計画面で見せる。2026-09-29 さつき。Q-14 を改める）
   const log = (
     <HandLog
       setup={hand.setup}
@@ -380,7 +363,7 @@ function ReplayView(props: {
         seats={seatViews(state, { hero: post.hero, villain: post.villain, actor })}
         pot={state.pot}
         board={board}
-        holes={state.folded.has(post.hero) ? {} : { [post.hero]: (author ? d.secrets?.heroCards : null) ?? 'back' }}
+        holes={state.folded.has(post.hero) ? {} : { [post.hero]: 'back' }}
         villainLabel="Villain（あなた）"
       />
       <ReplayControls c={c} />

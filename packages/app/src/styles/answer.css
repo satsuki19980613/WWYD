@@ -27,16 +27,23 @@
 .ans-skel { display: flex; flex-direction: column; gap: var(--s3); }
 .ans-sk-block { height: 360px; width: 100%; }
 
-/* ---- テーブル（ICMCLEC のガラス卓を参照。縦に長いカプセル） ---- */
+/* ---- テーブル（ICMCLEC のガラス卓を参照） ---- */
+/*
+ * カードは卓の幅に合わせて大きく（2026-09-29 さつき。前の 2.5 倍の 60px 前後）。--bw = ボードの札の幅（5 枚が卓の幅の 86% に収まる）、
+ * --hw = 席のホールカードの幅（2 枚で席のプレートの幅）。横の席は卓の縁に重ねる。
+ */
 .ptable {
   position: relative;
   width: 100%;
-  height: 400px;
+  height: 440px;
   user-select: none;
+  container-type: inline-size;
+  --bw: min(64px, calc((86cqw - 16px) / 5));
+  --hw: min(36px, calc(var(--bw) * 0.58));
 }
 .ptable-felt {
   position: absolute;
-  inset: 40px 17% 56px;
+  inset: 9% 6%;
   border-radius: 50%;
   border: 1px solid rgba(190, 232, 255, 0.5);
   background:
@@ -61,7 +68,7 @@
 .ptable-mid {
   position: absolute;
   left: 50%;
-  top: 48%;
+  top: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
@@ -69,13 +76,19 @@
   gap: var(--s1);
   pointer-events: none;
 }
-.ptable-pot { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+/* ボードを卓の中心に置き、ポットはその上・終わりの表示はその下に添える */
+.ptable-pot { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .ptable-pot b { font-size: 18px; color: var(--fg); text-shadow: 0 0 12px rgba(58, 230, 255, 0.5); }
-.ptable-board { display: flex; gap: 3px; }
+.ptable-board { display: flex; gap: 4px; }
+.ptable-slot, .ptable-board .pcard {
+  width: var(--bw);
+  height: calc(var(--bw) * 1.38);
+  font-size: calc(var(--bw) * 0.5);
+  border-radius: 4px;
+}
+.ptable-board .pcard { gap: 2px; }
+.ptable-board .pcard em { font-size: calc(var(--bw) * 0.38); }
 .ptable-slot {
-  width: 26px;
-  height: 36px;
-  border-radius: var(--r-sm);
   border: 1px solid rgba(190, 232, 255, 0.3);
   background: rgba(4, 14, 32, 0.42);
 }
@@ -92,10 +105,20 @@
 .pseat.a-c { transform: translate(-50%, -50%); }
 .pseat.a-l { left: 0; transform: translateY(-50%); }
 .pseat.a-r { right: 0; transform: translateY(-50%); }
-.pseat-cards { display: flex; gap: 2px; }
+/*
+ * ホールカード（とマック）はプレートの上に浮かせる（席の位置はプレートで決め、カードの有無で席が動かないようにする）。
+ * 上の席はプレートの右に置く（上に出すと卓からはみ出す）
+ */
+.pseat-hole { position: absolute; left: 50%; bottom: calc(100% + 3px); transform: translateX(-50%); }
+.pseat.top .pseat-hole { left: calc(100% + 4px); top: 0; bottom: auto; transform: none; }
+.pseat-cards { display: flex; gap: 3px; }
+.pseat-cards .pcard, .pback {
+  width: var(--hw);
+  height: calc(var(--hw) * 1.38);
+  font-size: calc(var(--hw) * 0.5);
+}
+.pseat-cards .pcard em { font-size: calc(var(--hw) * 0.38); }
 .pback {
-  width: 22px;
-  height: 30px;
   border-radius: 3px;
   background: repeating-linear-gradient(-45deg, rgba(252, 238, 10, 0.18) 0 2px, transparent 2px 5px), var(--surface-3);
   box-shadow: inset 0 0 0 1px var(--line-2);
@@ -472,12 +495,15 @@
 .ans.sp .mixbar { height: 24px; }
 .ans.sp .rcell-lbl { font-size: 9px; letter-spacing: -0.04em; }
 .ans.sp .rgrid { gap: 1px; }
-/* ログはモーダルなので、空いた分を卓に使う（画面の高さに合わせる。14 章） */
-.ans.sp .ptable { height: clamp(330px, calc(100dvh - 380px), 520px); }
+/*
+ * ログはモーダルなので、卓で画面の残りを埋める（14 章）。リプレイのタブの画面を画面の高さちょうどにして、卓を伸ばす
+ * （下の余白は下部固定のバーの高さ。.ans.sp の padding-bottom）。
+ */
+.ans.sp.tab-replay, .res.sp.tab-hand { min-height: var(--screen-fill-h); }
+.ans.sp.tab-replay > .replay, .res.sp.tab-hand > .replay { flex: 1 1 auto; }
+.ans.sp .replay > .ptable { flex: 1 1 auto; height: auto; min-height: 380px; }
 .ans.sp .pseat-plate { min-width: 72px; padding: 3px 6px; }
 .ans.sp .pseat-stack { font-size: 13px; }
-.ans.sp .ptable-felt { inset: 38px 20% 50px; }
-.ans.sp .ptable-slot, .ans.sp .ptable-board .pcard { width: 24px; height: 33px; }
 .ans.sp .rp-btns .btn { font-size: 13px; }
 .ans-bottom {
   position: fixed;
@@ -507,6 +533,10 @@
 
 /* ---- 集計画面（06 章 §5） ---- */
 .ptable-note {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
   font-family: var(--disp);
   font-size: 13px;
   font-weight: 700;

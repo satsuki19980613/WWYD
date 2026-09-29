@@ -122,41 +122,25 @@ export function HistoryButton(props: { disabled?: boolean; children: ReactNode }
 }
 
 type Pt = readonly [number, number];
-/** 席の配置（手前の中央から時計回り。卓の中の % 座標）。人数ごとに卓の周りへ均等に置く（2〜6 人。04 章 §2.1） */
-const SLOTS_BY_COUNT: Record<number, readonly Pt[]> = {
-  2: [
-    [50, 90],
-    [50, 10],
-  ],
-  3: [
-    [50, 90],
-    [8, 30],
-    [92, 30],
-  ],
-  4: [
-    [50, 90],
-    [8, 50],
-    [50, 10],
-    [92, 50],
-  ],
-  5: [
-    [50, 90],
-    [8, 70],
-    [8, 30],
-    [92, 30],
-    [92, 70],
-  ],
-  6: [
-    [50, 90],
-    [8, 70],
-    [8, 30],
-    [50, 10],
-    [92, 30],
-    [92, 70],
-  ],
+type Slot = { seat: Pt; chip: Pt };
+/**
+ * 席とチップの配置（手前の中央から時計回り。卓の中の % 座標）。2〜6 人（04 章 §2.1）。
+ * ボードは卓の中央に大きく出す（2026-09-29 さつき）ので、横の席は卓の縁に重ねて上下に寄せ、ボードの高さを空ける。
+ * チップは横の席なら同じ高さで内側、上下の席なら中央寄り（ボードに重ならない所）。
+ */
+const L_UP: Slot = { seat: [0, 27], chip: [30, 27] };
+const L_DOWN: Slot = { seat: [0, 73], chip: [30, 73] };
+const R_UP: Slot = { seat: [100, 27], chip: [70, 27] };
+const R_DOWN: Slot = { seat: [100, 73], chip: [70, 73] };
+const BOTTOM: Slot = { seat: [50, 91], chip: [50, 75] };
+const TOP: Slot = { seat: [50, 9], chip: [50, 25] };
+const SLOTS_BY_COUNT: Record<number, readonly Slot[]> = {
+  2: [BOTTOM, TOP],
+  3: [BOTTOM, L_UP, R_UP],
+  4: [BOTTOM, L_UP, TOP, R_UP],
+  5: [BOTTOM, L_DOWN, L_UP, R_UP, R_DOWN],
+  6: [BOTTOM, L_DOWN, L_UP, TOP, R_UP, R_DOWN],
 };
-/** チップの位置: 席から卓の中央へ半分ほど寄せた点 */
-const chipOf = ([x, y]: Pt): Pt => [50 + (x - 50) * 0.52, 50 + (y - 50) * 0.52];
 
 /**
  * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Villain の席を手前に置く（席の並びは replayModel の seatOrder）。
@@ -191,14 +175,14 @@ export function PokerTable(props: {
         {props.note && <span className="ptable-note">{props.note}</span>}
       </div>
       {props.seats.map((seat, i) => {
-        const slot = SLOTS_BY_COUNT[props.seats.length]?.[i] ?? ([50, 50] as const);
-        const [x, y] = slot;
-        const [cx, cy] = chipOf(slot);
+        const slot = SLOTS_BY_COUNT[props.seats.length]?.[i] ?? { seat: [50, 50] as const, chip: [50, 50] as const };
+        const [x, y] = slot.seat;
+        const [cx, cy] = slot.chip;
         const anchor = x < 20 ? 'l' : x > 80 ? 'r' : 'c';
         return (
           <div key={seat.pos}>
             <div
-              className={`pseat a-${anchor}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
+              className={`pseat a-${anchor}${y < 20 ? ' top' : ''}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
               style={{ top: `${y}%`, ...(anchor === 'c' ? { left: `${x}%` } : {}) }}
             >
               <HoleCards hole={props.holes[seat.pos]} />
@@ -229,9 +213,9 @@ export function PokerTable(props: {
 function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
   const { hole } = props;
   if (!hole) return null;
-  if (hole === 'muck') return <span className="pseat-muck">Muck</span>;
+  if (hole === 'muck') return <span className="pseat-hole pseat-muck">Muck</span>;
   return (
-    <div className="pseat-cards">
+    <div className="pseat-hole pseat-cards">
       {hole === 'back' ? (
         <>
           <span className="pback" />
