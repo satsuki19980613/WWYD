@@ -12,6 +12,8 @@ export const UID = '11111111-1111-4111-8111-111111111111';
 type Json = Record<string, unknown> | unknown[] | null;
 
 export type Backend = {
+  /** list_posts の応答（無ければ空の一覧） */
+  listRows?: Record<string, unknown>[];
   /** get_post_detail の応答（テストの途中で差し替えられる）。null なら post_not_found */
   detail: Json;
   /** answers への insert の本文 */
@@ -95,7 +97,7 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
       be.deletes.push(id);
       return json(route, 200, [{ id }]);
     }
-    if (path === '/rpc/list_posts') return json(route, 200, []);
+    if (path === '/rpc/list_posts') return json(route, 200, be.listRows ?? []);
     if (path === '/rpc/delete_my_account') {
       be.calls.push('delete_my_account');
       if (be.deleteAccountError) return json(route, be.deleteAccountError.status, be.deleteAccountError.body);

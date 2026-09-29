@@ -25,6 +25,7 @@ import {
 } from '../answer/resultModel.ts';
 import { Link } from '../components/Link.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
+import { FitStage } from '../components/FitStage.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
@@ -111,7 +112,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
     // マスにマウスを乗せると内訳がそのマスになる（押すと固定。GTO Wizard の Hand matrix・PioViewer に倣う）
     const shown = hover ?? selected;
     return (
-      <section className="screen ans res pc">
+      <FitStage className="screen ans res pc">
         <div className="ans-replay">
           {head}
           <h2 className="sr-only">Hand History</h2>
@@ -155,7 +156,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
             {nextLink}
           </div>
         </div>
-      </section>
+      </FitStage>
     );
   }
 
@@ -324,8 +325,9 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
         board={f.board}
         holes={f.holes}
         note={f.note}
+        spot={c.step === hand.spotIndex}
       />
-      <ReplayControls c={c} />
+      <ReplayControls c={c} spot={hand.spotIndex} />
       {!props.logInModal && log}
     </div>
   );

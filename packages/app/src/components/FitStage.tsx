@@ -1,0 +1,37 @@
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+
+/** PC の画面の設計の大きさ（1440×900 の画面でヘッダーと余白を除いた広さ。17 章） */
+export const STAGE_W = 1376;
+export const STAGE_H = 800;
+
+/**
+ * PC の投稿・回答・集計の画面の器（17 章。2026-09-29 さつき: 必ず 1 画面に収め、各要素の比率を常に一定に）。
+ * 中身は設計の大きさ（STAGE_W × STAGE_H）で組み、ヘッダーの下の領域に収まる倍率で全体を同じ比率で拡大縮小する
+ * （CSS の zoom。レイアウトごと縮むので、マウスの座標や要素の位置もそのまま使える）。ページはスクロールしない。
+ * 長いもの（Hand History・席の表など）は、その枠の中だけでスクロールする。
+ */
+export function FitStage(props: { className: string; children: ReactNode }): JSX.Element {
+  const outer = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = outer.current;
+    if (!el) return;
+    const fit = (): void => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width > 0 && height > 0) setScale(Math.min(width / STAGE_W, height / STAGE_H));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={outer} className="fit-outer">
+      <div className={`fit-stage ${props.className}`} style={{ zoom: scale }}>
+        {props.children}
+      </div>
+    </div>
+  );
+}

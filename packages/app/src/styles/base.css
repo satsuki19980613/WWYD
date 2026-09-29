@@ -137,3 +137,14 @@ a { color: var(--cyan); }
   .app-main { padding-left: var(--s6); padding-right: var(--s6); }
   .hdr-inner { padding-left: var(--s6); padding-right: var(--s6); }
 }
+
+/* ---- PC の投稿・回答・集計の器（FitStage。17 章）: ヘッダーの下の領域いっぱい。中身は設計の大きさで組み、zoom で収める ---- */
+.app-main:has(> .fit-outer) { max-width: none; padding-bottom: var(--s4); }
+.fit-outer {
+  height: calc(100dvh - var(--hdr-h) - var(--sat) - 1px - 2 * var(--s4));
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+}
+.fit-stage { flex: none; width: 1376px; height: 800px; }

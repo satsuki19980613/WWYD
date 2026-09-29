@@ -674,41 +674,110 @@
 .res.sp.has-next { padding-bottom: calc(72px + var(--sab)); }
 .res-agg > .btn { align-self: stretch; }
 
-/* ---- PC の回答（17 章）: リプレイ | レンジ表 | 道具と送信 ---- */
+/* ---- PC の回答・集計（17 章）: 設計の大きさ（FitStage。1376×800）で組み、画面に合わせて全体を拡大縮小する ---- */
+/* 回答: リプレイ ｜ スポットの見出し / レンジ表（620px 角）｜ 道具（300px） */
 .ans.pc {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: 'replay range' 'replay tools';
+  grid-template-columns: minmax(0, 1fr) 620px 300px;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: 'replay banner banner' 'replay range tools';
   gap: var(--s4) var(--s5);
-  align-items: start;
 }
-.ans.pc .ans-replay { grid-area: replay; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
-.ans.pc .ans-range { grid-area: range; min-width: 0; }
-.ans.pc .ans-tools { grid-area: tools; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+.ans.pc .ans-replay { grid-area: replay; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; min-height: 0; }
+/* 卓は決まった高さ（縦長の楕円にしない）。Hand History が残りの高さを使い、その中でスクロールする */
+.ans.pc .ans-replay > .replay { flex: 1 1 auto; min-height: 0; }
+.ans.pc .ans-replay .ptable { flex: none; height: 430px; }
+.ans.pc .ans-replay .hlog { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start; }
+.ans.pc .ans-range { grid-area: range; min-width: 0; min-height: 0; }
+/* ミックスバーのハンドル（端で 16px はみ出す）が横のスクロールにならないよう、右に余白を取って同じだけ外へ出す */
+.ans.pc .ans-tools {
+  grid-area: tools;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 16px;
+  margin-right: -16px;
+}
 .ans-send { display: flex; flex-direction: column; gap: var(--s2); }
-/* 1200px 以上は画面の高さに収める: レンジ表は正方形で高さいっぱい（最大 760px）、リプレイは残りの幅、道具は 300px */
-@media (min-width: 1200px) {
-  .ans.pc {
-    --gsz: min(var(--screen-fill-h), 760px, calc(min(100vw, var(--app-w)) - 2 * var(--s6) - 380px - 300px - 2 * var(--s5)));
-    grid-template-columns: minmax(380px, 1fr) var(--gsz) 300px;
-    grid-template-areas: 'replay range tools';
-    height: var(--screen-fill-h);
-    align-items: stretch;
-  }
-  .ans.pc .ans-replay { min-height: 0; }
-  .ans.pc .ans-replay > .replay { flex: 1 1 auto; min-height: 0; }
-  .ans.pc .ans-replay .ptable { flex: 1 1 auto; height: auto; min-height: 280px; }
-  .ans.pc .ans-replay .hlog { flex: none; max-height: 26vh; overflow-y: auto; }
-  .ans.pc .ans-range { align-self: start; }
-  /* ミックスバーのハンドル（端で 16px はみ出す）が横のスクロールにならないよう、右に余白を取って同じだけ外へ出す */
-  .ans.pc .ans-tools { min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 16px; margin-right: -16px; }
-  .ans.pc .ans-send { margin-top: auto; }
-  .ans.pc .rcell-lbl { font-size: 12px; }
-}
-
-/* ---- PC の集計（17 章）: 再生 | 表示の切り替えと表 | 答え合わせ・内訳・操作。回答の画面と同じ 3 列 ---- */
+.ans.pc .ans-send { margin-top: auto; }
+.ans.pc .rcell-lbl { font-size: 12px; }
+/* 集計: リプレイ ｜ 表示の切り替えとレンジ表 ｜ 答え合わせ・内訳・操作 */
+.res.pc { grid-template-rows: minmax(0, 1fr); grid-template-areas: 'replay range tools'; }
 .res.pc .ans-range { display: flex; flex-direction: column; gap: var(--s3); }
-@media (min-width: 1200px) {
-  /* 表の上に表示の切り替え（約 56px）を置くので、その分だけ表を小さく */
-  .res.pc { --gsz: min(calc(var(--screen-fill-h) - 56px), 760px, calc(min(100vw, var(--app-w)) - 2 * var(--s6) - 380px - 300px - 2 * var(--s5))); }
+
+/* ---- スポットの見出し（PC。17 章）: どの局面の Hero の Range を答えるか ---- */
+.spot-banner {
+  grid-area: banner;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  min-height: 72px;
+  padding: var(--s3) var(--s5);
+  border: 1px solid rgba(252, 238, 10, 0.35);
 }
+.spot-banner .sp-lbl { color: var(--yellow); }
+.sp-street { font-family: var(--disp); font-size: 22px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg); }
+.sp-board { display: flex; gap: 4px; }
+.sp-q { display: flex; align-items: baseline; gap: var(--s3); min-width: 0; font-family: var(--disp); font-size: 20px; font-weight: 700; letter-spacing: 0.03em; }
+.sp-hero { color: var(--fg); white-space: nowrap; }
+.sp-facing { color: var(--dim); white-space: nowrap; }
+.sp-facing b, .sp-hero b { font-weight: 700; }
+.sp-nums { display: flex; gap: var(--s4); margin-left: auto; font-size: 17px; color: var(--fg); white-space: nowrap; }
+.sp-nums .mono-lbl { margin-right: 4px; font-style: normal; }
+
+/* ---- 出題の局面（17 章。2026-09-29 さつき: どこが出題か分かるようにアニメで） ----
+ * 卓の縁を黄で 1 回光らせ、Hero の席を黄で脈打たせ、席の右に「SPOT」の札を出す。進み具合のバーには黄の目盛り。
+ * 視差効果を減らす設定ではアニメを止め、札と枠だけを出す（base.css）。 */
+.ptable.at-spot::after {
+  content: '';
+  position: absolute;
+  inset: 9% 6%;
+  border-radius: 50%;
+  border: 2px solid var(--yellow);
+  pointer-events: none;
+  opacity: 0;
+  animation: spot-ring 1100ms var(--ease) 1;
+}
+@keyframes spot-ring {
+  0% { opacity: 0.95; transform: scale(0.97); }
+  100% { opacity: 0; transform: scale(1.07); }
+}
+/* 席のプレートは面取り（clip-path）で影が切れるので、光は席全体の drop-shadow で出す */
+.ptable.at-spot .pseat.hero .pseat-plate { border-color: var(--yellow); }
+.ptable.at-spot .pseat.hero { animation: spot-pulse 1400ms ease-in-out infinite; }
+@keyframes spot-pulse {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(252, 238, 10, 0.45)); }
+  50% { filter: drop-shadow(0 0 14px rgba(252, 238, 10, 0.95)); }
+}
+.pseat-spot {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 3px 10px;
+  background: var(--yellow);
+  color: var(--yellow-ink);
+  font-family: var(--disp);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  clip-path: var(--chamfer-xs);
+  animation: spot-in 420ms var(--ease) both;
+}
+@keyframes spot-in {
+  from { opacity: 0; transform: translate(-10px, -50%) scale(0.8); }
+  to { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+.rp-bar { position: relative; overflow: visible; }
+.rp-bar i { overflow: hidden; }
+.rp-spot { position: absolute; top: -4px; width: 3px; height: 12px; margin-left: -1.5px; background: var(--yellow); box-shadow: 0 0 6px rgba(252, 238, 10, 0.7); }
+
+/* スマホのスポットの要約も、出題の局面だと分かるよう黄の枠（PC の見出しと同じ。17 章） */
+.spot-strip { border-color: rgba(252, 238, 10, 0.4); }
+.spot-strip .sp-facing { color: var(--dim); }

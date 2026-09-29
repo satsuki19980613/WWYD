@@ -1,6 +1,7 @@
 import { STREETS, type Action, type Card, type Pos } from '@wwyd/core';
 import { useEffect, useRef, useState } from 'react';
 import { typingOrModal } from '../answer/Replay.tsx';
+import { FitStage } from '../components/FitStage.tsx';
 import { cardText } from '../components/PlayingCard.tsx';
 import { useToast } from '../components/Toast.tsx';
 import { ActionSection } from '../post/ActionSection.tsx';
@@ -240,7 +241,7 @@ export function NewPostScreen(): JSX.Element {
 
   if (!mobile) {
     return (
-      <section className="screen pf">
+      <FitStage className="screen pf">
         {ocr(true)}
         <div className="pf-grid">
           <div className="pf-col">
@@ -255,7 +256,7 @@ export function NewPostScreen(): JSX.Element {
           </div>
         </div>
         {keyboard}
-      </section>
+      </FitStage>
     );
   }
 

@@ -113,7 +113,7 @@ export function useReplayKeys(c: ReplayControl, enabled: boolean): void {
 }
 
 /** 再生の操作。「最初から」は文字、1手戻る・再生 / 一時停止・1手進むはマーク（名前は読み上げに。2026-09-29 さつき） */
-export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
+export function ReplayControls(props: { c: ReplayControl; /** 出題の局面の手数（進み具合のバーに黄の目盛り。17 章） */ spot?: number }): JSX.Element {
   const { c } = props;
   return (
     <div className="rp-ctrl">
@@ -134,6 +134,7 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
       <div className="rp-prog">
         <span className="rp-bar" aria-hidden="true">
           <i style={{ width: `${c.max > 0 ? (c.step / c.max) * 100 : 100}%` }} />
+          {props.spot !== undefined && c.max > 0 && <b className="rp-spot" style={{ left: `${(props.spot / c.max) * 100}%` }} />}
         </span>
         <span className="num rp-count" aria-live="polite">
           {c.step} / {c.max} 手目
@@ -206,10 +207,16 @@ export function PokerTable(props: {
   note?: string | null;
   /** ボードの中身を差し替える（投稿の入力でカードを押して選び直す） */
   boardContent?: ReactNode;
+  /** 出題の局面（Hero の手番）を表示中。卓の縁を 1 回光らせ、Hero の席を脈打たせて「SPOT」の札を出す（17 章） */
+  spot?: boolean;
 }): JSX.Element {
   const interactive = props.boardContent !== undefined;
   return (
-    <div className={`ptable${interactive ? ' live' : ''}`} role={interactive ? 'group' : 'img'} aria-label="Table">
+    <div
+      className={`ptable${interactive ? ' live' : ''}${props.spot ? ' at-spot' : ''}`}
+      role={interactive ? 'group' : 'img'}
+      aria-label={props.spot ? 'Table（Spot）' : 'Table'}
+    >
       <div className="ptable-felt" />
       <div className="ptable-mid">
         <div className="ptable-pot">
@@ -253,6 +260,11 @@ export function PokerTable(props: {
                 </span>
                 <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
               </div>
+              {props.spot && seat.hero && (
+                <span className="pseat-spot" aria-hidden="true">
+                  Spot
+                </span>
+              )}
               {seat.last && <span className="pseat-last">{seat.last}</span>}
               {anchor !== 'c' && chip}
             </div>

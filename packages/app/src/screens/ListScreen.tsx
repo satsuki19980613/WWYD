@@ -3,6 +3,7 @@ import { ChipGroup } from '../components/ChipGroup.tsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { ChevronIcon, TrashIcon } from '../components/Icons.tsx';
 import { Link } from '../components/Link.tsx';
+import { cardText, PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
@@ -198,12 +199,12 @@ function SpotTable(props: {
   return (
     <div className="spot-table">
       <div className="st-row st-head">
-        <span>Street</span>
+        <span>Board</span>
         <span>Title</span>
-        <span>Game</span>
         <span>Hero</span>
         <span className="st-num">{sortHead('many', '回答')}</span>
         <span className="st-num">{sortHead('new', '投稿')}</span>
+        <span />
         <span />
       </div>
       {props.loading && (
@@ -227,33 +228,54 @@ function SpotTable(props: {
   );
 }
 
+/** Street と、スポットの Street までの Board（17 章。サーバーが Board を返さないときは Street だけ） */
+function SpotBoard(props: { row: PostRow; size: 'sm' | 'big' }): JSX.Element {
+  const board = props.row.board ?? [];
+  return (
+    <span className={`spot-board ${props.size}`}>
+      <span className="street-badge">{STREET_LABEL[props.row.street]}</span>
+      {board.length > 0 && (
+        <span className="spot-board-cards" aria-label={`Board ${board.map(cardText).join(' ')}`}>
+          {board.map((c) => (
+            <PlayingCard key={c} card={c} size={props.size} />
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** 「Cash · 100bb · 6 Players」（人数はサーバーが返すときだけ） */
+function metaText(row: PostRow): string {
+  return row.players ? `${formatLabel(row)} · ${row.players} Players` : formatLabel(row);
+}
+
 function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JSX.Element {
   const { row } = props;
   const status = cardStatus(row);
   const action = cardAction(row);
   return (
     <li className={`st-row spot-row${action.primary ? '' : ' done'}`}>
-      <span>
-        <span className="street-badge">{STREET_LABEL[row.street]}</span>
-      </span>
+      <SpotBoard row={row} size="big" />
       <span className="st-title">
         <Link to={action.to} className="spot-link">
           {row.title}
         </Link>
+        <span className="st-meta num">{metaText(row)}</span>
         {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
         {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
       </span>
-      <span className="spot-fmt num">{formatLabel(row)}</span>
       <b className="st-pos" style={{ color: POS_VAR[row.hero] }}>
         {row.hero}
       </b>
       <span className="st-num num st-count">{row.answer_count}</span>
       <span className="st-num st-ago">{formatAgo(row.created_at, props.now)}</span>
-      <span className="st-go">
-        <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
-          {action.label}
-          <ChevronIcon />
-        </span>
+      <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
+        {action.label}
+        <ChevronIcon />
+      </span>
+      {/* 削除は専用の列（無い行も同じ幅を空けて、ほかの列を揃える。2026-09-29 さつき） */}
+      <span className="st-del">
         {row.can_delete && (
           <button type="button" className="spot-del" aria-label="削除" onClick={props.onDelete}>
             <TrashIcon />
@@ -272,8 +294,7 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
     // カード全体を押せる（タイトルのリンクをカードいっぱいに広げる。14 章）。削除のボタンはその上に重ねる
     <article className={`spot-card${action.primary ? '' : ' done'}`}>
       <div className="spot-top">
-        <span className="street-badge">{STREET_LABEL[row.street]}</span>
-        <span className="spot-fmt num">{formatLabel(row)}</span>
+        <SpotBoard row={row} size="sm" />
         {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
         {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
         {/* 削除はカードの右上に固定（右下の「回答する」「結果を見る」の幅で位置が変わらないように。2026-09-29 さつき） */}
@@ -293,6 +314,7 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
         <b className="pos" style={{ color: POS_VAR[row.hero] }}>
           {row.hero}
         </b>
+        <span className="spot-fmt num"> · {metaText(row)}</span>
       </p>
       <div className="spot-foot">
         <span className="spot-meta">

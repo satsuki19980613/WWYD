@@ -37,6 +37,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         desc: 'Card（PC は行）を押すと、未回答の Spot は回答画面へ、回答済みの Spot は集計画面へ進む。自分の投稿にも回答でき、集計は回答するまで見られない。',
       },
       { term: '削除', desc: '自分の投稿は Card の右上（PC は行の右端）のごみ箱のマークから削除できる（回答もまとめて消える。元に戻せない）。' },
+      { term: 'Board と Players', desc: 'Board はその Spot の Street までの Card。Players は Hand の人数。' },
       { term: 'キー操作（PC）', desc: '↑ ↓（または j k）で行を移り、Enter で開く。' },
     ],
   },
@@ -45,8 +46,8 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     title: 'Range 入力',
     items: [
       { term: '視点', desc: 'Hero（あなた）の席に座り、この Spot での Hero の Range を入力する（Hand ごとに、どの Action をどの割合で取るか）。' },
-      { term: 'Replay', desc: 'Spot までの Action を再生する。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。Hero の Hand は回答後に公開される。' },
-      { term: 'Spot の要約', desc: 'Range の上の行は Board・Hero の Action・Pot。押すと Replay に戻る。' },
+      { term: 'Replay', desc: 'Spot までの Action を再生する。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。Hero の Hand は回答後に公開される。Spot の局面に来ると、卓の Hero の席が黄に光り「SPOT」が出る。進み具合のバーの黄の目盛りが Spot の位置。' },
+      { term: 'Spot', desc: 'Spot（出題の局面）の Street・Board・Hero の席・Hero が向き合う Action（vs BB Bet 6.5 など。その Street の最初の Action なら to act）・Pot・to call。PC は Range の上の帯、スマホは Range のタブの上の行（押すと Replay に戻る）。' },
       {
         term: 'ブラシ',
         desc: '上部の Action を押すとその Action 100% のブラシになる。バーの境界をドラッグすると混合戦略（5% 刻み）を作れる。マスをタップ、またはなぞるとブラシの頻度で塗られる。',
@@ -99,7 +100,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         desc: '自分と全体の頻度（Range 外を含む）の違いの大きさを黄の濃さで表す。0% は全体と同じ、100% はまったく違う。正解・不正解ではない。',
       },
       { term: '次の Spot', desc: '未回答の Spot のうち最も新しいものへ進む。' },
-      { term: 'Hand History', desc: 'Hand を最後まで再生し、Showdown の Hand を確認できる。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。' },
+      { term: 'Hand History', desc: 'Hand を最後まで再生し、Showdown の Hand を確認できる。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。Spot の局面に来ると、卓の Hero の席が黄に光り「SPOT」が出る。進み具合のバーの黄の目盛りが Spot の位置。' },
       {
         term: 'キー操作（PC）',
         desc: '← → で 1手戻る・進む、Home で最初、End で最後。Hand History の Action を押すとその時点へ。表のマスにマウスを乗せると内訳がそのマスになる（押すと固定）。',

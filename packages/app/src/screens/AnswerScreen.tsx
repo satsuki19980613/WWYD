@@ -9,13 +9,19 @@ import {
   type AnswerKey,
   type Mix,
   type Paint,
+  type Action,
+  type Card,
+  type Mbb,
+  type Pos,
   type State,
+  type Street,
 } from '@wwyd/core';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
-import { ACTION_NAME } from '../post/draft.ts';
+import { ACTION_NAME, STREET_NAME } from '../post/draft.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
+import { FitStage } from '../components/FitStage.tsx';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
 import { insertAnswer } from '../answer/answerApi.ts';
@@ -286,15 +292,16 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   );
 
   if (!mobile) {
-    // PC（17 章）: 左にリプレイ、中央にレンジ表、右に道具と送信。1200px 以上は画面の高さに収めてスクロールさせない。
-    // 1200px 未満はリプレイとレンジの 2 列（レンジの列に道具を重ねる）
+    // PC（17 章）: 左にリプレイ、上にスポットの見出し、中央にレンジ表、右に道具と送信。
+    // 設計の大きさで組み、画面に収まるよう全体を同じ比率で拡大縮小する（FitStage。ページはスクロールしない）
     return (
-      <section className="screen ans pc">
+      <FitStage className="screen ans pc">
         <div className="ans-replay">
           {head}
           <h2 className="sr-only">Replay</h2>
           {replayView}
         </div>
+        <SpotBanner detail={d} state={stop} />
         <div className="ans-range">
           <h2 className="sr-only">Range</h2>
           {grid}
@@ -309,7 +316,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
           </div>
         </div>
         {dialog}
-      </section>
+      </FitStage>
     );
   }
 
@@ -345,34 +352,94 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   );
 }
 
+/** スポットの要点（17 章）: Street・Board・Hero・Hero が向き合う Action（このストリートの最後の Bet・Raise。無ければ最後の Action）・Pot・to call */
+type SpotFacts = { street: Street; board: Card[]; hero: Pos; facing: Action | null; pot: Mbb; toCall: Mbb };
+
+function spotFacts(d: PostDetail, state: State): SpotFacts {
+  const { hand, post } = d;
+  const inStreet = hand.actions.slice(0, hand.stopIndex).filter((a) => a.street === post.street);
+  const aggressive = [...inStreet].reverse().find((a) => a.type === 'bet' || a.type === 'raise');
+  return {
+    street: post.street,
+    board: hand.board.slice(0, BOARD_COUNT[state.street]),
+    hero: post.hero,
+    facing: aggressive ?? inStreet[inStreet.length - 1] ?? null,
+    pot: totalPot(state),
+    toCall: Math.min(state.currentBet - state.bets[post.hero], state.stacks[post.hero]),
+  };
+}
+
+/** 「vs BB Bet 6.5」「vs BB Check」、このストリートで最初の Action なら「to act」 */
+function FacingText(props: { f: SpotFacts }): JSX.Element {
+  const a = props.f.facing;
+  if (!a) return <span className="sp-facing">to act</span>;
+  return (
+    <span className="sp-facing">
+      vs <b style={{ color: POS_VAR[a.pos] }}>{a.pos}</b> {ACTION_NAME[a.type]}
+      {a.to !== undefined && <span className="num"> {formatBb(a.to)}</span>}
+    </span>
+  );
+}
+
 /**
- * スポットの要約（スマホのレンジタブ。14 章）: ボード・Hero が向き合っているアクション（このストリートの直前のアクション。
- * 無ければ「▶ BTN to act」）・ポット。塗りながらリプレイのタブへ戻らずに局面を確かめられるようにする。押すとリプレイのタブへ。
+ * PC のスポットの見出し（レンジ表と道具の上の帯。17 章。2026-09-29 さつき: どこのスポットの Range を答えるか分かるように）。
+ * 「SPOT · Turn · Board · Hero BTN vs BB Bet 6.5 · Pot · to call」。コーナーブラケットで囲む（シグネチャー 2）。
+ */
+function SpotBanner(props: { detail: PostDetail; state: State }): JSX.Element {
+  const f = spotFacts(props.detail, props.state);
+  return (
+    <div className="bracket-hero spot-banner" role="group" aria-label="Spot">
+      <span className="brk tl" aria-hidden="true" />
+      <span className="brk br" aria-hidden="true" />
+      <span className="mono-lbl sp-lbl">Spot</span>
+      <span className="sp-street">{STREET_NAME[f.street]}</span>
+      <span className="sp-board">
+        {f.board.map((c) => (
+          <PlayingCard key={c} card={c} />
+        ))}
+      </span>
+      <span className="sp-q">
+        <span className="sp-hero">
+          Hero <b style={{ color: POS_VAR[f.hero] }}>{f.hero}</b>
+        </span>
+        <FacingText f={f} />
+      </span>
+      <span className="sp-nums num">
+        <span>
+          <i className="mono-lbl">Pot</i> {formatBb(f.pot)}bb
+        </span>
+        {f.toCall > 0 && (
+          <span>
+            <i className="mono-lbl">to call</i> {formatBb(f.toCall)}bb
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * スマホのスポットの要約（Range のタブの 1 行。14 章・17 章）: Board・Hero・向き合う Action・Pot。行は増やさない。
+ * 塗りながら Replay のタブへ戻らずに局面を確かめられるようにする。押すと Replay のタブへ。
  */
 function SpotStrip(props: { detail: PostDetail; state: State; onOpen: () => void }): JSX.Element {
-  const { hand, post } = props.detail;
-  const board = hand.board.slice(0, BOARD_COUNT[props.state.street]);
-  const prev = hand.actions[hand.stopIndex - 1];
-  const a = prev && prev.street === post.street ? prev : null;
+  const f = spotFacts(props.detail, props.state);
   return (
     <button type="button" className="spot-strip" aria-label="Replay を見る" onClick={props.onOpen}>
       <span className="ss-board">
-        {board.map((c) => (
+        {f.board.map((c) => (
           <PlayingCard key={c} card={c} size="sm" />
         ))}
       </span>
-      {a ? (
-        <span className="ss-line">
-          <b style={{ color: POS_VAR[a.pos] }}>{a.pos}</b> {ACTION_NAME[a.type]}
-          {a.to !== undefined && <span className="num"> {formatBb(a.to)}</span>}
-        </span>
-      ) : (
-        <span className="ss-line num">
-          ▶ <b style={{ color: POS_VAR[post.hero] }}>{post.hero}</b> to act
-        </span>
-      )}
+      <span className="ss-line">
+        Hero{' '}
+        <b className="ss-hero" style={{ color: POS_VAR[f.hero] }}>
+          {f.hero}
+        </b>{' '}
+        <FacingText f={f} />
+      </span>
       <span className="ss-pot num">
-        <i className="mono-lbl">POT</i> {formatBb(totalPot(props.state))}
+        <i className="mono-lbl">POT</i> {formatBb(f.pot)}
       </span>
     </button>
   );
@@ -419,8 +486,9 @@ function ReplayView(props: {
         board={board}
         holes={state.folded.has(post.hero) ? {} : { [post.hero]: 'back' }}
         heroLabel="Hero（あなた）"
+        spot={c.step === hand.stopIndex}
       />
-      <ReplayControls c={c} />
+      <ReplayControls c={c} spot={hand.stopIndex} />
       {!props.logInModal && log}
     </div>
   );

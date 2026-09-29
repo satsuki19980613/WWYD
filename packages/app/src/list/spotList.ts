@@ -33,6 +33,9 @@ export type PostRow = {
   is_mine: boolean;
   answered_by_me: boolean;
   can_delete: boolean;
+  /** 人数（2〜6）と、スポットの Street までの Board（17 章。マイグレーション 20260929000002 より前のサーバーは返さない） */
+  players?: number;
+  board?: string[];
 };
 
 export const TAB_ITEMS: readonly { value: ListTab; label: string }[] = [
