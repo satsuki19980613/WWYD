@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal } from '../components/Modal.tsx';
 import { isDirty, PREFLOP_ALLIN } from './draft.ts';
 import { getDraft, setDraft } from './draftStore.ts';
@@ -25,12 +25,27 @@ export function OcrImport(props: { button?: boolean; onApplied?: () => void }): 
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [review, setReview] = useState<{ initial: Review; imageUrl: string } | null>(null);
+  const imageUrl = useRef<string | null>(null);
+  const mounted = useRef(true);
 
   // 確認画面を閉じたら画像の Object URL を破棄する（画像の参照を残さない）
   const closeReview = (): void => {
-    if (review) URL.revokeObjectURL(review.imageUrl);
+    if (imageUrl.current) URL.revokeObjectURL(imageUrl.current);
+    imageUrl.current = null;
     setReview(null);
   };
+
+  // 読み取り中や確認画面のまま画面を離れたら、読み取りを止めて画像の Object URL も破棄する（不変条件 5。リリース前レビュー R3-2）
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      abort.current?.abort();
+      abort.current = null;
+      if (imageUrl.current) URL.revokeObjectURL(imageUrl.current);
+      imageUrl.current = null;
+    };
+  }, []);
 
   const pick = (g: T4Game): void => {
     game.current = g;
@@ -50,14 +65,17 @@ export function OcrImport(props: { button?: boolean; onApplied?: () => void }): 
       try {
         const { runOcr } = await import('../ocr/runOcr.ts');
         const result = await runOcr(file, controller.signal);
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !mounted.current) return;
         const postable = result.problems.some((p) => p.code === 'not_six_players')
           ? 'unreadable'
           : ocrPostability(result, getDraft(), chosen);
         if (postable === 'unreadable') setErrors(['読み取れませんでした']);
         else if (postable === 'preflop_allin') setErrors([PREFLOP_ALLIN]);
         else if (postable === 'no_spot') setErrors([NO_SPOT_MESSAGE]);
-        else setReview({ initial: reviewFromOcr(result, chosen, getDraft().hero), imageUrl: URL.createObjectURL(file) });
+        else {
+          imageUrl.current = URL.createObjectURL(file);
+          setReview({ initial: reviewFromOcr(result, chosen, getDraft().hero), imageUrl: imageUrl.current });
+        }
       } catch {
         if (!controller.signal.aborted) setErrors(['読み取れませんでした']);
       } finally {
