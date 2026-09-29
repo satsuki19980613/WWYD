@@ -112,7 +112,7 @@ async function concurrency(url) {
       'title','DB-19','fmt','cash','hero','BTN','street','turn','effective_stack',100,
       'keys','["fold","call","s1"]'::jsonb,'s1_label','raise','min_to',13,'max_to',95.7,'pot_base',22.1,
       'sb',0.5,'bb',1,'ante',0,'rake',null,'stacks','{"UTG":100,"HJ":100,"CO":100,"BTN":100,"SB":100,"BB":100}'::jsonb,
-      'board','[]'::jsonb,'actions','[]'::jsonb,'spot_index',10,'stop_index',11,'hero_cards','["Ad","Kd"]'::jsonb));`)).trim();
+      'board','[]'::jsonb,'actions','[]'::jsonb,'spot_index',10,'stop_index',10,'hero_cards','["Ad","Kd"]'::jsonb));`)).trim();
     const paint = `set_byte(set_byte(decode(repeat('00', 676), 'hex'), 2, 20), 672, 20)`;  // AA を call 20、22 を fold 20
     const start = Date.now() + 3000;
     await Promise.all(users.slice(1).map((u) => psql(url, '-f -', `

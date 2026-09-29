@@ -63,7 +63,7 @@ create or replace function pg_temp.hs1(title text default 'H-S1') returns jsonb 
       {"street":"turn","pos":"BB","type":"call"},
       {"street":"river","pos":"BB","type":"check"},{"street":"river","pos":"BTN","type":"bet","to":15},
       {"street":"river","pos":"BB","type":"call"}]'::jsonb,
-    'spot_index', 10, 'stop_index', 11,
+    'spot_index', 10, 'stop_index', 10,
     'hero_cards', '["Ad","Kd"]'::jsonb, 'known_cards', '{"BB":["Ks","Js"]}'::jsonb)
 $$;
 

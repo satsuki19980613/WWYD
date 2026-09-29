@@ -98,7 +98,7 @@ update public.posts p set created_at = now() - make_interval(mins => s.k - 100)
 from seed_posts s where s.id = p.id and s.k >= 100;
 alter table public.posts enable trigger posts_only_count_update;
 
--- ---- 回答（AA を Bet 100%、22 を Check 100%） ----
+-- ---- 回答（AA を Bet 100%、22 を Check 100%。Bet の額は Pot の半分） ----
 do $$
 declare
   p record;
@@ -113,7 +113,7 @@ begin
       continue when (p.k * 7 + u * 3) % 8 >= (p.k % 9);
       perform set_config('request.jwt.claims',
         json_build_object('sub', '00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'), 'role', 'authenticated')::text, true);
-      insert into public.answers (post_id, paint) values (p.id, v_paint);
+      insert into public.answers (post_id, paint, size) values (p.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = p.id));
     end loop;
   end loop;
 
@@ -122,14 +122,14 @@ begin
     for u in 1..(p.k - 100) loop
       perform set_config('request.jwt.claims',
         json_build_object('sub', '00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'), 'role', 'authenticated')::text, true);
-      insert into public.answers (post_id, paint) values (p.id, v_paint);
+      insert into public.answers (post_id, paint, size) values (p.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = p.id));
     end loop;
   end loop;
 
   for real_user in select id from neon_auth."user" where id::text not like '00000000-0000-0000-%' loop
     perform set_config('request.jwt.claims', json_build_object('sub', real_user.id, 'role', 'authenticated')::text, true);
-    insert into public.answers (post_id, paint)
-    select id, v_paint from seed_posts where k < 100 and k % 4 = 0;
+    insert into public.answers (post_id, paint, size)
+    select s.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = s.id) from seed_posts s where s.k < 100 and s.k % 4 = 0;
   end loop;
   perform set_config('request.jwt.claims', '', true);
 end $$;

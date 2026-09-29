@@ -98,7 +98,7 @@ begin
       continue when (p.k * 7 + u * 3) % 8 >= (p.k % 9);
       perform set_config('request.jwt.claims',
         json_build_object('sub', '00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'), 'role', 'authenticated')::text, true);
-      insert into public.answers (post_id, paint) values (p.id, v_paint);
+      insert into public.answers (post_id, paint, size) values (p.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = p.id));
     end loop;
   end loop;
   perform set_config('request.jwt.claims', '', true);
