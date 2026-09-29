@@ -1,8 +1,8 @@
-import { POSITIONS, PLAYER_COUNTS, type Pos } from '@wwyd/core';
+import { isCard, POSITIONS, PLAYER_COUNTS, type Pos } from '@wwyd/core';
 import { useSyncExternalStore } from 'react';
 import { cardText } from '../components/PlayingCard.tsx';
 import { handCards } from './cardInput.ts';
-import { emptyDraft, parseSettings, phaseOf, settleActions, STREET_NAME, type Draft } from './draft.ts';
+import { emptyDraft, normalizeSpot, parseSettings, phaseOf, settleActions, STREET_NAME, type Draft } from './draft.ts';
 
 /**
  * 投稿の下書きの保存（1 人 3 件まで。06 章 §3.2、14 章 §3.5。2026-09-29）。
@@ -49,14 +49,14 @@ export function sanitizeDraft(raw: unknown): Draft {
     hero: POSITIONS.find((p) => p === raw.hero) ?? base.hero,
     hands: perSeat(raw.hands, base.hands),
     actions: Array.isArray(raw.actions) && raw.actions.every(isActionShape) ? (raw.actions as Draft['actions']) : [],
-    board: Array.isArray(raw.board) ? (raw.board as Draft['board']).filter((c) => typeof c === 'string') : [],
-    spotIndex: typeof raw.spotIndex === 'number' ? raw.spotIndex : null,
+    board: Array.isArray(raw.board) ? raw.board.filter(isCard) : [],
+    spotIndex: Number.isInteger(raw.spotIndex) ? (raw.spotIndex as number) : null,
     title: str(raw.title, ''),
   };
   try {
     // 保存されるのは、設定を変えて合わなくなった手を外す前の下書き（画面は settleActions の結果を出す）。
     // 開き直したときも画面と同じく、合わなくなった手から後だけを外す（リリース前レビュー R3-1）
-    const settled = settleActions(d);
+    const settled = normalizeSpot(settleActions(d));
     phaseOf(parseSettings(settled).setup, settled.actions, settled.board);
     return settled;
   } catch {

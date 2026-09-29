@@ -72,6 +72,14 @@ describe('下書きの保存（14 章 §3.5）', () => {
     }
   });
 
+  it('札でない Board と、整数でない・候補に無い Spot は捨てる（リリース前テスト TB-3）', () => {
+    for (const spotIndex of [0.5, -1, 1e21, 3]) {
+      const d = sanitizeDraft({ ...draft('t'), board: ['Ah', 'zz', '<script>', 7], spotIndex });
+      expect(d.board).toEqual(['Ah']);
+      expect(d.spotIndex).toBeNull();
+    }
+  });
+
   it('一覧の文言: タイトル（無ければ「タイトルなし」）と人数・Hero・Street・Action 数', () => {
     const d: Draft = {
       ...draft(''),
