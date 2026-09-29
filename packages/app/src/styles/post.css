@@ -738,6 +738,60 @@
 /* 列の中身が高さを超えたら、その列の中だけでスクロールする */
 .fit-stage.pf .pf-col { min-height: 0; overflow-y: auto; overflow-x: hidden; }
 .fit-stage.pf .pf-col:nth-child(2) { overflow: hidden; }
-.fit-stage.pf .pf-actsec { height: 100%; min-height: 0; }
-.fit-stage.pf .pf-actsec .ptable { flex: 1 1 auto; height: auto; min-height: 260px; }
-.fit-stage.pf .pf-actsec .hlog { flex: none; max-height: 170px; overflow-y: auto; }
+/* 中央の列は 見出し ／ 卓 ／ 台 ／ History の 4 段（2026-09-29 さつき: 卓と台を決まった位置に、History は横一列で横にスクロール）。
+   台の段は一番高い台（よく使う額・Fold to・道具・ボタン）の高さで固定し、低い台は上に寄せる。卓は残りの高さ */
+.fit-stage.pf .pf-actsec {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) 236px 104px;
+  grid-template-areas: 'head' 'table' 'dock' 'log';
+  gap: var(--s3);
+}
+.fit-stage.pf .pf-actsec > .sec-h { grid-area: head; }
+.fit-stage.pf .pf-actsec > .ptable { grid-area: table; height: 100%; min-height: 0; }
+.fit-stage.pf .pf-dockslot { grid-area: dock; display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
+.fit-stage.pf .pf-logslot { grid-area: log; min-height: 0; min-width: 0; }
+
+/* History の横一列（HandLog の strip）: ストリートごとに 見出し（名前と Board）＋ 1 手ずつのカード */
+.hlog.strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--s2);
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.hlog.strip .hlog-col { flex: none; flex-direction: row; align-items: stretch; gap: var(--s2); }
+.hlog.strip .hlog-head {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--s1);
+  min-height: 0;
+  padding-right: var(--s2);
+  border-right: 1px solid var(--line);
+}
+.hlog.strip .hlog-list { flex-direction: row; align-items: stretch; gap: 6px; }
+.hlog.strip .hlog-list li {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+.hlog.strip .hlog-list li.latest { border-color: rgba(58, 230, 255, 0.55); }
+.hlog.strip .hlog-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.hlog.strip .hlog-pick b { font-size: 14px; }
+.hlog.strip .hlog-tag { margin: 4px 0 0; }
+/* 台は段いっぱいの 1 枚の枠にし、3 つのボタンは枠の下に揃える（よく使う額・Fold to の行の有無でボタンが動かない） */
+.fit-stage.pf .pf-dockslot > .act-dock { flex: 1 1 auto; min-height: 0; }
+.fit-stage.pf .pf-dockslot .ad-btns { margin-top: auto; }

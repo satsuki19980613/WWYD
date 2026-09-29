@@ -261,3 +261,46 @@ test('スマホでも Action のあとに基本設定と Player の欄を変え�
 async function stepTo(page: Page, name: RegExp): Promise<void> {
   await page.getByRole('button', { name }).click();
 }
+
+test('PC の投稿: 卓と台は動かず、History は横一列で横にスクロール（2026-09-29）', async ({ page }) => {
+  await fakeBackend(page, null);
+  await page.goto('/new');
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' }).click();
+  const table = page.getByRole('group', { name: 'Table' });
+  const dock = page.getByRole('group', { name: 'Action' });
+  const box = async (): Promise<string> => {
+    const t = await table.boundingBox();
+    const d = await page.locator('.pf-dockslot').boundingBox();
+    const b = await dock.getByRole('button', { name: 'Fold' }).boundingBox();
+    return JSON.stringify([t, d, b?.y]);
+  };
+  // UTG の台（Fold to の行あり）と、BTN の Open のあとの台（行なし）・Board の台で、卓・台の枠・ボタンの位置は同じ
+  const first = await box();
+  await dock.getByRole('group', { name: 'Fold to' }).getByRole('button', { name: 'BTN' }).click();
+  await dock.getByRole('button', { name: /^Open/ }).click();
+  await dock.getByRole('button', { name: 'Fold' }).click();
+  expect(await box()).toBe(first);
+  await dock.getByRole('button', { name: /^Call/ }).click();
+  await expect(page.getByRole('group', { name: 'Board' })).toBeVisible();
+  const board = await page.locator('.pf-dockslot').boundingBox();
+  expect(JSON.stringify(board)).toBe(JSON.stringify(JSON.parse(first)[1]));
+  for (const c of ['K♥', '8♦', '3♣']) await page.getByRole('gridcell', { name: c }).click();
+  for (let i = 0; i < 2; i++) {
+    await dock.getByRole('button', { name: 'Check' }).click();
+  }
+  await page.getByRole('gridcell', { name: '2♠' }).click();
+  await dock.getByRole('button', { name: 'Check' }).click();
+  expect(await box()).toBe(first);
+
+  // History は 1 行（どのカードも同じ高さの位置）で、はみ出したら横にスクロールし、最新の手が見える
+  const strip = page.locator('.hlog.strip');
+  const tops = await strip.locator('li').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  const m = await strip.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, left: e.scrollLeft }));
+  expect(m.sw).toBeGreaterThan(m.cw);
+  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 1);
+  await expect(strip.getByRole('button', { name: 'BB Check' }).last()).toBeInViewport();
+  // 押すと入れ直しの確認
+  await strip.getByRole('button', { name: 'BTN Raise 2.5' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('BTN Raise 2.5 から入れ直しますか');
+});

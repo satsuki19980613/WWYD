@@ -297,6 +297,7 @@ function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
 /**
  * ハンドヒストリー（ストリートごとの列）。出題の Hero のアクションに「出題」、最新の 1 手を強調、
  * `actual`（集計画面の Hero の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
+ * `strip` は横一列（ストリートの見出しと 1 手ずつのカードを横に並べ、横にスクロール。新しい手が入ったら右端へ）。PC の投稿（17 章 §3.4）。
  */
 export function HandLog(props: {
   setup: HandSetup;
@@ -308,8 +309,14 @@ export function HandLog(props: {
   prompt?: string | null;
   /** 1 手を押したとき（投稿の入力の「ここから入れ直す」）。無ければ押せない */
   onPick?: (index: number) => void;
+  strip?: boolean;
 }): JSX.Element {
   const items = actionLog(props.setup, props.actions);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (props.strip && el) el.scrollLeft = el.scrollWidth;
+  }, [props.strip, items.length, props.board.length]);
   const last = items.length - 1;
   const streets = STREETS.filter((s) => items.some((it) => it.street === s));
   const boardOf: Record<Street, readonly Card[]> = {
@@ -319,7 +326,7 @@ export function HandLog(props: {
     river: props.board.slice(4, 5),
   };
   return (
-    <div className="hlog">
+    <div ref={ref} className={props.strip ? 'hlog strip' : 'hlog'}>
       {streets.map((s) => (
         <div key={s} className="hlog-col">
           <div className="hlog-head">
