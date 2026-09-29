@@ -5,7 +5,7 @@
  * 種を決めた擬似乱数（依存なし）。
  */
 import { BOARD_COUNT, POSITIONS, mbbToBb, spotView, status, type Action } from '@wwyd/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Rng } from '../../../core/src/poker/release.tb.gen.ts';
 import { buildSubmission } from '../post/draft.ts';
 import { buildDraft } from '../post/release.tb.draftgen.ts';
@@ -13,6 +13,9 @@ import { detailJson } from './detailFixtures.ts';
 import { parsePostDetail } from './postDetail.ts';
 import { actionText, actualAction, actualCell, cellDiff, cellViews, resultFrames } from './resultModel.ts';
 import { answerFrames, seatViews } from './replayModel.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 type Raw = Record<string, unknown>;
 

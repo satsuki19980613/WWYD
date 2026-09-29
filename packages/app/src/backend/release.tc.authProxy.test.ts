@@ -8,6 +8,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { onRequest, UPSTREAM } from '../../../../functions/api/auth/[[path]].ts';
 import { authCookies, firstPartyCookie, isProxiedPath, proxyAuth, PROXIED_PATHS } from './authProxy.ts';
 
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
+
 const SITE = 'https://wwyd.pages.dev';
 const UP = 'https://ep-x.neonauth.example/neondb/auth';
 

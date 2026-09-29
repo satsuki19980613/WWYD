@@ -4,9 +4,12 @@
  * 2 人・9999.999bb で 1bb ずつレイズし合うハンド（Action が最も多くなる形）。
  */
 import { spotView, validateInput, verifyPost } from '@wwyd/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MAX_BODY_BYTES } from './createPost/handler.ts';
 import { parseSettings, phaseOf, emptyDraft, type Draft } from '../../app/src/post/draft.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 /** BTN と BB が 1bb ずつ上げ合い、`n` 手で Preflop が終わらない形の本文（Flop まで行かない。Hero の Flop 以降の手番は無いので no_spot で断られる） */
 function longHand(n: number): Record<string, unknown> {

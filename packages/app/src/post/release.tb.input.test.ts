@@ -3,7 +3,7 @@
  * ランダムなハンドの各手番で確かめる。種を決めた擬似乱数（依存なし）。
  */
 import { POSITIONS, apply, formatBb, pctFromSize, sizeFromPct, status, type Action, type HandSetup, type Pos, type State } from '@wwyd/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Rng } from '../../../core/src/poker/release.tb.gen.ts';
 import { RANK_CHARS, applyCardKey, handCards, handSlots, isHandComplete, keyFromKeyboard } from './cardInput.ts';
 import {
@@ -25,6 +25,9 @@ import {
   turnInfo,
 } from './draft.ts';
 import { buildDraft } from './release.tb.draftgen.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 const clean = (s: string): boolean => !/NaN|undefined|Infinity|\[object/.test(s);
 

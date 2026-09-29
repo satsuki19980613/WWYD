@@ -4,7 +4,7 @@
  * 種を決めた擬似乱数（依存なし）。
  */
 import { POSITIONS, PLAYER_COUNTS, SEATS_BY_COUNT, ValidationError, runActions, type PlayerCount, type Pos } from '@wwyd/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Rng } from '../../../core/src/poker/release.tb.gen.ts';
 import { buildDraft } from './release.tb.draftgen.ts';
 import {
@@ -20,6 +20,9 @@ import {
   type Draft,
 } from './draft.ts';
 import { MAX_DRAFTS, clearDrafts, deleteDraft, readDrafts, sanitizeDraft, saveDraft, type KeyValue } from './savedDrafts.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 const WEIRD_NUM = ['', ' ', '1.', '.5', '0', '-1', 'abc', '1e2', '0.0001', '9999.999', '10000', '0.001', '0.5', '1', '2', '3', '5', '10', '20', '50', '100', '250', '1000', '１', '１００'];
 

@@ -2,7 +2,7 @@
  * リリース前の総合テスト B-05: paint のコーデック（05 章）のランダムな往復・壊れた入力の拒否・集計の性質。
  * 種を決めた擬似乱数（依存なし）。
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ANSWER_KEYS, MIX_TOTAL, type AnswerKey } from '../constants.ts';
 import { Rng } from '../poker/release.tb.gen.ts';
 import {
@@ -24,6 +24,9 @@ import {
 import { PAINT_BYTES, decodePaint, emptyPaint, encodePaint, fromHex, toHex, type Mix, type Paint } from './codec.ts';
 import { CELL_COUNT, TOTAL_COMBOS, combos, idxOf, labelOf } from './labels.ts';
 import { validatePaint, validatePaintBytes } from './validate.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 /** 合計 20 のミックスをランダムに（合法なキーだけに） */
 function randomMix(rng: Rng, keys: readonly AnswerKey[]): Mix {

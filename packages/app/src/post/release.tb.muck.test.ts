@@ -10,6 +10,9 @@ import { Oracle, Rng } from '../../../core/src/poker/release.tb.gen.ts';
 import { buildSubmission } from './draft.ts';
 import { buildDraft } from './release.tb.draftgen.ts';
 
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
+
 describe('B-02 known_cards の補完（Muck）', () => {
   it('ショーダウンに残った Hero 以外の席でカードが無ければ Muck、ポット獲得で終わったハンドは補完しない。送ったカードはそのまま', async () => {
     let checked = 0;

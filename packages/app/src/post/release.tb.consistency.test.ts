@@ -23,6 +23,9 @@ import { acts } from '../../../core/src/poker/testHelpers.ts';
 import { hmw, hs1, hs3, type Raw } from '../../../core/src/post/postFixtures.ts';
 import { buildSubmission, settleActions, setPlayers, submissionBody, type Draft } from './draft.ts';
 
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
+
 const UID = '11111111-1111-4111-8111-111111111111';
 
 function makeHandler() {

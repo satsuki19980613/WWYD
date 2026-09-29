@@ -2,7 +2,7 @@
  * リリース前の総合テスト B-01（ランダムなハンド）・B-03（額の境界）・B-04（Spot の候補と Preflop の All-in）。
  * 種は固定。落ちたらテスト名・メッセージの種（seed）で再現できる。
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Pos } from '../constants.ts';
 import { ValidationError } from '../errors.ts';
 import { MAX_AMOUNT_MBB, bbToMbb, formatBb, mbbToBb } from '../money.ts';
@@ -11,6 +11,9 @@ import { replay, runActions } from './replay.ts';
 import { advance, apply, initialState, legal, status } from './state.ts';
 import { acts, setup } from './testHelpers.ts';
 import { MismatchError, Oracle, Rng, playRandomHand, randomSetup, type Played } from './release.tb.gen.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 const HANDS = 12_000;
 

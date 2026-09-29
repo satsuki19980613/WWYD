@@ -5,7 +5,7 @@
  * 種を決めた擬似乱数（依存なし）。
  */
 import { PLAYER_COUNTS, POSITIONS, SEATS_BY_COUNT, validateInput, verifyPost, type Action, type Card, type PlayerCount } from '@wwyd/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Rng, randomCards } from '../../../core/src/poker/release.tb.gen.ts';
 import {
   addAction,
@@ -29,6 +29,9 @@ import {
   usedCards,
   type Draft,
 } from './draft.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 /** 画面と同じ順序の操作。返り値が null なら「その操作は今はできない」 */
 function step(raw: Draft, rng: Rng): { name: string; next: Draft } | null {

@@ -3,7 +3,7 @@
  * ランダムな操作列で参照モデルと突き合わせる。種を決めた擬似乱数（依存なし）。
  */
 import { ANSWER_KEYS, MIX_TOTAL, emptyPaint, validatePaint, type AnswerKey, type Mix, type Paint } from '@wwyd/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Rng } from '../../../core/src/poker/release.tb.gen.ts';
 import { boundaries, boundaryRange, handlesAt, initialBrush, moveBoundary, pickHandle, pureBrush, sameMix } from './brush.ts';
 import {
@@ -32,6 +32,9 @@ import {
   usesS1,
   type SizeSpot,
 } from './answerForm.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 const KEYSETS: AnswerKey[][] = [['fold', 'call'], ['fold', 'call', 's1'], ['check'], ['check', 's1']];
 

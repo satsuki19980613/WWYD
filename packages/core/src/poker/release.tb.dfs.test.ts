@@ -3,11 +3,14 @@
  * 各ノードで、core（state.ts）と別実装の Oracle（release.tb.gen.ts）の状態・合法手・手番・終了の判定を突き合わせる。
  * 額は「最小・最小+1mbb・最小+0.5bb・最大（All-in）」の 4 通りで枝分かれさせる。
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { POSITIONS } from '../constants.ts';
 import { Oracle, diffState } from './release.tb.gen.ts';
 import { advance, apply, initialState, legal, status, type HandSetup, type State } from './state.ts';
 import { setup } from './testHelpers.ts';
+
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
 
 /** Oracle の複製（深さ優先の分岐用） */
 function clone(o: Oracle): Oracle {

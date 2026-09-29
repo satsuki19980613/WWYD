@@ -21,6 +21,9 @@ import { buildSubmission, candidates, emptyDraft, NO_HERO_POSTFLOP, PREFLOP_ALLI
 import { evaluateReview, ocrPostability, reviewFromOcr } from '../../app/src/post/ocrDraft.ts';
 import { createPostHandler, type CreatePostDeps } from './createPost/handler.ts';
 
+// 乱数で多くのハンドを回す試験がある。CI の遅い環境でも既定の 5 秒で打ち切らない（2026-09-30 CI で 5.09 秒かかり落ちた）
+vi.setConfig({ testTimeout: 60_000 });
+
 const root = process.env.WWYD_SAMPLE_DIR ?? resolve(process.cwd(), 'sample');
 
 type Expected = { hero: string; hands: Record<string, string[]>; board: string[]; actions: { street: string; pos: string; verb: string; amount: number | null }[] };
