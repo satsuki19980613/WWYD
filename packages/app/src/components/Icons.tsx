@@ -69,3 +69,21 @@ export function ChevronIcon(): JSX.Element {
     </svg>
   );
 }
+
+/** ハンドヒストリー（行の並び） */
+export function HistoryIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M4 5h12M4 10h12M4 15h8" {...stroke} />
+    </svg>
+  );
+}
+
+/** すべて消す（ごみ箱） */
+export function TrashIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M4 6h12M8 6V4h4v2M5.5 6l.8 10h7.4l.8-10M8.5 9v4.5M11.5 9v4.5" {...stroke} />
+    </svg>
+  );
+}

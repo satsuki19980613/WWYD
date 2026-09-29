@@ -1,10 +1,11 @@
 import { BOARD_COUNT, formatBb, totalPot, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { HandLog, PokerTable } from '../answer/Replay.tsx';
 import { seatViews } from '../answer/replayModel.ts';
 import type { Hole } from '../answer/resultModel.ts';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
-import { UndoIcon } from '../components/Icons.tsx';
+import { HistoryIcon, RedoIcon, TrashIcon, UndoIcon } from '../components/Icons.tsx';
+import { Modal } from '../components/Modal.tsx';
 import { PlayingCard, cardText } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { useToast } from '../components/Toast.tsx';
@@ -17,24 +18,25 @@ import {
   defaultPreset,
   parseSize,
   PLAYERS_REQUIRED,
+  sizeNote,
   sizePresets,
   skipTargets,
   STREET_NAME,
-  turnInfo,
   usedCards,
   type Draft,
   type Phase,
 } from './draft.ts';
+import { SizeSlider } from './SizeSlider.tsx';
 
 type ActPhase = Extract<Phase, { kind: 'act' }>;
 
 /**
- * アクション入力（06 章 §3.6、13 章）。
- * 手番の操作はまとめて「アクションの台」（act-dock）に置く: 手番の見出し（席・ストリート・ポット・to call・残り）と
- * 1つ戻す、よく使う額、Fold to / Check to、3 つのボタン（フォールド / チェック・コール / ベット・レイズ）。
- * 上には入力中のハンドを卓で出す（Hero を手前。スタック・ベット・ポット・ボード・手番の席。14 章）。
- * 卓のボードのカードを押すとそのカード以降を、ログの 1 手を押すとその手以降を入れ直せる。
- * スマホは台を画面の下に固定する（親指の届く所。ボタンの位置が手番ごとに動かない）。
+ * アクション入力（06 章 §3.6、13 章、14 章 §3.1）。
+ * 上に入力中のハンドの卓（Hero を手前。スタック・ベット・ポット・ボード・手番の席）。卓のボードのカードを押すとそのカード以降を消す。
+ * 手番の操作は「アクションの台」（act-dock）にまとめる: よく使う額 → Fold to / Check to → 道具の行
+ * （手番の席・1つ戻す・1つ進む・すべて消す・額）→ 3 つのボタン。スマホは台を画面の下に固定する（親指の届く所）。
+ * ログ（ハンドヒストリー）は PC は卓の下に出し、スマホは左上のボタンからモーダルで開く（量が増えると画面を圧迫するため）。
+ * ログの 1 手を押すと、確かめてからその手以降を入れ直せる。
  */
 export function ActionSection(props: {
   draft: Draft;
@@ -44,6 +46,8 @@ export function ActionSection(props: {
   onAction: (a: Action) => void;
   onActions: (a: readonly Action[]) => void;
   onUndo: () => void;
+  /** 1つ進む（取り消したアクションを入れ直す）。できなければ null */
+  onRedo: (() => void) | null;
   /** ログの 1 手から入れ直す（その手以降を消す） */
   onTruncate: (index: number) => void;
   onClear: () => void;
@@ -66,11 +70,18 @@ export function ActionSection(props: {
   // ログの 1 手を押したら、確かめてからその手以降を消す
   const [rewind, setRewind] = useState<number | null>(null);
   const rewindText = rewind !== null && props.setup ? (actionLog(props.setup, d.actions)[rewind]?.text ?? null) : null;
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
-  const undo = (
-    <button type="button" className="icon-btn ad-undo" aria-label="1つ戻す" disabled={d.actions.length === 0} onClick={props.onUndo}>
-      <UndoIcon />
-    </button>
+  const canClear = d.actions.length > 0 || d.board.length > 0;
+  const tools = (
+    <Tools
+      canUndo={d.actions.length > 0}
+      onUndo={props.onUndo}
+      onRedo={props.onRedo}
+      canClear={canClear}
+      onClear={() => setClearing(true)}
+    />
   );
   const dock =
     phase.kind === 'act' ? (
@@ -78,13 +89,28 @@ export function ActionSection(props: {
         key={d.actions.length}
         phase={phase}
         actions={d.actions}
-        undo={undo}
+        mobile={props.mobile}
+        tools={tools}
         onAction={props.onAction}
         onActions={props.onActions}
       />
     ) : phase.kind === 'board' ? (
-      <BoardDock draft={d} undo={undo} onOpen={openPicker} />
+      <BoardDock draft={d} tools={tools} onOpen={openPicker} />
     ) : null;
+
+  const log = props.setup && d.actions.length > 0 && (
+    <HandLog
+      setup={props.setup}
+      actions={d.actions}
+      board={d.board}
+      spotIndex={d.spotIndex ?? -1}
+      highlightLast
+      onPick={(i) => {
+        setHistoryOpen(false);
+        setRewind(i);
+      }}
+    />
+  );
 
   return (
     <section className={`pf-sec pf-actsec ${dock && props.mobile ? 'has-dock' : ''}`} aria-labelledby="pf-actions">
@@ -94,31 +120,24 @@ export function ActionSection(props: {
       {phase.kind === 'invalid' && (
         <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
       )}
+      {props.mobile && phase.kind !== 'invalid' && (
+        <button type="button" className="pf-histbtn" disabled={d.actions.length === 0} onClick={() => setHistoryOpen(true)}>
+          <HistoryIcon />
+          ヒストリー
+        </button>
+      )}
       <LiveTable draft={d} phase={phase} onOpen={openPicker} onRemoveFrom={props.onBoardRemoveFrom} />
       {/* PC は台を卓の下に置く（スマホは画面の下に固定） */}
       {!props.mobile && dock}
-      {props.setup && d.actions.length > 0 && (
-        <HandLog
-          setup={props.setup}
-          actions={d.actions}
-          board={d.board}
-          spotIndex={d.spotIndex ?? -1}
-          highlightLast
-          onPick={setRewind}
-        />
-      )}
-      {/* 1つ戻すは台の見出し（手番を入れている間）。終わった後もここから戻せるように置く */}
-      <div className="btn-row pf-undo">
-        {!dock && (
-          <button type="button" className="btn ghost" disabled={d.actions.length === 0} onClick={props.onUndo}>
-            1つ戻す
-          </button>
-        )}
-        <button type="button" className="btn red" disabled={d.actions.length === 0 && d.board.length === 0} onClick={props.onClear}>
-          すべて消す
-        </button>
-      </div>
+      {!props.mobile && log}
+      {/* 手番が無い（終わった）ときは台が無いので、ここに 1つ戻す・すべて消す */}
+      {!dock && phase.kind !== 'invalid' && <div className="pf-undo">{tools}</div>}
       {props.mobile && dock}
+      {historyOpen && log && (
+        <Modal title="ハンドヒストリー" tone="info" onClose={() => setHistoryOpen(false)}>
+          {log}
+        </Modal>
+      )}
       {rewind !== null && rewindText && (
         <ConfirmDialog
           title={`${rewindText} から入れ直しますか`}
@@ -129,6 +148,19 @@ export function ActionSection(props: {
             setRewind(null);
           }}
           onCancel={() => setRewind(null)}
+        />
+      )}
+      {clearing && (
+        <ConfirmDialog
+          title="アクションとボードをすべて消しますか"
+          body="入れたアクションとボードのカードを消します。"
+          confirmLabel="すべて消す"
+          destructive
+          onConfirm={() => {
+            props.onClear();
+            setClearing(false);
+          }}
+          onCancel={() => setClearing(false)}
         />
       )}
       {pickerOpen && phase.kind === 'board' && (
@@ -143,10 +175,27 @@ export function ActionSection(props: {
   );
 }
 
-/** 手番の見出し（席・ストリート・ポット・残り）と 1つ戻す。to call はコールのボタンに出す */
-function DockHead(props: { pos?: Action['pos']; title: string; nums?: { pot: Mbb; stack: Mbb }; undo: JSX.Element }): JSX.Element {
+/** 道具: 1つ戻す・1つ進む・すべて消す（すべて消すは確認してから） */
+function Tools(props: { canUndo: boolean; onUndo: () => void; onRedo: (() => void) | null; canClear: boolean; onClear: () => void }): JSX.Element {
   return (
-    <div className="ad-head">
+    <span className="ad-tools">
+      <button type="button" className="icon-btn ad-tool" aria-label="1つ戻す" disabled={!props.canUndo} onClick={props.onUndo}>
+        <UndoIcon />
+      </button>
+      <button type="button" className="icon-btn ad-tool" aria-label="1つ進む" disabled={!props.onRedo} onClick={() => props.onRedo?.()}>
+        <RedoIcon />
+      </button>
+      <button type="button" className="icon-btn ad-tool red" aria-label="すべて消す" disabled={!props.canClear} onClick={props.onClear}>
+        <TrashIcon />
+      </button>
+    </span>
+  );
+}
+
+/** 道具の行: 左に手番（席・ストリート）と道具、右に額 */
+function ToolRow(props: { pos?: Pos; title: string; tools: JSX.Element; right?: ReactNode }): JSX.Element {
+  return (
+    <div className="ad-toolrow">
       <p className="ad-turn">
         {props.pos && (
           <b className="ad-pos" style={{ color: POS_VAR[props.pos] }}>
@@ -155,17 +204,8 @@ function DockHead(props: { pos?: Action['pos']; title: string; nums?: { pot: Mbb
         )}
         <span className="ad-street">{props.title}</span>
       </p>
-      {props.nums && (
-        <p className="ad-nums num">
-          <span>
-            <i className="mono-lbl">POT</i> {formatBb(props.nums.pot)}
-          </span>
-          <span>
-            <i className="mono-lbl">残り</i> {formatBb(props.nums.stack)}
-          </span>
-        </p>
-      )}
-      {props.undo}
+      {props.tools}
+      {props.right}
     </div>
   );
 }
@@ -173,7 +213,8 @@ function DockHead(props: { pos?: Action['pos']; title: string; nums?: { pot: Mbb
 function ActDock(props: {
   phase: ActPhase;
   actions: readonly Action[];
-  undo: JSX.Element;
+  mobile: boolean;
+  tools: JSX.Element;
   onAction: (a: Action) => void;
   onActions: (a: readonly Action[]) => void;
 }): JSX.Element {
@@ -188,7 +229,6 @@ function ActDock(props: {
   const skip = skipTargets(state, pos, legal);
   // 1 手で回る席は「フォールド」「チェック」と同じなので出さない
   const shortcuts = skip.targets.filter((t) => t.actions.length >= 2);
-  const info = turnInfo(state, pos);
 
   const act = (type: Action['type'], to?: Mbb): void =>
     props.onAction(to === undefined ? { street: state.street, pos, type } : { street: state.street, pos, type, to });
@@ -206,10 +246,40 @@ function ActDock(props: {
   const raiseLabel = state.currentBet > 0 || (legal.raise !== null && legal.bet === null);
   // ボタンはプレイヤーが呼ぶ名前（オープン / 3bet / リンプ など。13 章 §6）
   const s1Name = raiseLabel && state.currentBet === 0 ? 'レイズ' : aggressiveName(state, props.actions);
+  const unit = raiseLabel ? 'to' : 'bet';
+  const sizeLabel = raiseLabel ? 'レイズの額（to。bb）' : 'ベットの額（bb）';
+
+  // 額: スマホは縦のスライダー（キーボードを出さない）、PC は入力欄
+  const sizeField =
+    range &&
+    (props.mobile ? (
+      <SizeSlider
+        unit={unit}
+        label={sizeLabel}
+        range={range}
+        value={to}
+        note={(v) => sizeNote(state, v)}
+        onChange={(v) => setSize(formatBb(v))}
+      />
+    ) : (
+      <label className="ad-size">
+        <span className="mono-lbl">{unit}</span>
+        <input
+          className="inp num"
+          inputMode="decimal"
+          autoComplete="off"
+          aria-label={sizeLabel}
+          value={size}
+          onChange={(e) => setSize(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') aggressive();
+          }}
+        />
+      </label>
+    ));
 
   return (
     <div className="act-dock" role="group" aria-label="アクション">
-      <DockHead pos={pos} title={STREET_NAME[state.street]} nums={info} undo={props.undo} />
       {range && (
         <div className="ad-chips" role="group" aria-label={raiseLabel ? 'レイズの額' : 'ベットの額'}>
           {presets.map((p) => (
@@ -235,36 +305,17 @@ function ActDock(props: {
           ))}
         </div>
       )}
-      {(shortcuts.length > 0 || range) && (
-        <div className="ad-row">
-          {shortcuts.length > 0 && (
-            <div className="ad-skip" role="group" aria-label={skip.kind === 'fold' ? 'Fold to' : 'Check to'}>
-              <span className="mono-lbl">{skip.kind === 'fold' ? 'Fold to' : 'Check to'}</span>
-              {shortcuts.map((t) => (
-                <button key={t.pos} type="button" className="ad-skip-btn" onClick={() => props.onActions(t.actions)}>
-                  <b style={{ color: POS_VAR[t.pos] }}>{t.pos}</b>
-                </button>
-              ))}
-            </div>
-          )}
-          {range && (
-            <label className="ad-size">
-              <span className="mono-lbl">{raiseLabel ? 'to' : 'bet'}</span>
-              <input
-                className="inp num"
-                inputMode="decimal"
-                autoComplete="off"
-                aria-label={raiseLabel ? 'レイズの額（to。bb）' : 'ベットの額（bb）'}
-                value={size}
-                onChange={(e) => setSize(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') aggressive();
-                }}
-              />
-            </label>
-          )}
+      {shortcuts.length > 0 && (
+        <div className="ad-skip" role="group" aria-label={skip.kind === 'fold' ? 'Fold to' : 'Check to'}>
+          <span className="mono-lbl">{skip.kind === 'fold' ? 'Fold to' : 'Check to'}</span>
+          {shortcuts.map((t) => (
+            <button key={t.pos} type="button" className="ad-skip-btn" onClick={() => props.onActions(t.actions)}>
+              <b style={{ color: POS_VAR[t.pos] }}>{t.pos}</b>
+            </button>
+          ))}
         </div>
       )}
+      <ToolRow pos={pos} title={STREET_NAME[state.street]} tools={props.tools} right={sizeField} />
       <div className="ad-btns">
         <button type="button" className="act-btn fold" disabled={!legal.fold} onClick={() => act('fold')}>
           フォールド
@@ -290,12 +341,12 @@ function ActDock(props: {
   );
 }
 
-/** ボードを待つ間の台: 「フロップのカード」＋開き直すボタン */
-function BoardDock(props: { draft: Draft; undo: JSX.Element; onOpen: () => void }): JSX.Element {
+/** ボードを待つ間の台: 道具の行（「フロップのカード」）＋ピッカーを開き直すボタン */
+function BoardDock(props: { draft: Draft; tools: JSX.Element; onOpen: () => void }): JSX.Element {
   const street = cardStreet(props.draft.board.length);
   return (
     <div className="act-dock" role="group" aria-label="ボード">
-      <DockHead title={`${STREET_NAME[street]}のカード`} undo={props.undo} />
+      <ToolRow title={`${STREET_NAME[street]}のカード`} tools={props.tools} />
       <div className="ad-btns one">
         <button type="button" className="btn ghost" onClick={props.onOpen}>
           {STREET_NAME[street]}のカードを選ぶ

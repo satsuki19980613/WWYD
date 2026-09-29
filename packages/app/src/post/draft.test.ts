@@ -8,6 +8,7 @@ import {
   aggressiveName,
   buildSubmission,
   callName,
+  canReplay,
   candidates,
   clearActions,
   defaultAmount,
@@ -23,7 +24,10 @@ import {
   phaseOf,
   removeBoardFrom,
   selectSpot,
+  sizeNote,
   sizePresets,
+  sliderStep,
+  sliderValue,
   skipTargets,
   statusLine,
   truncateActions,
@@ -231,6 +235,34 @@ describe('アクション入力の補助（13 章）', () => {
     expect(name([])).toBe('ベット');
     expect(name([fl('BB', 'bet', 2)])).toBe('レイズ');
     expect(name([fl('BB', 'bet', 2), fl('BTN', 'raise', 6)])).toBe('3bet');
+  });
+  it('額のスライダー: 刻みは幅で変わり、端は最小・最大ちょうど', () => {
+    expect(sliderStep({ min: 2000, max: 10000 })).toBe(100);
+    expect(sliderStep({ min: 5000, max: 45000 })).toBe(500);
+    expect(sliderStep({ min: 2000, max: 100000 })).toBe(1000);
+    const r = { min: 2000, max: 100000 };
+    expect(sliderValue(0, r)).toBe(2000);
+    expect(sliderValue(1, r)).toBe(100000);
+    expect(sliderValue(0.5, r)).toBe(51000);
+    // 丸めても最小を下回らない
+    expect(sliderValue(0.006, { min: 2500, max: 100000 })).toBe(3000);
+  });
+  it('額の添え書き: ベットは % pot、レイズは ×倍率、オープンは無し', () => {
+    const base = [pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'fold'), pf('BTN', 'raise', 2.5), pf('SB', 'fold'), pf('BB', 'call')];
+    const bet = actAt([...base, fl('BB', 'check')], ['Kh', '8d', '3c']);
+    expect(sizeNote(bet.state, 2750)).toBe('50% pot');
+    const raise = actAt([...base, fl('BB', 'bet', 2)], ['Kh', '8d', '3c']);
+    expect(sizeNote(raise.state, 6000)).toBe('×3');
+    expect(sizeNote(actAt([]).state, 2500)).toBeNull();
+    expect(sizeNote(actAt([pf('UTG', 'raise', 2.5)]).state, 7500)).toBe('×3');
+  });
+  it('1つ進む: 取り消したアクションは同じ手番で合法なら入れ直せる', () => {
+    const ph = actAt([pf('UTG', 'fold')]);
+    expect(canReplay(ph, pf('HJ', 'raise', 2.5))).toBe(true);
+    expect(canReplay(ph, pf('CO', 'fold'))).toBe(false);
+    expect(canReplay(ph, pf('HJ', 'check'))).toBe(false);
+    expect(canReplay(ph, pf('HJ', 'raise', 200))).toBe(false);
+    expect(canReplay(ph, undefined)).toBe(false);
   });
   it('ログの 1 手から入れ直す: その手以降を消し、ボードは残す', () => {
     const acts = [pf('UTG', 'fold'), pf('HJ', 'fold'), pf('CO', 'fold'), pf('BTN', 'raise', 2.5), pf('SB', 'fold'), pf('BB', 'call'), fl('BB', 'check')];

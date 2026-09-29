@@ -336,6 +336,55 @@ export function skipTargets(state: State, pos: Pos, legalNow: Legal): { kind: 'f
   return { kind, targets };
 }
 
+// ---- 額のスライダー（スマホ。14 章 §3.1） ----
+
+/** なぞったときの刻み（mbb）: 幅が 10bb まで 0.1bb、50bb まで 0.5bb、それより広ければ 1bb。▲▼ は常に 0.1bb */
+export function sliderStep(range: { min: Mbb; max: Mbb }): Mbb {
+  const span = range.max - range.min;
+  return span <= 10_000 ? 100 : span <= 50_000 ? 500 : 1000;
+}
+export const SLIDER_NUDGE: Mbb = 100;
+
+/** スライダーの位置（0 = 下端 = 最小、1 = 上端 = 最大）から額。刻みに丸め、端は最小・最大ちょうど */
+export function sliderValue(ratio: number, range: { min: Mbb; max: Mbb }): Mbb {
+  if (ratio <= 0.005) return range.min;
+  if (ratio >= 0.995) return range.max;
+  const step = sliderStep(range);
+  const v = Math.round((range.min + ratio * (range.max - range.min)) / step) * step;
+  return Math.min(range.max, Math.max(range.min, v));
+}
+
+/** 額の添え書き: ベットは「{n}% pot」、レイズは直前のベット（to）の「×{n}」。プリフロップのオープンは無し */
+export function sizeNote(state: State, to: Mbb): string | null {
+  if (state.currentBet === 0) {
+    const pot = totalPot(state);
+    return pot > 0 ? `${Math.round((to / pot) * 100)}% pot` : null;
+  }
+  if (state.street === 'pf' && state.currentBet <= state.bb) return null;
+  return `×${(Math.round((to / state.currentBet) * 10) / 10).toString()}`;
+}
+
+// ---- 1つ進む（取り消したアクションを入れ直す。14 章 §3.1） ----
+
+/** 取り消したアクション `a` を今の手番にそのまま入れられるか（同じストリート・同じ席・合法な額） */
+export function canReplay(phase: Phase, a: Action | undefined): boolean {
+  if (!a || phase.kind !== 'act' || a.street !== phase.state.street || a.pos !== phase.pos) return false;
+  const lg = phase.legal;
+  const within = (r: { min: Mbb; max: Mbb } | null): boolean => r !== null && a.to !== undefined && a.to >= r.min && a.to <= r.max;
+  switch (a.type) {
+    case 'fold':
+      return lg.fold;
+    case 'check':
+      return lg.check;
+    case 'call':
+      return lg.call !== null;
+    case 'bet':
+      return within(lg.bet);
+    case 'raise':
+      return within(lg.raise);
+  }
+}
+
 /** 額の入力を検査する。範囲外・小数第 4 位以下・数でなければ null。 */
 export function parseSize(text: string, range: { min: Mbb; max: Mbb }): Mbb | null {
   const m = parseAmount(text, null);

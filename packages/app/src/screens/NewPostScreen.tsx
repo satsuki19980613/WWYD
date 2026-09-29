@@ -1,4 +1,4 @@
-import type { Action, Card, Pos } from '@wwyd/core';
+import { STREETS, type Action, type Card, type Pos } from '@wwyd/core';
 import { useEffect, useState } from 'react';
 import { cardText } from '../components/PlayingCard.tsx';
 import { useToast } from '../components/Toast.tsx';
@@ -10,6 +10,7 @@ import {
   addActions,
   addBoardCard,
   buildSubmission,
+  canReplay,
   clearActions,
   neighborSeat,
   normalizeSpot,
@@ -64,6 +65,18 @@ export function NewPostScreen(): JSX.Element {
   }, [seat]);
 
   const update = (f: (x: Draft) => Draft): void => setDraft(f);
+
+  // 1つ進む（14 章 §3.1）: 1つ戻す・入れ直しで取り消したアクションを先頭から順に持つ。
+  // 取り消したものと同じアクションを入れたら先へ進め、違うアクションを入れたら捨てる
+  const [future, setFuture] = useState<readonly Action[]>([]);
+  const advanceFuture = (as: readonly Action[]): void =>
+    setFuture((f) => (as.every((a, k) => sameAction(a, f[k])) ? f.slice(as.length) : []));
+  const redo = (): void => {
+    const next = future[0];
+    if (!next || !canReplay(phase, next)) return;
+    setFuture((f) => f.slice(1));
+    update((x) => addAction(x, next));
+  };
   const patch = (p: Partial<Draft>): void => update((x) => normalizeSpot({ ...x, ...p }));
 
   const onKey = (key: CardKey): void => {
@@ -109,13 +122,35 @@ export function NewPostScreen(): JSX.Element {
       setup={setup}
       phase={phase}
       mobile={mobile}
-      onAction={(a: Action) => update((x) => addAction(x, a))}
-      onActions={(as) => update((x) => addActions(x, as))}
-      onUndo={() => update(undoAction)}
-      onTruncate={(i) => update((x) => truncateActions(x, i))}
-      onClear={() => update(clearActions)}
+      onAction={(a: Action) => {
+        advanceFuture([a]);
+        update((x) => addAction(x, a));
+      }}
+      onActions={(as) => {
+        advanceFuture(as);
+        update((x) => addActions(x, as));
+      }}
+      onUndo={() => {
+        const last = d.actions[d.actions.length - 1];
+        if (last) setFuture((f) => [last, ...f]);
+        update(undoAction);
+      }}
+      onRedo={canReplay(phase, future[0]) ? redo : null}
+      onTruncate={(i) => {
+        setFuture((f) => [...d.actions.slice(i), ...f]);
+        update((x) => truncateActions(x, i));
+      }}
+      onClear={() => {
+        setFuture([]);
+        update(clearActions);
+      }}
       onBoardAdd={(c: Card) => update((x) => addBoardCard(x, c))}
-      onBoardRemoveFrom={(i) => update((x) => removeBoardFrom(x, i))}
+      onBoardRemoveFrom={(i) => {
+        const street = i < 3 ? 'flop' : i === 3 ? 'turn' : 'river';
+        const cut = d.actions.findIndex((a) => STREETS.indexOf(a.street) >= STREETS.indexOf(street));
+        if (cut >= 0) setFuture((f) => [...d.actions.slice(cut), ...f]);
+        update((x) => removeBoardFrom(x, i));
+      }}
     />
   );
   const spot = (
@@ -142,7 +177,10 @@ export function NewPostScreen(): JSX.Element {
   );
   // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ。
   // 反映したらスマホはアクションのステップへ（読み込んだアクションとスポットの確認に進む。2026-09-29）
-  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => setStep(ACTION_STEP)} />;
+  const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => {
+    setFuture([]);
+    setStep(ACTION_STEP);
+  }} />;
 
   if (!mobile) {
     return (
@@ -221,4 +259,8 @@ function stepDone(d: Draft, handDone: boolean): boolean[] {
   const settingsOk = parseSettings(d).invalid.length === 0;
   const handsOk = d.players !== null && seatsOf(d).every((p) => isHandComplete(d.hands[p])) && d.hands[d.hero].length === 4;
   return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.villain !== null && d.title.trim() !== ''];
+}
+
+function sameAction(a: Action, b: Action | undefined): boolean {
+  return !!b && a.street === b.street && a.pos === b.pos && a.type === b.type && a.to === b.to;
 }

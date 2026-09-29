@@ -183,18 +183,17 @@
 .pf.sp .act-dock > * { width: 100%; max-width: 480px; margin: 0 auto; }
 /* 台の下に隠れないよう、ログの下に余白 */
 .pf.sp .pf-actsec.has-dock { padding-bottom: 200px; }
-.ad-head { display: flex; align-items: center; gap: var(--s2); min-height: 40px; }
-.ad-turn { display: flex; align-items: baseline; gap: var(--s2); flex: none; }
+/* 道具の行（14 章 §3.1）: 手番（席の上にストリート）・1つ戻す・1つ進む・すべて消す、右に額。ポット・残りは卓に出ている */
+.ad-toolrow { display: flex; align-items: center; gap: var(--s2); min-height: 44px; }
+.ad-turn { display: flex; flex-direction: column; justify-content: center; flex: none; min-width: 52px; line-height: 1.1; }
 .ad-pos { font-family: var(--disp); font-size: 20px; font-weight: 700; letter-spacing: 0.04em; }
-.ad-street { font-size: 13px; color: var(--dim); }
-.ad-nums { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px var(--s3); flex: 1; min-width: 0; font-size: 14px; }
-.ad-nums span { white-space: nowrap; }
-.ad-nums i { font-style: normal; margin-right: 2px; }
-.ad-undo { flex: none; color: var(--cyan); border-color: rgba(58, 230, 255, 0.4); }
-.ad-undo:disabled { opacity: 0.3; cursor: default; }
-/* よく使う額（横にスクロール）と、Fold to / Check to＋額の入力欄の行 */
-.ad-row { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
-.ad-row .ad-skip { flex: 1; min-width: 0; }
+.ad-street { font-size: 11px; color: var(--dim); white-space: nowrap; }
+.ad-tools { display: flex; gap: 4px; flex: none; }
+.ad-tool { width: 42px; height: 42px; color: var(--cyan); border-color: rgba(58, 230, 255, 0.4); }
+.ad-tool.red { color: var(--red); border-color: rgba(255, 51, 51, 0.45); }
+.ad-tool:disabled { opacity: 0.3; cursor: default; }
+.ad-toolrow .ad-size { margin-left: auto; }
+.pf-undo { display: flex; justify-content: flex-end; }
 .ad-size {
   flex: none;
   width: 96px;
@@ -207,6 +206,71 @@
   background: var(--surface-2);
 }
 .ad-size .inp { width: 100%; min-width: 0; min-height: 40px; padding: 0 6px; border: 0; background: transparent; font-size: 17px; }
+/* スマホの額: ボタン＋縦のスライダー（キーボードを出さない） */
+.ad-size.sl { position: relative; padding: 0; }
+.ad-size-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+.ad-size-btn b { margin-left: auto; font-size: 18px; font-weight: 400; }
+.ad-size-btn[aria-expanded='true'] { box-shadow: inset 0 0 0 1px var(--yellow); }
+.sl-backdrop { position: fixed; inset: 0; z-index: 1; }
+.sl-pop {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--s2) 6px;
+  border: 1px solid rgba(252, 238, 10, 0.55);
+  background: rgba(8, 8, 4, 0.97);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7);
+  clip-path: var(--chamfer-sm);
+}
+.sl-val { display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+.sl-val b { font-size: 22px; font-weight: 400; color: var(--yellow); }
+.sl-val span { font-size: 11px; color: var(--dim); }
+.sl-nudge {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 13px;
+  cursor: pointer;
+}
+.sl-nudge:disabled { opacity: 0.3; cursor: default; }
+.sl-end { font-size: 11px; color: var(--dim); }
+.sl-track {
+  position: relative;
+  width: 44px;
+  height: clamp(140px, 30dvh, 260px);
+  background: var(--surface-3);
+  touch-action: none;
+  cursor: pointer;
+}
+.sl-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--act-s1-stripe), rgba(252, 238, 10, 0.35); }
+.sl-thumb {
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  height: 18px;
+  background: var(--yellow);
+  box-shadow: 0 0 12px rgba(252, 238, 10, 0.6);
+}
+.sl-thumb:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 /* よく使う額は等分に並べる（最大 7 つ。スマホの幅でも切れない） */
 .ad-chips { display: flex; gap: 4px; min-width: 0; }
 .ad-chip {
@@ -228,9 +292,6 @@
 .ad-chip span { font-size: 11px; color: var(--dim); }
 .ad-chip[aria-pressed='true'] { border-color: var(--yellow); background: rgba(252, 238, 10, 0.1); color: var(--yellow); }
 .ad-chip.allin b { font-family: var(--body); font-size: 11px; line-height: 1.2; }
-/* すべて消す（破壊的・めったに使わない）は小さく右に */
-.pf.sp .pf-undo { justify-content: flex-end; }
-.pf.sp .pf-undo .btn { flex: none; width: auto; min-height: 40px; padding: 6px 14px; font-size: 13px; }
 /* Fold to / Check to */
 .ad-skip { display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .ad-skip::-webkit-scrollbar { display: none; }
@@ -626,7 +687,30 @@
 }
 
 /* 入力中の卓（スマホ。回答画面の卓と同じ詰め方） */
-.pf.sp .ptable { height: 330px; margin-bottom: var(--s3); }
+/* 背の高い画面では卓を大きく（ログはモーダルなので、台の上の空きを卓に使う） */
+.pf.sp .ptable { height: clamp(300px, calc(100dvh - 440px), 400px); margin-bottom: var(--s3); }
 .pf.sp .pseat-plate { min-width: 72px; padding: 3px 6px; }
 .pf.sp .pseat-stack { font-size: 13px; }
 .pf.sp .ptable-felt { inset: 38px 20% 50px; }
+
+/* スマホのハンドヒストリーのボタン（卓の左上の空き。押すとモーダル。14 章 §3.1） */
+.pf-actsec { position: relative; }
+.pf-histbtn {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(58, 230, 255, 0.45);
+  background: var(--surface);
+  color: var(--cyan);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pf-histbtn:disabled { opacity: 0.35; cursor: default; }
+.modal .hlog { grid-template-columns: 1fr; }
