@@ -50,6 +50,7 @@ Villain（Hero のアクションに答える相手の席）の概念をなく�
 
 ## 4. DB（01・02 章を改める）
 
+- 停止位置の制約を `stop_index = spot_index` に置き換えた（`20260929000001_stop_is_spot.sql`。以前は `stop_index > spot_index`）。
 - `posts.villain` 列と `posts_hero_ne_villain` 制約を外した。`insert_post` は `villain` を受け取らない。`list_posts`・`get_post_detail` は `villain` を返さない。
 - 試験データ（`db/seed/*.sql`）: H-S1 の BTN の手番 7 / 10 / 13（キー check / s1）。回答は AA を Bet、22 を Check（大量の試験データは Check と Bet を混ぜる）。
 - create-post（Neon Function）も `villain` を送らない・保存しない形に変わったので、**dev・本番に配備し直す**（マイグレーションと同時に）。
