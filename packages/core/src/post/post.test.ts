@@ -148,6 +148,37 @@ describe('VAL 投稿の検証', () => {
     expect(codeOf({ ...hmw(), spot_index: 16 })).toBe('invalid_spot'); // 範囲外
   });
 
+  it('Flop 以降に Hero の手番が無いハンドは no_spot（2026-09-29 さつき）', () => {
+    // Hero が Preflop で Fold し、ほかの席が Flop 以降を続けた
+    expect(codeOf({ ...hs1(), hero: 'UTG', known_cards: { BB: ['Ks', 'Js'], BTN: ['Qs', 'Qd'] }, spot_index: 0 })).toBe('no_spot');
+    // Preflop で全員が Fold して終わった
+    const pfOnly = { ...hs1(), board: [], known_cards: {}, actions: [...(hs1().actions as Raw[]).slice(0, 5), { street: 'pf', pos: 'BB', type: 'fold' }], spot_index: 3 };
+    expect(codeOf(pfOnly)).toBe('no_spot');
+  });
+
+  it('Preflop でだれかが All-in になったハンドは preflop_allin（Hero が Flop 以降を続けても。2026-09-29 さつき）', () => {
+    const r: Raw = {
+      ...hs1(),
+      stacks: { ...STACKS100, UTG: 10 },
+      known_cards: {},
+      // UTG の All-in が残るのでランアウト（5 枚）
+      board: ['Kh', '8d', '3c', '2s', '7h'],
+      actions: [
+        { street: 'pf', pos: 'UTG', type: 'raise', to: 10 },
+        { street: 'pf', pos: 'HJ', type: 'fold' },
+        { street: 'pf', pos: 'CO', type: 'fold' },
+        { street: 'pf', pos: 'BTN', type: 'call' },
+        { street: 'pf', pos: 'SB', type: 'fold' },
+        { street: 'pf', pos: 'BB', type: 'call' },
+        { street: 'flop', pos: 'BB', type: 'check' },
+        { street: 'flop', pos: 'BTN', type: 'bet', to: 5 },
+        { street: 'flop', pos: 'BB', type: 'fold' },
+      ],
+      spot_index: 7,
+    };
+    expect(codeOf(r)).toBe('preflop_allin');
+  });
+
   it.each<[string, Raw]>([
     ['スタック 0', { stacks: { ...STACKS100, CO: 0 } }],
     ['スタックが負', { stacks: { ...STACKS100, CO: -1 } }],

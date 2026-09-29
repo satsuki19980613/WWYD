@@ -29,7 +29,10 @@ Villain（Hero のアクションに答える相手の席）の概念をなく�
   - **Action の入力で受け付けない**: 押すとエラー「Preflop で All-in になった Hand は投稿できません」を出し、手番はそのまま（`makesPreflopAllin`）。All-in の Raise・All-in になる Call（短いスタック）のどちらも。すでに Preflop の All-in があるハンド（前の版の下書きなど）は続きを止めない（投稿時のエラーで止める）。
   - T4 の画像の読み込み: 確認画面を開かずにエラー（06 章 §3.9）。
 - **候補が無いハンド**は投稿できない。Spot の欄は「候補なし」。「投稿する」を押すとエラー: Preflop の All-in は「Preflop で All-in になった Hand は投稿できません」、
-  それ以外（Hero の Preflop の Fold、Preflop で全員が Fold など）は「Flop 以降に Hero の Action が無い Hand は投稿できません」。
+  それ以外（Hero の Preflop の Fold、Preflop で全員が Fold など）は「Flop 以降に Hero の Action が無い Hand は投稿できません」。サーバーも同じ文言になるコードを返す（`preflop_allin` / `no_spot`）。
+- **投稿画面のエラーはすべてサーバーも返す**（2026-09-29 さつき）。画面の検査は送る前の案内で、正はサーバー（`validateInput`・`verifyPost`）。
+  画面を通さずに送った本文（`submissionBody`）でも、画面が出すエラーごとにサーバーが 422 で断ることを `draft.test.ts`「画面のエラーはすべてサーバーも返す」と create-post の `handler.test.ts` で試験する。
+  文言が画面と同じになるのは `preflop_allin`・`no_spot`・`invalid_title`・`duplicate_card` 等。人数・基本設定・途中の Hand・Spot の未選択は、画面の文言の方が細かい（サーバーは `invalid_settings` / `malformed`。画面を通さない送信だけが受けるので、細かく分けない）。
 - Flop 以降のオールインは他のアクションと同じ扱い（Hero の All-in も、相手の All-in への Call / Fold も、その前の手番も候補）。23 通りの見本 `packages/core/src/post/allinFixtures.ts` で core・下書き・E2E を試験する。
 
 見本（`packages/core/src/post/postFixtures.ts`）:

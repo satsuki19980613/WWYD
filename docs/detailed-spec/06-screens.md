@@ -449,6 +449,7 @@ A  2  3  [♠]
 | `illegal_action` / `not_your_turn` / `amount_out_of_range` / `street_mismatch` / `action_after_end` / `hand_incomplete` / `board_mismatch` | 投稿 | 「アクションの内容を確認してください（{n}手目）」 | — |
 | `invalid_spot` / `invalid_villain` | 投稿 | 「スポットを選び直してください」 | — |
 | `preflop_allin` | 投稿 | 「Preflop で All-in になった Hand は投稿できません」（16 章） | — |
+| `no_spot` | 投稿 | 「Flop 以降に Hero の Action が無い Hand は投稿できません」（16 章） | — |
 | `derived_mismatch` | 投稿 | 「投稿できませんでした。再読み込みしてやり直してください」 | — |
 | `not_admin` / `update_forbidden` / `aggregate_overflow` / `internal` | 全般 | 「エラーが発生しました」 | — |
 | 通信失敗 | 全般 | 「通信に失敗しました」 | 再試行ボタン |

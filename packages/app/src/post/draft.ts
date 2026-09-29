@@ -484,7 +484,7 @@ export function titleLength(title: string): number {
 }
 
 export const PREFLOP_ALLIN = messageForCode('preflop_allin');
-export const NO_HERO_POSTFLOP = 'Flop 以降に Hero の Action が無い Hand は投稿できません';
+export const NO_HERO_POSTFLOP = messageForCode('no_spot');
 
 /** 下書きのハンドで Preflop にだれかが All-in になったか（core の hasPreflopAllin。再生できなければ false） */
 function preflopAllinOf(d: Draft, add: readonly Action[] = []): boolean {
@@ -519,7 +519,7 @@ function noSpotError(d: Draft): string {
  */
 export function buildSubmission(d: Draft): Submission {
   const errors: string[] = [];
-  const { setup, rake, invalid } = parseSettings(d);
+  const { setup, invalid } = parseSettings(d);
   const seats = seatsOf(d);
   if (d.players === null) errors.push(PLAYERS_REQUIRED);
   for (const f of invalid) errors.push(`${FIELD_LABEL[f]} の値が正しくありません`);
@@ -538,48 +538,74 @@ export function buildSubmission(d: Draft): Submission {
     return { ok: false, errors };
   }
 
-  const known: Record<string, Card[]> = {};
-  for (const p of seats) {
-    const cards = handCards(d.hands[p]);
-    if (p !== d.hero && cards.length === 2) known[p] = cards;
-  }
-  const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
-
   try {
-    const view = spotView(setup, d.actions, d.hero, d.spotIndex);
-    // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
-    const stacks: Record<string, number> = {};
-    for (const p of seats) stacks[p] = mbbToBb(setup.stacks[p]);
-    const body: Record<string, unknown> = {
-      title: d.title.trim(),
-      fmt: d.fmt,
-      sb: mbbToBb(setup.sb),
-      bb: mbbToBb(setup.bb),
-      ante: mbbToBb(setup.ante),
-      rake: d.fmt === 'cash' ? rake : null,
-      stacks,
-      hero: d.hero,
-      hero_cards: heroCards,
-      known_cards: known,
-      // 到達したストリートより後のボード（「1つ戻す」で残ったカード）は送らない
-      board: d.board.slice(0, phase.boardCount),
-      actions: d.actions.map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) })),
-      spot_index: d.spotIndex,
-      derived: {
-        street: view.derived.street,
-        keys: view.derived.keys,
-        s1_label: view.derived.s1Label,
-        min_to: bb(view.derived.minTo),
-        max_to: bb(view.derived.maxTo),
-        pot_base: mbbToBb(view.derived.potBase),
-        effective_stack: mbbToBb(view.derived.effectiveStack),
-        stop_index: view.derived.stopIndex,
-      },
-    };
+    const body = submissionBody(d);
     verifyPost(validateInput(body));
     return { ok: true, body };
   } catch (e) {
     if (e instanceof ValidationError) return { ok: false, errors: [messageForCode(e.code, e.index)] };
     throw e;
   }
+}
+
+/**
+ * 下書きから create-post に送る本文を作る（画面の検査はしない。入力のまま送り、正しくなければサーバーが断る）。
+ * 画面のエラーはすべてサーバーも返す（2026-09-29 さつき）ことを、この本文をサーバーと同じ検証にかけて試験する（draft.test）。
+ */
+export function submissionBody(d: Draft): Record<string, unknown> {
+  const { setup } = parseSettings(d);
+  const seats = seatsOf(d);
+  // 数の欄は、読めれば core の丸めを通した値、読めなければ入力のまま数にする（サーバーが断る）
+  const num = (text: string, parsed: Mbb | undefined): number => (parsed !== undefined ? mbbToBb(parsed) : Number(text.trim()));
+  const stacks: Record<string, number> = {};
+  for (const p of seats) stacks[p] = num(d.stacks[p], setup?.stacks[p]);
+  const known: Record<string, Card[]> = {};
+  for (const p of seats) {
+    const cards = handCards(d.hands[p]);
+    if (p !== d.hero && cards.length > 0) known[p] = cards;
+  }
+  let board = d.board;
+  let derived: Record<string, unknown> | null = null;
+  if (setup) {
+    try {
+      const phase = phaseOf(setup, d.actions, d.board);
+      // 到達したストリートより後のボード（「1つ戻す」で残ったカード）は送らない
+      if (phase.kind === 'done') board = d.board.slice(0, phase.boardCount);
+      if (d.spotIndex !== null) {
+        const v = spotView(setup, d.actions, d.hero, d.spotIndex).derived;
+        const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
+        derived = {
+          street: v.street,
+          keys: v.keys,
+          s1_label: v.s1Label,
+          min_to: bb(v.minTo),
+          max_to: bb(v.maxTo),
+          pot_base: mbbToBb(v.potBase),
+          effective_stack: mbbToBb(v.effectiveStack),
+          stop_index: v.stopIndex,
+        };
+      }
+    } catch (e) {
+      if (!(e instanceof ValidationError)) throw e;
+    }
+  }
+  const rake = d.rake.trim();
+  return {
+    title: d.title.trim(),
+    fmt: d.fmt,
+    sb: num(d.sb, setup?.sb),
+    bb: 1,
+    ante: d.ante.trim() === '' ? 0 : num(d.ante, setup?.ante),
+    rake: d.fmt === 'cash' && rake !== '' ? Number(rake) : null,
+    // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
+    stacks,
+    hero: d.hero,
+    hero_cards: handCards(d.hands[d.hero]),
+    known_cards: known,
+    board,
+    actions: d.actions.map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) })),
+    spot_index: d.spotIndex,
+    // スポットが決まらなければ派生メタは null（サーバーは malformed で断る）
+    derived,
+  };
 }

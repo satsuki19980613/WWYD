@@ -17,6 +17,7 @@ export type ValidationCode =
   | 'board_mismatch'
   | 'invalid_spot'
   | 'preflop_allin'
+  | 'no_spot'
   | 'derived_mismatch';
 
 export class ValidationError extends Error {
