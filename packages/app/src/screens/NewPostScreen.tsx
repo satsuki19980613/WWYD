@@ -25,7 +25,8 @@ import {
   usedCards,
   type Draft,
 } from '../post/draft.ts';
-import { getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
+import { draftSlot, getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
+import { activeUser, deleteDraft } from '../post/savedDrafts.ts';
 import { messageForCode } from '../post/errorMessages.ts';
 import { OcrImport } from '../post/OcrImport.tsx';
 import { sendPost } from '../post/sendPost.ts';
@@ -34,8 +35,8 @@ import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
 import { navigate } from '../router.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 
-const STEPS = ['基本設定', 'プレイヤー', 'アクション', 'スポット'] as const;
-const ACTION_STEP = STEPS.indexOf('アクション');
+const STEPS = ['基本設定', 'Player', 'Action', 'Spot'] as const;
+const ACTION_STEP = STEPS.indexOf('Action');
 
 /**
  * スポット投稿（06 章 §3。仕様書 §5.2）。
@@ -97,6 +98,10 @@ export function NewPostScreen(): JSX.Element {
     void sendPost(s.body).then((r) => {
       setBusy(false);
       if (r.ok) {
+        // 開いた下書きから投稿したら、その下書きは消す
+        const slot = draftSlot();
+        const uid = activeUser();
+        if (slot && uid) deleteDraft(uid, slot);
         resetDraft();
         navigate('/?tab=mine');
       } else {

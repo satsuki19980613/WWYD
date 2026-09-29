@@ -85,14 +85,6 @@ a { color: var(--cyan); }
   color: var(--fg);
   white-space: nowrap;
 }
-/* 一覧（最上位）だけハザードティック（シグネチャー 3）。下の階層は「＜」が先頭に立つ */
-.hdr-title.tick::before {
-  content: '';
-  width: 16px;
-  height: 11px;
-  flex: none;
-  background: repeating-linear-gradient(-45deg, var(--yellow) 0 3px, var(--bg) 3px 6px);
-}
 .hdr-actions { display: flex; align-items: center; gap: var(--s1); }
 
 /* ---- アプリ面 ---- */

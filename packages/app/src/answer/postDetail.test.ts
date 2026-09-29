@@ -4,7 +4,7 @@ import { detailJson } from './detailFixtures.ts';
 import { answerErrorMessage, errorCode, parsePostDetail } from './postDetail.ts';
 
 describe('get_post_detail の読み取り', () => {
-  it('未回答者（アクションとボードは停止位置まで。secrets・集計なし）', () => {
+  it('未回答者（Action と Board は停止位置まで。secrets・集計なし）', () => {
     const d = parsePostDetail(detailJson(undefined, { viewer: 'unanswered' }));
     expect(d.viewer).toBe('unanswered');
     expect(d.post).toMatchObject({
@@ -29,7 +29,7 @@ describe('get_post_detail の読み取り', () => {
     expect(d.myAnswer).toBeNull();
   });
 
-  it('投稿者（回答前: Hero のハンドと全アクションはあるが集計は無い。回答後: 自分の回答と集計）', () => {
+  it('投稿者（回答前: Hero の Hand と全 Action はあるが集計は無い。回答後: 自分の回答と集計）', () => {
     const before = parsePostDetail(detailJson(undefined, { viewer: 'author' }));
     expect(before.secrets).toEqual({ heroCards: ['Ad', 'Kd'], knownCards: { BB: ['Ks', 'Js'] } });
     expect(before.hand.actions).toHaveLength(15);
@@ -48,7 +48,7 @@ describe('get_post_detail の読み取り', () => {
     expect(after.aggregate?.cells).toHaveLength(169);
   });
 
-  it('マック', () => {
+  it('Muck', () => {
     const raw = detailJson(undefined, { viewer: 'answered' });
     (raw.secrets as Record<string, unknown>).known_cards = { BB: 'muck' };
     expect(parsePostDetail(raw).secrets?.knownCards).toEqual({ BB: 'muck' });

@@ -7,7 +7,7 @@ import { handSlots } from './cardInput.ts';
 import { isLocked, seatsOf, type Draft, type SettingField } from './draft.ts';
 
 const FMT_ITEMS = [
-  { value: 'cash', label: 'キャッシュ' },
+  { value: 'cash', label: 'Cash' },
   { value: 'mtt', label: 'MTT' },
 ] as const;
 
@@ -59,10 +59,10 @@ export function SettingsSection(props: {
         {/* 見出しは他の欄と同じく上に置く（横に置くと欄の左端が揃わない） */}
         <div className="pf-field">
           <span className="mono-lbl" aria-hidden="true">
-            ゲーム形式
+            Game 形式
           </span>
           <ChipGroup
-            label="ゲーム形式"
+            label="Game 形式"
             variant="segment"
             items={FMT_ITEMS}
             value={d.fmt}
@@ -75,9 +75,9 @@ export function SettingsSection(props: {
             <span className="mono-lbl">BB（bb）</span>
             <span className="pf-static num">1</span>
           </div>
-          <NumField label="アンティ（bb）" value={d.ante} invalid={bad('ante')} onChange={(ante) => props.onChange({ ante })} />
+          <NumField label="Ante（bb）" value={d.ante} invalid={bad('ante')} onChange={(ante) => props.onChange({ ante })} />
           <NumField
-            label="レーキ（%）"
+            label="Rake（%）"
             value={d.fmt === 'mtt' ? '' : d.rake}
             disabled={d.fmt === 'mtt'}
             invalid={bad('rake')}
@@ -109,7 +109,7 @@ export function PlayersSection(props: {
   return (
     <section className="pf-sec" aria-labelledby="pf-players">
       <h2 id="pf-players" className="sec-h">
-        プレイヤーとハンド
+        Player と Hand
       </h2>
       <fieldset className="pf-fieldset" disabled={locked}>
         <div className="pf-field">
@@ -126,16 +126,16 @@ export function PlayersSection(props: {
         </div>
       </fieldset>
       {seats.length > 0 && (
-      <div className="pf-players" role="table" aria-label="プレイヤーとハンド">
+      <div className="pf-players" role="table" aria-label="Player と Hand">
         <div className="pf-prow head" role="row">
           <span className="mono-lbl" role="columnheader">
             席
           </span>
           <span className="mono-lbl" role="columnheader">
-            スタック（bb）
+            Stack（bb）
           </span>
           <span className="mono-lbl pf-ch" role="columnheader">
-            ハンド
+            Hand
           </span>
           <span className="mono-lbl pf-ch" role="columnheader">
             Hero
@@ -153,7 +153,7 @@ export function PlayersSection(props: {
                   className="inp num pf-stack"
                   inputMode="decimal"
                   autoComplete="off"
-                  aria-label={`${p} のスタック（bb）`}
+                  aria-label={`${p} の Stack（bb）`}
                   value={d.stacks[p]}
                   disabled={locked}
                   aria-invalid={props.invalid.includes(p) || undefined}
@@ -194,7 +194,7 @@ export function HandButton(props: { seat: Pos; hand: string; active: boolean; on
       className={`pf-hand ${props.active ? 'active' : ''}`}
       data-seat={props.seat}
       data-keep-open
-      aria-label={`${props.seat} のハンド`}
+      aria-label={`${props.seat} の Hand`}
       aria-expanded={props.active}
       onClick={props.onOpen}
     >

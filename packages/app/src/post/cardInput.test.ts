@@ -17,8 +17,8 @@ function type(keys: string[], used: ReadonlySet<string> = NONE, start = ''): str
   return keys.reduce((h, k) => applyCardKey(h, k, used).hand, start);
 }
 
-describe('カードキーボード（06 章 §3.5）', () => {
-  it('ランク → スートで 1 枚、2 枚で完成', () => {
+describe('Card キーボード（06 章 §3.5）', () => {
+  it('ランク → Suit で 1 枚、2 枚で完成', () => {
     expect(type(['A', 'd', 'K', 'd'])).toBe('AdKd');
     expect(handCards('AdKd')).toEqual(['Ad', 'Kd']);
     expect(isHandComplete('AdKd')).toBe(true);
@@ -29,17 +29,17 @@ describe('カードキーボード（06 章 §3.5）', () => {
   it('1 → 0 以外のランクは置き換え', () => {
     expect(type(['1', '9', 'h'])).toBe('9h');
   });
-  it('1 → スートは無視', () => {
+  it('1 → Suit は無視', () => {
     expect(type(['1', 's'])).toBe('1');
   });
   it('0 単独は無視', () => {
     expect(type(['0'])).toBe('');
     expect(type(['A', 's', '0'])).toBe('As');
   });
-  it('スート待ちでランクは直前のランクを置き換える', () => {
+  it('Suit 待ちでランクは直前のランクを置き換える', () => {
     expect(type(['K', 'Q', 'c'])).toBe('Qc');
   });
-  it('ランク待ちでスートは無視', () => {
+  it('ランク待ちで Suit は無視', () => {
     expect(type(['s'])).toBe('');
     expect(type(['A', 's', 'h'])).toBe('As');
   });
@@ -51,7 +51,7 @@ describe('カードキーボード（06 章 §3.5）', () => {
     expect(type(['A', 's', 'K', 'BS'])).toBe('As');
     expect(type(['BS'])).toBe('');
   });
-  it('使用済みのカードは入力せず、そのカードを返す', () => {
+  it('使用済みの Card は入力せず、その Card を返す', () => {
     const used = new Set(['Kd']);
     expect(applyCardKey('K', 'd', used)).toEqual({ hand: 'K', used: 'Kd' });
     expect(applyCardKey('AdA', 'd', NONE)).toEqual({ hand: 'AdA', used: 'Ad' }); // 同じ席の 1 枚目
@@ -66,7 +66,7 @@ describe('表示用の枠', () => {
     expect(handSlots('AdK')).toEqual([{ kind: 'card', card: 'Ad' }, { kind: 'rank', rank: 'K' }]);
     expect(handSlots('')).toEqual([{ kind: 'empty' }, { kind: 'empty' }]);
   });
-  it('1 枚・スート未確定は途中', () => {
+  it('1 枚・Suit 未確定は途中', () => {
     expect(isHandComplete('')).toBe(true);
     expect(isHandComplete('Ad')).toBe(false);
     expect(isHandComplete('AdK')).toBe(false);
@@ -95,7 +95,7 @@ describe('フリックの割り当て（2026-09-29）', () => {
   it('絵札のキーは タップ / 上 / 左 / 下 = Q / K / T / J。A は単独のキー', () => {
     expect(RANK_FLICK).toEqual({ tap: 'Q', up: 'K', right: null, down: 'J', left: 'T' });
   });
-  it('スートのキーは タップ / 上 / 左 / 下 = ♠ / ♥ / ♦ / ♣', () => {
+  it('Suit のキーは タップ / 上 / 左 / 下 = ♠ / ♥ / ♦ / ♣', () => {
     expect(SUIT_FLICK).toEqual({ tap: 's', up: 'h', right: null, down: 'c', left: 'd' });
   });
   it('どちらも右（画面の外側）には割り当てない', () => {

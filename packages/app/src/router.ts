@@ -8,6 +8,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 export type Route =
   | { name: 'list' }
   | { name: 'new' }
+  | { name: 'drafts' }
   | { name: 'spot'; id: string }
   | { name: 'answer'; id: string }
   | { name: 'result'; id: string }
@@ -29,6 +30,7 @@ export function parseRoute(pathname: string, allowDev = false): Route {
   const path = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
   if (path === '' || path === '/') return { name: 'list' };
   if (path === '/new') return { name: 'new' };
+  if (path === '/drafts') return { name: 'drafts' };
   if (path === '/terms') return { name: 'terms' };
   if (path === '/privacy') return { name: 'privacy' };
   if (allowDev && path === '/_dev/ui') return { name: 'devUi' };
@@ -60,6 +62,8 @@ export function routePath(route: Route): string {
       return '/';
     case 'new':
       return '/new';
+    case 'drafts':
+      return '/drafts';
     case 'spot':
       return `/s/${encodeURIComponent(route.id)}`;
     case 'answer':
@@ -99,11 +103,37 @@ function snapshot(): string {
   return window.location.pathname + window.location.search;
 }
 
-/** アプリ内の遷移。`replace` は振り分け（`/s/:id` → answer / result）に使う。 */
-export function navigate(to: string, opts: { replace?: boolean } = {}): void {
+// ---- 画面を離れる前の確認（投稿の下書き。14 章 §3.5） ----
+
+/** 遷移を止める関数。止めたら true を返し、確認のあとで `navigate(to, { force: true })` を呼ぶ */
+type Blocker = (to: string) => boolean;
+let blocker: Blocker | null = null;
+let lastHref = typeof window === 'undefined' ? '' : snapshot();
+
+export function setNavigationBlocker(b: Blocker | null): void {
+  blocker = b;
+}
+
+// ブラウザの「戻る」: URL は既に変わっているので、止めるなら元の URL を積み直して確認を出す。
+// 画面の購読より先に登録して、離れた画面を一瞬でも出さないようにする
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    const to = snapshot();
+    if (blocker && to !== lastHref && blocker(to)) {
+      window.history.pushState(null, '', lastHref);
+      return;
+    }
+    lastHref = to;
+  });
+}
+
+/** アプリ内の遷移。`replace` は振り分け（`/s/:id` → answer / result）に使う。`force` は確認を済ませた遷移 */
+export function navigate(to: string, opts: { replace?: boolean; force?: boolean } = {}): void {
   if (to === snapshot()) return;
+  if (!opts.force && blocker?.(to)) return;
   if (opts.replace) window.history.replaceState(null, '', to);
   else window.history.pushState(null, '', to);
+  lastHref = snapshot();
   notify();
 }
 

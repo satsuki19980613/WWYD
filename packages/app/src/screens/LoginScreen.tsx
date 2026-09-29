@@ -10,7 +10,7 @@ export function LoginScreen(props: { onLogin?: () => void; busy?: boolean; faile
   return (
     <section className="login">
       <h1 className="login-name">WWYD</h1>
-      <p className="login-tagline">ポーカーのスポットを投稿し、Villain のレンジを他のプレイヤーの回答から集合知として見るツール</p>
+      <p className="login-tagline">Poker の Spot を投稿し、Villain の Range を他の Player の回答から集合知として見るツール</p>
       {props.failed && (
         <p className="form-err" role="alert">
           ログインできませんでした

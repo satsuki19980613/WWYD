@@ -16,7 +16,7 @@ import {
 // H-S1 の停止位置（ターン、BTN が 6.5 をベット。04 章 PCT-01）
 const HS1: SizeSpot = { currentBet: 6500, potBase: 22100, minTo: 13000, maxTo: 95700 };
 
-describe('サイズの入力（06 章 §4.7）', () => {
+describe('Size の入力（06 章 §4.7）', () => {
   it('初期値は 50%（PCT-01 17.55bb）。保存済みがあればそれ', () => {
     expect(initialSize(HS1, null)).toBe(17550);
     expect(initialSize(HS1, 30000)).toBe(30000);
@@ -60,7 +60,7 @@ describe('サイズの入力（06 章 §4.7）', () => {
 
   it('畳んだ行の表示', () => {
     expect(sizeSummary(17550, HS1)).toEqual({ amount: '17.55bb', pct: '50% pot' });
-    expect(sizeSummary(95700, HS1)).toEqual({ amount: '95.7bb', pct: 'オールイン' });
+    expect(sizeSummary(95700, HS1)).toEqual({ amount: '95.7bb', pct: 'All-in' });
     expect(sizeSummary(null, HS1)).toEqual({ amount: '—', pct: '' });
   });
 });
@@ -81,12 +81,12 @@ describe('送信前の検査（06 章 §4.9）', () => {
     expect(submitErrors(emptyPaint(), keys, 17550, HS1)).toEqual(['1マス以上塗ってください']);
   });
 
-  it('s1 を含むマスがあり、サイズが範囲外', () => {
-    expect(submitErrors(paintWith({ 0: RAISE }), keys, 12000, HS1)).toEqual(['サイズを 13〜95.7bb にしてください']);
-    expect(submitErrors(paintWith({ 0: RAISE }), keys, null, HS1)).toEqual(['サイズを 13〜95.7bb にしてください']);
+  it('s1 を含むマスがあり、Size が範囲外', () => {
+    expect(submitErrors(paintWith({ 0: RAISE }), keys, 12000, HS1)).toEqual(['Size を 13〜95.7bb にしてください']);
+    expect(submitErrors(paintWith({ 0: RAISE }), keys, null, HS1)).toEqual(['Size を 13〜95.7bb にしてください']);
   });
 
-  it('s1 を含まなければサイズは見ない・送らない', () => {
+  it('s1 を含まなければ Size は見ない・送らない', () => {
     const p = paintWith({ 0: CALL });
     expect(submitErrors(p, keys, null, HS1)).toEqual([]);
     expect(sizeForSubmit(p, 12000)).toBeNull();
@@ -104,7 +104,7 @@ describe('送信前の検査（06 章 §4.9）', () => {
     ]);
   });
 
-  it('s1 が合法でないスポット', () => {
+  it('s1 が合法でない Spot', () => {
     expect(submitErrors(paintWith({ 0: { fold: 0, check: 20, call: 0, s1: 0 } }), ['check'], null, null)).toEqual([]);
   });
 });

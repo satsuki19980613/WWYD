@@ -23,16 +23,16 @@ export function SpotSection(props: {
   return (
     <section className="pf-sec" aria-labelledby="pf-spot">
       <h2 id="pf-spot" className="sec-h">
-        スポット
+        Spot
       </h2>
       <div className="pf-field">
         <span className="mono-lbl" aria-hidden="true">
-          Hero のアクション
+          Hero の Action
         </span>
         {list.length === 0 ? (
           <p className="pf-none">候補なし</p>
         ) : (
-          <div className="pf-cands" role="radiogroup" aria-label="Hero のアクション">
+          <div className="pf-cands" role="radiogroup" aria-label="Hero の Action">
             {list.map((c) => (
               <button
                 key={c.index}

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { AccountIcon } from './Icons.tsx';
+import { AccountIcon, DraftIcon } from './Icons.tsx';
+import { Link } from './Link.tsx';
 import { AccountMenu } from './AccountMenu.tsx';
 import { BackLink } from './BackLink.tsx';
 
@@ -7,13 +8,15 @@ import { BackLink } from './BackLink.tsx';
 export type HeaderTitle = { text: string; heading: boolean };
 
 /**
- * ヘッダー（06 章 §0.2）。左に「＜」（一覧へ。一覧以外）と画面名、右に ⓘ とアカウントアイコン。
+ * ヘッダー（06 章 §0.2）。左に「＜」（一覧へ。一覧以外）と画面名、右に下書き・ⓘ・アカウントアイコン。
  * ⓘ は `data-keep-open` を付けて、アカウントメニューを開いたまま押せるようにする（開いていればアカウントの節を出す）。
  */
 export function Header(props: {
   title?: HeaderTitle;
   back: boolean;
   showAccount: boolean;
+  /** 保存した下書きの件数（ログイン中だけ下書きのボタンを出す。14 章 §3.5） */
+  drafts?: number;
   onInfo: (accountMenuOpen: boolean) => void;
   onLogout?: () => void;
   onDeleteAccount?: () => void;
@@ -28,9 +31,15 @@ export function Header(props: {
       <div className="hdr-inner">
         <div className="hdr-lead">
           {props.back && <BackLink />}
-          {title && <Title className={`hdr-title ${props.back ? '' : 'tick'}`}>{title.text}</Title>}
+          {title && <Title className="hdr-title">{title.text}</Title>}
         </div>
         <div className="hdr-actions">
+          {props.drafts !== undefined && (
+            <Link to="/drafts" className="icon-btn hdr-drafts" aria-label={`下書き（${props.drafts}件）`}>
+              <DraftIcon />
+              {props.drafts > 0 && <span className="hdr-badge num">{props.drafts}</span>}
+            </Link>
+          )}
           <button
             type="button"
             className="infomark"

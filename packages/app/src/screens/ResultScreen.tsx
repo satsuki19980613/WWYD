@@ -2,7 +2,7 @@ import { aggregateBar, labelOfCards, paintBar, type AnswerKey, type Card } from 
 import { useMemo, useState } from 'react';
 import { ComboBar } from '../answer/ComboBar.tsx';
 import type { PostDetail } from '../answer/postDetail.ts';
-import { HandLog, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
+import { HandLog, HistoryButton, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
 import { seatViews } from '../answer/replayModel.ts';
 import { ResultGrid } from '../answer/ResultGrid.tsx';
 import {
@@ -36,7 +36,7 @@ import { metaLine } from './AnswerScreen.tsx';
 type MobileTab = 'agg' | 'hand';
 const MOBILE_TABS: readonly { value: MobileTab; label: string }[] = [
   { value: 'agg', label: '集計' },
-  { value: 'hand', label: 'ハンドヒストリー' },
+  { value: 'hand', label: 'Hand History' },
 ];
 
 /**
@@ -72,7 +72,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
 
   const nextLink = typeof next === 'string' && (
     <Link to={`/s/${next}`} className="btn">
-      次のスポット
+      次の Spot
     </Link>
   );
   const aggregate = (
@@ -100,7 +100,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   // リプレイの位置はスマホのタブを切り替えても残す
   const frames = useMemo(() => resultFrames(d), [d]);
   const replay = useReplay(d.hand.actions.length, { atEnd: true });
-  const hand = <ResultReplay detail={d} frames={frames} c={replay} />;
+  const hand = <ResultReplay detail={d} frames={frames} c={replay} logInModal={mobile} />;
 
   if (!mobile) {
     return (
@@ -108,7 +108,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
         {head}
         <div className="ans-grid">
           <div className="ans-col">
-            <h2 className="sec-h">ハンドヒストリー</h2>
+            <h2 className="sec-h">Hand History</h2>
             {hand}
           </div>
           <div className="ans-col">
@@ -143,7 +143,7 @@ function BreakdownPanel(props: { detail: PostDetail; view: ResultView; idx: numb
         <b className="res-detail-lbl num">{b.label}</b>
         {b.kind === 'all' ? (
           <span className="res-detail-sub num">
-            レンジ内 {b.n} / {b.total}人
+            Range 内 {b.n} / {b.total}人
           </span>
         ) : (
           <span className="res-detail-sub num">{b.text}</span>
@@ -198,7 +198,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
       <span className="brk tl" aria-hidden="true" />
       <span className="brk br" aria-hidden="true" />
       <div className="res-actual-act">
-        <span className="res-actual-lbl">Villain（{d.post.villain}）実際のアクション</span>
+        <span className="res-actual-lbl">Villain（{d.post.villain}）実際の Action</span>
         <b className="res-actual-name">{a ? actionText(a) : '—'}</b>
       </div>
       <div className="res-actual-hand">
@@ -210,7 +210,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
             <span className="num">{labelOfCards(h[0] as Card, h[1] as Card)}</span>
           </>
         ) : (
-          <span className="res-actual-unknown">{h === 'muck' ? 'マック' : 'ハンド不明'}</span>
+          <span className="res-actual-unknown">{h === 'muck' ? 'Muck' : 'Hand 不明'}</span>
         )}
       </div>
     </div>
@@ -258,14 +258,25 @@ function Operations(props: { detail: PostDetail }): JSX.Element | null {
   );
 }
 
-/** ハンドヒストリーの再生（06 章 §5.4）: 最初から最後まで。初期表示は最後の状態。 */
-function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[]; c: ReplayControl }): JSX.Element {
+/** ハンドヒストリーの再生（06 章 §5.4）: 最初から最後まで。初期表示は最後の状態。スマホのログはモーダル（14 章） */
+function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[]; c: ReplayControl; logInModal: boolean }): JSX.Element {
   const { detail: d, frames, c } = props;
   const { hand, post } = d;
   const f = frames[c.step] ?? frames[frames.length - 1];
   if (!f) return <></>;
+  const log = (
+    <HandLog
+      setup={hand.setup}
+      actions={hand.actions.slice(0, c.step)}
+      board={f.board}
+      spotIndex={hand.spotIndex}
+      highlightLast={c.step < c.max}
+      actual={hand.stopIndex}
+    />
+  );
   return (
     <div className="replay">
+      {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
       <PokerTable
         seats={seatViews(f.state, { hero: post.hero, villain: post.villain, actor: f.actor })}
         pot={f.state.pot}
@@ -275,14 +286,7 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
         note={f.note}
       />
       <ReplayControls c={c} />
-      <HandLog
-        setup={hand.setup}
-        actions={hand.actions.slice(0, c.step)}
-        board={f.board}
-        spotIndex={hand.spotIndex}
-        highlightLast={c.step < c.max}
-        actual={hand.stopIndex}
-      />
+      {!props.logInModal && log}
     </div>
   );
 }

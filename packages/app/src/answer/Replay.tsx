@@ -1,5 +1,7 @@
 import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
 import { useEffect, useState, type ReactNode } from 'react';
+import { HistoryIcon } from '../components/Icons.tsx';
+import { Modal } from '../components/Modal.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { actionLog, STREET_NAME } from '../post/draft.ts';
@@ -98,6 +100,27 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
   );
 }
 
+/**
+ * スマホのハンドヒストリーのボタン（卓の左上。押すとモーダル。14 章）。ログを常に出すと画面を圧迫するため。
+ * `children` はモーダルの中身（HandLog）。
+ */
+export function HistoryButton(props: { disabled?: boolean; children: ReactNode }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="hist-btn" disabled={props.disabled} onClick={() => setOpen(true)}>
+        <HistoryIcon />
+        History
+      </button>
+      {open && (
+        <Modal title="Hand History" tone="info" onClose={() => setOpen(false)}>
+          {props.children}
+        </Modal>
+      )}
+    </>
+  );
+}
+
 type Pt = readonly [number, number];
 /** 席の配置（手前の中央から時計回り。卓の中の % 座標）。人数ごとに卓の周りへ均等に置く（2〜6 人。04 章 §2.1） */
 const SLOTS_BY_COUNT: Record<number, readonly Pt[]> = {
@@ -151,7 +174,7 @@ export function PokerTable(props: {
 }): JSX.Element {
   const interactive = props.boardContent !== undefined;
   return (
-    <div className={`ptable${interactive ? ' live' : ''}`} role={interactive ? 'group' : 'img'} aria-label="テーブル">
+    <div className={`ptable${interactive ? ' live' : ''}`} role={interactive ? 'group' : 'img'} aria-label="Table">
       <div className="ptable-felt" />
       <div className="ptable-mid">
         <div className="ptable-pot">
@@ -206,7 +229,7 @@ export function PokerTable(props: {
 function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
   const { hole } = props;
   if (!hole) return null;
-  if (hole === 'muck') return <span className="pseat-muck">マック</span>;
+  if (hole === 'muck') return <span className="pseat-muck">Muck</span>;
   return (
     <div className="pseat-cards">
       {hole === 'back' ? (

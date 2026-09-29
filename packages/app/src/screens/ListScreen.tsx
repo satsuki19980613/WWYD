@@ -64,14 +64,14 @@ export function ListScreen(): JSX.Element {
         <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
         {!mobile && (
           <Link to="/new" className="btn auto">
-            ＋ スポットを投稿
+            ＋ Spot を投稿
           </Link>
         )}
       </div>
 
       <div className="list-filters">
         <ChipGroup
-          label="ストリート"
+          label="Street"
           variant="segment"
           items={STREET_ITEMS}
           value={query.street}
@@ -116,7 +116,7 @@ export function ListScreen(): JSX.Element {
       {mobile && (
         <div className="list-fab">
           <Link to="/new" className="btn">
-            ＋ スポットを投稿
+            ＋ Spot を投稿
           </Link>
         </div>
       )}
@@ -192,7 +192,7 @@ function Empty(props: { query: ListQuery }): JSX.Element {
       <p className="list-empty-label">{e.label}</p>
       {e.showPost && (
         <Link to="/new" className="btn auto">
-          スポットを投稿
+          Spot を投稿
         </Link>
       )}
     </div>

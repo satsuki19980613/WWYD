@@ -43,7 +43,7 @@ export function SizeControl(props: {
                 aria-pressed={presetActive(p, to, spot)}
                 onClick={() => set(presetSize(p, spot))}
               >
-                {p === 'allin' ? 'オールイン' : `${p}%`}
+                {p === 'allin' ? 'All-in' : `${p}%`}
               </button>
             ))}
           </div>

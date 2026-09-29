@@ -115,15 +115,15 @@ export function ActionSection(props: {
   return (
     <section className={`pf-sec pf-actsec ${dock && props.mobile ? 'has-dock' : ''}`} aria-labelledby="pf-actions">
       <h2 id="pf-actions" className="sec-h">
-        アクション入力
+        Action 入力
       </h2>
       {phase.kind === 'invalid' && (
         <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
       )}
       {props.mobile && phase.kind !== 'invalid' && (
-        <button type="button" className="pf-histbtn" disabled={d.actions.length === 0} onClick={() => setHistoryOpen(true)}>
+        <button type="button" className="hist-btn" disabled={d.actions.length === 0} onClick={() => setHistoryOpen(true)}>
           <HistoryIcon />
-          ヒストリー
+          History
         </button>
       )}
       <LiveTable draft={d} phase={phase} onOpen={openPicker} onRemoveFrom={props.onBoardRemoveFrom} />
@@ -134,14 +134,14 @@ export function ActionSection(props: {
       {!dock && phase.kind !== 'invalid' && <div className="pf-undo">{tools}</div>}
       {props.mobile && dock}
       {historyOpen && log && (
-        <Modal title="ハンドヒストリー" tone="info" onClose={() => setHistoryOpen(false)}>
+        <Modal title="Hand History" tone="info" onClose={() => setHistoryOpen(false)}>
           {log}
         </Modal>
       )}
       {rewind !== null && rewindText && (
         <ConfirmDialog
           title={`${rewindText} から入れ直しますか`}
-          body="この手から後のアクションを消します。"
+          body="この手から後の Action を消します。"
           confirmLabel="入れ直す"
           onConfirm={() => {
             props.onTruncate(rewind);
@@ -152,8 +152,8 @@ export function ActionSection(props: {
       )}
       {clearing && (
         <ConfirmDialog
-          title="アクションとボードをすべて消しますか"
-          body="入れたアクションとボードのカードを消します。"
+          title="Action と Board をすべて消しますか"
+          body="入れた Action と Board の Card を消します。"
           confirmLabel="すべて消す"
           destructive
           onConfirm={() => {
@@ -245,9 +245,9 @@ function ActDock(props: {
   // ベットがある（または BB のオプション）ならレイズ。レイズできないとき（相手がオールイン）もレイズと出して押せなくする
   const raiseLabel = state.currentBet > 0 || (legal.raise !== null && legal.bet === null);
   // ボタンはプレイヤーが呼ぶ名前（オープン / 3bet / リンプ など。13 章 §6）
-  const s1Name = raiseLabel && state.currentBet === 0 ? 'レイズ' : aggressiveName(state, props.actions);
+  const s1Name = raiseLabel && state.currentBet === 0 ? 'Raise' : aggressiveName(state, props.actions);
   const unit = raiseLabel ? 'to' : 'bet';
-  const sizeLabel = raiseLabel ? 'レイズの額（to。bb）' : 'ベットの額（bb）';
+  const sizeLabel = raiseLabel ? 'Raise の額（to。bb）' : 'Bet の額（bb）';
 
   // 額: スマホは縦のスライダー（キーボードを出さない）、PC は入力欄
   const sizeField =
@@ -278,10 +278,13 @@ function ActDock(props: {
       </label>
     ));
 
+  // よく使う額がオールインだけなら行ごと出さない（額の欄の最大と同じで、台が高くなるだけ）
+  const showChips = presets.some((p) => !p.allin);
+
   return (
-    <div className="act-dock" role="group" aria-label="アクション">
-      {range && (
-        <div className="ad-chips" role="group" aria-label={raiseLabel ? 'レイズの額' : 'ベットの額'}>
+    <div className="act-dock" role="group" aria-label="Action">
+      {showChips && (
+        <div className="ad-chips" role="group" aria-label={raiseLabel ? 'Raise の額' : 'Bet の額'}>
           {presets.map((p) => (
             <button
               key={p.label}
@@ -290,16 +293,7 @@ function ActDock(props: {
               aria-pressed={to === p.to}
               onClick={() => setSize(formatBb(p.to))}
             >
-              {p.allin ? (
-                // 7 つ並んでも収まるよう 2 行に
-                <b aria-label="オールイン">
-                  オール
-                  <br />
-                  イン
-                </b>
-              ) : (
-                <b>{p.label}</b>
-              )}
+              <b>{p.label}</b>
               {!p.allin && p.label !== p.sub && <span className="num">{p.sub}</span>}
             </button>
           ))}
@@ -318,23 +312,23 @@ function ActDock(props: {
       <ToolRow pos={pos} title={STREET_NAME[state.street]} tools={props.tools} right={sizeField} />
       <div className="ad-btns">
         <button type="button" className="act-btn fold" disabled={!legal.fold} onClick={() => act('fold')}>
-          フォールド
+          Fold
         </button>
         {legal.check ? (
           <button type="button" className="act-btn check" onClick={() => act('check')}>
-            チェック
+            Check
           </button>
         ) : (
           <button type="button" className="act-btn call" disabled={legal.call === null} onClick={() => act('call')}>
             {callName(state, pos)}
             {legal.call !== null && <span className="num"> {formatBb(legal.call)}</span>}
-            {callAllin && <small>オールイン</small>}
+            {callAllin && <small>All-in</small>}
           </button>
         )}
         <button type="button" className="act-btn s1" disabled={!range} onClick={aggressive}>
           {s1Name}
           {to !== null && <span className="num"> {formatBb(to)}</span>}
-          {to !== null && range && to === range.max && <small>オールイン</small>}
+          {to !== null && range && to === range.max && <small>All-in</small>}
         </button>
       </div>
     </div>
@@ -345,11 +339,11 @@ function ActDock(props: {
 function BoardDock(props: { draft: Draft; tools: JSX.Element; onOpen: () => void }): JSX.Element {
   const street = cardStreet(props.draft.board.length);
   return (
-    <div className="act-dock" role="group" aria-label="ボード">
-      <ToolRow title={`${STREET_NAME[street]}のカード`} tools={props.tools} />
+    <div className="act-dock" role="group" aria-label="Board">
+      <ToolRow title={`${STREET_NAME[street]} の Card`} tools={props.tools} />
       <div className="ad-btns one">
         <button type="button" className="btn ghost" onClick={props.onOpen}>
-          {STREET_NAME[street]}のカードを選ぶ
+          {STREET_NAME[street]} の Card を選ぶ
         </button>
       </div>
     </div>
@@ -376,7 +370,7 @@ function LiveTable(props: { draft: Draft; phase: Phase; onOpen: () => void; onRe
     if (cards.length === 2) holes[p] = cards;
     else if (showdown.includes(p)) holes[p] = 'muck';
   }
-  const note = done ? (phase.result.kind === 'over' ? `${phase.result.winner} ポット獲得` : 'ショーダウン') : null;
+  const note = done ? (phase.result.kind === 'over' ? `${phase.result.winner} Pot 獲得` : 'Showdown') : null;
   const reached = phase.kind === 'act' ? BOARD_COUNT[phase.state.street] : phase.kind === 'board' ? phase.need : phase.boardCount;
   return (
     <PokerTable
@@ -420,7 +414,7 @@ function BoardSlots(props: {
               key={i}
               type="button"
               className={`pf-bslot filled ${i >= props.reached ? 'ahead' : ''}`}
-              aria-label={`${cardText(card)}（このカード以降を消す）`}
+              aria-label={`${cardText(card)}（この Card 以降を消す）`}
               onClick={() => props.onRemoveFrom(i)}
             >
               <PlayingCard card={card} />
@@ -429,7 +423,7 @@ function BoardSlots(props: {
         }
         if (props.addable && i === next) {
           return (
-            <button key={i} type="button" className="pf-bslot add" aria-label={`${STREET_NAME[street]}のカードを選ぶ`} onClick={props.onOpen}>
+            <button key={i} type="button" className="pf-bslot add" aria-label={`${STREET_NAME[street]} の Card を選ぶ`} onClick={props.onOpen}>
               ＋
             </button>
           );

@@ -113,13 +113,13 @@ export function setPlayers(d: Draft, n: PlayerCount): Draft {
 
 // ---- 基本設定（06 章 §3.3・§3.4） ----
 
-export const STREET_NAME: Record<Street, string> = { pf: 'プリフロップ', flop: 'フロップ', turn: 'ターン', river: 'リバー' };
+export const STREET_NAME: Record<Street, string> = { pf: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River' };
 export const ACTION_NAME: Record<ActionType, string> = {
-  fold: 'フォールド',
-  check: 'チェック',
-  call: 'コール',
-  bet: 'ベット',
-  raise: 'レイズ',
+  fold: 'Fold',
+  check: 'Check',
+  call: 'Call',
+  bet: 'Bet',
+  raise: 'Raise',
 };
 
 /** 数値の文字列を mbb に（空は `empty`）。小数第 4 位以下・数でないものは null。 */
@@ -133,17 +133,17 @@ function parseAmount(text: string, empty: Mbb | null): Mbb | null {
 export type SettingField = 'sb' | 'ante' | 'rake' | Pos;
 export const FIELD_LABEL: Record<SettingField, string> = {
   sb: 'SB',
-  ante: 'アンティ',
-  rake: 'レーキ',
-  UTG: 'UTG のスタック',
-  HJ: 'HJ のスタック',
-  CO: 'CO のスタック',
-  BTN: 'BTN のスタック',
-  SB: 'SB のスタック',
-  BB: 'BB のスタック',
+  ante: 'Ante',
+  rake: 'Rake',
+  UTG: 'UTG の Stack',
+  HJ: 'HJ の Stack',
+  CO: 'CO の Stack',
+  BTN: 'BTN の Stack',
+  SB: 'SB の Stack',
+  BB: 'BB の Stack',
 };
 
-export const PLAYERS_REQUIRED = 'プレイヤーの人数を選択してください';
+export const PLAYERS_REQUIRED = 'Player の人数を選択してください';
 
 export type ParsedSettings ={ setup: HandSetup | null; rake: number | null; invalid: SettingField[] };
 
@@ -218,7 +218,7 @@ export function statusLine(state: State, pos: Pos): string {
   const toCall = state.currentBet - state.bets[pos];
   const parts = [`${pos} to act`, STREET_NAME[state.street]];
   if (toCall > 0) parts.push(`to call ${formatBb(Math.min(toCall, state.stacks[pos]))}`);
-  parts.push(`スタック ${formatBb(state.stacks[pos])}bb`);
+  parts.push(`Stack ${formatBb(state.stacks[pos])}bb`);
   return parts.join(' · ');
 }
 
@@ -272,7 +272,7 @@ export function sizePresets(state: State, legal: Legal): SizePreset[] {
     if (to < range.min || to >= range.max || out.some((o) => o.to === to)) continue;
     out.push({ label: r.label, sub: formatBb(to), to, allin: false });
   }
-  out.push({ label: 'オールイン', sub: formatBb(range.max), to: range.max, allin: true });
+  out.push({ label: 'All-in', sub: formatBb(range.max), to: range.max, allin: true });
   return out;
 }
 
@@ -299,16 +299,16 @@ function limperCount(state: State): number {
 export function aggressiveName(state: State, actions: readonly Action[]): string {
   const n = actions.filter((a) => a.street === state.street && (a.type === 'bet' || a.type === 'raise')).length;
   if (state.street === 'pf') {
-    if (n === 0) return limperCount(state) === 0 ? 'オープン' : 'レイズ';
+    if (n === 0) return limperCount(state) === 0 ? 'Open' : 'Raise';
     return `${n + 2}bet`;
   }
-  if (n === 0) return 'ベット';
-  return n === 1 ? 'レイズ' : `${n + 1}bet`;
+  if (n === 0) return 'Bet';
+  return n === 1 ? 'Raise' : `${n + 1}bet`;
 }
 
 /** 台のコールのボタンの名前: プリフロップでレイズが無いときの BB 以外のコールは「リンプ」 */
 export function callName(state: State, pos: Pos): string {
-  return state.street === 'pf' && state.currentBet === state.bb && pos !== 'BB' ? 'リンプ' : 'コール';
+  return state.street === 'pf' && state.currentBet === state.bb && pos !== 'BB' ? 'Limp' : 'Call';
 }
 
 /**
@@ -403,7 +403,7 @@ export function actionLog(setup: HandSetup, actions: readonly Action[]): LogItem
     let text = `${a.pos} ${ACTION_NAME[a.type]}`;
     if (a.type === 'call') text += ` ${formatBb(after.bets[a.pos] - prev.bets[a.pos])}`;
     if (a.to !== undefined) text += ` ${formatBb(a.to)}`;
-    if (a.type !== 'fold' && a.type !== 'check' && after.stacks[a.pos] === 0) text += ' オールイン';
+    if (a.type !== 'fold' && a.type !== 'check' && after.stacks[a.pos] === 0) text += ' All-in';
     return { index: i, street: a.street, pos: a.pos, text };
   });
 }
@@ -494,14 +494,14 @@ export function buildSubmission(d: Draft): Submission {
   for (const f of invalid) errors.push(`${FIELD_LABEL[f]} の値が正しくありません`);
 
   const heroCards = handCards(d.hands[d.hero]);
-  if (heroCards.length !== 2 || !isHandComplete(d.hands[d.hero])) errors.push(`Hero（${d.hero}）のハンドを入力してください`);
+  if (heroCards.length !== 2 || !isHandComplete(d.hands[d.hero])) errors.push(`Hero（${d.hero}）の Hand を入力してください`);
   for (const p of seats) {
-    if (p !== d.hero && !isHandComplete(d.hands[p])) errors.push(`${p} のハンドが途中です`);
+    if (p !== d.hero && !isHandComplete(d.hands[p])) errors.push(`${p} の Hand が途中です`);
   }
 
   const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
-  if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('ハンドを最後まで入力してください');
-  if (d.spotIndex === null) errors.push('スポットを選択してください');
+  if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
+  if (d.spotIndex === null) errors.push('Spot を選択してください');
   else if (d.villain === null) errors.push('Villain を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null || d.villain === null) {

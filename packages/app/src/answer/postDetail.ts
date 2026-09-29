@@ -238,7 +238,7 @@ export function answerErrorMessage(code: string): string {
   if (code.startsWith('paint_') || code.startsWith('size_')) return '回答の内容が正しくありません';
   switch (code) {
     case 'post_not_found':
-      return 'スポットが見つかりません';
+      return 'Spot が見つかりません';
     case 'forbidden':
       return 'この操作はできません';
     case 'not_authenticated':

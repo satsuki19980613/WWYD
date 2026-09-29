@@ -35,7 +35,7 @@ const tab = (page: Page, name: string): Locator => page.getByRole('tab', { name,
 const detailBox = (page: Page): Locator => page.locator('.res-detail');
 const table = (page: Page): Locator => page.locator('.ptable');
 
-test.describe('集計レンジ（06 章 §5.2）', () => {
+test.describe('集計 Range（06 章 §5.2）', () => {
   test('全体: タブ・上部バー・白枠の初期選択・マスの内訳', async ({ page }) => {
     await open(page);
     await expect(tab(page, '全体（2人）')).toHaveAttribute('aria-selected', 'true');
@@ -47,17 +47,17 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await expect(all).toContainText('全体');
     await expect(all).toContainText('9 combos');
     await expect(all).toContainText('0.7%');
-    await expect(all.locator('.cbar-legend')).toContainText('フォールド 33.3%');
-    await expect(all.locator('.cbar-legend')).toContainText('コール 50.0%');
-    await expect(all.locator('.cbar-legend')).toContainText('レイズ 16.7%');
+    await expect(all.locator('.cbar-legend')).toContainText('Fold 33.3%');
+    await expect(all.locator('.cbar-legend')).toContainText('Call 50.0%');
+    await expect(all.locator('.cbar-legend')).toContainText('Raise 16.7%');
     await expect(page.locator('.cbar').nth(1)).toContainText('6 combos');
 
     // 初期選択は Villain の実際のハンド（KJs、白枠）
     await expect(cell(page, 'KJs')).toHaveAttribute('aria-pressed', 'true');
     await expect(cell(page, 'KJs')).toHaveClass(/actual/);
     await expect(detailBox(page)).toContainText('KJs');
-    await expect(detailBox(page)).toContainText('レンジ内 0 / 2人');
-    await expect(detailBox(page)).toContainText('自分：レンジ外');
+    await expect(detailBox(page)).toContainText('Range 内 0 / 2人');
+    await expect(detailBox(page)).toContainText('自分：Range 外');
 
     // 濃さ: AA は 2 人 → 1、KK は 1 人 → 0.65、QQ は無色
     await expect(cell(page, 'AA').locator('.cfill')).toHaveCSS('opacity', '1');
@@ -67,24 +67,24 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await cell(page, 'AA').click();
     await expect(cell(page, 'AA')).toHaveAttribute('aria-pressed', 'true');
     await expect(cell(page, 'KJs')).toHaveAttribute('aria-pressed', 'false');
-    await expect(detailBox(page)).toContainText('レンジ内 2 / 2人');
-    await expect(detailBox(page)).toContainText('フォールド 0.0%（0人）');
-    await expect(detailBox(page)).toContainText('コール 75.0%（2人）');
-    await expect(detailBox(page)).toContainText('レイズ 25.0%（1人）');
-    await expect(detailBox(page)).toContainText('自分：コール 100%');
+    await expect(detailBox(page)).toContainText('Range 内 2 / 2人');
+    await expect(detailBox(page)).toContainText('Fold 0.0%（0人）');
+    await expect(detailBox(page)).toContainText('Call 75.0%（2人）');
+    await expect(detailBox(page)).toContainText('Raise 25.0%（1人）');
+    await expect(detailBox(page)).toContainText('自分：Call 100%');
   });
 
   test('自分のタブ', async ({ page }) => {
     await open(page);
     await tab(page, '自分').click();
     await cell(page, 'AA').click();
-    await expect(detailBox(page)).toContainText('コール 100%');
+    await expect(detailBox(page)).toContainText('Call 100%');
     // 自分のタブは自分のまとめだけ
     await expect(page.locator('.cbar')).toHaveCount(1);
     await expect(page.locator('.cbar')).toContainText('6 combos');
-    await expect(page.locator('.cbar-legend')).toContainText('コール 100.0%');
+    await expect(page.locator('.cbar-legend')).toContainText('Call 100.0%');
     await cell(page, 'KK').click();
-    await expect(detailBox(page)).toContainText('レンジ外');
+    await expect(detailBox(page)).toContainText('Range 外');
   });
 
   test('自分との差: 差の濃さで塗り、内訳に「差」', async ({ page }) => {
@@ -97,10 +97,10 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await expect(detailBox(page)).toContainText('差 50%');
   });
 
-  test('答え合わせ（実際のアクション）を集計の先頭に出す', async ({ page }) => {
+  test('答え合わせ（実際の Action）を集計の先頭に出す', async ({ page }) => {
     await open(page);
     const first = page.locator('.res-agg > *').first();
-    await expect(first).toContainText('実際のアクション');
+    await expect(first).toContainText('実際の Action');
   });
 
   test('回答 0 件は「回答なし」', async ({ page }) => {
@@ -117,53 +117,53 @@ test.describe('集計レンジ（06 章 §5.2）', () => {
     await expect(cell(page, 'AKs')).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('ArrowDown');
     await expect(cell(page, 'KK')).toHaveAttribute('aria-pressed', 'true');
-    await expect(detailBox(page)).toContainText('レンジ内 1 / 2人');
+    await expect(detailBox(page)).toContainText('Range 内 1 / 2人');
   });
 });
 
-test.describe('実際のアクションとハンドヒストリー（06 章 §5.3・§5.4）', () => {
-  test('Villain の実際のアクションとハンド', async ({ page }) => {
+test.describe('実際の Action と Hand History（06 章 §5.3・§5.4）', () => {
+  test('Villain の実際の Action と Hand', async ({ page }) => {
     await open(page);
     const box = page.locator('.res-actual');
-    await expect(box).toContainText('Villain（BB）実際のアクション');
-    await expect(box).toContainText('コール');
+    await expect(box).toContainText('Villain（BB）実際の Action');
+    await expect(box).toContainText('Call');
     await expect(box).toContainText('KJs');
-    await expect(box.getByLabel('スペードのK')).toBeVisible();
+    await expect(box.getByLabel('Spade の K')).toBeVisible();
   });
 
-  test('マックと不明', async ({ page }) => {
+  test('Muck と不明', async ({ page }) => {
     await open(page, detailJson({ ...hs1(), known_cards: { BB: 'muck' } }, { viewer: 'answered', id: ID, answerCount: 2, aggregate: AGG, myAnswer: MY }));
-    await expect(page.locator('.res-actual')).toContainText('マック');
+    await expect(page.locator('.res-actual')).toContainText('Muck');
     await expect(cell(page, 'AA')).toHaveAttribute('aria-pressed', 'true');
-    await expect(table(page)).toContainText('マック');
+    await expect(table(page)).toContainText('Muck');
   });
 
-  test('最後の状態から始まり、最初から再生できる。ログに出題タグと実際のアクションの強調', async ({ page }) => {
+  test('最後の状態から始まり、最初から再生できる。ログに出題タグと実際の Action の強調', async ({ page }) => {
     await open(page);
     await expect(page.getByText('15 / 15 手目')).toBeVisible();
-    await expect(table(page)).toContainText('ショーダウン');
+    await expect(table(page)).toContainText('Showdown');
     await expect(table(page)).toContainText('52.1bb');
     // 終了時は Hero と Villain のハンドを公開
-    await expect(table(page).getByLabel('ダイヤのA')).toBeVisible();
-    await expect(table(page).getByLabel('スペードのJ')).toBeVisible();
+    await expect(table(page).getByLabel('Diamond の A')).toBeVisible();
+    await expect(table(page).getByLabel('Spade の J')).toBeVisible();
     await expect(page.locator('.hlog-tag')).toHaveText('出題');
-    await expect(page.locator('.hlog-list li.actual')).toHaveText('BB コール 6.5');
+    await expect(page.locator('.hlog-list li.actual')).toHaveText('BB Call 6.5');
 
     await page.getByRole('button', { name: '最初から' }).click();
     await expect(page.getByText('0 / 15 手目')).toBeVisible();
-    await expect(table(page)).not.toContainText('ショーダウン');
+    await expect(table(page)).not.toContainText('Showdown');
     // Hero のハンドは表向きのまま、Villain は伏せる
-    await expect(table(page).getByLabel('ダイヤのA')).toBeVisible();
-    await expect(table(page).getByLabel('スペードのJ')).toHaveCount(0);
+    await expect(table(page).getByLabel('Diamond の A')).toBeVisible();
+    await expect(table(page).getByLabel('Spade の J')).toHaveCount(0);
     await expect(page.locator('.hlog-list li')).toHaveCount(0);
 
     await page.getByRole('button', { name: '1手進む' }).click();
     await expect(page.getByText('1 / 15 手目')).toBeVisible();
-    await expect(page.locator('.hlog-list li.latest')).toHaveText('UTG フォールド');
+    await expect(page.locator('.hlog-list li.latest')).toHaveText('UTG Fold');
   });
 });
 
-test.describe('次のスポット（14 章）', () => {
+test.describe('次の Spot（14 章）', () => {
   const row = (id: string, o: Record<string, unknown> = {}) => ({
     id,
     created_at: '2026-09-28T00:00:00.000000+00:00',
@@ -192,13 +192,13 @@ test.describe('次のスポット（14 章）', () => {
       }),
     );
     await page.goto(RESULT);
-    await expect(page.getByRole('link', { name: '次のスポット' })).toHaveAttribute('href', `/s/${NEXT}`);
+    await expect(page.getByRole('link', { name: '次の Spot' })).toHaveAttribute('href', `/s/${NEXT}`);
   });
 
   test('候補が無ければ出さない', async ({ page }) => {
     await open(page);
     await expect(cell(page, 'AA')).toBeVisible();
-    await expect(page.getByRole('link', { name: '次のスポット' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '次の Spot' })).toHaveCount(0);
   });
 });
 
@@ -222,10 +222,10 @@ test.describe('操作（06 章 §5.5）', () => {
     const be = await open(page, authorDetail());
     await expect(page.getByRole('tab')).toHaveText(['全体（2人）', '自分', '自分との差']);
     await cell(page, 'QQ').click();
-    await expect(detailBox(page)).toContainText('自分：フォールド 25% / レイズ 75%');
+    await expect(detailBox(page)).toContainText('自分：Fold 25% / Raise 75%');
     await tab(page, '自分').click();
-    await expect(detailBox(page)).toContainText('フォールド 25% / レイズ 75%');
-    await expect(page.getByRole('link', { name: /想定レンジ/ })).toHaveCount(0);
+    await expect(detailBox(page)).toContainText('Fold 25% / Raise 75%');
+    await expect(page.getByRole('link', { name: /想定 Range/ })).toHaveCount(0);
 
     await page.getByRole('button', { name: '削除' }).click();
     await page.getByRole('button', { name: 'やめる' }).click();
@@ -235,20 +235,20 @@ test.describe('操作（06 章 §5.5）', () => {
 });
 
 test.describe('スマホ（06 章 §5.1）', () => {
-  test('集計 / ハンドヒストリーのタブ。切り替えてもリプレイの位置と選んだマスが残る @sp', async ({ page }) => {
+  test('集計 / Hand History のタブ。切り替えても Replay の位置と選んだマスが残る @sp', async ({ page }) => {
     await open(page);
     await expect(tab(page, '集計')).toHaveAttribute('aria-selected', 'true');
     await cell(page, 'AA').tap();
-    await expect(detailBox(page)).toContainText('レンジ内 2 / 2人');
+    await expect(detailBox(page)).toContainText('Range 内 2 / 2人');
 
-    await tab(page, 'ハンドヒストリー').tap();
+    await tab(page, 'Hand History').tap();
     await expect(page.getByText('15 / 15 手目')).toBeVisible();
     await page.getByRole('button', { name: '1手戻る' }).tap();
     await expect(page.getByText('14 / 15 手目')).toBeVisible();
 
     await tab(page, '集計').tap();
     await expect(cell(page, 'AA')).toHaveAttribute('aria-pressed', 'true');
-    await tab(page, 'ハンドヒストリー').tap();
+    await tab(page, 'Hand History').tap();
     await expect(page.getByText('14 / 15 手目')).toBeVisible();
   });
 });

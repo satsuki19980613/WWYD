@@ -87,7 +87,7 @@
 .infomark::after { content: ''; position: absolute; inset: -10px; }
 .infomark:hover { background: rgba(58, 230, 255, 0.12); }
 
-/* ---- 見出し = ハザードティック＋mono（シグネチャー 3・5） ---- */
+/* ---- 見出し = mono（シグネチャー 5。ハザードティックは 2026-09-29 にさつきの指示でやめた） ---- */
 .sec-h {
   display: flex;
   align-items: center;
@@ -98,13 +98,6 @@
   font-weight: 400;
   letter-spacing: 0.16em;
   color: var(--dim);
-}
-.sec-h::before {
-  content: '';
-  width: 16px;
-  height: 11px;
-  flex: none;
-  background: repeating-linear-gradient(-45deg, var(--yellow) 0 3px, var(--bg) 3px 6px);
 }
 .mono-lbl {
   font-family: var(--mono);
@@ -368,3 +361,52 @@
 .act-swatch.check, .act-swatch.call { background: var(--act-call); }
 .act-swatch.s1 { background: var(--act-s1-stripe), var(--act-s1); }
 .act-swatch.off { background: var(--cell-off); }
+
+/* ハンドヒストリーのボタン（スマホ。卓の左上の空き。押すとモーダル。14 章） */
+.hist-btn {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(58, 230, 255, 0.45);
+  background: var(--surface);
+  color: var(--cyan);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hist-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* ヘッダーの下書きのボタン（件数のバッジ。14 章 §3.5） */
+.hdr-drafts { position: relative; color: var(--fg); text-decoration: none; }
+.hdr-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--yellow);
+  color: var(--yellow-ink);
+  font-size: 10px;
+  line-height: 1;
+}
+/* 下書きに保存しますか: 3 つのボタン */
+.draft-dlg-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--s2); }
+.draft-dlg-btns .btn { min-height: 44px; padding: 8px 4px; font-size: 14px; }
+.btn.red-text { color: var(--red); }
+/* 下書きがいっぱい: 消す下書きを選ぶ */
+.draft-pick { margin: var(--s3) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--s2); }
+.draft-pick li { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s3); border: 1px solid var(--line); background: var(--surface); }
+.draft-pick-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.draft-pick-text b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.draft-pick-text span { font-size: 11px; color: var(--dim); }
+.drafts-count { margin: 0 0 var(--s3); font-size: 12px; color: var(--dim); text-align: right; }

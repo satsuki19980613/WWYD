@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { APP_STATES, type AppState } from './appState.ts';
 import { useAuth } from './auth/useAuth.ts';
 import { ConfirmDialog } from './components/ConfirmDialog.tsx';
@@ -6,7 +6,10 @@ import { Header, type HeaderTitle } from './components/Header.tsx';
 import { InfoModal } from './components/InfoModal.tsx';
 import { useToast } from './components/Toast.tsx';
 import { LegalScreen } from './legal/LegalScreen.tsx';
+import { LeaveDraftDialog } from './post/DraftDialogs.tsx';
 import { useLeaveGuard } from './post/draftStore.ts';
+import { clearDrafts, setActiveUser, useSavedDrafts } from './post/savedDrafts.ts';
+import { DraftsScreen } from './screens/DraftsScreen.tsx';
 import { INFO_SECTIONS, infoSectionFor, type InfoSectionId } from './info/infoSections.ts';
 import { useLocation, useRoute, useScrollTopOnNavigate, type Route } from './router.ts';
 import { BootScreen } from './screens/BootScreen.tsx';
@@ -37,8 +40,9 @@ const reload = (): void => window.location.reload();
  * 画面名は見出しにしない。
  */
 const SCREEN_TITLE: Partial<Record<Route['name'], HeaderTitle>> = {
-  list: { text: 'スポット一覧', heading: true },
-  new: { text: 'スポット投稿', heading: true },
+  list: { text: 'Spot 一覧', heading: true },
+  new: { text: 'Spot 投稿', heading: true },
+  drafts: { text: '下書き', heading: true },
   answer: { text: '回答', heading: false },
   result: { text: '結果', heading: false },
   terms: { text: '利用規約', heading: false },
@@ -52,6 +56,10 @@ export function App(): JSX.Element {
 
   const auth = useAuth();
   const state = devStateFrom(search) ?? auth.state;
+  // 下書きはログインしている利用者ごと（14 章 §3.5）
+  const draftUser = state === 'ready' ? auth.userId : null;
+  useEffect(() => setActiveUser(draftUser), [draftUser]);
+  const drafts = useSavedDrafts();
 
   const [info, setInfo] = useState<InfoSectionId | null>(null);
   const [deleting, setDeleting] = useState<{ busy: boolean } | null>(null);
@@ -59,9 +67,11 @@ export function App(): JSX.Element {
 
   const confirmDeleteAccount = (): void => {
     setDeleting({ busy: true });
+    const uid = auth.userId;
     void auth.deleteAccount().then((ok) => {
       setDeleting(null);
       if (!ok) toast('削除できませんでした');
+      else if (uid) clearDrafts(uid);
     });
   };
 
@@ -92,11 +102,13 @@ export function App(): JSX.Element {
         title={state === 'ready' || isLegal ? SCREEN_TITLE[route.name] : undefined}
         back={showBack}
         showAccount={state === 'ready'}
+        drafts={state === 'ready' ? drafts.length : undefined}
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}
         onLogout={() => void auth.signOut()}
         onDeleteAccount={() => setDeleting({ busy: false })}
       />
       <DraftLeaveGuard />
+      <LeaveDraftDialog active={state === 'ready' && route.name === 'new'} />
       <main className="app-main">
         {body}
       </main>
@@ -124,6 +136,8 @@ function RouteScreen(props: { route: Route }): JSX.Element {
       return <ListScreen />;
     case 'new':
       return <NewPostScreen />;
+    case 'drafts':
+      return <DraftsScreen />;
     case 'spot':
     case 'answer':
     case 'result':

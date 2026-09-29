@@ -14,7 +14,7 @@ export function CardPicker(props: {
 }): JSX.Element {
   return (
     <Modal title={props.title} tone="info" onClose={props.onClose}>
-      <div className="picker" role="grid" aria-label="カード">
+      <div className="picker" role="grid" aria-label="Card">
         {[...SUITS].map((s) => (
           <div key={s} className="picker-row" role="row">
             {[...RANKS].map((r) => {

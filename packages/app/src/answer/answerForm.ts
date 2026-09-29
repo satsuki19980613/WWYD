@@ -69,7 +69,7 @@ export function presetActive(p: Preset, to: Mbb | null, spot: SizeSpot): boolean
 export function sizeSummary(to: Mbb | null, spot: SizeSpot): { amount: string; pct: string } {
   if (to === null) return { amount: '—', pct: '' };
   const pct = pctFromSize(spot.currentBet, spot.potBase, to, spot.maxTo);
-  return { amount: `${formatBb(to)}bb`, pct: pct === 'allin' ? 'オールイン' : `${pct}% pot` };
+  return { amount: `${formatBb(to)}bb`, pct: pct === 'allin' ? 'All-in' : `${pct}% pot` };
 }
 
 export function usesS1(paint: Paint): boolean {
@@ -88,7 +88,7 @@ export function submitErrors(paint: Paint, keys: readonly AnswerKey[], to: Mbb |
   if (code === null) return [];
   if (code === 'paint_empty') return ['1マス以上塗ってください'];
   if (code === 'size_out_of_range' && min !== null && max !== null) {
-    return [`サイズを ${formatBb(min)}〜${formatBb(max)}bb にしてください`];
+    return [`Size を ${formatBb(min)}〜${formatBb(max)}bb にしてください`];
   }
   return ['回答の内容が正しくありません'];
 }

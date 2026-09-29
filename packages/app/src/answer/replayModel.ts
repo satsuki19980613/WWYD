@@ -58,7 +58,7 @@ export type SeatView = {
 export function lastActionText(s: State, p: Pos): string | null {
   const a = s.lastAction[p];
   if (!a) return s.folded.has(p) ? ACTION_NAME.fold : null;
-  if (a.type !== 'fold' && s.stacks[p] === 0) return 'オールイン';
+  if (a.type !== 'fold' && s.stacks[p] === 0) return 'All-in';
   return a.to === undefined ? ACTION_NAME[a.type] : `${ACTION_NAME[a.type]} ${formatBb(a.to)}`;
 }
 

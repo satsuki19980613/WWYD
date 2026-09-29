@@ -291,7 +291,7 @@
 .ad-chip b { font-family: var(--disp); font-size: 16px; font-weight: 700; }
 .ad-chip span { font-size: 11px; color: var(--dim); }
 .ad-chip[aria-pressed='true'] { border-color: var(--yellow); background: rgba(252, 238, 10, 0.1); color: var(--yellow); }
-.ad-chip.allin b { font-family: var(--body); font-size: 11px; line-height: 1.2; }
+.ad-chip.allin b { font-size: 13px; }
 /* Fold to / Check to */
 .ad-skip { display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .ad-skip::-webkit-scrollbar { display: none; }
@@ -693,24 +693,5 @@
 .pf.sp .pseat-stack { font-size: 13px; }
 .pf.sp .ptable-felt { inset: 38px 20% 50px; }
 
-/* スマホのハンドヒストリーのボタン（卓の左上の空き。押すとモーダル。14 章 §3.1） */
 .pf-actsec { position: relative; }
-.pf-histbtn {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(58, 230, 255, 0.45);
-  background: var(--surface);
-  color: var(--cyan);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.pf-histbtn:disabled { opacity: 0.35; cursor: default; }
 .modal .hlog { grid-template-columns: 1fr; }

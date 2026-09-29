@@ -148,7 +148,7 @@
 }
 
 /* ---- リプレイの操作 ---- */
-.replay { display: flex; flex-direction: column; gap: var(--s3); }
+.replay { position: relative; display: flex; flex-direction: column; gap: var(--s3); }
 .rp-ctrl { display: flex; flex-direction: column; gap: var(--s2); }
 .rp-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); }
 .rp-btns .btn { font-size: 14px; padding: 8px 4px; }
@@ -472,7 +472,8 @@
 .ans.sp .mixbar { height: 24px; }
 .ans.sp .rcell-lbl { font-size: 9px; letter-spacing: -0.04em; }
 .ans.sp .rgrid { gap: 1px; }
-.ans.sp .ptable { height: 330px; }
+/* ログはモーダルなので、空いた分を卓に使う（画面の高さに合わせる。14 章） */
+.ans.sp .ptable { height: clamp(330px, calc(100dvh - 380px), 520px); }
 .ans.sp .pseat-plate { min-width: 72px; padding: 3px 6px; }
 .ans.sp .pseat-stack { font-size: 13px; }
 .ans.sp .ptable-felt { inset: 38px 20% 50px; }

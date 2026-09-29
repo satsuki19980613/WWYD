@@ -42,7 +42,7 @@ export type RowView = { pos: Pos | null; street: Street | null; ok: boolean; mis
 export type ReviewEval = { draft: Draft; rows: RowView[]; issues: string[] };
 
 /** 投稿できないハンド（Hero のフロップ以降のアクションが無い）を読み込んだときの表示 */
-export const NO_SPOT_MESSAGE = 'フロップ以降の Hero のアクションがないハンドです';
+export const NO_SPOT_MESSAGE = 'Flop 以降の Hero の Action がない Hand です';
 
 /**
  * 読み込んだ時点で、投稿できるハンドかを判定する（06 章 §3.9）。スポットは Hero のフロップ以降のアクション
@@ -92,8 +92,8 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
   const hands = { ...emptyDraft().hands };
   for (const p of POSITIONS) {
     const h = rv.hands[p];
-    if (h === '') issues.push(`${p} のハンドがありません`);
-    else if (!isHandComplete(h) || !take(handCards(h))) issues.push(`${p} のハンドが正しくありません`);
+    if (h === '') issues.push(`${p} の Hand がありません`);
+    else if (!isHandComplete(h) || !take(handCards(h))) issues.push(`${p} の Hand が正しくありません`);
     else hands[p] = h;
   }
   const board: Card[] = [];
@@ -101,7 +101,7 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
     if (!take([c])) break;
     board.push(c);
   }
-  if (board.length < rv.board.length || (board.length > 0 && board.length < 3)) issues.push('ボードが正しくありません');
+  if (board.length < rv.board.length || (board.length > 0 && board.length < 3)) issues.push('Board が正しくありません');
   if (board.length > 0 && board.length < 3) board.length = 0;
 
   let draft: Draft = applyT4Game({ ...base, hero: rv.hero, hands, board, actions: [], spotIndex: null, villain: null }, rv.game);
@@ -134,8 +134,8 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
   // 1 行の読み落としで以降がすべてずれるので、最初の 1 か所だけ知らせる（行は赤で示す）
   const firstMismatch = views.findIndex((v) => v.ok && v.mismatch);
   if (firstMismatch >= 0) issues.push(`${firstMismatch + 1}手目から席が画像の読み取りと合いません`);
-  if (stopped >= 0) issues.push(`${stopped + 1}手目のアクションが正しくありません`);
-  else if (phaseOf(setup, actions, board).kind !== 'done') issues.push(`${actions.length + 1}手目以降のアクションが足りません`);
+  if (stopped >= 0) issues.push(`${stopped + 1}手目の Action が正しくありません`);
+  else if (phaseOf(setup, actions, board).kind !== 'done') issues.push(`${actions.length + 1}手目以降の Action が足りません`);
 
   draft = normalizeSpot({ ...draft, actions });
   // 最後まで再生できたのに出題できるアクションが無い（Hero の席の直し間違いなど）

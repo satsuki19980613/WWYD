@@ -87,3 +87,12 @@ export function TrashIcon(): JSX.Element {
     </svg>
   );
 }
+
+/** 下書き（書きかけの紙） */
+export function DraftIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M11.5 3H5.5v14h9V6z M11.5 3v3h3 M8 10h4.5 M8 13h3" {...stroke} />
+    </svg>
+  );
+}

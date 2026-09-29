@@ -41,7 +41,7 @@ export function CardKeyboard(props: {
   const press = (k: CardKey) => () => props.onKey(k);
 
   return (
-    <div ref={ref} className="ckb" role="group" aria-label="カードキーボード">
+    <div ref={ref} className="ckb" role="group" aria-label="Card キーボード">
       <div className="ckb-head">
         <span className="ckb-seat">{props.seat}</span>
         <span className="ckb-nav">
@@ -73,7 +73,7 @@ export function CardKeyboard(props: {
           <KeyButton key={k} label={k} onPress={press(k)} />
         ))}
         <div className="ckb-edit">
-          <KeyButton label="C" aria="ハンドを消す" onPress={press('C')} />
+          <KeyButton label="C" aria="Hand を消す" onPress={press('C')} />
           <KeyButton label="⌫" aria="1 文字消す" onPress={press('BS')} />
         </div>
         <FlickKey className="rank" map={RANK_FLICK} render={(v) => v} label="Q（フリックで K T J）" onKey={props.onKey} />
@@ -81,7 +81,7 @@ export function CardKeyboard(props: {
           className="suit"
           map={SUIT_FLICK}
           render={(v) => SUIT_SYMBOL[v] ?? ''}
-          label="スート（フリックで ♥ ♦ ♣）"
+          label="Suit（フリックで ♥ ♦ ♣）"
           onKey={props.onKey}
         />
       </div>

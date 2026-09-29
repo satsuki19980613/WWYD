@@ -27,12 +27,12 @@ import { T4_GAME_ORDER, T4_GAMES, type T4Game } from './t4Games.ts';
 type EditRow = ReviewRow & { key: number; text: string };
 
 const VERBS: readonly { value: OcrVerb; label: string }[] = [
-  { value: 'fold', label: 'フォールド' },
-  { value: 'check', label: 'チェック' },
-  { value: 'call', label: 'コール' },
-  { value: 'bet', label: 'ベット' },
-  { value: 'raise', label: 'レイズ' },
-  { value: 'allin', label: 'オールイン' },
+  { value: 'fold', label: 'Fold' },
+  { value: 'check', label: 'Check' },
+  { value: 'call', label: 'Call' },
+  { value: 'bet', label: 'Bet' },
+  { value: 'raise', label: 'Raise' },
+  { value: 'allin', label: 'All-in' },
 ];
 const WITH_AMOUNT: ReadonlySet<OcrVerb> = new Set(['bet', 'raise', 'allin']);
 
@@ -91,9 +91,9 @@ export function OcrReview(props: {
   const result = (
     <div className="ocr-rv-form">
       <section className="pf-sec">
-        <h3 className="sec-h">T4 のゲーム</h3>
+        <h3 className="sec-h">T4 の Game</h3>
         <ChipGroup
-          label="T4 のゲーム"
+          label="T4 の Game"
           variant="segment"
           items={T4_GAME_ORDER.map((g) => ({ value: g, label: `${T4_GAMES[g].label}（${T4_GAMES[g].capBb}bb cap）` }))}
           value={game}
@@ -102,7 +102,7 @@ export function OcrReview(props: {
       </section>
 
       <section className="pf-sec">
-        <h3 className="sec-h">ハンド</h3>
+        <h3 className="sec-h">Hand</h3>
         <div className="ocr-rv-hands" role="radiogroup" aria-label="Hero">
           {POSITIONS.map((p) => (
             <div key={p} className="ocr-rv-seat">
@@ -126,7 +126,7 @@ export function OcrReview(props: {
       </section>
 
       <section className="pf-sec">
-        <h3 className="sec-h">ボード</h3>
+        <h3 className="sec-h">Board</h3>
         <div className="pf-board">
           {[0, 1, 2, 3, 4].map((i) => {
             const card = board[i];
@@ -152,7 +152,7 @@ export function OcrReview(props: {
             );
           })}
           {board.length > 0 && (
-            <button type="button" className="icon-btn ocr-rv-x" aria-label="最後のカードを消す" onClick={() => setBoard(board.slice(0, -1))}>
+            <button type="button" className="icon-btn ocr-rv-x" aria-label="最後の Card を消す" onClick={() => setBoard(board.slice(0, -1))}>
               ×
             </button>
           )}
@@ -160,7 +160,7 @@ export function OcrReview(props: {
       </section>
 
       <section className="pf-sec">
-        <h3 className="sec-h">アクション</h3>
+        <h3 className="sec-h">Action</h3>
         <ol className="ocr-rv-rows">
           {rows.map((row, i) => {
             const v = ev.rows[i];
@@ -173,7 +173,7 @@ export function OcrReview(props: {
                 <span className="ocr-rv-actor" style={v?.pos && !v.mismatch ? { color: POS_VAR[v.pos] } : undefined}>
                   {v?.pos ?? '—'}
                 </span>
-                <Select label={`${i + 1}手目のアクション`} options={VERBS} value={row.verb} onChange={(verb) => patchRow(i, { verb })} />
+                <Select label={`${i + 1}手目の Action`} options={VERBS} value={row.verb} onChange={(verb) => patchRow(i, { verb })} />
                 {WITH_AMOUNT.has(row.verb) ? (
                   <label className="ocr-rv-amt">
                     <input
@@ -182,7 +182,7 @@ export function OcrReview(props: {
                       inputMode="decimal"
                       aria-label={`${i + 1}手目の額（bb）`}
                       value={row.text}
-                      placeholder={row.verb === 'allin' ? 'オールイン' : ''}
+                      placeholder={row.verb === 'allin' ? 'All-in' : ''}
                       onChange={(e) => patchRow(i, { text: e.currentTarget.value })}
                     />
                     <span className="mono-lbl">bb</span>
@@ -206,7 +206,7 @@ export function OcrReview(props: {
           })}
         </ol>
         <button type="button" className="btn ghost auto" onClick={() => insertRow(rows.length)}>
-          アクションを足す
+          Action を足す
         </button>
       </section>
 
@@ -261,7 +261,7 @@ export function OcrReview(props: {
       )}
       {slot !== null && (
         <CardPicker
-          title={`ボード ${slot + 1}枚目`}
+          title={`Board ${slot + 1}枚目`}
           used={used(undefined, slot)}
           onPick={(c) => {
             const next = [...board];

@@ -59,7 +59,7 @@ export const ResultGrid = memo(function ResultGrid(props: {
   };
 
   return (
-    <div ref={grid} className="rgrid result" role="group" aria-label="レンジ表" onKeyDown={onKeyDown}>
+    <div ref={grid} className="rgrid result" role="group" aria-label="Range 表" onKeyDown={onKeyDown}>
       {Array.from({ length: CELL_COUNT }, (_, idx) => {
         const view = props.views[idx] ?? { ratio: null, opacity: 0 };
         const selected = idx === props.selected;

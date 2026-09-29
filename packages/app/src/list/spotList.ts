@@ -42,10 +42,10 @@ export const TAB_ITEMS: readonly { value: ListTab; label: string }[] = [
 ];
 
 export const STREET_LABEL: Record<Street, string> = {
-  pf: 'プリフロップ',
-  flop: 'フロップ',
-  turn: 'ターン',
-  river: 'リバー',
+  pf: 'Preflop',
+  flop: 'Flop',
+  turn: 'Turn',
+  river: 'River',
 };
 
 export const STREET_ITEMS: readonly { value: StreetFilter; label: string }[] = [
@@ -143,7 +143,7 @@ export function appendPage(prev: readonly PostRow[], page: readonly PostRow[]): 
 export function formatLabel(row: Pick<PostRow, 'fmt' | 'effective_stack'>): string {
   const mbb = bbToMbb(Number(row.effective_stack));
   const stack = mbb === null ? String(row.effective_stack) : formatBb(mbb);
-  return `${row.fmt === 'mtt' ? 'MTT' : 'キャッシュ'} · ${stack}bb`;
+  return `${row.fmt === 'mtt' ? 'MTT' : 'Cash'} · ${stack}bb`;
 }
 
 const MINUTE = 60_000;
@@ -187,5 +187,5 @@ export function cardAction(row: Pick<PostRow, 'id' | 'is_mine' | 'answered_by_me
 /** 空のときの表示（06 章 §2.3）。自分の投稿・ストリートすべてのときだけ投稿ボタンを添える。 */
 export function emptyState(q: ListQuery): { label: string; showPost: boolean } {
   if (q.tab === 'mine' && q.street === 'all') return { label: '投稿なし', showPost: true };
-  return { label: '該当スポットなし', showPost: false };
+  return { label: '該当 Spot なし', showPost: false };
 }

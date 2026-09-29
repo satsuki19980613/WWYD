@@ -64,7 +64,7 @@ export function initialCell(d: PostDetail): number {
 
 /** アクションのキーの名前（s1 はベットかレイズ）。 */
 export function keyNames(d: PostDetail): KeyNames {
-  return { fold: 'フォールド', check: 'チェック', call: 'コール', s1: d.post.s1Label === 'bet' ? 'ベット' : 'レイズ' };
+  return { fold: 'Fold', check: 'Check', call: 'Call', s1: d.post.s1Label === 'bet' ? 'Bet' : 'Raise' };
 }
 
 /** Villain の実際のアクション（停止位置のアクション）。 */
@@ -99,7 +99,7 @@ export function emptyLabel(d: PostDetail, view: ResultView): string | null {
 
 /** ミックスの文字列「コール 50% / レイズ 50%」。レンジ外は「レンジ外」。 */
 export function mixText(mix: Mix | null, names: KeyNames): string {
-  if (!mix) return 'レンジ外';
+  if (!mix) return 'Range 外';
   return ANSWER_KEYS.filter((k) => mix[k] > 0)
     .map((k) => `${names[k]} ${mixUnitsToPercent(mix[k])}%`)
     .join(' / ');
@@ -231,7 +231,7 @@ export function resultFrames(d: PostDetail): ResultFrame[] {
 function endNote(d: PostDetail): string | null {
   try {
     const r = replay(d.hand.setup, d.hand.actions, d.hand.board.length).result;
-    return r.kind === 'showdown' ? 'ショーダウン' : `${r.winner} ポット獲得`;
+    return r.kind === 'showdown' ? 'Showdown' : `${r.winner} Pot 獲得`;
   } catch {
     return null;
   }
