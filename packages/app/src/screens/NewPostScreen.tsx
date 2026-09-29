@@ -12,10 +12,12 @@ import {
   buildSubmission,
   canReplay,
   clearActions,
+  makesPreflopAllin,
   neighborSeat,
   normalizeSpot,
   parseSettings,
   phaseOf,
+  PREFLOP_ALLIN,
   removeBoardFrom,
   seatsOf,
   selectSpot,
@@ -75,9 +77,15 @@ export function NewPostScreen(): JSX.Element {
   const [future, setFuture] = useState<readonly Action[]>([]);
   const advanceFuture = (as: readonly Action[]): void =>
     setFuture((f) => (as.every((a, k) => sameAction(a, f[k])) ? f.slice(as.length) : []));
+  // Preflop で All-in になる Action は受け付けない（投稿できないハンドになる。2026-09-29 さつき）
+  const refused = (as: readonly Action[]): boolean => {
+    if (!makesPreflopAllin(getDraft(), as)) return false;
+    toast(PREFLOP_ALLIN);
+    return true;
+  };
   const redo = (): void => {
     const next = future[0];
-    if (!next || !canReplay(phase, next)) return;
+    if (!next || !canReplay(phase, next) || refused([next])) return;
     setFuture((f) => f.slice(1));
     update((x) => addAction(x, next));
   };
@@ -131,10 +139,12 @@ export function NewPostScreen(): JSX.Element {
       phase={phase}
       mobile={mobile}
       onAction={(a: Action) => {
+        if (refused([a])) return;
         advanceFuture([a]);
         update((x) => addAction(x, a));
       }}
       onActions={(as) => {
+        if (refused(as)) return;
         advanceFuture(as);
         update((x) => addActions(x, as));
       }}
@@ -165,7 +175,6 @@ export function NewPostScreen(): JSX.Element {
     <SpotSection
       draft={d}
       onSelectSpot={(i) => update((x) => selectSpot(x, i))}
-      onVillain={(v) => update((x) => ({ ...x, villain: v }))}
       onTitle={(title) => update((x) => ({ ...x, title }))}
     />
   );
@@ -243,7 +252,7 @@ export function NewPostScreen(): JSX.Element {
           <ErrorList errors={errors} />
           <div className="btn-row">
             <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
-              戻る
+              Back
             </button>
             {last ? (
               submitButton
@@ -269,7 +278,7 @@ function submissionErrors(d: Draft): string[] {
 function stepDone(d: Draft, handDone: boolean): boolean[] {
   const settingsOk = parseSettings(d).invalid.length === 0;
   const handsOk = d.players !== null && seatsOf(d).every((p) => isHandComplete(d.hands[p])) && d.hands[d.hero].length === 4;
-  return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.villain !== null && d.title.trim() !== ''];
+  return [settingsOk, handsOk, handDone, d.spotIndex !== null && d.title.trim() !== ''];
 }
 
 function sameAction(a: Action, b: Action | undefined): boolean {

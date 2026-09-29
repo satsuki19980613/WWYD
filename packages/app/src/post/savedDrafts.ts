@@ -51,14 +51,13 @@ export function sanitizeDraft(raw: unknown): Draft {
     actions: Array.isArray(raw.actions) ? (raw.actions as Draft['actions']) : [],
     board: Array.isArray(raw.board) ? (raw.board as Draft['board']).filter((c) => typeof c === 'string') : [],
     spotIndex: typeof raw.spotIndex === 'number' ? raw.spotIndex : null,
-    villain: POSITIONS.find((p) => p === raw.villain) ?? null,
     title: str(raw.title, ''),
   };
   try {
     phaseOf(parseSettings(d).setup, d.actions, d.board);
     return d;
   } catch {
-    return { ...d, actions: [], board: [], spotIndex: null, villain: null };
+    return { ...d, actions: [], board: [], spotIndex: null };
   }
 }
 

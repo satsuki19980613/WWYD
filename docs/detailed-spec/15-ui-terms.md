@@ -35,7 +35,7 @@
 
 - 英単語と日本語の間は半角スペース（「Hero の Hand」「Flop 以降」）。括弧・句読点の隣には入れない（「（Spot）」「Fold、Check」）。
 - 大文字で始める（「Fold」「Range 外」）。ボタンの額は後ろに（「Call 1.9」「3bet 45」）。
-- 画面名: 「Spot 一覧」「Spot 投稿」。投稿のステップ: 「基本設定」「Player」「Action」「Spot」。回答のタブ: 「Replay」「Range」。集計のタブ: 「集計」「Hand History」。
+- 画面名: 「List」「Post」（2026-09-29）。投稿のボタン: 「＋ Post」。戻るボタン: 「Back」。投稿のステップ: 「基本設定」「Player」「Action」「Spot」。回答のタブ: 「Replay」「Range」。集計のタブ: 「集計」「Hand History」。
 - ログ・ハンドヒストリーの 1 行: 「BTN Raise 2.5」「BB Call 1.5」「SB Raise 100 All-in」。終わり: 「BTN Pot 獲得」「Showdown」。
 - 札の読み上げ: 「Diamond の A」。
 - 利用者が書くタイトルは置き換えない。

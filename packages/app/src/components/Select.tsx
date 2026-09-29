@@ -61,7 +61,8 @@ export function Select<T extends string>(props: {
   };
 
   return (
-    <div className={`select ${open ? 'open' : ''}`}>
+    // 選べない（候補が 1 つで自動で決まった）ときも、値は薄くせずに見せる（未選択に見えないように）
+    <div className={`select ${open ? 'open' : ''}${props.disabled && current ? ' fixed' : ''}`}>
       <button
         ref={triggerRef}
         type="button"

@@ -14,7 +14,7 @@ function rawActions(actions: Action[]): Raw[] {
 
 export const STACKS100 = { UTG: 100, HJ: 100, CO: 100, BTN: 100, SB: 100, BB: 100 };
 
-/** H-S1 スポット 10 / BB の正しい投稿（03 章 §3.1 の例）。 */
+/** H-S1 スポット 10（ターンの BTN の手番）の正しい投稿（03 章 §3.1 の例）。 */
 export function hs1(): Raw {
   return {
     title: 'K83r のターン 2 バレル',
@@ -37,7 +37,31 @@ export function hs1(): Raw {
       }),
     ),
     spot_index: 10,
-    villain: 'BB',
+    derived: {
+      street: 'turn',
+      keys: ['check', 's1'],
+      s1_label: 'bet',
+      min_to: 1,
+      max_to: 95.7,
+      pot_base: 9.1,
+      effective_stack: 100,
+      stop_index: 10,
+    },
+  };
+}
+
+/**
+ * H-S1 を BB の手番で出題した形（ターンで BTN b6.5 に向き合う。スポット 11）。Hero = BB（Ks Js）、BTN は Ad Kd を見せた。
+ * Fold / Call / Raise の局面の試験に使う。
+ */
+export function hs1bb(): Raw {
+  return {
+    ...hs1(),
+    title: 'K83r のターンのバレルを受ける',
+    hero: 'BB',
+    hero_cards: ['Ks', 'Js'],
+    known_cards: { BTN: ['Ad', 'Kd'] },
+    spot_index: 11,
     derived: {
       street: 'turn',
       keys: ['fold', 'call', 's1'],
@@ -51,7 +75,7 @@ export function hs1(): Raw {
   };
 }
 
-/** H-MW スポット 7 / BB。 */
+/** H-MW スポット 7（フロップの CO の手番）。 */
 export function hmw(): Raw {
   return {
     ...hs1(),
@@ -68,21 +92,20 @@ export function hmw(): Raw {
       }),
     ),
     spot_index: 7,
-    villain: 'BB',
     derived: {
       street: 'flop',
-      keys: ['fold', 'call', 's1'],
-      s1_label: 'raise',
-      min_to: 6,
+      keys: ['check', 's1'],
+      s1_label: 'bet',
+      min_to: 1,
       max_to: 97.5,
-      pot_base: 17,
+      pot_base: 8,
       effective_stack: 100,
-      stop_index: 9,
+      stop_index: 7,
     },
   };
 }
 
-/** H-S3（MTT）スポット 6 / HJ。 */
+/** H-S3（MTT）スポット 6（フロップの BB の手番）。 */
 export function hs3(): Raw {
   return {
     title: 'MTT の見本',
@@ -105,16 +128,15 @@ export function hs3(): Raw {
       }),
     ),
     spot_index: 6,
-    villain: 'HJ',
     derived: {
       street: 'flop',
-      keys: ['fold', 'call', 's1'],
-      s1_label: 'raise',
-      min_to: 6,
-      max_to: 19.775,
-      pot_base: 11.45,
+      keys: ['check', 's1'],
+      s1_label: 'bet',
+      min_to: 1,
+      max_to: 21.775,
+      pot_base: 5.45,
       effective_stack: 22,
-      stop_index: 7,
+      stop_index: 6,
     },
   };
 }

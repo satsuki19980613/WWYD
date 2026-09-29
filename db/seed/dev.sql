@@ -4,7 +4,7 @@
 -- - 試験用ユーザー 8 人（UUID が 00000000-0000-0000-5eed-…、メールは @example.test）が 5 件ずつ投稿（計 40 件、過去 12 日に散らす）
 -- - dev に実在するユーザー（さつきのログイン）には「自分の投稿」を 3 件ずつ作り、試験用の投稿のいくつかに回答させる
 -- - 回答は試験用ユーザー同士でも入れ、回答数を 0〜7 にばらつかせる
--- ハンドはすべて H-S1（04 章）。スポットは BTN のアクション 7 / 10 / 13（フロップ〜リバー。プリフロップは出題しない）、Villain は BB。
+-- ハンドはすべて H-S1（04 章）。スポットは BTN の手番 7 / 10 / 13（フロップ〜リバー。プリフロップは出題しない。Hero の Check / Bet を答える。2026-09-29）。
 -- 派生メタは packages/core の spotView で計算した値（create-post が保存する値と同じ）。
 begin;
 
@@ -20,23 +20,23 @@ from generate_series(1, 8) as n;
 -- ---- 投稿 ----
 create temp table seed_spot (street text, spot_index int, stop_index int, min_to numeric, max_to numeric, pot_base numeric);
 insert into seed_spot values
-  ('flop',  7,  8,  3.6, 97.5, 9.1),
-  ('turn',  10, 11, 13,  95.7, 22.1),
-  ('river', 13, 14, 30,  89.2, 52.1);
+  ('flop',  7,  7,  1, 97.5, 5.5),
+  ('turn',  10, 10, 1, 95.7, 9.1),
+  ('river', 13, 13, 1, 89.2, 22.1);
 
 create temp table seed_title (i int, title text);
 insert into seed_title values
   (0, '試験 BTN vs BB のシングルレイズドポット'),
-  (1, '試験 ドライボードでのチェックレイズ頻度'),
-  (2, '試験 ターンのバレルにどう応じる？'),
+  (1, '試験 ドライボードでの C-bet 頻度'),
+  (2, '試験 ターンで 2 バレル目を打つ？'),
   (3, '試験 リバーのポラライズドベット'),
   (4, '試験 とても長いタイトルの例。二行に収まらないときは省略記号で切られるはず');
 
 -- H-S1 のスポットを 1 件作る（DB の所有者として insert_post を呼ぶ。create-post と同じ）
 create function pg_temp.seed_post(author uuid, title text, sp seed_spot, fmt text) returns uuid language sql as $$
   select public.insert_post(author, jsonb_build_object(
-    'title', title, 'fmt', fmt, 'hero', 'BTN', 'villain', 'BB', 'street', sp.street,
-    'effective_stack', 100, 'keys', '["fold","call","s1"]'::jsonb, 's1_label', 'raise',
+    'title', title, 'fmt', fmt, 'hero', 'BTN', 'street', sp.street,
+    'effective_stack', 100, 'keys', '["check","s1"]'::jsonb, 's1_label', 'bet',
     'min_to', sp.min_to, 'max_to', sp.max_to, 'pot_base', sp.pot_base,
     'sb', 0.5, 'bb', 1, 'ante', 0, 'rake', case when fmt = 'cash' then 5 end,
     'stacks', '{"UTG":100,"HJ":100,"CO":100,"BTN":100,"SB":100,"BB":100}'::jsonb,
@@ -98,13 +98,13 @@ update public.posts p set created_at = now() - make_interval(mins => s.k - 100)
 from seed_posts s where s.id = p.id and s.k >= 100;
 alter table public.posts enable trigger posts_only_count_update;
 
--- ---- 回答（AA を call 100%、22 を fold 100%） ----
+-- ---- 回答（AA を Bet 100%、22 を Check 100%。Bet の額は Pot の半分） ----
 do $$
 declare
   p record;
   u int;
   real_user record;
-  v_paint bytea := set_byte(set_byte(decode(repeat('00', 676), 'hex'), 2, 20), 672, 20);
+  v_paint bytea := set_byte(set_byte(decode(repeat('00', 676), 'hex'), 3, 20), 673, 20);
 begin
   for p in select * from seed_posts where k < 100 loop
     for u in 1..8 loop
@@ -113,7 +113,7 @@ begin
       continue when (p.k * 7 + u * 3) % 8 >= (p.k % 9);
       perform set_config('request.jwt.claims',
         json_build_object('sub', '00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'), 'role', 'authenticated')::text, true);
-      insert into public.answers (post_id, paint) values (p.id, v_paint);
+      insert into public.answers (post_id, paint, size) values (p.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = p.id));
     end loop;
   end loop;
 
@@ -122,14 +122,14 @@ begin
     for u in 1..(p.k - 100) loop
       perform set_config('request.jwt.claims',
         json_build_object('sub', '00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'), 'role', 'authenticated')::text, true);
-      insert into public.answers (post_id, paint) values (p.id, v_paint);
+      insert into public.answers (post_id, paint, size) values (p.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = p.id));
     end loop;
   end loop;
 
   for real_user in select id from neon_auth."user" where id::text not like '00000000-0000-0000-%' loop
     perform set_config('request.jwt.claims', json_build_object('sub', real_user.id, 'role', 'authenticated')::text, true);
-    insert into public.answers (post_id, paint)
-    select id, v_paint from seed_posts where k < 100 and k % 4 = 0;
+    insert into public.answers (post_id, paint, size)
+    select s.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = s.id) from seed_posts s where s.k < 100 and s.k % 4 = 0;
   end loop;
   perform set_config('request.jwt.claims', '', true);
 end $$;

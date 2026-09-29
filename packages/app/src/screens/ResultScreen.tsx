@@ -18,7 +18,7 @@ import {
   keyNames,
   resultFrames,
   resultTabs,
-  villainHand,
+  heroHand,
   type ResultFrame,
   type ResultView,
   type Shares,
@@ -42,7 +42,7 @@ const MOBILE_TABS: readonly { value: MobileTab; label: string }[] = [
 /**
  * 集計画面（06 章 §5。仕様書 §5.4）。回答済みの人が開く（投稿者も回答してから。未回答は SpotScreen が回答画面へ移す）。
  * PC は左にハンドヒストリーの再生、右に集計。スマホは上部固定のタブ「集計 / ハンドヒストリー」。
- * 集計は答え合わせ（Villain の実際のアクションとハンド）を先頭に置き、全体と自分のレンジを並べて比べる（14 章）。
+ * 集計は答え合わせ（Hero の実際のアクションとハンド）を先頭に置き、全体と自分のレンジを並べて比べる（14 章）。
  * 最後に「次のスポット」（未回答の新着）へ進める。
  */
 export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
@@ -75,10 +75,12 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
       次の Spot
     </Link>
   );
+  // 集計の表示の切り替え。スマホは上部固定のパネルに置く（表や内訳までスクロールしても切り替えられるように）
+  const viewTabs = <Tabs label="集計の表示" items={tabs} value={view} onChange={setView} />;
   const aggregate = (
     <div className="res-agg">
       <ActualBox detail={d} />
-      <Tabs label="集計の表示" items={tabs} value={view} onChange={setView} />
+      {!mobile && viewTabs}
       {empty ? (
         <div className="list-empty">
           <p className="list-empty-label">{empty}</p>
@@ -125,6 +127,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
       {head}
       <div className="ans-top">
         <Tabs label="表示" items={MOBILE_TABS} value={tab} onChange={setTab} />
+        {tab === 'agg' && <div className="res-agg">{viewTabs}</div>}
       </div>
       {tab === 'agg' ? aggregate : hand}
       {nextLink && <div className="ans-bottom">{nextLink}</div>}
@@ -188,21 +191,21 @@ function MiniBar(props: { label: string; keys: readonly AnswerKey[]; shares: Sha
   );
 }
 
-/** Villain の実際のアクションとハンド（06 章 §5.3）。 */
+/** Hero の実際のアクションとハンド（答え合わせ。06 章 §5.3） */
 function ActualBox(props: { detail: PostDetail }): JSX.Element {
   const { detail: d } = props;
   const a = actualAction(d);
-  const h = villainHand(d);
+  const h = heroHand(d);
   return (
     <div className="bracket-hero res-actual">
       <span className="brk tl" aria-hidden="true" />
       <span className="brk br" aria-hidden="true" />
       <div className="res-actual-act">
-        <span className="res-actual-lbl">Villain（{d.post.villain}）実際の Action</span>
+        <span className="res-actual-lbl">Hero（{d.post.hero}）実際の Action</span>
         <b className="res-actual-name">{a ? actionText(a) : '—'}</b>
       </div>
       <div className="res-actual-hand">
-        {Array.isArray(h) && h.length === 2 ? (
+        {h && h.length === 2 ? (
           <>
             {h.map((c) => (
               <PlayingCard key={c} card={c} size="sm" />
@@ -210,7 +213,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
             <span className="num">{labelOfCards(h[0] as Card, h[1] as Card)}</span>
           </>
         ) : (
-          <span className="res-actual-unknown">{h === 'muck' ? 'Muck' : 'Hand 不明'}</span>
+          <span className="res-actual-unknown">Hand 不明</span>
         )}
       </div>
     </div>
@@ -271,18 +274,17 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
       board={f.board}
       spotIndex={hand.spotIndex}
       highlightLast={c.step < c.max}
-      actual={hand.stopIndex}
+      actual={hand.spotIndex}
     />
   );
   return (
     <div className="replay">
       {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
       <PokerTable
-        seats={seatViews(f.state, { hero: post.hero, villain: post.villain, actor: f.actor })}
+        seats={seatViews(f.state, { hero: post.hero, actor: f.actor })}
         pot={f.state.pot}
         board={f.board}
         holes={f.holes}
-        villainLabel="Villain"
         note={f.note}
       />
       <ReplayControls c={c} />

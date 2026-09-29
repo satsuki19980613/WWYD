@@ -24,7 +24,6 @@ export function messageForCode(code: string, index?: number): string {
     case 'daily_limit':
       return '本日の投稿上限（5件）に達しました';
     case 'invalid_spot':
-    case 'invalid_villain':
       return 'Spot を選び直してください';
     case 'derived_mismatch':
       return '投稿できませんでした。再読み込みしてやり直してください';

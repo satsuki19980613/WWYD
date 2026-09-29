@@ -58,12 +58,10 @@ describe('下書きの保存（14 章 §3.5）', () => {
       actions: [{ street: 'pf', pos: 'BB', type: 'raise', to: 1 }],
       board: ['Ah'],
       spotIndex: 0,
-      villain: 'BB',
     });
     expect(d.actions).toEqual([]);
     expect(d.board).toEqual([]);
     expect(d.spotIndex).toBeNull();
-    expect(d.villain).toBeNull();
     expect(d.title).toBe('t');
   });
 

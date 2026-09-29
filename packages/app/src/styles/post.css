@@ -361,7 +361,7 @@
 .pf-muck { font-size: 12px; color: var(--dim); }
 
 /* ---- スポット ---- */
-/* 候補が無いときも欄の形を保つ（下の Villain・タイトルと揃える） */
+/* 候補が無いときも欄の形を保つ（下のタイトルと揃える） */
 .pf-none {
   min-height: 44px;
   display: flex;
@@ -408,6 +408,15 @@
 /* 下の余白 = 戻る・次へのバーの実際の高さ（NewPostScreen の useBarHeight が --bar-h を入れる） */
 .pf.sp { padding-bottom: calc(var(--bar-h, 128px) - var(--s6) - var(--sab) + var(--s2)); }
 .pf-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+/* スマホのステップのタブはヘッダーの下に固定する（負の上の余白で .app-main の上の余白を取り込む） */
+.pf.sp .pf-steps {
+  position: sticky;
+  top: calc(var(--hdr-h) + var(--sat));
+  z-index: 20;
+  margin: calc(-1 * var(--s4)) calc(-1 * var(--s4)) 0;
+  padding: var(--s4) var(--s4) var(--s2);
+  background: var(--bg2);
+}
 .pf-step {
   display: flex;
   flex-direction: column;

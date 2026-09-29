@@ -1,5 +1,4 @@
-import { TITLE_MAX, type Pos } from '@wwyd/core';
-import { Select } from '../components/Select.tsx';
+import { TITLE_MAX } from '@wwyd/core';
 import { candidates, titleLength, type Draft } from './draft.ts';
 
 /** 40 文字（コードポイント数）を超える分を切る。 */
@@ -8,17 +7,14 @@ function clampTitle(v: string): string {
   return chars.length > TITLE_MAX ? chars.slice(0, TITLE_MAX).join('') : v;
 }
 
-/** スポット（06 章 §3.7）: Hero のアクションの候補・Villain・タイトル。 */
+/** スポット（06 章 §3.7）: 出題する Hero の手番（Flop 以降の Hero のアクションの候補）・タイトル。 */
 export function SpotSection(props: {
   draft: Draft;
   onSelectSpot: (index: number) => void;
-  onVillain: (v: Pos) => void;
   onTitle: (title: string) => void;
 }): JSX.Element {
   const { draft: d } = props;
   const list = candidates(d);
-  const current = list.find((c) => c.index === d.spotIndex);
-  const villains = current?.villains ?? [];
 
   return (
     <section className="pf-sec" aria-labelledby="pf-spot">
@@ -48,17 +44,6 @@ export function SpotSection(props: {
             ))}
           </div>
         )}
-      </div>
-      <div className="pf-field">
-        <span className="mono-lbl">Villain</span>
-        <Select
-          label="Villain"
-          placeholder="—"
-          options={villains.map((v) => ({ value: v, label: v }))}
-          value={d.villain ?? ''}
-          disabled={villains.length <= 1}
-          onChange={(v) => props.onVillain(v as Pos)}
-        />
       </div>
       <div className="pf-field">
         <div className="pf-title-row">

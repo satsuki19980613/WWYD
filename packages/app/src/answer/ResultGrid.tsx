@@ -25,7 +25,7 @@ function inkClass(view: CellView): string {
 
 /**
  * 集計のレンジ表（13×13。06 章 §5.2）。マスを選ぶと親が内訳を出す。塗りの操作はない。
- * `actual` は Villain の実際のハンドのマス（白枠）。キーボード: 矢印・Home・End で選ぶマスを移す。
+ * `actual` は Hero の実際のハンドのマス（白枠）。キーボード: 矢印・Home・End で選ぶマスを移す。
  */
 export const ResultGrid = memo(function ResultGrid(props: {
   views: readonly CellView[];

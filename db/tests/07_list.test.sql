@@ -11,7 +11,7 @@ select pg_temp.make_post(1, pg_temp.hs1('A')) as a \gset
 select pg_temp.make_post(1, pg_temp.hs1('B')) as b \gset
 select pg_temp.make_post(2, pg_temp.hs1('C')) as c \gset
 select pg_temp.make_post(2, pg_temp.hs1('D')) as d \gset
-select pg_temp.make_post(2, pg_temp.hs1('E') || '{"street":"flop","stop_index":8,"spot_index":7,"pot_base":9.1,"min_to":3.6,"max_to":97.5}') as e \gset
+select pg_temp.make_post(2, pg_temp.hs1('E') || '{"street":"flop","stop_index":7,"spot_index":7,"pot_base":9.1,"min_to":3.6,"max_to":97.5}') as e \gset
 -- 作成日時の書き換えはトリガで拒否されるので、一時的にトリガを外す
 alter table public.posts disable trigger posts_only_count_update;
 update public.posts set created_at = now() - (interval '1 minute' * (ascii('F') - ascii(title))) where title in ('A','B','C','D','E');

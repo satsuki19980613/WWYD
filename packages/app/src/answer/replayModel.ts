@@ -14,20 +14,20 @@ import {
 import { ACTION_NAME } from '../post/draft.ts';
 
 /**
- * リプレイの表示（詳細仕様 06 章 §4.3）。卓は Villain の席を手前（下中央）に、以降は時計回り
+ * リプレイの表示（詳細仕様 06 章 §4.3）。卓は Hero の席を手前（下中央）に、以降は時計回り
  * （アクションの順。UTG → HJ → … → BB）に並べる。
  */
 
-/** 回答画面の各手目の状態。`frames[i]` は i 手目まで適用した状態、最後（停止位置）は Villain の手番まで進めた状態。 */
+/** 回答画面の各手目の状態。`frames[i]` は i 手目まで適用した状態、最後（停止位置）は Hero の手番まで進めた状態。 */
 export function answerFrames(setup: HandSetup, actions: readonly Action[], stopIndex: number, street: Street): State[] {
   const frames = runActions(setup, actions.slice(0, stopIndex));
   frames[stopIndex] = stopState(setup, actions, stopIndex, street);
   return frames;
 }
 
-/** i 手目の状態で次にアクションする席（停止位置は Villain）。 */
-export function actorAt(actions: readonly Action[], step: number, stopIndex: number, villain: Pos): Pos {
-  return step < stopIndex ? (actions[step] as Action).pos : villain;
+/** i 手目の状態で次にアクションする席（停止位置は Hero の手番）。 */
+export function actorAt(actions: readonly Action[], step: number, stopIndex: number, hero: Pos): Pos {
+  return step < stopIndex ? (actions[step] as Action).pos : hero;
 }
 
 /** その状態で見えているボードの枚数。 */
@@ -50,7 +50,8 @@ export type SeatView = {
   /** 直前のアクション（このストリート）。フォールド済みの席は「フォールド」。 */
   last: string | null;
   hero: boolean;
-  villain: boolean;
+  /** 回答者（あなた）の席。回答画面では Hero の席（2026-09-29。Villain の概念は無い） */
+  you: boolean;
   acting: boolean;
 };
 
@@ -62,9 +63,9 @@ export function lastActionText(s: State, p: Pos): string | null {
   return a.to === undefined ? ACTION_NAME[a.type] : `${ACTION_NAME[a.type]} ${formatBb(a.to)}`;
 }
 
-/** `bottom` は手前に置く席（既定は Villain。投稿の入力では Hero を手前に置き、Villain は無い） */
-export function seatViews(s: State, o: { hero: Pos; villain: Pos | null; actor: Pos | null; bottom?: Pos }): SeatView[] {
-  return seatOrder(o.bottom ?? o.villain ?? o.hero, s.seated).map((pos) => ({
+/** 手前に置く席は Hero。`you` なら Hero の席を回答者の席として強調する（回答画面） */
+export function seatViews(s: State, o: { hero: Pos; actor: Pos | null; you?: boolean }): SeatView[] {
+  return seatOrder(o.hero, s.seated).map((pos) => ({
     pos,
     stack: s.stacks[pos],
     // フォールドした席のベットも回収まではその席の前に残す（ポットは回収済みの額を出すため、消すと額が合わない）
@@ -72,7 +73,7 @@ export function seatViews(s: State, o: { hero: Pos; villain: Pos | null; actor: 
     folded: s.folded.has(pos),
     last: lastActionText(s, pos),
     hero: pos === o.hero,
-    villain: pos === o.villain,
+    you: o.you === true && pos === o.hero,
     acting: pos === o.actor,
   }));
 }

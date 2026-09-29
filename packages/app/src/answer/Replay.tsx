@@ -1,6 +1,6 @@
 import { formatBb, STREETS, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
 import { useEffect, useState, type ReactNode } from 'react';
-import { HistoryIcon } from '../components/Icons.tsx';
+import { HistoryIcon, PauseIcon, PlayIcon, StepBackIcon, StepForwardIcon } from '../components/Icons.tsx';
 import { Modal } from '../components/Modal.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
@@ -70,6 +70,7 @@ export function useReplay(max: number, opts: { atEnd?: boolean } = {}): ReplayCo
   };
 }
 
+/** 再生の操作。「最初から」は文字、1手戻る・再生 / 一時停止・1手進むはマーク（名前は読み上げに。2026-09-29 さつき） */
 export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
   const { c } = props;
   return (
@@ -78,14 +79,14 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
         <button type="button" className="btn ghost" onClick={c.first}>
           最初から
         </button>
-        <button type="button" className="btn ghost" disabled={c.step <= 0} onClick={c.back}>
-          1手戻る
+        <button type="button" className="btn ghost rp-icon" aria-label="1手戻る" disabled={c.step <= 0} onClick={c.back}>
+          <StepBackIcon />
         </button>
-        <button type="button" className="btn ghost" onClick={c.toggle}>
-          {c.playing ? '一時停止' : '再生'}
+        <button type="button" className="btn ghost rp-icon" aria-label={c.playing ? '一時停止' : '再生'} onClick={c.toggle}>
+          {c.playing ? <PauseIcon /> : <PlayIcon />}
         </button>
-        <button type="button" className="btn ghost" disabled={c.step >= c.max} onClick={c.forward}>
-          1手進む
+        <button type="button" className="btn ghost rp-icon" aria-label="1手進む" disabled={c.step >= c.max} onClick={c.forward}>
+          <StepForwardIcon />
         </button>
       </div>
       <div className="rp-prog">
@@ -102,16 +103,22 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
 
 /**
  * スマホのハンドヒストリーのボタン（卓の左上。押すとモーダル。14 章）。ログを常に出すと画面を圧迫するため。
- * `children` はモーダルの中身（HandLog）。
+ * `children` はモーダルの中身（HandLog）。`compact` はアイコンだけの道具のボタン（Range のタブのブラシの道具の行）。
  */
-export function HistoryButton(props: { disabled?: boolean; children: ReactNode }): JSX.Element {
+export function HistoryButton(props: { disabled?: boolean; compact?: boolean; children: ReactNode }): JSX.Element {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="hist-btn" disabled={props.disabled} onClick={() => setOpen(true)}>
-        <HistoryIcon />
-        History
-      </button>
+      {props.compact ? (
+        <button type="button" className="tool-btn" aria-label="Hand History" disabled={props.disabled} onClick={() => setOpen(true)}>
+          <HistoryIcon />
+        </button>
+      ) : (
+        <button type="button" className="hist-btn" disabled={props.disabled} onClick={() => setOpen(true)}>
+          <HistoryIcon />
+          History
+        </button>
+      )}
       {open && (
         <Modal title="Hand History" tone="info" onClose={() => setOpen(false)}>
           {props.children}
@@ -144,7 +151,7 @@ const SLOTS_BY_COUNT: Record<number, readonly Slot[]> = {
 };
 
 /**
- * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Villain の席を手前に置く（席の並びは replayModel の seatOrder）。
+ * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Hero の席を手前に置く（席の並びは replayModel の seatOrder）。
  * `holes` は席ごとに見せるホールカード（表向き・裏向き・マック）。`note` は終了時の「ショーダウン」など。
  */
 export function PokerTable(props: {
@@ -152,7 +159,8 @@ export function PokerTable(props: {
   pot: Mbb;
   board: readonly Card[];
   holes: Partial<Record<Pos, Hole>>;
-  villainLabel: string;
+  /** Hero の席のタグ（回答画面は「Hero（あなた）」） */
+  heroLabel?: string;
   note?: string | null;
   /** ボードの中身を差し替える（投稿の入力でカードを押して選び直す） */
   boardContent?: ReactNode;
@@ -190,7 +198,7 @@ export function PokerTable(props: {
         return (
           <div key={seat.pos}>
             <div
-              className={`pseat a-${anchor}${y < 20 ? ' top' : ''}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.villain ? ' villain' : ''}${seat.acting ? ' acting' : ''}`}
+              className={`pseat a-${anchor}${y < 20 ? ' top' : ''}${seat.folded ? ' folded' : ''}${seat.hero ? ' hero' : ''}${seat.you ? ' you' : ''}${seat.acting ? ' acting' : ''}`}
               style={{ top: `${y}%`, ...(anchor === 'c' ? { left: `${x}%` } : {}) }}
             >
               <HoleCards hole={props.holes[seat.pos]} />
@@ -199,8 +207,7 @@ export function PokerTable(props: {
                   <b className="pseat-pos" style={{ color: POS_VAR[seat.pos] }}>
                     {seat.pos}
                   </b>
-                  {seat.hero && <span className="pseat-tag hero">Hero</span>}
-                  {seat.villain && <span className="pseat-tag villain">{props.villainLabel}</span>}
+                  {seat.hero && <span className="pseat-tag hero">{props.heroLabel ?? 'Hero'}</span>}
                 </span>
                 <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
               </div>
@@ -235,7 +242,7 @@ function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
 
 /**
  * ハンドヒストリー（ストリートごとの列）。出題の Hero のアクションに「出題」、最新の 1 手を強調、
- * `actual`（集計画面の Villain の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
+ * `actual`（集計画面の Hero の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
  */
 export function HandLog(props: {
   setup: HandSetup;

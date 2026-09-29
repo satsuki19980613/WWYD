@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { ValidationError, type ValidationCode } from '../errors.ts';
-import { hmw, hs1, hs3, STACKS100, type Raw } from './postFixtures.ts';
+import { hmw, hs1, hs1bb, hs3, STACKS100, type Raw } from './postFixtures.ts';
 import { validateInput } from './validateInput.ts';
 import { verifyPost } from './verifyPost.ts';
 
@@ -33,19 +33,23 @@ describe('EF-02 正常系', () => {
     expect(v.title).toBe('K83r のターン 2 バレル');
     expect(v.derived).toEqual({
       street: 'turn',
-      keys: ['fold', 'call', 's1'],
-      s1Label: 'raise',
-      minTo: 13000,
+      keys: ['check', 's1'],
+      s1Label: 'bet',
+      minTo: 1000,
       maxTo: 95700,
-      potBase: 22100,
+      potBase: 9100,
       effectiveStack: 100000,
-      stopIndex: 11,
+      stopIndex: 10,
     });
     expect(v.result).toEqual({ kind: 'showdown', seats: ['BTN', 'BB'] });
   });
 
+  it('H-S1 を BB の手番で（ベットに向き合う Hero）', () => {
+    expect(run(hs1bb()).derived).toMatchObject({ keys: ['fold', 'call', 's1'], minTo: 13000, potBase: 22100, stopIndex: 11 });
+  });
+
   it('H-MW スポット 7 と H-S3（MTT）', () => {
-    expect(run(hmw()).derived.stopIndex).toBe(9);
+    expect(run(hmw()).derived.stopIndex).toBe(7);
     const s3 = run(hs3());
     expect(s3.rake).toBeNull();
     expect(s3.derived.effectiveStack).toBe(22000);
@@ -59,13 +63,13 @@ describe('EF-02 正常系', () => {
 describe('EF-03 / EF-04 派生メタの照合', () => {
   const tamper: [string, unknown][] = [
     ['street', 'river'],
-    ['keys', ['fold', 'call']],
-    ['s1_label', 'bet'],
-    ['min_to', 13.01],
+    ['keys', ['fold', 'call', 's1']],
+    ['s1_label', 'raise'],
+    ['min_to', 1.01],
     ['max_to', 95.6],
-    ['pot_base', 22],
+    ['pot_base', 9],
     ['effective_stack', 99],
-    ['stop_index', 12],
+    ['stop_index', 11],
   ];
   it.each(tamper)('%s を改ざんすると derived_mismatch', (key, value) => {
     const raw = hs1();
@@ -75,7 +79,7 @@ describe('EF-03 / EF-04 派生メタの照合', () => {
 
   it('keys の順序違いも不一致', () => {
     const raw = hs1();
-    raw.derived = { ...(raw.derived as Raw), keys: ['call', 'fold', 's1'] };
+    raw.derived = { ...(raw.derived as Raw), keys: ['s1', 'check'] };
     expect(codeOf(raw)).toBe('derived_mismatch');
   });
 });
@@ -140,14 +144,8 @@ describe('VAL 投稿の検証', () => {
   it('VAL-12 候補でない spot_index', () => {
     const spot = (i: number, derived: Raw = hs1().derived as Raw): Raw => ({ ...hs1(), spot_index: i, derived });
     expect(codeOf(spot(0))).toBe('invalid_spot'); // Hero のアクションでない
-    expect(codeOf({ ...hmw(), spot_index: 15 })).toBe('invalid_spot'); // 後続なし
-    const fold = withActions(hs1(), () => undefined);
-    expect(codeOf({ ...fold, hero: 'SB', hero_cards: ['2d', '4c'], spot_index: 4 })).toBe('invalid_spot'); // fold
-  });
-
-  it('VAL-13 候補でない Villain', () => {
-    expect(codeOf({ ...hs1(), villain: 'CO' })).toBe('invalid_villain');
-    expect(codeOf({ ...hs1(), villain: 'BTN' })).toBe('invalid_villain');
+    expect(codeOf({ ...hmw(), spot_index: 2 })).toBe('invalid_spot'); // プリフロップ
+    expect(codeOf({ ...hmw(), spot_index: 16 })).toBe('invalid_spot'); // 範囲外
   });
 
   it.each<[string, Raw]>([
@@ -180,7 +178,6 @@ describe('VAL 投稿の検証', () => {
     ['actions が配列でない', { actions: {} }],
     ['spot_index が小数', { spot_index: 1.5 }],
     ['spot_index が負', { spot_index: -1 }],
-    ['villain', { villain: 'MP' }],
     ['derived がない', { derived: null }],
     ['title が文字列でない', { title: 1 }],
   ])('VAL-16 形式: %s', (_name, patch) => {

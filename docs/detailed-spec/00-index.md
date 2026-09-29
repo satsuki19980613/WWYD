@@ -29,6 +29,7 @@
 | 13 | [13-action-input.md](13-action-input.md) | アクション入力の UX（ルールの要点、入力する人の考え、試験のパターン、試行錯誤の記録） |
 | 14 | [14-ui-research.md](14-ui-research.md) | 類似アプリの調査と UI・UX への反映（入力中の卓、入れ直し、答え合わせと自分との差、次のスポット、下書き） |
 | 15 | [15-ui-terms.md](15-ui-terms.md) | 画面のポーカー用語（英語の表記）の用語表 |
+| 16 | [16-hero-spot.md](16-hero-spot.md) | 出題は Hero の手番（Villain をなくす。回答者は Hero の席で Range を答える。01〜06 章の Villain の記述より優先） |
 
 ## 共通の表記
 

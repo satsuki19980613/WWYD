@@ -40,8 +40,8 @@ const reload = (): void => window.location.reload();
  * 画面名は見出しにしない。
  */
 const SCREEN_TITLE: Partial<Record<Route['name'], HeaderTitle>> = {
-  list: { text: 'Spot 一覧', heading: true },
-  new: { text: 'Spot 投稿', heading: true },
+  list: { text: 'List', heading: true },
+  new: { text: 'Post', heading: true },
   drafts: { text: '下書き', heading: true },
   answer: { text: '回答', heading: false },
   result: { text: '結果', heading: false },

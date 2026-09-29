@@ -1,6 +1,8 @@
 import { bbToMbb, playerCountOf, type Action, type HandSetup, type Pos } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
+import { ALLIN_CASES, allinHand, allinRaw, allinTitle } from '../../../core/src/post/allinFixtures.ts';
 import { hmw, hs1, hs3, type Raw } from '../../../core/src/post/postFixtures.ts';
+import { acts } from '../../../core/src/poker/testHelpers.ts';
 import {
   actionLog,
   addAction,
@@ -16,9 +18,12 @@ import {
   emptyDraft,
   isDirty,
   isLocked,
+  makesPreflopAllin,
   neighborSeat,
   parseSettings,
+  NO_HERO_POSTFLOP,
   PLAYERS_REQUIRED,
+  PREFLOP_ALLIN,
   setPlayers,
   parseSize,
   phaseOf,
@@ -38,11 +43,24 @@ import {
 } from './draft.ts';
 import { messageForCode } from './errorMessages.ts';
 
+/** 見本のプリフロップのまま、フロップのアクションを差し替える（額は bb。見本の JSON の形） */
+function rawActs(base: Raw, flop: string): Raw[] {
+  const pf = (base.actions as Raw[]).filter((a) => a.street === 'pf');
+  const f = acts({ flop }).map((a) => (a.to === undefined ? { ...a } : { ...a, to: a.to / 1000 }));
+  return [...pf, ...f];
+}
+
 /** 6 人を選んだ下書き */
 const six = (): Draft => ({ ...emptyDraft(), players: 6 });
 
 /** 見本（03 章 §3.1 の形）を画面の操作どおりに入力した下書き。ボードはストリートが進むたびに足す。 */
 function enter(raw: Raw): Draft {
+  const d = selectSpot(play(raw), raw.spot_index as number);
+  return { ...d, title: raw.title as string };
+}
+
+/** 見本のアクションとボードを入れるだけ（スポットは選ばない） */
+function play(raw: Raw): Draft {
   let d: Draft = six();
   const stacks = raw.stacks as Record<Pos, number>;
   d = {
@@ -78,8 +96,7 @@ function enter(raw: Raw): Draft {
     d = addBoardCard(d, board[d.board.length] as string);
     ph = phaseOf(setup, d.actions, d.board);
   }
-  d = selectSpot(d, raw.spot_index as number);
-  return { ...d, villain: raw.villain as Pos, title: raw.title as string };
+  return d;
 }
 
 describe('基本設定（06 章 §3.3）', () => {
@@ -366,7 +383,7 @@ describe('Hand の進行（06 章 §3.6）', () => {
 
   it('すべて消す: Action・Board・Spot を消す', () => {
     const c = clearActions(enter(hs1()));
-    expect(c).toMatchObject({ actions: [], board: [], spotIndex: null, villain: null });
+    expect(c).toMatchObject({ actions: [], board: [], spotIndex: null });
     expect(c.hands.BTN).toBe('AdKd');
   });
 
@@ -399,18 +416,27 @@ describe('Spot（06 章 §3.7）', () => {
     ]);
   });
 
-  it('Villain が 1 席なら自動で選ぶ。複数なら未選択', () => {
-    const d = { ...enter(hs1()), spotIndex: null, villain: null };
-    expect(selectSpot(d, 10).villain).toBe('BB');
-    const mw = { ...enter(hmw()), spotIndex: null, villain: null }; // CO b3 の区間は BTN・BB
-    expect(selectSpot(mw, 7)).toMatchObject({ spotIndex: 7, villain: null });
+  it('候補は Flop 以降の Hero のアクションすべて（Fold・ハンドの最後のアクションも。2026-09-29）', () => {
+    const fold = play({ ...hs1(), actions: rawActs(hs1(), 'BB b3, BTN f'), board: ['Kh', '8d', '3c'] });
+    expect(candidates(fold).map((c) => c.label)).toEqual(['Flop / BTN Fold']);
+    const mw = play(hmw());
+    expect(candidates(mw).map((c) => c.index)).toEqual([7, 10, 13, 15]);
+  });
+
+  it('スポットは自動では選ばない（Hero のオールインでも。投稿者が選ぶ）', () => {
+    const shove = play({ ...hs1(), actions: rawActs(hs1(), 'BB x, BTN b97.5, BB c') });
+    expect(shove.spotIndex).toBeNull();
+    expect(candidates(shove).map((c) => c.label)).toEqual(['Flop / BTN Bet 97.5']);
+    expect(selectSpot(shove, 7).spotIndex).toBe(7);
   });
 
   it('Action を戻して候補が消えたら選択を解除', () => {
-    const d = enter(hs1()); // スポット 10 / BB
+    const d = enter(hs1()); // スポット 10（ターンの BTN b6.5）
     let u = d;
-    for (let i = 0; i < 4; i++) u = undoAction(u); // 11 番目（BB コール）まで消す
-    expect(u).toMatchObject({ spotIndex: null, villain: null });
+    for (let i = 0; i < 4; i++) u = undoAction(u); // 11 番目（BB コール）まで消す: スポット 10 は残る
+    expect(u.spotIndex).toBe(10);
+    u = undoAction(u); // 10 番目（BTN b6.5）を消す
+    expect(u.spotIndex).toBeNull();
   });
 });
 
@@ -449,10 +475,10 @@ describe('投稿（06 章 §3.8）', () => {
     });
   });
 
-  it('Hand が途中・Villain 未選択', () => {
+  it('Hand が途中', () => {
     const d = enter(hs1());
-    const s = buildSubmission({ ...undoAction(d), spotIndex: 3, villain: null });
-    expect(s).toEqual({ ok: false, errors: ['Hand を最後まで入力してください', 'Villain を選択してください'] });
+    const s = buildSubmission(undoAction(d));
+    expect(s).toEqual({ ok: false, errors: ['Hand を最後まで入力してください'] });
   });
 
   it('タイトルの前後の空白は除いて送る', () => {
@@ -466,13 +492,89 @@ describe('投稿（06 章 §3.8）', () => {
   });
 });
 
+describe('オールインを含むハンドの Spot（2026-09-29「オールインも他のアクションと変わらない」）', () => {
+  it.each(ALLIN_CASES.map((c) => [c.name, c] as const))('%s', (_, c) => {
+    // 画面と同じ操作で入れ、候補は Flop 以降の Hero の手番すべて（オールインも、その前の手番も）
+    const d = play(allinHand(c));
+    expect(phaseOf(parseSettings(d).setup, d.actions, d.board).kind).toBe('done');
+    const list = candidates(d);
+    expect(list.map((x) => x.label)).toEqual(c.spots.map(([label]) => label));
+    // 候補が無い（Preflop の All-in）ハンドは投稿できないと伝える
+    if (list.length === 0) {
+      expect(buildSubmission({ ...d, title: allinTitle(c) })).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+    }
+    // どの候補を選んでも投稿でき、送る本文は core の見本と一致する（サーバーと同じ検証も通る）
+    for (const { index } of list) {
+      const s = buildSubmission({ ...selectSpot(d, index), title: allinTitle(c) });
+      expect(s.ok ? null : s.errors).toBeNull();
+      if (s.ok) expect(s.body).toEqual(allinRaw(c, index));
+    }
+  });
+});
+
+describe('Spot の候補が無いハンドの投稿のエラー', () => {
+  const pf = (line: string, stacks?: Record<string, number>): Draft => {
+    const raw = { ...hs1(), actions: acts({ pf: line }).map((a) => (a.to === undefined ? { ...a } : { ...a, to: a.to / 1000 })) };
+    return { ...play(stacks ? { ...raw, stacks } : raw), title: '見本' };
+  };
+  it('Hero が Preflop で All-in（Call 側でも）', () => {
+    expect(buildSubmission(pf('UTG..CO f, BTN r100, SB f, BB c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+    expect(buildSubmission(pf('UTG..CO f, BTN r2.5, SB f, BB r100, BTN c'))).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+  });
+  it('相手の Preflop の All-in に、スタックの多い Hero が Call（それ以上 Action できない）', () => {
+    const d = pf('UTG..CO f, BTN r2.5, SB f, BB r30, BTN c', { ...hs1().stacks as Record<string, number>, BB: 30 });
+    expect(buildSubmission(d)).toEqual({ ok: false, errors: [PREFLOP_ALLIN] });
+  });
+  it('Hero が Preflop で Fold、または Preflop で全員が Fold', () => {
+    expect(buildSubmission(pf('UTG r2.5, HJ..CO f, BTN f, SB f, BB r100, UTG c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+    expect(buildSubmission(pf('UTG..CO f, BTN r2.5, SB f, BB f'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+  });
+  it('Hero が Preflop で Fold したあと、ほかの席が All-in', () => {
+    expect(buildSubmission(pf('UTG..CO f, BTN f, SB r100, BB c'))).toEqual({ ok: false, errors: [NO_HERO_POSTFLOP] });
+  });
+});
+
+describe('Preflop で All-in になる Action は受け付けない（2026-09-29）', () => {
+  const at = (line: string, stacks?: Record<string, number>): { d: Draft; last: Action } => {
+    const all = acts({ pf: line });
+    const raw = { ...hs1(), actions: [], board: [], ...(stacks ? { stacks } : {}) };
+    let d = play(raw);
+    for (const a of all.slice(0, -1)) d = addAction(d, a);
+    return { d, last: all[all.length - 1] as Action };
+  };
+  const refused = (line: string, stacks?: Record<string, number>): boolean => {
+    const { d, last } = at(line, stacks);
+    return makesPreflopAllin(d, [last]);
+  };
+  const S = { ...(hs1().stacks as Record<string, number>) };
+
+  it('Hero の All-in の Raise・All-in の Call', () => {
+    expect(refused('UTG..CO f, BTN r100')).toBe(true);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN c')).toBe(true);
+  });
+  it('相手の All-in にスタックの多い Hero が Call し、誰も Action できなくなる', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r30, BTN c', { ...S, BB: 30 })).toBe(true);
+  });
+  it('短い UTG の All-in に Hero が Call し、最後の BB の Fold でランアウトになる', () => {
+    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB c', { ...S, UTG: 10 })).toBe(false);
+    expect(refused('UTG r10, HJ..CO f, BTN c, SB f, BB f', { ...S, UTG: 10 })).toBe(true);
+  });
+  it('相手の Preflop の All-in そのもの・Hero の Fold・Flop 以降の All-in は受け付ける', () => {
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100')).toBe(false);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB r100, BTN f')).toBe(false);
+    expect(refused('UTG..CO f, BTN r2.5, SB f, BB c')).toBe(false);
+    const d = play({ ...hs1(), actions: rawActs(hs1(), 'BB x') });
+    expect(makesPreflopAllin(d, [{ street: 'flop', pos: 'BTN', type: 'bet', to: 97500 }])).toBe(false);
+  });
+});
+
 describe('エラーコードの文言（06 章 §7）', () => {
   it.each<[string, number | undefined, string]>([
     ['illegal_action', 6, 'Action の内容を確認してください（7手目）'],
     ['hand_incomplete', undefined, 'Action の内容を確認してください'],
     ['duplicate_card', undefined, '入力内容を確認してください'],
     ['daily_limit', undefined, '本日の投稿上限（5件）に達しました'],
-    ['invalid_villain', undefined, 'Spot を選び直してください'],
+    ['invalid_spot', undefined, 'Spot を選び直してください'],
     ['derived_mismatch', undefined, '投稿できませんでした。再読み込みしてやり直してください'],
     ['network', undefined, '通信に失敗しました'],
     ['internal', undefined, 'エラーが発生しました'],

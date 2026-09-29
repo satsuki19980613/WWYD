@@ -36,7 +36,6 @@ export type PostDetail = {
     title: string;
     fmt: 'cash' | 'mtt';
     hero: Pos;
-    villain: Pos;
     street: Street;
     effectiveStack: Mbb;
     keys: AnswerKey[];
@@ -178,7 +177,6 @@ export function parsePostDetail(raw: unknown): PostDetail {
       title: str(p.title, 'post.title'),
       fmt: oneOf(p.fmt, ['cash', 'mtt'] as const, 'post.fmt'),
       hero: oneOf(p.hero, POSITIONS, 'post.hero'),
-      villain: oneOf(p.villain, POSITIONS, 'post.villain'),
       street: oneOf(p.street, STREETS, 'post.street'),
       effectiveStack: amount(p.effective_stack, 'post.effective_stack'),
       keys: p.keys.map((k: unknown) => oneOf(k, ANSWER_KEYS, 'post.keys')),

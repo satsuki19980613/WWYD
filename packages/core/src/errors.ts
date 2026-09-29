@@ -16,7 +16,6 @@ export type ValidationCode =
   | 'hand_incomplete'
   | 'board_mismatch'
   | 'invalid_spot'
-  | 'invalid_villain'
   | 'derived_mismatch';
 
 export class ValidationError extends Error {

@@ -55,7 +55,6 @@ export type Draft = {
   actions: Action[];
   board: Card[];
   spotIndex: number | null;
-  villain: Pos | null;
   title: string;
 };
 
@@ -73,7 +72,6 @@ export function emptyDraft(): Draft {
     actions: [],
     board: [],
     spotIndex: null,
-    villain: null,
     title: '',
   };
 }
@@ -410,8 +408,8 @@ export function actionLog(setup: HandSetup, actions: readonly Action[]): LogItem
 
 // ---- 下書きの操作 ----
 
-/** スポットの候補（Hero のアクション）。表示「ターン / BTN ベット 6.5」 */
-export function candidates(d: Draft): { index: number; villains: Pos[]; label: string }[] {
+/** スポットの候補（Flop 以降の Hero の手番。2026-09-29）。表示「Turn / BTN Bet 6.5」（その手番で Hero が実際にしたアクション） */
+export function candidates(d: Draft): { index: number; label: string }[] {
   return spotCandidates(d.actions, d.hero).map((c) => {
     const a = d.actions[c.index] as Action;
     const size = a.to === undefined ? '' : ` ${formatBb(a.to)}`;
@@ -419,16 +417,14 @@ export function candidates(d: Draft): { index: number; villains: Pos[]; label: s
   });
 }
 
-/** 候補から消えたスポット・Villain の選択を解除し、Villain が 1 席なら自動で選ぶ（06 章 §3.7）。 */
+/** 候補から消えたスポットの選択を解除する（06 章 §3.7）。 */
 export function normalizeSpot(d: Draft): Draft {
-  const c = candidates(d).find((x) => x.index === d.spotIndex);
-  if (!c) return d.spotIndex === null && d.villain === null ? d : { ...d, spotIndex: null, villain: null };
-  if (c.villains.length === 1) return c.villains[0] === d.villain ? d : { ...d, villain: c.villains[0] as Pos };
-  return d.villain !== null && !c.villains.includes(d.villain) ? { ...d, villain: null } : d;
+  if (d.spotIndex === null || candidates(d).some((c) => c.index === d.spotIndex)) return d;
+  return { ...d, spotIndex: null };
 }
 
 export function selectSpot(d: Draft, index: number): Draft {
-  return normalizeSpot({ ...d, spotIndex: index, villain: d.spotIndex === index ? d.villain : null });
+  return normalizeSpot({ ...d, spotIndex: index });
 }
 
 export function addAction(d: Draft, action: Action): Draft {
@@ -452,7 +448,7 @@ export function truncateActions(d: Draft, index: number): Draft {
 
 /** 「すべて消す」: アクションとボードを消す（ロック解除） */
 export function clearActions(d: Draft): Draft {
-  return { ...d, actions: [], board: [], spotIndex: null, villain: null };
+  return { ...d, actions: [], board: [], spotIndex: null };
 }
 
 export function addBoardCard(d: Draft, card: Card): Draft {
@@ -482,6 +478,39 @@ export function titleLength(title: string): number {
   return [...title].length;
 }
 
+export const PREFLOP_ALLIN = 'Preflop で All-in になった Hand は投稿できません';
+export const NO_HERO_POSTFLOP = 'Flop 以降に Hero の Action が無い Hand は投稿できません';
+
+/**
+ * `add` を入れると Preflop で All-in になる（Hero が Preflop で All-in になる、または Hero が残ったまま誰も
+ * Action できなくなりランアウトになる）か。そのハンドは Flop 以降に Hero の手番が無く投稿できないので、
+ * Action の入力で受け付けない（2026-09-29 さつき）。相手の Preflop の All-in そのものは受け付ける（Hero と別の席が続けられる）。
+ */
+export function makesPreflopAllin(d: Draft, add: readonly Action[]): boolean {
+  const setup = parseSettings(d).setup;
+  if (!setup || !add.some((a) => a.street === 'pf')) return false;
+  let s: State;
+  try {
+    const states = runActions(setup, [...d.actions, ...add]);
+    s = states[states.length - 1] as State;
+  } catch {
+    return false;
+  }
+  if (s.street !== 'pf' || s.folded.has(d.hero)) return false;
+  return s.stacks[d.hero] === 0 || status(s).kind === 'runout';
+}
+
+/**
+ * 最後まで入れたハンドに Spot の候補が無いとき（Flop 以降に Hero の手番が無い）の投稿のエラー。候補があれば null。
+ * Hero が Preflop で All-in になって（All-in に Call して）ショーダウンまで進んだハンドはそう伝える（2026-09-29 さつき）。
+ */
+function noSpotError(d: Draft, phase: Extract<Phase, { kind: 'done' }>): string | null {
+  if (candidates(d).length > 0) return null;
+  const heroAllinPf =
+    phase.result.kind === 'showdown' && !phase.state.folded.has(d.hero) && d.actions.every((a) => a.street === 'pf');
+  return heroAllinPf ? PREFLOP_ALLIN : NO_HERO_POSTFLOP;
+}
+
 /**
  * 「投稿する」を押したときの検査。問題があればエラー文の一覧、なければ create-post に送る本文を返す。
  * 最後に packages/core の validateInput と verifyPost を通す（サーバーと同じ判定。03 章 §4）。
@@ -501,10 +530,9 @@ export function buildSubmission(d: Draft): Submission {
 
   const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
-  if (d.spotIndex === null) errors.push('Spot を選択してください');
-  else if (d.villain === null) errors.push('Villain を選択してください');
+  if (d.spotIndex === null) errors.push((phase.kind === 'done' && noSpotError(d, phase)) || 'Spot を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
-  if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null || d.villain === null) {
+  if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };
   }
 
@@ -516,7 +544,7 @@ export function buildSubmission(d: Draft): Submission {
   const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
 
   try {
-    const view = spotView(setup, d.actions, d.hero, d.spotIndex, d.villain);
+    const view = spotView(setup, d.actions, d.hero, d.spotIndex);
     // 席は stacks のキーで表す（空席は送らない。04 章 §2.1）
     const stacks: Record<string, number> = {};
     for (const p of seats) stacks[p] = mbbToBb(setup.stacks[p]);
@@ -535,7 +563,6 @@ export function buildSubmission(d: Draft): Submission {
       board: d.board.slice(0, phase.boardCount),
       actions: d.actions.map((a) => (a.to === undefined ? { ...a } : { ...a, to: mbbToBb(a.to) })),
       spot_index: d.spotIndex,
-      villain: d.villain,
       derived: {
         street: view.derived.street,
         keys: view.derived.keys,

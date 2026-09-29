@@ -46,18 +46,18 @@ export function resultTabs(d: PostDetail): { value: ResultView; label: string }[
   return tabs;
 }
 
-/** Villain のハンド（判明していればカード、マック、不明は null）。 */
-export function villainHand(d: PostDetail): Card[] | 'muck' | null {
-  return d.secrets?.knownCards[d.post.villain] ?? null;
+/** Hero のハンド（答え合わせ。回答後に見える。2026-09-29） */
+export function heroHand(d: PostDetail): Card[] | null {
+  return d.secrets?.heroCards ?? null;
 }
 
-/** 白枠を付けるマス（Villain の実際のハンドがカードのときだけ。05 章 §4.3）。 */
+/** 白枠を付けるマス（Hero の実際のハンド。05 章 §4.3）。 */
 export function actualCell(d: PostDetail): number | null {
-  const h = villainHand(d);
-  return Array.isArray(h) && h.length === 2 ? idxOf(labelOfCards(h[0] as Card, h[1] as Card)) : null;
+  const h = heroHand(d);
+  return h && h.length === 2 ? idxOf(labelOfCards(h[0] as Card, h[1] as Card)) : null;
 }
 
-/** 最初に選ぶマス: Villain の実際のハンド、なければ AA（§5.2）。 */
+/** 最初に選ぶマス: Hero の実際のハンド、なければ AA（§5.2）。 */
 export function initialCell(d: PostDetail): number {
   return actualCell(d) ?? idxOf('AA');
 }
@@ -67,10 +67,10 @@ export function keyNames(d: PostDetail): KeyNames {
   return { fold: 'Fold', check: 'Check', call: 'Call', s1: d.post.s1Label === 'bet' ? 'Bet' : 'Raise' };
 }
 
-/** Villain の実際のアクション（停止位置のアクション）。 */
+/** Hero の実際のアクション（出題の手番のアクション。答え合わせ）。 */
 export function actualAction(d: PostDetail): Action | null {
-  const a = d.hand.actions[d.hand.stopIndex];
-  return a && a.pos === d.post.villain ? a : null;
+  const a = d.hand.actions[d.hand.spotIndex];
+  return a && a.pos === d.post.hero ? a : null;
 }
 
 /** 「コール」「レイズ 12bb」（§5.3）。 */

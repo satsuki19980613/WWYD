@@ -4,7 +4,7 @@
 -- - 試験用ユーザー 8 人（UUID が 00000000-0000-0000-5eed-…、メールは @example.test。個人の情報は持たない）が 5 件ずつ投稿（計 40 件、過去 12 日に散らす）
 -- - 回答は試験用ユーザー同士だけ（回答数 0〜7）。**実在するユーザーの投稿・回答・投稿枠には一切触れない**（dev.sql との違い）
 -- - 消すときは試験用ユーザーの投稿を作成者で選んで消す（回答・集計はカスケード）。題名では選ばない（利用者の投稿を巻き込まないため）
--- ハンドはすべて H-S1（04 章）。スポットは BTN のアクション 7 / 10 / 13（フロップ〜リバー）、Villain は BB。
+-- ハンドはすべて H-S1（04 章）。スポットは BTN の手番 7 / 10 / 13（フロップ〜リバー。Hero の Check / Bet を答える。2026-09-29）。
 begin;
 
 -- ---- 前回の試験データを消す ----
@@ -19,23 +19,23 @@ from generate_series(1, 8) as n;
 -- ---- 投稿 ----
 create temp table seed_spot (street text, spot_index int, stop_index int, min_to numeric, max_to numeric, pot_base numeric);
 insert into seed_spot values
-  ('flop',  7,  8,  3.6, 97.5, 9.1),
-  ('turn',  10, 11, 13,  95.7, 22.1),
-  ('river', 13, 14, 30,  89.2, 52.1);
+  ('flop',  7,  7,  1, 97.5, 5.5),
+  ('turn',  10, 10, 1, 95.7, 9.1),
+  ('river', 13, 13, 1, 89.2, 22.1);
 
 create temp table seed_title (i int, title text);
 insert into seed_title values
   (0, '試験 BTN vs BB のシングルレイズドポット'),
-  (1, '試験 ドライボードでのチェックレイズ頻度'),
-  (2, '試験 ターンのバレルにどう応じる？'),
+  (1, '試験 ドライボードでの C-bet 頻度'),
+  (2, '試験 ターンで 2 バレル目を打つ？'),
   (3, '試験 リバーのポラライズドベット'),
   (4, '試験 とても長いタイトルの例。二行に収まらないときは省略記号で切られるはず');
 
 -- H-S1 のスポットを 1 件作る（DB の所有者として insert_post を呼ぶ。create-post と同じ）
 create function pg_temp.seed_post(author uuid, title text, sp seed_spot, fmt text) returns uuid language sql as $$
   select public.insert_post(author, jsonb_build_object(
-    'title', title, 'fmt', fmt, 'hero', 'BTN', 'villain', 'BB', 'street', sp.street,
-    'effective_stack', 100, 'keys', '["fold","call","s1"]'::jsonb, 's1_label', 'raise',
+    'title', title, 'fmt', fmt, 'hero', 'BTN', 'street', sp.street,
+    'effective_stack', 100, 'keys', '["check","s1"]'::jsonb, 's1_label', 'bet',
     'min_to', sp.min_to, 'max_to', sp.max_to, 'pot_base', sp.pot_base,
     'sb', 0.5, 'bb', 1, 'ante', 0, 'rake', case when fmt = 'cash' then 5 end,
     'stacks', '{"UTG":100,"HJ":100,"CO":100,"BTN":100,"SB":100,"BB":100}'::jsonb,
@@ -84,12 +84,12 @@ update public.posts p set created_at = now() - make_interval(mins => (s.k * 397)
 from seed_posts s where s.id = p.id;
 alter table public.posts enable trigger posts_only_count_update;
 
--- ---- 回答（AA を call 100%、22 を fold 100%）。試験用ユーザー同士だけ ----
+-- ---- 回答（AA を Bet 100%、22 を Check 100%）。試験用ユーザー同士だけ ----
 do $$
 declare
   p record;
   u int;
-  v_paint bytea := set_byte(set_byte(decode(repeat('00', 676), 'hex'), 2, 20), 672, 20);
+  v_paint bytea := set_byte(set_byte(decode(repeat('00', 676), 'hex'), 3, 20), 673, 20);
 begin
   for p in select * from seed_posts loop
     for u in 1..8 loop
@@ -98,7 +98,7 @@ begin
       continue when (p.k * 7 + u * 3) % 8 >= (p.k % 9);
       perform set_config('request.jwt.claims',
         json_build_object('sub', '00000000-0000-0000-5eed-' || lpad(u::text, 12, '0'), 'role', 'authenticated')::text, true);
-      insert into public.answers (post_id, paint) values (p.id, v_paint);
+      insert into public.answers (post_id, paint, size) values (p.id, v_paint, (select round(q.pot_base * 0.5, 1) from public.posts q where q.id = p.id));
     end loop;
   end loop;
   perform set_config('request.jwt.claims', '', true);

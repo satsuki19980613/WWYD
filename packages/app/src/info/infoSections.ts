@@ -18,7 +18,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
     items: [
       {
         term: 'WWYD',
-        desc: 'Hand の 1 場面（Spot）で、Villain ならどんな Range でどう行動するかを、Player の回答から集合知として見るアプリ。',
+        desc: 'Hand の Hero の手番（Spot）で、ほかの Player ならどんな Range でどう行動するかを、回答から集合知として見るアプリ。',
       },
       {
         term: 'ログイン',
@@ -28,7 +28,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
   },
   list: {
     id: 'list',
-    title: 'Spot 一覧',
+    title: 'List',
     items: [
       { term: 'タブ', desc: '「すべて」と「自分の投稿」。' },
       { term: 'フィルタ', desc: 'Spot の Street（Flop〜River）で絞り込み、新着順または回答数順に並び替え。' },
@@ -36,14 +36,15 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         term: '遷移',
         desc: 'Card を押すと、未回答の Spot は回答画面へ、回答済みの Spot は集計画面へ進む。自分の投稿にも回答でき、集計は回答するまで見られない。',
       },
+      { term: '削除', desc: '自分の投稿は Card の右上のごみ箱のマークから削除できる（回答もまとめて消える。元に戻せない）。' },
     ],
   },
   answer: {
     id: 'answer',
     title: 'Range 入力',
     items: [
-      { term: '視点', desc: 'Villain（あなた）の席から、Hero の Action に対する Villain の Range を入力する。' },
-      { term: 'Replay', desc: 'Spot までの Action を再生する。Hero の Hand は回答後に公開される。' },
+      { term: '視点', desc: 'Hero（あなた）の席に座り、この Spot での Hero の Range を入力する（Hand ごとに、どの Action をどの割合で取るか）。' },
+      { term: 'Replay', desc: 'Spot までの Action を再生する。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。Hero の Hand は回答後に公開される。' },
       { term: 'Spot の要約', desc: 'Range の上の行は Board・Hero の Action・Pot。押すと Replay に戻る。' },
       {
         term: 'ブラシ',
@@ -82,7 +83,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         desc: 'マス内の色の割合が Action 頻度を表す（その Hand を Range 内とした回答者の平均）。赤は Fold、シアンは Check と Call、黄は Bet と Raise。',
       },
       { term: '濃さ', desc: 'その Hand を Range 内に含めた回答者の割合を 20% ごとの 5 段階で表す。薄いほど Range 外とした回答者が多い。' },
-      { term: '白枠', desc: 'Villain の実際の Hand。Showdown がない、または Muck の場合は表示されない。' },
+      { term: '白枠', desc: 'Hero の実際の Hand。' },
       {
         term: '上部のバー',
         desc: '全体と自分の Range の大きさ（combos と 1326 combos に対する %）と、Range の中の各 Action の割合。全体は Range 内とした回答者の割合で重み付けしている。',
@@ -93,12 +94,12 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
         desc: '自分と全体の頻度（Range 外を含む）の違いの大きさを黄の濃さで表す。0% は全体と同じ、100% はまったく違う。正解・不正解ではない。',
       },
       { term: '次の Spot', desc: '未回答の Spot のうち最も新しいものへ進む。' },
-      { term: 'Hand History', desc: 'Hand を最後まで再生し、Showdown の Hand を確認できる。' },
+      { term: 'Hand History', desc: 'Hand を最後まで再生し、Showdown の Hand を確認できる。再生の操作は「|◀」で 1手戻る、「▶」で再生（再生中は「❚❚」で一時停止）、「▶|」で 1手進む。' },
     ],
   },
   new: {
     id: 'new',
-    title: 'Spot 投稿',
+    title: 'Post',
     items: [
       {
         term: '画像読み込み',
@@ -127,7 +128,7 @@ export const INFO_SECTIONS: Record<InfoSectionId, InfoSection> = {
       },
       {
         term: 'Spot',
-        desc: 'Hero の Flop 以降の Action を 1 つと Villain を 1 つ選ぶ（Preflop は出題できない）。回答対象はその後の Villain の最初の Action。Fold した席も Villain に選べる。',
+        desc: 'Hero の Flop 以降の手番を 1 つ選ぶ（Preflop は出題できない）。回答者はその手番で Hero の席から Range を答え、回答後に Hero が実際に取った Action と Hand が表示される。',
       },
       {
         term: '下書き',

@@ -10,7 +10,7 @@ const KEY = `wwyd.drafts.v1.${UID}`;
 /** 投稿の画面で人数とタイトルだけ入れる（何か入っている＝離れるときに聞く） */
 async function startPost(page: Page, title: string): Promise<void> {
   await page.goto('/');
-  await page.getByRole('link', { name: /Spot を投稿/ }).first().click();
+  await page.getByRole('link', { name: /Post/ }).first().click();
   await expect(page).toHaveURL('/new');
   await step(page, /^2\s*Player$/);
   await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' }).click();
@@ -63,7 +63,7 @@ test('保存しない → 入力は空に。やめる → 留まる', async ({ p
   await expect(draftsButton(page)).toHaveAccessibleName('下書き（0件）');
   expect(await page.evaluate((k) => localStorage.getItem(k), KEY)).toBeNull();
   // 戻ると空から
-  await page.getByRole('link', { name: /Spot を投稿/ }).first().click();
+  await page.getByRole('link', { name: /Post/ }).first().click();
   await step(page, /^4\s*Spot$/);
   await expect(page.getByPlaceholder(/タイトル/)).toHaveValue('');
 });

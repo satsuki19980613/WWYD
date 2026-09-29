@@ -132,14 +132,13 @@ describe('保存（EF-02・EF-04）', () => {
       title: 'K83r のターン 2 バレル',
       fmt: 'cash',
       hero: 'BTN',
-      villain: 'BB',
       street: 'turn',
       effective_stack: 100,
-      keys: ['fold', 'call', 's1'],
-      s1_label: 'raise',
-      min_to: 13,
+      keys: ['check', 's1'],
+      s1_label: 'bet',
+      min_to: 1,
       max_to: 95.7,
-      pot_base: 22.1,
+      pot_base: 9.1,
       sb: 0.5,
       bb: 1,
       ante: 0,
@@ -147,7 +146,7 @@ describe('保存（EF-02・EF-04）', () => {
       stacks: { UTG: 100, HJ: 100, CO: 100, BTN: 100, SB: 100, BB: 100 },
       board: ['Kh', '8d', '3c', '2s', '7h'],
       spot_index: 10,
-      stop_index: 11,
+      stop_index: 10,
       hero_cards: ['Ad', 'Kd'],
       known_cards: { BB: ['Ks', 'Js'] },
     });
@@ -160,8 +159,8 @@ describe('保存（EF-02・EF-04）', () => {
     const { handler, insertPost } = setup();
     expect((await handler(post({ ...hmw(), known_cards: { BTN: ['7s', '7d'] } }))).status).toBe(201);
     const p = insertPost.mock.calls[0]?.[1] as InsertPayload;
-    expect(p.stop_index).toBe(9);
-    expect(p.pot_base).toBe(17);
+    expect(p.stop_index).toBe(7);
+    expect(p.pot_base).toBe(8);
     expect(p.known_cards).toEqual({ BTN: ['7s', '7d'], BB: 'muck' });
   });
 
@@ -169,7 +168,7 @@ describe('保存（EF-02・EF-04）', () => {
     const { handler, insertPost } = setup();
     expect((await handler(post(hs3()))).status).toBe(201);
     const p = insertPost.mock.calls[0]?.[1] as InsertPayload;
-    expect(p).toMatchObject({ fmt: 'mtt', rake: null, ante: 0.125, max_to: 19.775, pot_base: 11.45, effective_stack: 22 });
+    expect(p).toMatchObject({ fmt: 'mtt', rake: null, ante: 0.125, max_to: 21.775, pot_base: 5.45, effective_stack: 22 });
   });
 
   it('EF-04 タイトルはサーバーで整えた値（前後の空白を除く）', async () => {

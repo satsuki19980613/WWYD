@@ -384,16 +384,10 @@ function LiveTable(props: { draft: Draft; phase: Phase; onOpen: () => void; onRe
   const reached = phase.kind === 'act' ? BOARD_COUNT[phase.state.street] : phase.kind === 'board' ? phase.need : phase.boardCount;
   return (
     <PokerTable
-      seats={seatViews(s, {
-        hero: d.hero,
-        villain: null,
-        actor: phase.kind === 'act' ? phase.pos : null,
-        bottom: s.seated.includes(d.hero) ? d.hero : undefined,
-      })}
+      seats={seatViews(s, { hero: d.hero, actor: phase.kind === 'act' ? phase.pos : null })}
       pot={s.pot}
       board={d.board}
       holes={holes}
-      villainLabel="Villain"
       note={note}
       boardContent={
         <BoardSlots draft={d} addable={phase.kind === 'board'} reached={reached} onOpen={props.onOpen} onRemoveFrom={props.onRemoveFrom} />

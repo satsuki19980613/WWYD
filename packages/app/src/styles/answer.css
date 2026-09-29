@@ -93,6 +93,11 @@
   border-radius: 4px;
 }
 .ptable-board .pcard { gap: 2px; }
+/*
+ * 卓の上の札は白を抑えたグレー（2026-09-29 さつき。真っ白だと暗い卓から浮く）。透明にはしない（卓の模様が透けて読みにくくなる）。
+ * 4 色のランクとの対比は大きい文字の基準（3:1）以上
+ */
+.ptable .pcard:not(.pending) { background: #c9cbc0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
 .ptable-board .pcard em { font-size: calc(var(--bw) * 0.38); }
 .ptable-slot {
   border: 1px solid rgba(190, 232, 255, 0.3);
@@ -144,7 +149,6 @@
 .pseat-pos { font-family: var(--mono); font-size: 13px; font-weight: 400; letter-spacing: 0.06em; }
 .pseat-tag { font-family: var(--disp); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
 .pseat-tag.hero { color: var(--yellow); }
-.pseat-tag.villain { color: var(--cyan); }
 .pseat-stack { font-size: 17px; color: var(--fg); }
 .pseat-last {
   font-size: 14px;
@@ -156,15 +160,15 @@
 }
 .pseat.folded .pseat-plate { opacity: 0.45; }
 .pseat.folded .pseat-last { color: var(--faint); }
-/* Villain（あなた）= シアンの枠（仕様書の「青枠」）。Hero = 黄のラベル */
-.pseat.villain .pseat-plate { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+/* 回答者（あなた）の席 = シアンの枠。回答画面では Hero の席（2026-09-29）。Hero = 黄のラベル */
+.pseat.you .pseat-plate { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
 /* to act = 黄のグロー */
 .pseat.acting .pseat-plate {
   border-color: var(--yellow);
   box-shadow: 0 0 14px rgba(252, 238, 10, 0.45), inset 0 0 0 1px var(--yellow);
   animation: act-glow 1.4s var(--ease) infinite alternate;
 }
-.pseat.acting.villain .pseat-plate { box-shadow: 0 0 14px rgba(252, 238, 10, 0.45), inset 0 0 0 2px var(--cyan); }
+.pseat.acting.you .pseat-plate { box-shadow: 0 0 14px rgba(252, 238, 10, 0.45), inset 0 0 0 2px var(--cyan); }
 @keyframes act-glow { from { filter: brightness(0.9); } to { filter: brightness(1.15); } }
 .pchip {
   position: absolute;
@@ -188,6 +192,7 @@
 .rp-ctrl { display: flex; flex-direction: column; gap: var(--s2); }
 .rp-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); }
 .rp-btns .btn { font-size: 14px; padding: 8px 4px; }
+.rp-btns .rp-icon svg { width: 22px; height: 22px; }
 .rp-prog { display: flex; align-items: center; gap: var(--s3); }
 .rp-bar { flex: 1; height: 4px; background: var(--surface-3); overflow: hidden; }
 .rp-bar i { display: block; height: 100%; background: var(--cyan); transition: width 200ms var(--ease); }
@@ -414,6 +419,27 @@
 .size-input .tool-btn { border: 1px solid var(--line-2); }
 .size-range { font-size: 12px; color: var(--dim); display: flex; gap: var(--s2); }
 .size-out { color: var(--red); }
+/* スマホの Size のボタン（ブラシの道具の行。押すとモーダル） */
+.size-btn {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 6px;
+  line-height: 1.1;
+  box-shadow: inset 0 0 0 1px rgba(252, 238, 10, 0.45);
+}
+.size-btn-lbl { font-family: var(--disp); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--yellow); }
+.size-btn-amt { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 400; color: var(--fg); }
+.size-btn.bad { box-shadow: inset 0 0 0 1px var(--red); }
+.size-btn.bad .size-btn-amt { color: var(--red); }
+.size-modal { display: flex; flex-direction: column; gap: var(--s3); }
+.size-modal-sum { margin: 0; display: flex; align-items: baseline; gap: var(--s2); }
+.size-modal-sum .size-amt { font-size: 24px; }
+.size-modal-sum .size-pct { font-size: 14px; }
 /* ゲージ（min〜max） */
 .gauge {
   width: 100%;
@@ -473,8 +499,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--s2);
-  margin: 0 calc(-1 * var(--s4));
-  padding: 0 var(--s4) var(--s2);
+  /* 固定したときにタブがヘッダーの線に付かないよう、上にも余白（負の余白で固定前の位置は変えない） */
+  margin: calc(-1 * var(--s2)) calc(-1 * var(--s4)) 0;
+  padding: var(--s2) var(--s4);
   background: var(--bg2);
   border-bottom: 1px solid var(--line);
 }
@@ -497,7 +524,6 @@
 .ss-board { display: flex; gap: 2px; flex: none; }
 .ss-line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
 .ss-line b { font-family: var(--mono); font-weight: 400; }
-.ss-tag { margin-left: 4px; font-family: var(--disp); font-size: 11px; font-weight: 700; color: var(--yellow); }
 .ss-pot { margin-left: auto; flex: none; color: var(--fg); }
 .ans.sp .brush { padding: 6px; gap: 6px; }
 /* スマホのタイルは 2 行（名前 / 頻度・額）にして上部固定パネルを低くする */
@@ -508,6 +534,27 @@
 .ans.sp .mixbar { height: 24px; }
 .ans.sp .rcell-lbl { font-size: 9px; letter-spacing: -0.04em; }
 .ans.sp .rgrid { gap: 1px; }
+/*
+ * 道具の行（ブラシ / 消しゴム・戻す・やり直す・Size・Hand History・クリア）を 1 行に収める。
+ * 押す所は 40px 角（狭い端末は 36px）。残りの幅を Size に回す
+ */
+.ans.sp .brush-tools { flex-wrap: nowrap; gap: 4px; }
+.ans.sp .brush-tools .tool-btn { width: 40px; height: 40px; flex: none; }
+.ans.sp .brush-tools .tool-btn.size-btn { flex: 1 1 auto; width: auto; }
+.ans.sp .brush-clear { flex: none; min-width: 0; min-height: 40px; height: 40px; padding: 0 10px; font-size: 14px; }
+@media (max-width: 380px) {
+  .ans.sp .brush-tools .tool-btn { width: 36px; }
+  .ans.sp .brush-clear { padding: 0 8px; font-size: 13px; }
+  .size-btn-amt { font-size: 12px; }
+}
+/* Range のタブは画面をスクロールさせない。表は残りの高さと幅の小さい方の正方形（2026-09-29 さつき） */
+.ans.sp.tab-range { min-height: var(--screen-fill-h); }
+/* 背の低い端末では Range のタブのタイトルを出さない（上の Spot の要約で足りる。表を大きく残す） */
+@media (max-height: 860px) {
+  .ans.sp.tab-range > .ans-head { display: none; }
+}
+.ans-gridbox { flex: 1 1 0; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
+.ans-gridbox > .rgrid { width: min(100cqw, 100cqh); }
 /*
  * ログはモーダルなので、卓で画面の残りを埋める（14 章）。リプレイのタブの画面を画面の高さちょうどにして、卓を伸ばす
  * （下の余白は下部固定のバーの高さ。.ans.sp の padding-bottom）。
@@ -582,7 +629,7 @@
 .rgrid.result { touch-action: manipulation; }
 .rgrid.result .rcell[aria-pressed='true'] { outline: 2px solid var(--yellow); outline-offset: 1px; z-index: 1; }
 .rgrid.result .rcell[aria-pressed='true']:focus-visible { outline-color: var(--cyan); }
-/* Villain の実際のハンド = 白枠（仕様書 §5.4.2） */
+/* Hero の実際のハンド = 白枠（答え合わせ。2026-09-29） */
 .rgrid.result .rcell.actual { box-shadow: inset 0 0 0 2px var(--fg); }
 .res-detail {
   display: flex;
