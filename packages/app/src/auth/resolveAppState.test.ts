@@ -5,7 +5,7 @@ import { checkHealth, cleanAuthParams, resolveAppState, type AppStateDeps, type 
 function deps(p: {
   health?: Reachability;
   online?: boolean;
-  session?: boolean;
+  session?: boolean | Reachability;
   whoami?: Whoami | Reachability;
 }): AppStateDeps & { calls: string[] } {
   const calls: string[] = [];
@@ -49,6 +49,15 @@ describe('resolveAppState（06 章 §0.3）', () => {
     expect(d.calls).toEqual(['health']);
     expect((await resolveAppState(deps({ health: { kind: 'http', status: 503 } }))).state).toBe('maintenance');
     expect((await resolveAppState(deps({ health: { kind: 'network' }, online: false }))).state).toBe('offline');
+  });
+
+  it('get-session の失敗: 5xx・通信エラーはメンテナンス中 / オフライン、4xx は未ログイン（リリース前テスト T-A F5）', async () => {
+    const d = deps({ session: { kind: 'http', status: 502 } });
+    expect((await resolveAppState(d)).state).toBe('maintenance');
+    expect(d.calls).toEqual(['health', 'session']);
+    expect((await resolveAppState(deps({ session: { kind: 'network' } }))).state).toBe('maintenance');
+    expect((await resolveAppState(deps({ session: { kind: 'network' }, online: false }))).state).toBe('offline');
+    expect((await resolveAppState(deps({ session: { kind: 'http', status: 401 } }))).state).toBe('signedOut');
   });
 
   it('whoami の通信失敗', async () => {

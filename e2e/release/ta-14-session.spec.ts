@@ -14,10 +14,9 @@ const NOT_AUTH = { code: 'P0001', message: 'not_authenticated', details: null, h
 const JWT_EXPIRED = { code: 'PGRST301', message: 'JWT expired', details: null, hint: null };
 
 async function expectLoginOrMessage(page: Page): Promise<void> {
-  // 期待（06 章 §7）: ログイン画面へ移る、または少なくとも「ログインし直してください」と伝える
-  const login = page.getByRole('button', { name: 'Google でログイン' });
-  const msg = page.getByText('ログインし直してください');
-  await expect(login.or(msg)).toBeVisible({ timeout: 5000 });
+  // 期待（06 章 §7）: ログイン画面へ移り、「ログインし直してください」と伝える
+  await expect(page.getByRole('button', { name: 'Google でログイン' })).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('alert').filter({ hasText: 'ログインし直してください' })).toBeVisible();
 }
 
 for (const v of ['', ' @sp'] as const) {
@@ -35,7 +34,8 @@ for (const v of ['', ' @sp'] as const) {
     await expectLoginOrMessage(page);
   });
 
-  test(`回答の送信が not_authenticated → 文言「ログインし直してください」（塗りは残る）${v}`, async ({ page }) => {
+  // ログインし直すには Google へ移るので塗りは残せない。06 章 §7 のとおりログイン画面へ移る（指揮役が期待を直した）
+  test(`回答の送信が not_authenticated → ログイン画面に「ログインし直してください」${v}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await fakeBackend(page, detailJson(hs1bb(), { viewer: 'unanswered', id: ID }));
     await page.route(`${DATA}/answers`, (r) => (r.request().method() === 'OPTIONS' ? r.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' } }) : fulfillJson(r, 400, NOT_AUTH)));
@@ -44,8 +44,7 @@ for (const v of ['', ' @sp'] as const) {
     await page.getByRole('button', { name: /^AA / }).click();
     await page.getByRole('button', { name: '回答する' }).click();
     await page.getByRole('button', { name: '送信する' }).click();
-    await expect(page.getByText('ログインし直してください')).toBeVisible();
-    await expect(page.getByRole('button', { name: /^AA / })).toHaveAccessibleName('AA Call 100%');
+    await expectLoginOrMessage(page);
   });
 
   test(`使っている途中で /api/auth/token が 401（セッション切れ）でも、画面の中で操作を続けると、ログインし直しを促す（ログイン画面 or 文言）${v}`, async ({ page }) => {

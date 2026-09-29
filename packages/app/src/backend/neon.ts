@@ -90,13 +90,34 @@ function expOf(jwt: string): number {
   }
 }
 
+// ---- 使っている途中のセッション切れ（06 章 §7 の not_authenticated → ログイン画面へ。リリース前テスト T-A F6） ----
+
+const sessionLostListeners = new Set<() => void>();
+
+/** 使っている途中でセッションが切れた（7 日を過ぎた・ほかの端末でログアウトした等）ことを知らせてもらう */
+export function onSessionLost(listener: () => void): () => void {
+  sessionLostListeners.add(listener);
+  return () => sessionLostListeners.delete(listener);
+}
+
+function sessionLost(): void {
+  cachedToken = null;
+  for (const l of sessionLostListeners) l();
+}
+
 export async function getToken(): Promise<string | null> {
   if (cachedToken && cachedToken.exp - 30_000 > Date.now()) return cachedToken.token;
   const res = await sessionFetch('/token');
-  if (res.status === 401) return null;
+  if (res.status === 401) {
+    sessionLost();
+    return null;
+  }
   if (!res.ok) throw Object.assign(new Error(`token ${res.status}`), { status: res.status });
   const { token } = (await res.json()) as { token?: string };
-  if (!token) return null;
+  if (!token) {
+    sessionLost();
+    return null;
+  }
   cachedToken = { token, exp: expOf(token) };
   return token;
 }
@@ -107,6 +128,18 @@ export const db = new PostgrestClient(DATA_API_URL, {
     const token = await getToken();
     const headers = new Headers(init?.headers);
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    return fetch(input, { ...init, headers });
+    const res = await fetch(input, { ...init, headers });
+    // JWT が通らない（401）・サーバーが not_authenticated を返した → ログインし直してもらう
+    if (res.status === 401 || (res.status === 400 && (await isNotAuthenticated(res)))) sessionLost();
+    return res;
   },
 });
+
+async function isNotAuthenticated(res: Response): Promise<boolean> {
+  try {
+    const body = (await res.clone().json()) as { message?: unknown } | null;
+    return body?.message === 'not_authenticated';
+  } catch {
+    return false;
+  }
+}

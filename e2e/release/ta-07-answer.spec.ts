@@ -341,13 +341,13 @@ test.describe('A-07 送信', () => {
     expect(be.inserts).toHaveLength(1);
   });
 
-  test('通信失敗・5xx・未ログイン・paint / size のコード → 文言。エラーは塗りを変えると消え、押し直せる', async ({ page }) => {
+  // not_authenticated はログイン画面へ移る（06 章 §7。ta-14-session で確かめる）
+  test('通信失敗・5xx・paint / size のコード → 文言。エラーは塗りを変えると消え、押し直せる', async ({ page }) => {
     const be = await open(page);
     await cell(page, 'AA').click();
     const cases: [{ status: number; body: Record<string, unknown> } | 'abort', string][] = [
       ['abort', '通信に失敗しました'],
       [{ status: 500, body: { message: 'boom' } }, 'エラーが発生しました'],
-      [{ status: 400, body: { code: 'P0001', message: 'not_authenticated' } }, 'ログインし直してください'],
       [{ status: 400, body: { code: 'P0001', message: 'size_out_of_range' } }, '回答の内容が正しくありません'],
       [{ status: 400, body: { code: 'P0001', message: 'paint_empty' } }, '回答の内容が正しくありません'],
       [{ status: 400, body: { code: 'P0001', message: 'not_allowed' } }, 'このアカウントは利用できません'],

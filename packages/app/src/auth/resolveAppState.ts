@@ -9,7 +9,8 @@ export type Whoami = { allowed: boolean; admin: boolean };
 export type AppStateDeps = {
   health: () => Promise<Reachability>;
   online: () => boolean;
-  hasSession: () => Promise<boolean>;
+  /** セッションがあるか。get-session が失敗したら Reachability を返す（5xx・通信エラーは未ログインと区別する） */
+  hasSession: () => Promise<boolean | Reachability>;
   /** whoami の結果。通信に失敗したら Reachability を返す。 */
   whoami: () => Promise<Whoami | Reachability>;
 };
@@ -23,7 +24,12 @@ function isWhoami(v: Whoami | Reachability): v is Whoami {
 export async function resolveAppState(deps: AppStateDeps): Promise<Resolved> {
   const blocked = classifyReachability(await deps.health(), deps.online());
   if (blocked) return { state: blocked, admin: false };
-  if (!(await deps.hasSession())) return { state: 'signedOut', admin: false };
+  const session = await deps.hasSession();
+  if (typeof session !== 'boolean') {
+    // get-session の 5xx・通信エラーはメンテナンス中（オフライン）。4xx は未ログインとして扱う（06 章 §0.3。リリース前テスト T-A F5）
+    return { state: classifyReachability(session, deps.online()) ?? 'signedOut', admin: false };
+  }
+  if (!session) return { state: 'signedOut', admin: false };
   const me = await deps.whoami();
   if (!isWhoami(me)) {
     // whoami の 4xx（トークン切れ等）はログインし直してもらう

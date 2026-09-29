@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppState, Reachability } from '../appState.ts';
-import { configured, SESSION_URL, db, getSessionUser, signInWithGoogle, signOut as neonSignOut } from '../backend/neon.ts';
+import { configured, SESSION_URL, db, getSessionUser, onSessionLost, signInWithGoogle, signOut as neonSignOut } from '../backend/neon.ts';
+import { resetDraft } from '../post/draftStore.ts';
 import { navigate } from '../router.ts';
 import { checkHealth, cleanAuthParams, resolveAppState, type Whoami } from './resolveAppState.ts';
 
@@ -11,6 +12,8 @@ export type Auth = {
   admin: boolean;
   /** Google の同意を拒否した・失敗した（ログイン画面に「ログインできませんでした」を出す） */
   loginFailed: boolean;
+  /** 使っている途中でセッションが切れた（ログイン画面に「ログインし直してください」を出す。06 章 §7） */
+  sessionExpired: boolean;
   signingIn: boolean;
   signIn: () => void;
   signOut: () => Promise<void>;
@@ -40,7 +43,10 @@ export function useAuth(): Auth {
   const sessionUser = useRef<string | null>(null);
   const [loginFailed, setLoginFailed] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const run = useRef(0);
+  const ready = useRef(false);
+  ready.current = state === 'ready';
 
   const resolve = useCallback(async (verifier: string | null) => {
     const id = ++run.current;
@@ -57,9 +63,10 @@ export function useAuth(): Auth {
           const u = await getSessionUser(verifier);
           sessionUser.current = u?.id ?? null;
           return u !== null;
-        } catch {
+        } catch (e) {
           sessionUser.current = null;
-          return false;
+          const status = (e as { status?: unknown }).status;
+          return typeof status === 'number' ? { kind: 'http', status } : { kind: 'network' };
         }
       },
       whoami: callWhoami,
@@ -80,9 +87,25 @@ export function useAuth(): Auth {
     })();
   }, [resolve]);
 
+  // 使っている途中のセッション切れ（Data API の 401・not_authenticated、JWT を取り直せない）→ ログイン画面へ。
+  // 起動中の判定は resolveAppState が行うので、使っている間（ready）だけ扱う
+  useEffect(
+    () =>
+      onSessionLost(() => {
+        if (!ready.current) return;
+        run.current++; // 進行中の判定の結果で上書きしない
+        setSessionExpired(true);
+        setState('signedOut');
+        setAdmin(false);
+        setUserId(null);
+      }),
+    [],
+  );
+
   const signIn = useCallback(() => {
     setSigningIn(true);
     setLoginFailed(false);
+    setSessionExpired(false);
     // ログイン後は元のパスへ戻る（06 章 §1）
     const back = window.location.origin + window.location.pathname + window.location.search;
     signInWithGoogle(back).catch(() => {
@@ -97,6 +120,9 @@ export function useAuth(): Auth {
     } catch {
       // サーバーに届かなくても、画面はログアウトした状態にする（次回の起動で判定し直す）
     }
+    // 入力中の投稿（メモリの中だけ）も捨てる。ログアウトした後は保存先の利用者がいないので、
+    // 残すと離脱確認や「下書きに保存しますか」が出て保存もできない（リリース前テスト T-A F3・F4）
+    resetDraft();
     setState('signedOut');
     setAdmin(false);
     setUserId(null);
@@ -116,5 +142,5 @@ export function useAuth(): Auth {
     return true;
   }, [signOut]);
 
-  return { state, userId, admin, loginFailed, signingIn, signIn, signOut, deleteAccount };
+  return { state, userId, admin, loginFailed, sessionExpired, signingIn, signIn, signOut, deleteAccount };
 }
