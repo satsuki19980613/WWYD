@@ -2,7 +2,7 @@
   "name": "wwyd",
   "version": "0.0.0",
   "private": true,
-  "description": "WWYD（What Would You Do?）— ポーカーのスポットで Villain のレンジを集合知として見るアプリ",
+  "description": "WWYD（What Would You Do?）— ポーカーの Hero の手番（スポット）で、ほかの人ならどんなレンジで打つかを集合知として見るアプリ",
   "type": "module",
   "workspaces": [
     "packages/*"

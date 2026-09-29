@@ -22,6 +22,15 @@ export default defineConfig({
     // テスト名に @sp を付けたものはスマホ（幅 412px・タッチ）で、それ以外は PC で実行する
     { name: 'pc', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } }, grepInvert: /@sp/ },
     { name: 'sp', use: { ...devices['Pixel 7'] }, grep: /@sp/ },
+    // E2E_ALL_BROWSERS=1 のときだけ WebKit（Safari 相当。iPhone も）と Firefox でも回す（release-test-plan.md §3 G）。
+    // 事前に `npx playwright install webkit firefox` が要る。Firefox はスマホの端末の再現（isMobile）に対応しないので PC だけ
+    ...(process.env.E2E_ALL_BROWSERS
+      ? [
+          { name: 'pc-webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 900 } }, grepInvert: /@sp/ },
+          { name: 'sp-webkit', use: { ...devices['iPhone 14'] }, grep: /@sp/ },
+          { name: 'pc-firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 } }, grepInvert: /@sp/ },
+        ]
+      : []),
   ],
   webServer: {
     command: `npm run dev -w @wwyd/app -- --port ${PORT} --strictPort`,
