@@ -36,6 +36,8 @@ export function watchErrors(page: Page): string[] {
     const t = m.text();
     // 偽のバックエンドが 4xx / 5xx を返す試験では、ブラウザ自身が出すリソースの読み込み失敗の行が出る（アプリの例外ではない）
     if (/Failed to load resource/.test(t)) return;
+    // 開発サーバー（Vite）の HMR の WebSocket が、負荷の高い実行で一瞬つながらないときの行（アプリの例外ではない）
+    if (/WebSocket connection to 'ws:\/\/localhost/.test(t)) return;
     errors.push(`console.error: ${t}`);
   });
   return errors;
