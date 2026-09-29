@@ -17,7 +17,6 @@ import {
   defaultPreset,
   emptyDraft,
   isDirty,
-  isLocked,
   makesPreflopAllin,
   neighborSeat,
   nextOpenSeat,
@@ -26,6 +25,7 @@ import {
   PLAYERS_REQUIRED,
   PREFLOP_ALLIN,
   setPlayers,
+  settleActions,
   parseSize,
   phaseOf,
   removeBoardFrom,
@@ -304,16 +304,77 @@ describe('Action 入力の補助（13 章）', () => {
   });
 });
 
+describe('Action を入れたあとに設定を変える（2026-09-29 さつき: 確定した内容も編集できる）', () => {
+  // H-S1: 0-5 Preflop、6-8 Flop、9-11 Turn（10 が Spot の BTN Bet 6.5）、12-14 River（13 が BTN Bet 15）
+  const done = (): Draft => enter(hs1());
+  const phase = (d: Draft) => phaseOf(parseSettings(d).setup, d.actions, d.board);
+
+  it('合法なままなら何も外さない（同じ下書きを返す）', () => {
+    const d = done();
+    expect(settleActions(d)).toBe(d);
+    const rake = { ...d, rake: '10', fmt: 'cash' as const };
+    expect(settleActions(rake)).toBe(rake);
+  });
+  it('Stack を減らして River の Bet が払えなくなると、その手から後を外す（Spot と Board は残す）', () => {
+    const d = settleActions({ ...done(), stacks: { ...done().stacks, BTN: '20' } });
+    expect(d.actions).toHaveLength(13);
+    expect(d.spotIndex).toBe(10);
+    expect(d.board).toHaveLength(5);
+    expect(phase(d)).toMatchObject({ kind: 'act', pos: 'BTN' });
+  });
+  it('Spot の手が外れると Spot の選択も外す', () => {
+    const d = settleActions({ ...done(), stacks: { ...done().stacks, BTN: '1' } });
+    expect(d.actions).toHaveLength(3);
+    expect(d.spotIndex).toBeNull();
+  });
+  it('打っている途中（読めない値）では外さない。元の下書きは書き換えない', () => {
+    const base = done();
+    for (const v of ['', '1.', 'abc']) {
+      const d = { ...base, stacks: { ...base.stacks, BTN: v } };
+      expect(settleActions(d)).toBe(d);
+    }
+    settleActions({ ...base, stacks: { ...base.stacks, BTN: '1' } });
+    expect(base.actions).toHaveLength(15);
+  });
+  it('Stack を増やすと All-in だった Bet は普通の Bet になり、続きを入れられる', () => {
+    // BTN が 30bb で Flop に All-in、BB が Call → Board 待ちのまま Showdown。BTN を 100bb にすると Turn の Action 待ち
+    let d: Draft = { ...six(), stacks: { ...six().stacks, BTN: '30' }, hands: { ...six().hands, BTN: 'AdKd' } };
+    d = { ...d, actions: acts({ pf: 'UTG f, HJ f, CO f, BTN r2.5, SB f, BB c', flop: 'BB x, BTN b27.5, BB c' }), board: ['Kh', '8d', '3c', '2s', '7h'] };
+    expect(phase(d)).toMatchObject({ kind: 'done' });
+    const more = settleActions({ ...d, stacks: { ...d.stacks, BTN: '100' } });
+    expect(more.actions).toHaveLength(9);
+    expect(phase(more)).toMatchObject({ kind: 'act', pos: 'BB' });
+  });
+  it('Hero を変えても Action は残し、新しい Hero の候補に無い Spot は外す', () => {
+    const d = done();
+    const bb = selectSpot(settleActions({ ...d, hero: 'BB' }), d.spotIndex as number);
+    expect(bb.actions).toHaveLength(15);
+    expect(bb.spotIndex).toBeNull();
+    expect(candidates(bb).map((c) => c.index)).toContain(11);
+  });
+  it('人数を変えると先頭の席が変わり、Action はすべて外れる（Board は残す）', () => {
+    const d = settleActions(setPlayers(done(), 5));
+    expect(d.actions).toEqual([]);
+    expect(d.spotIndex).toBeNull();
+    expect(d.board).toHaveLength(5);
+  });
+  it('Ante は額を変えないので残す。相手の Stack を減らして途中で All-in になれば、その後の手を外す', () => {
+    expect(settleActions({ ...done(), ante: '1' }).actions).toHaveLength(15);
+    // BB が 5bb: Turn の Call（残り 0.7）で All-in になり、River の Action（12〜）は入れられない
+    const short = settleActions({ ...done(), stacks: { ...done().stacks, BB: '5' } });
+    expect(short.actions).toHaveLength(12);
+    expect(phase(short)).toMatchObject({ kind: 'done' });
+  });
+});
+
 describe('Hand の進行（06 章 §3.6）', () => {
-  it('最初は UTG の手番。状況行とロック', () => {
+  it('最初は UTG の手番。状況行', () => {
     const d = six();
     const ph = phaseOf(parseSettings(d).setup, d.actions, d.board);
     expect(ph.kind).toBe('act');
     if (ph.kind !== 'act') return;
     expect(ph.pos).toBe('UTG');
     expect(statusLine(ph.state, ph.pos)).toBe('UTG to act · Preflop · to call 1 · Stack 100bb');
-    expect(isLocked(d)).toBe(false);
-    expect(isLocked(addAction(d, { street: 'pf', pos: 'UTG', type: 'fold' }))).toBe(true);
   });
 
   it('Street が終わると Board 待ち（Flop は 3 枚）', () => {

@@ -1,5 +1,6 @@
-import { STREETS, type Action, type Card, type Pos } from '@wwyd/core';
+import { STREETS, type Action, type Card, type PlayerCount, type Pos } from '@wwyd/core';
 import { useEffect, useRef, useState } from 'react';
+import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { typingOrModal } from '../answer/Replay.tsx';
 import { FitStage } from '../components/FitStage.tsx';
 import { cardText } from '../components/PlayingCard.tsx';
@@ -26,6 +27,7 @@ import {
   seatsOf,
   selectSpot,
   setPlayers,
+  settleActions,
   truncateActions,
   undoAction,
   usedCards,
@@ -49,9 +51,12 @@ const ACTION_STEP = STEPS.indexOf('Action');
  * スポット投稿（06 章 §3。仕様書 §5.2）。
  * PC は 3 列（基本設定・プレイヤー / アクション / スポット＋エラー＋投稿）、スマホは 4 ステップ。
  * 下書きはメモリのストア（draftStore）に持つ。
+ * 基本設定・人数・Stack・Hero は Action を入れたあとも変えられる（2026-09-29 さつき）。画面は変えた設定で合法な Action までを出し（settleActions）、
+ * Action を操作したときにそれを確定する（Stack を打っている途中の値で Action を消さない）。
  */
 export function NewPostScreen(): JSX.Element {
-  const d = useDraft();
+  const raw = useDraft();
+  const d = settleActions(raw);
   const mobile = useIsMobile();
   const toast = useToast();
   const [step, setStep] = useState(0);
@@ -59,6 +64,8 @@ export function NewPostScreen(): JSX.Element {
   const [attempted, setAttempted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 人数を変えると Action が外れるときの確認（2026-09-29）
+  const [recount, setRecount] = useState<{ n: PlayerCount; dropped: number } | null>(null);
   // スマホの戻る・次へのバーの高さ（画面の下の余白に使う）
   const barRef = useHeightVar('.pf', '--bar-h');
 
@@ -66,7 +73,7 @@ export function NewPostScreen(): JSX.Element {
   const phase = phaseOf(setup, d.actions, d.board);
 
   // 入力が変わったらサーバーのエラーは消す（投稿前の一覧はその場で計算し直す）
-  useEffect(() => setServerError(null), [d]);
+  useEffect(() => setServerError(null), [raw]);
 
   // キーボードを開いた欄が隠れないよう、画面の中ほどへスクロールする
   useEffect(() => {
@@ -74,7 +81,7 @@ export function NewPostScreen(): JSX.Element {
     document.querySelector(`[data-seat="${seat}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [seat]);
 
-  const update = (f: (x: Draft) => Draft): void => setDraft(f);
+  const update = (f: (x: Draft) => Draft): void => setDraft((x) => f(settleActions(x)));
 
   // 1つ進む（14 章 §3.1）: 1つ戻す・入れ直しで取り消したアクションを先頭から順に持つ。
   // 取り消したものと同じアクションを入れたら先へ進め、違うアクションを入れたら捨てる
@@ -83,7 +90,7 @@ export function NewPostScreen(): JSX.Element {
     setFuture((f) => (as.every((a, k) => sameAction(a, f[k])) ? f.slice(as.length) : []));
   // Preflop で All-in になる Action は受け付けない（投稿できないハンドになる。2026-09-29 さつき）
   const refused = (as: readonly Action[]): boolean => {
-    if (!makesPreflopAllin(getDraft(), as)) return false;
+    if (!makesPreflopAllin(settleActions(getDraft()), as)) return false;
     toast(PREFLOP_ALLIN);
     return true;
   };
@@ -94,12 +101,18 @@ export function NewPostScreen(): JSX.Element {
     update((x) => addAction(x, next));
   };
   const undoLast = (): void => {
-    const last = getDraft().actions.at(-1);
+    const last = settleActions(getDraft()).actions.at(-1);
     if (!last) return;
     setFuture((f) => [last, ...f]);
     update(undoAction);
   };
-  const patch = (p: Partial<Draft>): void => update((x) => normalizeSpot({ ...x, ...p }));
+  // 設定の欄は打っている途中でも Action を確定しない（外すのは画面の上だけ。直せば戻る）
+  const patch = (p: Partial<Draft>): void => setDraft((x) => normalizeSpot({ ...x, ...p }));
+  const changePlayers = (n: PlayerCount): void => {
+    const dropped = d.actions.length - settleActions(setPlayers(d, n)).actions.length;
+    if (dropped > 0) setRecount({ n, dropped });
+    else update((x) => setPlayers(x, n));
+  };
 
   // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）
   const keys = useRef({ undoLast, redo });
@@ -155,7 +168,7 @@ export function NewPostScreen(): JSX.Element {
       invalid={invalid}
       activeSeat={seat}
       onChange={patch}
-      onPlayers={(n) => update((x) => setPlayers(x, n))}
+      onPlayers={changePlayers}
       onOpenHand={(p) => setSeat(p)}
     />
   );
@@ -232,6 +245,20 @@ export function NewPostScreen(): JSX.Element {
       onNext={() => setSeat(neighborSeat(seatsOf(d), seat, 1))}
     />
   );
+  const recountDialog = recount && (
+    <ConfirmDialog
+      title={`人数を ${recount.n} 人にしますか`}
+      body={recount.dropped === d.actions.length ? "入れた Action をすべて消します。" : `後ろの ${recount.dropped} 個の Action を消します。`}
+      confirmLabel="変更する"
+      destructive
+      onConfirm={() => {
+        setFuture([]);
+        update((x) => setPlayers(x, recount.n));
+        setRecount(null);
+      }}
+      onCancel={() => setRecount(null)}
+    />
+  );
   // PC とスマホで同じ key の直下の子にして、幅が変わってレイアウトが切り替わっても読み込み・確認の途中の状態を保つ。
   // 反映したらスマホはアクションのステップへ（読み込んだアクションとスポットの確認に進む。2026-09-29）
   const ocr = (button: boolean): JSX.Element => <OcrImport key="ocr" button={button} onApplied={() => {
@@ -256,6 +283,7 @@ export function NewPostScreen(): JSX.Element {
           </div>
         </div>
         {keyboard}
+        {recountDialog}
       </FitStage>
     );
   }
@@ -305,6 +333,7 @@ export function NewPostScreen(): JSX.Element {
         </div>
       )}
       {mobileKeyboard}
+      {recountDialog}
     </section>
   );
 }

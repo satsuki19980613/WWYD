@@ -171,3 +171,93 @@ test('PC の Hand は Card の選択ボードで選び、2 枚そろうと次の
   await expect(page.getByRole('button', { name: 'BTN の Hand' })).toContainText('A');
   await expect(page.getByRole('button', { name: 'SB の Hand' })).toContainText('Q');
 });
+
+/** PC: 6 人で UTG〜CO が Fold、BTN が Open 2.5（手番は SB） */
+async function openBtn(page: Page): Promise<void> {
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' }).click();
+  const dock = page.getByRole('group', { name: 'Action' });
+  await dock.getByRole('group', { name: 'Fold to' }).getByRole('button', { name: 'BTN' }).click();
+  await dock.getByRole('button', { name: /^Open/ }).click();
+  await expect(page.getByRole('group', { name: 'Table' }).locator('.pseat.acting')).toContainText('SB');
+}
+
+test('Action を入れたあとも基本設定・Stack・Hero・人数を変えられる（2026-09-29）', async ({ page }) => {
+  await fakeBackend(page, null);
+  await page.goto('/new');
+  await openBtn(page);
+  const log = page.locator('.hlog');
+  const acting = page.getByRole('group', { name: 'Table' }).locator('.pseat.acting');
+  const stack = page.getByRole('textbox', { name: 'BTN の Stack（bb）' });
+
+  // どの欄も押せる
+  await expect(stack).toBeEnabled();
+  await expect(page.getByLabel('SB（bb）')).toBeEnabled();
+  await expect(page.getByRole('group', { name: 'Game 形式' }).getByRole('button', { name: 'MTT' })).toBeEnabled();
+  await expect(page.getByRole('radio', { name: 'Hero を CO にする' })).toBeEnabled();
+
+  // 変えても合法なら Action は残る（Ante・Hero・Stack を増やす）
+  await page.getByLabel('Ante（bb）').fill('0.1');
+  await page.getByRole('radio', { name: 'Hero を CO にする' }).click();
+  await expect(page.getByRole('radio', { name: 'Hero を CO にする' })).toHaveAttribute('aria-checked', 'true');
+  await stack.fill('150');
+  await expect(log).toContainText('BTN Raise 2.5');
+  await expect(acting).toContainText('SB');
+
+  // BTN を 2bb にすると 2.5 の Open は入らない → その手から外れ、BTN の番に戻る。打ち直せば戻る（途中の値では消さない）
+  await stack.fill('2');
+  await expect(log).not.toContainText('BTN Raise 2.5');
+  await expect(acting).toContainText('BTN');
+  await stack.fill('100');
+  await expect(log).toContainText('BTN Raise 2.5');
+  await expect(acting).toContainText('SB');
+
+  // 人数を変えると Action が外れるので確かめる。やめれば何も変えない
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '5' }).click();
+  const confirm = page.getByRole('alertdialog', { name: '人数を 5 人にしますか' });
+  await expect(confirm).toContainText('入れた Action をすべて消します。');
+  await confirm.getByRole('button', { name: 'やめる' }).click();
+  await expect(page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(log).toContainText('BTN Raise 2.5');
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '5' }).click();
+  await confirm.getByRole('button', { name: '変更する' }).click();
+  await expect(page.getByRole('group', { name: '人数' }).getByRole('button', { name: '5' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(log).toHaveCount(0);
+  await expect(acting).toContainText('HJ');
+});
+
+test('Stack を減らして外れた Action は、次に Action を入れたときに確定する（2026-09-29）', async ({ page }) => {
+  await fakeBackend(page, null);
+  await page.goto('/new');
+  await openBtn(page);
+  const stack = page.getByRole('textbox', { name: 'BTN の Stack（bb）' });
+  await stack.fill('2');
+  const dock = page.getByRole('group', { name: 'Action' });
+  // BTN の番から入れ直す（2bb の All-in の Open は Preflop の All-in なので、ここでは Limp）
+  await dock.getByRole('button', { name: /^Limp/ }).click();
+  await stack.fill('100');
+  const log = page.locator('.hlog');
+  await expect(log).toContainText('BTN Call 1');
+  await expect(log).not.toContainText('BTN Raise 2.5');
+});
+
+test('スマホでも Action のあとに基本設定と Player の欄を変えられる @sp', async ({ page }) => {
+  await openPlayers(page);
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' }).click();
+  await stepTo(page, /^3\s*Action$/);
+  const dock = page.getByRole('group', { name: 'Action' });
+  await dock.getByRole('group', { name: 'Fold to' }).getByRole('button', { name: 'BTN' }).click();
+  await dock.getByRole('button', { name: /^Open/ }).click();
+  await stepTo(page, /^1\s*基本設定$/);
+  await expect(page.getByLabel('SB（bb）')).toBeEnabled();
+  await page.getByLabel('Ante（bb）').fill('0.2');
+  await stepTo(page, /^2\s*Player$/);
+  await page.getByRole('textbox', { name: 'BTN の Stack（bb）' }).fill('60');
+  await page.getByRole('radio', { name: 'Hero を BB にする' }).click();
+  await expect(page.getByRole('radio', { name: 'Hero を BB にする' })).toHaveAttribute('aria-checked', 'true');
+  await stepTo(page, /^3\s*Action$/);
+  await expect(page.getByRole('group', { name: 'Table' }).locator('.pseat.acting')).toContainText('SB');
+});
+
+async function stepTo(page: Page, name: RegExp): Promise<void> {
+  await page.getByRole('button', { name }).click();
+}

@@ -107,3 +107,33 @@ test('下書きの画面: 無ければ「下書きなし」。削除は確かめ
   await page.getByRole('alertdialog').getByRole('button', { name: '削除する' }).click();
   await expect(page.getByText('下書きなし')).toBeVisible();
 });
+
+test('Action まで入れた下書きを開き直しても、基本設定・Stack・Hero を変えられる（2026-09-29 さつき）', async ({ page }) => {
+  await page.goto('/new');
+  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6' }).click();
+  const dock = page.getByRole('group', { name: 'Action' });
+  await dock.getByRole('group', { name: 'Fold to' }).getByRole('button', { name: 'BTN' }).click();
+  await dock.getByRole('button', { name: /^Open/ }).click();
+  await page.getByPlaceholder(/タイトル/).fill('Action の入った下書き');
+  await page.getByRole('link', { name: 'List' }).click();
+  await leaveDialog(page).getByRole('button', { name: '保存する' }).click();
+
+  await draftsButton(page).click();
+  await page.getByRole('link', { name: 'Action の入った下書き' }).click();
+  await expect(page.locator('.hlog')).toContainText('BTN Raise 2.5');
+  const stack = page.getByRole('textbox', { name: 'BTN の Stack（bb）' });
+  await expect(stack).toBeEnabled();
+  await stack.fill('80');
+  await page.getByLabel('SB（bb）').fill('0.4');
+  await page.getByRole('radio', { name: 'Hero を SB にする' }).click();
+  await expect(page.getByRole('radio', { name: 'Hero を SB にする' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.hlog')).toContainText('BTN Raise 2.5');
+  // 変えたので離れるときに聞く。保存して開き直すと変えた値
+  await page.getByRole('link', { name: 'List' }).click();
+  await leaveDialog(page).getByRole('button', { name: '保存する' }).click();
+  await draftsButton(page).click();
+  await page.getByRole('link', { name: 'Action の入った下書き' }).click();
+  await expect(stack).toHaveValue('80');
+  await expect(page.getByLabel('SB（bb）')).toHaveValue('0.4');
+  await expect(page.getByRole('radio', { name: 'Hero を SB にする' })).toHaveAttribute('aria-checked', 'true');
+});

@@ -82,9 +82,22 @@ export function isDirty(d: Draft): boolean {
   return JSON.stringify(d) !== JSON.stringify(emptyDraft());
 }
 
-/** アクションを 1 つでも入れたら、基本設定・人数・スタック・Hero の席はロック（06 章 §3.3）。 */
-export function isLocked(d: Draft): boolean {
-  return d.actions.length > 0;
+/**
+ * 基本設定・人数・Stack・Hero は Action を入れたあとも変えられる（2026-09-29 さつき。前はロックしていた）。
+ * 変えた設定で合法に再生できる Action だけを残す（途中の手が合法でなくなったら、その手から後を外す）。
+ * 設定が読めない間（入力の途中）は外さない。画面はこの結果を出し、Action を操作したときに確定する。
+ */
+export function settleActions(d: Draft): Draft {
+  const setup = parseSettings(d).setup;
+  if (!setup || d.actions.length === 0) return d;
+  let n = d.actions.length;
+  try {
+    runActions(setup, d.actions);
+  } catch (e) {
+    if (!(e instanceof ValidationError)) throw e;
+    n = e.index ?? 0;
+  }
+  return n === d.actions.length ? d : normalizeSpot({ ...d, actions: d.actions.slice(0, n) });
 }
 
 /** 座っている席（人数を選ぶまでは空）。プリフロップのアクション順 */
