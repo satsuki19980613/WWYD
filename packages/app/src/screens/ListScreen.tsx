@@ -59,25 +59,27 @@ export function ListScreen(): JSX.Element {
 
   return (
     <section className={`screen list-screen ${mobile ? 'sp' : ''}`}>
-      {/* 画面名はヘッダーに出す。PC は投稿ボタンをタブの右に置く */}
-      <div className="list-head">
-        <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
-        {!mobile && (
-          <Link to="/new" className="btn auto">
-            ＋ Spot を投稿
-          </Link>
-        )}
-      </div>
+      {/* 画面名はヘッダーに出す。PC は投稿ボタンをタブの右に置く。タブと絞り込みはスクロールしても上に固定する */}
+      <div className="list-top">
+        <div className="list-head">
+          <Tabs label="投稿の範囲" items={TAB_ITEMS} value={query.tab} onChange={(tab) => setQuery({ tab })} />
+          {!mobile && (
+            <Link to="/new" className="btn auto">
+              ＋ Spot を投稿
+            </Link>
+          )}
+        </div>
 
-      <div className="list-filters">
-        <ChipGroup
-          label="Street"
-          variant="segment"
-          items={STREET_ITEMS}
-          value={query.street}
-          onChange={(street) => setQuery({ street })}
-        />
-        <ChipGroup label="並び替え" variant="toggle" items={SORT_ITEMS} value={query.sort} onChange={(sort) => setQuery({ sort })} />
+        <div className="list-filters">
+          <ChipGroup
+            label="Street"
+            variant="segment"
+            items={STREET_ITEMS}
+            value={query.street}
+            onChange={(street) => setQuery({ street })}
+          />
+          <ChipGroup label="並び替え" variant="toggle" items={SORT_ITEMS} value={query.sort} onChange={(sort) => setQuery({ sort })} />
+        </div>
       </div>
 
       {list.status === 'loading' && (

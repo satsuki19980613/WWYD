@@ -75,10 +75,12 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
       次の Spot
     </Link>
   );
+  // 集計の表示の切り替え。スマホは上部固定のパネルに置く（表や内訳までスクロールしても切り替えられるように）
+  const viewTabs = <Tabs label="集計の表示" items={tabs} value={view} onChange={setView} />;
   const aggregate = (
     <div className="res-agg">
       <ActualBox detail={d} />
-      <Tabs label="集計の表示" items={tabs} value={view} onChange={setView} />
+      {!mobile && viewTabs}
       {empty ? (
         <div className="list-empty">
           <p className="list-empty-label">{empty}</p>
@@ -125,6 +127,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
       {head}
       <div className="ans-top">
         <Tabs label="表示" items={MOBILE_TABS} value={tab} onChange={setTab} />
+        {tab === 'agg' && <div className="res-agg">{viewTabs}</div>}
       </div>
       {tab === 'agg' ? aggregate : hand}
       {nextLink && <div className="ans-bottom">{nextLink}</div>}

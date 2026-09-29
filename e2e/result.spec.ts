@@ -252,3 +252,46 @@ test.describe('スマホ（06 章 §5.1）', () => {
     await expect(page.getByText('14 / 15 手目')).toBeVisible();
   });
 });
+
+test.describe('スクロールしても固定する部分（2026-09-29）', () => {
+  test('集計: 画面のタブと集計の表示の切り替えは上に固定 @sp', async ({ page }) => {
+    await open(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(tab(page, '集計')).toBeInViewport();
+    await expect(tab(page, '自分')).toBeInViewport();
+    await tab(page, '自分').click();
+    await expect(tab(page, '自分')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('一覧: 範囲のタブ・Street・並び替えは上に固定 @sp', async ({ page }) => {
+    await fakeBackend(page, null);
+    const rows = Array.from({ length: 12 }, (_, i) => ({
+      id: `00000000-0000-4000-8000-0000000000${10 + i}`,
+      created_at: '2026-09-28T00:00:00.000000+00:00',
+      title: `t${i}`,
+      fmt: 'cash',
+      hero: 'BTN',
+      villain: 'BB',
+      street: 'turn',
+      effective_stack: 100,
+      answer_count: 0,
+      is_mine: false,
+      answered_by_me: false,
+      can_delete: false,
+    }));
+    await page.route(`${DATA}/rpc/list_posts`, (r) =>
+      r.fulfill({
+        status: 200,
+        headers: { 'access-control-allow-origin': r.request().headers()['origin'] ?? '*', 'access-control-allow-credentials': 'true', 'content-type': 'application/json' },
+        body: JSON.stringify(rows),
+      }),
+    );
+    await page.goto('/');
+    await expect(page.getByText('t11')).toBeAttached();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.getByText('t0', { exact: true })).not.toBeInViewport();
+    await expect(page.getByRole('tab', { name: '自分の投稿' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'River' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: '回答が多い順' })).toBeInViewport();
+  });
+});

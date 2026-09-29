@@ -1,5 +1,5 @@
 import { MIX_TOTAL, mixUnitsToPercent, type AnswerKey, type Mix } from '@wwyd/core';
-import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
+import { useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { BrushIcon, EraserIcon, RedoIcon, UndoIcon } from '../components/Icons.tsx';
 import {
   boundaries,
@@ -16,7 +16,7 @@ export type KeyNames = Record<AnswerKey, string>;
 
 /**
  * ブラシパネル（06 章 §4.4・§4.6）: アクションのタイル、ミックスバー、道具（ブラシ / 消しゴム・元に戻す・
- * やり直す・取れないアクション（PC のみ）・クリア）。
+ * やり直す・取れないアクション（PC のみ）・`extra`（スマホの Size と Hand History のボタン）・クリア）。
  */
 export function BrushPanel(props: {
   keys: readonly AnswerKey[];
@@ -35,6 +35,8 @@ export function BrushPanel(props: {
   onUndo: () => void;
   onRedo: () => void;
   onClear: () => void;
+  /** クリアの前に並べるボタン（スマホの Size・Hand History） */
+  extra?: ReactNode;
 }): JSX.Element {
   const erasing = props.tool === 'eraser';
   return (
@@ -95,6 +97,7 @@ export function BrushPanel(props: {
             ))}
           </span>
         )}
+        {props.extra}
         <button type="button" className="btn red auto sm brush-clear" disabled={!props.canClear} onClick={props.onClear}>
           クリア
         </button>

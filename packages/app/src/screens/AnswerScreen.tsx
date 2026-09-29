@@ -42,7 +42,7 @@ import { answerErrorMessage, type PostDetail } from '../answer/postDetail.ts';
 import { RangeGrid } from '../answer/RangeGrid.tsx';
 import { HandLog, HistoryButton, PokerTable, ReplayControls, useReplay, type ReplayControl } from '../answer/Replay.tsx';
 import { actorAt, answerFrames, seatViews } from '../answer/replayModel.ts';
-import { SizeControl } from '../answer/SizeControl.tsx';
+import { SizeButton, SizeControl } from '../answer/SizeControl.tsx';
 import { STREET_LABEL } from '../list/spotList.ts';
 import { ErrorList } from '../post/SpotSection.tsx';
 import { useHeightVar } from '../useHeightVar.ts';
@@ -182,6 +182,22 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   // スマホの下部固定バーの高さを --ans-bottom-h に（いちばん下までスクロールしたとき、レンジ表の最後の行がバーのすぐ上に来る）
   const bottomRef = useHeightVar('.ans', '--ans-bottom-h');
   const s1Sub = sizeSpot ? sizeSummary(to, sizeSpot) : null;
+  // スマホはブラシの道具の行に Size（モーダル）と Hand History（停止位置までのログのモーダル）のボタンを置く（2026-09-29 さつき）
+  const tools = mobile && (
+    <>
+      {sizeSpot && <SizeButton label={`${s1Name} Size`} spot={sizeSpot} text={sizeText} onText={setSizeText} />}
+      <HistoryButton compact>
+        <HandLog
+          setup={hand.setup}
+          actions={hand.actions.slice(0, hand.stopIndex)}
+          board={hand.board.slice(0, BOARD_COUNT[stop.street])}
+          spotIndex={hand.spotIndex}
+          highlightLast
+          prompt={`▶ ${post.villain} to act`}
+        />
+      </HistoryButton>
+    </>
+  );
   const brushPanel = (
     <BrushPanel
       keys={post.keys}
@@ -201,6 +217,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
       onUndo={() => setEditor(undo)}
       onRedo={() => setEditor(redo)}
       onClear={() => setEditor(clear)}
+      extra={tools}
     />
   );
   const grid = <RangeGrid paint={editor.paint} names={names} onStart={onStart} onEnter={onEnter} onEnd={onEnd} onPick={onPick} />;
@@ -273,11 +290,11 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
           <div className="ans-panel">
             <SpotStrip detail={d} state={stop} onOpen={() => setTab('replay')} />
             {brushPanel}
-            {size}
           </div>
         )}
       </div>
-      {tab === 'replay' ? replayView : grid}
+      {/* Range のタブは画面をスクロールさせず、表を残りの高さに収める（2026-09-29 さつき） */}
+      {tab === 'replay' ? replayView : <div className="ans-gridbox">{grid}</div>}
       <div className="ans-bottom" ref={bottomRef}>
         {tab === 'replay' ? (
           <button type="button" className="btn" onClick={() => setTab('range')}>

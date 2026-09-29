@@ -1,9 +1,11 @@
 import { useId, useRef, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { useLayer } from './useLayer.ts';
 
 /**
  * モーダルの共通の器（面取りプレート）。スマホは下からのシート、PC は中央。
  * Esc と背景クリックで閉じる。`tone` は上端の線の意味の色（情報 = シアン、確認 = 黄、破壊的 = 赤）。
+ * body の直下に描く（上部固定のパネルの中から開いても、下部固定のバーより前に出るように）。
  */
 export function Modal(props: {
   title: string;
@@ -19,7 +21,7 @@ export function Modal(props: {
   const titleId = useId();
   useLayer(ref, props.onClose, { trapFocus: true, initialFocus: props.initialFocus });
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" role="presentation" onClick={props.onClose}>
       <div
         ref={ref}
@@ -42,7 +44,8 @@ export function Modal(props: {
         <div className="modal-body">{props.children}</div>
         {props.footer && <div className="modal-foot">{props.footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

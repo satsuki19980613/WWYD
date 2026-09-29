@@ -482,6 +482,29 @@ test.describe('スマホ（06 章 §4.1）', () => {
     await expect(tile(page, 'Call')).toHaveAttribute('aria-pressed', 'true');
   });
 
+  test('Range のタブは画面をスクロールしない。Size と Hand History は道具の行からモーダル @sp', async ({ page }) => {
+    await open(page);
+    await page.getByRole('tab', { name: 'Range' }).click();
+    await expect(cell(page, '22')).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
+    // Size（畳んだ行は無く、ボタンからモーダル。2026-09-29）
+    await expect(page.locator('.size-row')).toHaveCount(0);
+    const sizeBtn = page.getByRole('button', { name: /^Raise Size 17\.55bb/ });
+    await expect(sizeBtn).toContainText('17.55');
+    await sizeBtn.click();
+    const dlg = page.getByRole('dialog', { name: 'Raise Size' });
+    await dlg.getByRole('button', { name: '75%' }).click();
+    await expect(dlg.getByRole('textbox', { name: 'Raise Size（bb）' })).toHaveValue('23.08');
+    await dlg.getByRole('button', { name: '決定' }).click();
+    await expect(dlg).toHaveCount(0);
+    await expect(tile(page, 'Raise')).toContainText('23.08bb');
+    // Hand History（停止位置までのログ）
+    await page.getByRole('button', { name: 'Hand History' }).click();
+    const log = page.getByRole('dialog', { name: 'Hand History' });
+    await expect(log.locator('.hlog')).toBeVisible();
+    await expect(log).toContainText('▶ BB to act');
+  });
+
   test('タブを切り替えても塗りと Replay の位置が残る @sp', async ({ page }) => {
     await open(page);
     await page.getByRole('button', { name: '1手戻る' }).click();

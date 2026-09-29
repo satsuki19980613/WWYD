@@ -102,16 +102,22 @@ export function ReplayControls(props: { c: ReplayControl }): JSX.Element {
 
 /**
  * スマホのハンドヒストリーのボタン（卓の左上。押すとモーダル。14 章）。ログを常に出すと画面を圧迫するため。
- * `children` はモーダルの中身（HandLog）。
+ * `children` はモーダルの中身（HandLog）。`compact` はアイコンだけの道具のボタン（Range のタブのブラシの道具の行）。
  */
-export function HistoryButton(props: { disabled?: boolean; children: ReactNode }): JSX.Element {
+export function HistoryButton(props: { disabled?: boolean; compact?: boolean; children: ReactNode }): JSX.Element {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="hist-btn" disabled={props.disabled} onClick={() => setOpen(true)}>
-        <HistoryIcon />
-        History
-      </button>
+      {props.compact ? (
+        <button type="button" className="tool-btn" aria-label="Hand History" disabled={props.disabled} onClick={() => setOpen(true)}>
+          <HistoryIcon />
+        </button>
+      ) : (
+        <button type="button" className="hist-btn" disabled={props.disabled} onClick={() => setOpen(true)}>
+          <HistoryIcon />
+          History
+        </button>
+      )}
       {open && (
         <Modal title="Hand History" tone="info" onClose={() => setOpen(false)}>
           {props.children}
