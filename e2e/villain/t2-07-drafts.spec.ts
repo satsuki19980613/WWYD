@@ -49,7 +49,7 @@ for (const v of ['', ' @sp'] as const) {
     await page.getByRole('button', { name: 'PFR を数で入力' }).click();
     await page.getByRole('textbox', { name: 'PFR（%）' }).fill('12');
     await page.keyboard.press('Enter');
-    await villains(page).getByRole('group', { name: 'Sample' }).getByRole('button', { name: 'Long' }).click();
+    await villains(page).getByRole('group', { name: 'Postflop Aggression' }).getByRole('button', { name: 'Aggressive', exact: true }).click();
     await villains(page).getByRole('button', { name: '＋ General Read' }).click();
     const g = villains(page).locator('.vr-read').filter({ hasText: 'General Read 1' });
     await g.getByRole('group', { name: 'Street', exact: true }).getByRole('button', { name: 'Turn', exact: true }).click();
@@ -66,7 +66,7 @@ for (const v of ['', ' @sp'] as const) {
     expect(saved).toHaveLength(1);
     // 保存した JSON に Villain・MTT が入っている（Memo は無い）
     const d = saved[0]?.draft as { reads: Record<string, Record<string, unknown>>; mtt: Record<string, unknown> };
-    expect(d.reads.BB).toMatchObject({ vpip: 38, pfr: 12, sample: 3 });
+    expect(d.reads.BB).toMatchObject({ vpip: 38, pfr: 12, agg: 3 });
     expect(JSON.stringify(d)).not.toMatch(/memo/i);
     expect(d.mtt).toMatchObject({ speed: 100, rank: '12', left: '58', entries: '320', paid: '50', avg: '35.5', prize: 'top' });
     // 開き直す
@@ -84,7 +84,7 @@ for (const v of ['', ' @sp'] as const) {
     await step(page, S_SPOT);
     await expect(seatBtn(page, 'SB')).toContainText('1 Read');
     await expect(seatBtn(page, 'BB')).toContainText('38/12');
-    await expect(seatBtn(page, 'BB')).toContainText('Sample: Long');
+    await expect(seatBtn(page, 'BB')).toContainText('Aggressive');
     await expect(seatBtn(page, 'BB')).toContainText('1 Read');
     await openSeat(page, 'SB');
     const lean = villains(page).locator('.vr-read').first().getByRole('group', { name: 'Lean' }).getByRole('button').nth(1);
@@ -154,7 +154,7 @@ const OLD_DRAFTS: Record<string, unknown>[] = [
         pfr: 40, // PFR > VPIP → PFR を捨てる
         agg: 3,
         image: 7, // 範囲外
-        sample: 4,
+        sample: 4, // 廃止した Sample（V-007）→ 捨てる
         spot: { street: 'turn', action: 'barrel', lean: 'value', strong: true }, // BB に候補は無いが下書きには残る形として読む
         general: [
           { street: 'flop', action: 'cbet', lean: 'value', strong: true, texture: { high: 'a', suit: 'zz' }, runout: ['brick', 'x'], size: 'big' },
@@ -227,12 +227,12 @@ for (const v of ['', ' @sp'] as const) {
     await page.goto('/drafts');
     await page.getByRole('link', { name: 'OLD6' }).click();
     await step(page, S_SPOT);
-    // BB: VPIP 30、PFR は捨てる、agg 3（Aggressive）、image は捨てる、sample 4、General Read は 3 件中 2 件まで読む（slice 2）
+    // BB: VPIP 30、PFR は捨てる、agg 3（Aggressive）、image・sample は捨てる、General Read は 3 件中 2 件まで読む（slice 2）
     const sum = await seatBtn(page, 'BB').locator('.vr-sum').innerText();
     expect(sum).toContain('VPIP 30');
     expect(sum).not.toContain('30/');
     expect(sum).toContain('Aggressive');
-    expect(sum).toContain('Sample: HUD Stats');
+    expect(sum).not.toContain('Sample');
     expect(sum).not.toContain('Hero Image');
     await seatBtn(page, 'BB').click();
     // 最初の General Read は Flop の C-Bet（texture の不正な値と runout の不正な値は外れる。runout は Flop には無いので全部外れる）

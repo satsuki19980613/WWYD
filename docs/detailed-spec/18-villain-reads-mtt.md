@@ -17,7 +17,7 @@
 | 画面に説明を出さない（不変条件 1） | 例外として画面に出す: Prize Structure の目安（選択肢の一部として小さく）、MTT の数の欄の名前、回答画面の MTT のモーダルの「順位 / 残りの人数」の見出し。詳しい説明は ⓘ（09 章） |
 | 新しいカードのデザインの範囲 | スマホのカードだけ。PC の一覧は表のまま（17 章。F-029 で直したばかり）で、印（Reads・MTT）と黄の使い方だけ合わせる |
 | Slider の 5 段階の境目 | Claude の案（§2.1）。数字はあとで変えてよい |
-| Villain の情報の形（2026-09-30 仕様変更） | 全体の傾向（VPIP・PFR の Slider と、Postflop Aggression・Hero Image・Sample の 5 分割のボタン）と、構造化した Read（`[When] · [Action] → [Lean]`）。§2.1。**未決定の論点は §10、今の実装との食い違いは §11**。承認まで実装しない |
+| Villain の情報の形（2026-09-30 仕様変更） | 全体の傾向（VPIP・PFR の Slider と、Postflop Aggression・Hero Image の 5 分割のボタン。Sample は 2026-09-30 に廃止）と、構造化した Read（`[When] · [Action] → [Lean]`）。§2.1。**未決定の論点は §10、今の実装との食い違いは §11**。承認まで実装しない |
 
 ## 2. 投稿画面
 
@@ -34,12 +34,12 @@
 | 2 | PFR | Slider（同上） | 0〜100 の整数（%）。PFR ≦ VPIP（PFR を上げたら VPIP も追従） |
 | 3 | Postflop Aggression（Passive〜Aggressive） | 5 分割のボタン | 0〜4 |
 | 4 | Hero Image（Tight〜Loose） | 5 分割のボタン | 0〜4 |
-| 5 | Sample（First Impression〜Long / HUD Stats） | 5 分割のボタン | 0〜4。旧 Read Confidence を改名。プレイヤーに 1 つだけ（Read ごとには持たない） |
+| 5 | ~~Sample（First Impression〜Long / HUD Stats）~~ | — | **2026-09-30 さつきの判断で項目ごと廃止**（V-007。Long と HUD Stats の並びが情報の量の順に読めてしまう指摘に対し「無くてよい情報」）。新しい投稿に `sample` があればサーバーは malformed で断る。前の版の投稿・下書き・Preset に残った `sample` は読むときに捨てる |
 
 - VPIP・PFR は「未入力」を持ち、初めは未入力。× で未入力に戻す。
 - 5 分割のボタンは、選んでいるボタンをもう一度押すと未入力に戻る。
 - ラベル（左から 0〜4。§10 C-1）: Postflop Aggression は Very Passive / Passive / Balanced / Aggressive / Very Aggressive、Hero Image は Very Tight / Tight / Standard / Loose / Very Loose、
-  Sample は First Impression / Few Orbits / Some History / Long / HUD Stats。帯を 5 つに分けたボタンで、選んだ所まで黄。帯の下の左右に両端の名前。
+  （Sample は 2026-09-30 に廃止。）5 分割のボタンは帯を 5 つに分け、選んだ所まで黄。帯の下の左右に両端の名前。
 - VPIP・PFR の段階の境目: VPIP 15・22・30・40、PFR 10・16・23・30（その値以上で次の段階。Claude の案。`READ_DEFS`）。PFR は 2026-09-30 に 8・14・20・26 から改めた（レギュラーの 18〜22 が Standard にまとまるように。V-006、さつき）。保存するのは数なので、既存の投稿は表示の段階だけ変わる。
 
 #### 2.1.2 Read の型（1 つだけ）
@@ -108,10 +108,10 @@
 
 #### 2.1.6 表示
 
-- 中央以外の値と Read だけを出す（VPIP・PFR は数でいつも、Postflop Aggression・Hero Image は中央を出さない、Sample は中央も出す。§10 C-2）。1 席の例:
+- 中央以外の値と Read だけを出す（VPIP・PFR は数でいつも、Postflop Aggression・Hero Image は中央を出さない。§10 C-2）。1 席の例:
 
 ```
-BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
+BTN  VPIP 38 · PFR 12 · Passive
      River · Barrel (Big) → Value-heavy
      Flop · Fold to C-Bet → Over
 ```
@@ -284,8 +284,8 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 
 | # | 論点 | 選択肢 | Claude の推奨 |
 |---|---|---|---|
-| C-1 | 5 分割のボタンの中間のラベル | 下の案 / ほかの語 | Postflop Aggression: Very Passive / Passive / Balanced / Aggressive / Very Aggressive。Hero Image: Very Tight / Tight / Standard / Loose / Very Loose（どちらも今のまま）。Sample: First Impression / Few Orbits / Some History / **Long** / HUD Stats（例の「Sample: Long」に合わせ Long Session を Long に） |
-| C-2 | 表示で「中央」を出さないこと（前の決定「未入力と中央は別」と、見る側からは区別できなくなる） | (a) 項目ごとに決める (b) 5 分割の 3 つすべてで中央を出さない (c) 入力した値はすべて出す | (a): VPIP・PFR は数でいつも出す（例のとおり）。Postflop Aggression・Hero Image は中央（Balanced・Standard）を出さない。Sample は入っていれば中央でも出す（読みの確かさなので中央にも意味がある） |
+| C-1 | 5 分割のボタンの中間のラベル | 下の案 / ほかの語 | Postflop Aggression: Very Passive / Passive / Balanced / Aggressive / Very Aggressive。Hero Image: Very Tight / Tight / Standard / Loose / Very Loose（どちらも今のまま）。Sample: First Impression / Few Orbits / Some History / **Long** / HUD Stats（例の「Sample: Long」に合わせ Long Session を Long に。**Sample は 2026-09-30 に廃止**） |
+| C-2 | 表示で「中央」を出さないこと（前の決定「未入力と中央は別」と、見る側からは区別できなくなる） | (a) 項目ごとに決める (b) 5 分割の 3 つすべてで中央を出さない (c) 入力した値はすべて出す | (a): VPIP・PFR は数でいつも出す（例のとおり）。Postflop Aggression・Hero Image は中央（Balanced・Standard）を出さない。Sample は入っていれば中央でも出す（読みの確かさなので中央にも意味がある。**Sample は 2026-09-30 に廃止**） |
 | C-3 | Spot Read の Action を Action の列から決める規則 | 下の案 / 直す | 下の案（§10.3） |
 | C-4 | 1 席に候補が複数ある（例: Preflop の 3-Bet と Flop の C-Bet） | (a) 投稿者が候補から 1 つ選ぶ (b) 判断地点にいちばん近い Action に決める | (a)。最初は判断地点にいちばん近い Action を選んだ状態にする |
 | C-5 | Spot Read の Size | (a) 実際の額から自動で付ける (b) 付けない | (a)。Pot に対して 50% 未満 Small・50〜100% Big・100% 超 Overbet。Preflop は付けない |
@@ -333,6 +333,11 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 | V-005 | Size の境目（§10 C-5） | 今のまま（50% 未満 Small・100% まで Big・その上 Overbet）。**ⓘ に定義を書く**（回答画面の Size の項目。09 章） |
 | V-015・V-016 | ⓘ の Villain の項目 | 投稿は「参加した席と Steal に Fold した Blind」。回答・集計は Read の項目にし、「Over・Under は頻度、Value・Bluff-heavy は打つ手の中身」を書く（09 章） |
 | V-036 | Spot Read の注記のカタカナ | 「この Hand の結果を知る前の読みで」（不変条件 2 に合わせる。CLAUDE.md の不変条件 1 も直した） |
+| V-006 | PFR の段階の境目 | **10・16・23・30** に（§2.1。レギュラーの 18〜22 が Standard にまとまる） |
+| V-007 | Sample（Long と HUD Stats はどちらが多いとは限らない） | **Sample を項目ごと廃止**（無くてよい情報。ⓘ に目安を書く案は ⓘ の 7 項目の上限で置けなかった） |
+| V-039 | Runout の Brick とほかの同時選択 | **同時に選べない**（§10 C-12。サーバーも断る） |
+| V-038 | スマホの集計画面の Villain のボタン | 集計のタブにも置く（§5.2） |
+| V-009・V-019・V-020・V-025・V-026・V-028・V-037 | 仕様への意見 | 今のまま（公開後の声を見て決める） |
 
 ## 11. 前の実装・スキーマとの食い違い（2026-09-30 の仕様変更。すべて実装で直した）
 

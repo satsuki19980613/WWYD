@@ -10,7 +10,7 @@
 | V-004 | R-01（R01-3） | 仕様への意見（S4） | `readActions.ts:172-175`、18 章 §10.3 | Flop・Turn とも全員 Check の後の PFR の River の Bet が `barrel(big)`。§10.3 どおりだが、プロの感覚では Barrel ではない | 中（再現済み） | さつきの判断で今のまま（18 章 §10.4） |
 | V-005 | R-01（R01-4） | 仕様への意見（S4） | `readActions.ts:77-82`（§10 C-5） | Half-pot（50% ちょうど）の C-Bet が `cbet(big)`。ソルバーの解説では 50% は Medium で、Big は 75〜100% | 中（再現済み） | さつきの判断で境目は今のまま、ⓘ に定義を書いた（`2574355`・VR4） |
 | V-006 | R-01（R01-5） | S4 | `packages/app/src/reads/readsModel.ts:66-67` | PFR の段階の境目 8/14/20/26 で、レギュラーの PFR 18〜22 が Standard と High に割れる（案 10/16/23/30） | 中 | 修正（`4a05c8b`。10/16/23/30。2026-09-30 さつき） |
-| V-007 | R-01（R01-6） | S4 | `readsModel.ts:85` | Sample の Long と HUD Stats は、どちらのサンプルが多いとは限らない（ⓘ で目安を定義する案） | 中 | 保留（ⓘ の Post の節が 7 項目の上限。置き場所をさつきに相談） |
+| V-007 | R-01（R01-6） | S4 | `readsModel.ts:85` | Sample の Long と HUD Stats は、どちらのサンプルが多いとは限らない（ⓘ で目安を定義する案） | 中 | Sample を項目ごと廃止（2026-09-30 さつきの判断） |
 | V-008 | R-01（R01-7）・R-05（R05-6） | S4 | 18 章 §10 B-4 | Connectivity の定義文「3 枚が連続する 5 つのランクに収まる」が Paired Board（8-8-9）に合わない。判定のコードは無く文書だけ | 高 | 修正済み（18 章の文。`2574355`・VR4） |
 | V-009 | R-01（R01-8） | 仕様への意見（S4） | `readsModel.ts:473`（§2.4） | Prize Structure の目安（1 位の %）は大会の人数に左右される（大人数ほど Flat 側に寄る） | 低〜中 | 今のまま（2026-09-30 さつき） |
 | V-010 | R-04（R04-1）・T2-04 | S2 | `readsModel.ts:323-325`、`VillainSection.tsx:256-257` | BB・BTN 300bb。`flop: BB x, BTN b2, BB r6, BTN r15, BB r40, BTN c` / `turn: BB x`（Hero BTN の Turn が Spot）。BB の候補は Check-Raise (Small)・Check-Raise (Big) の 2 つ（再現済み）だが、SpotDraft が Street・Action しか持たないため 1 つ目を選べず、送る Size も 2 つ目になる | 高（T2 が画面で再現: CO の「Flop · Raise (Small)」を選んで Over を押すと Big 側が押された表示になり、本文の size は big。間違った Size が黙って保存される） | 修正済み（`7a1b484`・VR2）→ 再試験済み（T2 の E2E・readsModel の単体） |

@@ -33,6 +33,7 @@ import {
   SPEED_DEF,
   spotCandidateOf,
   STEP_DEF,
+  STEP_DEFS,
   tendencyChips,
   toggleRunout,
   toggleSize,
@@ -64,10 +65,10 @@ describe('VPIP・PFR の段階のラベル（18 章 §2.1）', () => {
     expect([18, 20, 22].map((v) => labelOf('pfr', v))).toEqual(['Standard', 'Standard', 'Standard']);
   });
 
-  it('5 分割のボタンのラベル（§10 C-1）', () => {
+  it('5 分割のボタンのラベル（§10 C-1）。Sample は廃止（V-007）', () => {
     expect(STEP_DEF.agg.labels).toEqual(['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive']);
     expect(STEP_DEF.image.labels).toEqual(['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose']);
-    expect(STEP_DEF.sample.labels).toEqual(['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats']);
+    expect(STEP_DEFS.map((d) => d.key)).toEqual(['agg', 'image']);
   });
 });
 
@@ -158,9 +159,9 @@ describe('表示（18 章 §2.1.2・§2.1.6）', () => {
     expect(readLine(entry({ street: 'flop', action: 'cbet', size: null, texture: { connect: 'straight' } }))).toBe('Flop · Straight possible · C-Bet → Value-heavy');
     expect(readSpeech(entry({ strong: true }))).toBe('River · Barrel (Big) → Value-heavy（強い）');
   });
-  it('全体の傾向のチップ: VPIP・PFR は数、Aggression・Hero Image の中央は出さない、Sample は中央も出す（§10 C-2）', () => {
-    expect(tendencyChips({ vpip: 38, pfr: 12, agg: 1, sample: 3 })).toEqual(['VPIP 38', 'PFR 12', 'Passive', 'Sample: Long']);
-    expect(tendencyChips({ agg: 2, image: 2, sample: 2 })).toEqual(['Sample: Some History']);
+  it('全体の傾向のチップ: VPIP・PFR は数、Aggression・Hero Image の中央は出さない（§10 C-2）', () => {
+    expect(tendencyChips({ vpip: 38, pfr: 12, agg: 1 })).toEqual(['VPIP 38', 'PFR 12', 'Passive']);
+    expect(tendencyChips({ agg: 2, image: 2 })).toEqual([]);
     expect(tendencyChips({ image: 3 })).toEqual(['Hero Image: Loose']);
   });
   it('折りたたんだ席の 1 行', () => {
@@ -340,9 +341,19 @@ describe('下書きの読み直し（前の版の下書き・壊れた値）', (
       reads: { SB: { vpip: 20, pfr: 30, agg: 101, conf: 2, memo: 'x', sample: 2 }, XX: { vpip: 1 }, BB: 'x', CO: { memo: 'only' } },
       mtt: { stage: 'bubble', type: 'pko', speed: 150, prize: 'flat', rank: 3 },
     });
-    expect(d.reads).toEqual({ SB: { vpip: 20, sample: 2 } });
+    expect(d.reads).toEqual({ SB: { vpip: 20 } });
     expect(d.mtt).toEqual({ ...emptyMtt(), prize: 'flat' });
     expect(sanitizeDraft({ mtt: { speed: 1 } }).mtt.speed).toBe(1);
+  });
+  it('V-007: 前の版の下書きに残った Sample は捨てる（Sample だけの席は情報なし）', () => {
+    expect(sanitizeSeat({ vpip: 30, agg: 1, sample: 3 })).toEqual({ vpip: 30, agg: 1 });
+    expect(sanitizeSeat({ sample: 4 })).toEqual({});
+    const d = sanitizeDraft({ reads: { SB: { vpip: 30, sample: 3 }, BB: { sample: 2 }, CO: { image: 4, sample: 0, general: [{ street: 'flop', action: 'cbet', lean: 'over', strong: false }] } } });
+    expect(d.reads).toEqual({
+      SB: { vpip: 30 },
+      CO: { image: 4, general: [{ street: 'flop', action: 'cbet', texture: {}, runout: [], size: null, lean: 'over', strong: false }] },
+    });
+    expect(JSON.stringify(d.reads)).not.toContain('sample');
   });
   it('Read は合わない値を外して読み直す', () => {
     const s = sanitizeSeat({
@@ -412,5 +423,15 @@ describe('Preset（18 章 §2.1.7。端末だけに保存。schema version つ�
     s.setItem('wwyd.readPresets.v1.u', '[]');
     savePreset('u', 'n', { vpip: 3 }, s);
     expect(s.getItem('wwyd.readPresets.v1.u')).toBeNull();
+  });
+
+  it('V-007: 前の版の Preset に残った Sample は捨てる（Sample だけの Preset は中身なし）', () => {
+    const s = memoryStore();
+    s.setItem('wwyd.readPresets.u', JSON.stringify({ schema: 2, presets: [{ id: 'a', name: 'Reg', read: { vpip: 22, pfr: 18, sample: 4 } }, { id: 'b', name: 'only', read: { sample: 1 } }] }));
+    expect(readPresets('u', s)).toEqual([
+      { id: 'a', name: 'Reg', read: { vpip: 22, pfr: 18 } },
+      { id: 'b', name: 'only', read: {} },
+    ]);
+    expect(presetOf({ vpip: 22, sample: 3 } as Parameters<typeof presetOf>[0])).toEqual({ vpip: 22 });
   });
 });

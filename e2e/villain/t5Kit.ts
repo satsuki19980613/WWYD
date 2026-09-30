@@ -227,7 +227,7 @@ const BAD_VR: unknown[] = [
   { BB: { vpip: 10, pfr: 99 } },
   { BTN: { reads: [{ scope: 'spot', street: 'river', action: 'cbet', texture: null, runout: null, size: null, lean: 'over', strong: false }] } },
   { CO: { reads: [{ scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'zz' }, runout: null, size: 'huge', lean: 'value', strong: 'yes' }] } },
-  { BTN: { vpip: 1e9, pfr: -3, agg: 99, image: 2.5, sample: 4 } },
+  { BTN: { vpip: 1e9, pfr: -3, agg: 99, image: 2.5, sample: 4 } }, // sample は廃止した項目（V-007）
   Object.fromEntries(['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'].map((p) => [p, { memo: 'x'.repeat(2000) }])),
 ];
 const BAD_MTT: unknown[] = [
@@ -311,7 +311,7 @@ function hostileDraft(rng: Rng, built: Built, i: number): unknown {
         pfr: 90,
         agg: 9,
         image: -1,
-        sample: 1.5,
+        sample: 1.5, // 廃止した項目（V-007）
         general: [{ street: 'flop', action: 'turn_only', lean: 'x' }, null, 5, { street: 'pf', action: '3bet', texture: { high: 'a' }, runout: ['brick'], size: 'overbet', lean: 'value', strong: 'true' }],
       },
     };

@@ -285,7 +285,6 @@ async function fillAll(page: Page): Promise<void> {
   await page.keyboard.press('Enter');
   await villains(page).getByRole('group', { name: 'Postflop Aggression' }).getByRole('button').nth(4).click();
   await villains(page).getByRole('group', { name: 'Hero Image' }).getByRole('button').nth(4).click();
-  await villains(page).getByRole('group', { name: 'Sample' }).getByRole('button').nth(0).click();
   // Spot Read の Lean（強い）
   const lean = villains(page).locator('.vr-read').first().getByRole('group', { name: 'Lean' }).getByRole('button');
   await lean.nth(2).click();

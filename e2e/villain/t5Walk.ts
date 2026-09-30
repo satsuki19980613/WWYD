@@ -373,7 +373,7 @@ async function applyReads(env: WalkEnv, rng: Rng, log: (s: string) => void): Pro
       }
     }
     // 5 分割のボタン
-    for (const name of ['Postflop Aggression', 'Hero Image', 'Sample']) {
+    for (const name of ['Postflop Aggression', 'Hero Image']) {
       if (!rng.chance(0.4)) continue;
       const b = sec.getByRole('group', { name, exact: true }).getByRole('button');
       const k = pickN(rng, 5);

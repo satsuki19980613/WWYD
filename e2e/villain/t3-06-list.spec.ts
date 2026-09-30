@@ -318,7 +318,7 @@ for (const v of ['', ' @sp'] as const) {
     const reads: Record<string, unknown> = {};
     for (const p of ['UTG', 'HJ', 'CO', 'BTN', 'SB']) {
       reads[p] = {
-        vpip: 30, pfr: 20, agg: 4, image: 4, sample: 3,
+        vpip: 30, pfr: 20, agg: 4, image: 4,
         reads: [
           { scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'a', suit: 'two', paired: 'unpaired', connect: 'straight' }, runout: null, size: 'small', lean: 'over', strong: true },
           { scope: 'general', street: 'turn', action: 'barrel', texture: null, runout: ['over', 'flush'], size: 'big', lean: 'bluff', strong: false },

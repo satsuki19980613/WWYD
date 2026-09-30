@@ -222,6 +222,7 @@ export function parsePostDetail(raw: unknown): PostDetail {
  * （保存するときに create-post が core の同じ検証を通している。18 章 §4）。
  */
 function lenientReads(raw: unknown, seats: readonly Pos[], hero: unknown): VillainReads {
+  raw = withoutSample(raw);
   try {
     return validateReads(raw, seats, hero as Pos);
   } catch {
@@ -237,6 +238,18 @@ function lenientReads(raw: unknown, seats: readonly Pos[], hero: unknown): Villa
     }
     return out;
   }
+}
+
+/** 廃止した Sample（2026-09-30。V-007）が前の版の投稿に残っていても、ほかの情報は出す */
+function withoutSample(raw: unknown): unknown {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).map(([pos, seat]) => {
+      if (seat === null || typeof seat !== 'object' || Array.isArray(seat)) return [pos, seat];
+      const { sample: _drop, ...rest } = seat as Record<string, unknown>;
+      return [pos, rest];
+    }),
+  );
 }
 
 function lenientMtt(raw: unknown): MttInfo | null {

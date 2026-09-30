@@ -39,7 +39,6 @@ const FULL = (() => {
       pfr: 12,
       agg: 4,
       image: 0,
-      sample: 4,
       reads: [
         entry('flop', 'cbet', 'bluff', { texture: { high: 'qj', suit: 'two', paired: 'unpaired', connect: 'straight' }, size: 'overbet' }),
         entry('turn', 'barrel', 'value', { texture: { high: 'mid', suit: 'mono', paired: 'paired', connect: 'none' }, runout: ['over', 'flush', 'straight', 'pair'], size: 'overbet' }),

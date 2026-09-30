@@ -310,7 +310,7 @@ test('T3-10 コントラスト: 席のモーダル・All Villains・MTT のモ�
     fmt: 'mtt',
     rake: null,
     villain_reads: {
-      UTG: { vpip: 12, pfr: 8, agg: 0, image: 4, sample: 3 },
+      UTG: { vpip: 12, pfr: 8, agg: 0, image: 4 },
       BTN: { vpip: 40, reads: [{ scope: 'spot', street: 'turn', action: 'barrel', texture: null, runout: null, size: 'big', lean: 'value', strong: true }, { scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'a' }, runout: null, size: 'small', lean: 'over', strong: false }] },
     },
     mtt: { speed: 70, rank: 12, left: 58, paid: 50, entries: 320, avg: 35, prize: 'top' },

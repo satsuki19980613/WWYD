@@ -179,15 +179,16 @@ describe('T1-05 検証の表の全組', () => {
     for (const [name, raw] of bad) expect(codeOf(() => validateReads(raw, SEATS, 'BTN')), name).toBe('malformed');
   });
 
-  it('全体の傾向の境界: VPIP・PFR は 0〜100、Postflop Aggression・Hero Image・Sample は 0〜4', () => {
+  it('全体の傾向の境界: VPIP・PFR は 0〜100、Postflop Aggression・Hero Image は 0〜4。廃止した Sample は値によらず malformed', () => {
     for (const k of ['vpip', 'pfr'] as const) {
       for (const x of [0, 1, 50, 99, 100]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBeNull();
       for (const x of [-1, 101, 1000, 1e21]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBe('invalid_reads');
     }
-    for (const k of ['agg', 'image', 'sample'] as const) {
+    for (const k of ['agg', 'image'] as const) {
       for (const x of [0, 1, 2, 3, 4]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBeNull();
       for (const x of [-1, 5, 50, 100]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBe('invalid_reads');
     }
+    for (const x of [0, 2, 4, 5, -1]) expect(codeOf(() => validateReads({ SB: { sample: x } }, SEATS, 'BTN')), `sample=${x}`).toBe('malformed');
     // -0 は 0 として通る（JSON にすると 0）
     expect(validateReads({ SB: { vpip: -0 } }, SEATS, 'BTN')).toEqual({ SB: { vpip: -0 } });
   });
@@ -252,7 +253,7 @@ describe('T1-05 検証の表の全組', () => {
         strong: false,
       });
     const richest = { street: 'river', action: 'bet_vs_check', lean: 'bluff', size: 'overbet', strong: false };
-    const seat = { vpip: 100, pfr: 100, agg: 4, image: 4, sample: 4, reads: [entry({ scope: 'spot', ...richest }), longest('general'), entry({ ...longest('general'), ...richest })] };
+    const seat = { vpip: 100, pfr: 100, agg: 4, image: 4, reads: [entry({ scope: 'spot', ...richest }), longest('general'), entry({ ...longest('general'), ...richest })] };
     const raw = { UTG: seat, HJ: seat, CO: seat, SB: seat, BB: seat };
     const r = validateReads(raw, SEATS, 'BTN');
     const bytes = JSON.stringify(r).length // ASCII だけなのでバイト数と同じ;

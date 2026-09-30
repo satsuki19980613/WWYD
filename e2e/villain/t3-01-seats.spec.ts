@@ -14,28 +14,26 @@ const seatBtn = (page: Page, p: string) => page.getByRole('button', { name: `${p
 const dlg = (page: Page, name: string) => page.getByRole('dialog', { name });
 
 for (const v of ['', ' @sp'] as const) {
-  test(`T3-01 席のモーダル: チップは VPIP・PFR が数、Aggression・Hero Image は中央を出さず、Sample は中央も出す${v}`, async ({ page }) => {
+  test(`T3-01 席のモーダル: チップは VPIP・PFR が数、Aggression・Hero Image は中央を出さず、廃止した Sample（V-007）は前の版の投稿に残っていても出さない${v}`, async ({ page }) => {
     const errors = watchErrors(page);
     await openAnswer(page, {
       ...baseHs1bb(),
       villain_reads: {
         UTG: { vpip: 0, pfr: 0 }, // 0 も出す
         HJ: { agg: 2, image: 2 }, // 中央だけ → 印なし
-        CO: { sample: 2 }, // Sample は中央も出す
-        BTN: { agg: 0, image: 4, sample: 0 },
+        CO: { sample: 2 }, // 廃止した Sample だけ → 情報なし（印なし）
+        BTN: { agg: 0, image: 4, sample: 0 }, // Sample だけ捨て、ほかは出す
         SB: { agg: 3, image: 1 },
       },
     });
-    await expect(page.locator('.pseat-read')).toHaveCount(4); // HJ の中央だけの席には付けない
+    await expect(page.locator('.pseat-read')).toHaveCount(3); // HJ の中央だけの席・CO の Sample だけの席には付けない
     await expect(seatBtn(page, 'HJ')).toHaveCount(0);
+    await expect(seatBtn(page, 'CO')).toHaveCount(0);
     await seatBtn(page, 'UTG').click();
     await expect(dlg(page, 'Villain · UTG').locator('.rv-chip')).toHaveText(['VPIP 0', 'PFR 0']);
     await page.keyboard.press('Escape');
-    await seatBtn(page, 'CO').click();
-    await expect(dlg(page, 'Villain · CO').locator('.rv-chip')).toHaveText(['Sample: Some History']);
-    await page.keyboard.press('Escape');
     await seatBtn(page, 'BTN').click();
-    await expect(dlg(page, 'Villain · BTN').locator('.rv-chip')).toHaveText(['Very Passive', 'Hero Image: Very Loose', 'Sample: First Impression']);
+    await expect(dlg(page, 'Villain · BTN').locator('.rv-chip')).toHaveText(['Very Passive', 'Hero Image: Very Loose']);
     await page.keyboard.press('Escape');
     await seatBtn(page, 'SB').click();
     await expect(dlg(page, 'Villain · SB').locator('.rv-chip')).toHaveText(['Aggressive', 'Hero Image: Tight']);
@@ -214,6 +212,8 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`T3-03 MTT: 人数の 1 行の組み合わせ・Avg Stack・Prize Structure と目安。無い項目は出さない${v}`, async ({ page }) => {
+    // 画面を何十回も開き直すので、全体の試験の負荷の中では既定の 30 秒を超えることがある
+    test.setTimeout(120_000);
     const cases: [Record<string, unknown>, string | null][] = [
       [{ rank: 12 }, '#12'],
       [{ left: 58 }, '58 left'],

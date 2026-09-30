@@ -52,7 +52,7 @@ const bb = (over: Raw = {}): Raw => ({ ...hs1bb(), ...over });
 
 describe('T4-02 正しい本文は 201 で、サーバーで整えた値を渡す', () => {
   it('Spot Read（Flop C-Bet・Turn Barrel は 1 席 1 件）と全体の傾向・General Read を通す', async () => {
-    const reads = { BTN: { vpip: 35, pfr: 28, agg: 4, image: 0, sample: 2, reads: [general({ street: 'flop', action: 'cbet', texture: { suit: 'mono' }, size: null, lean: 'over' }), spot()] }, SB: { reads: [spot({ street: 'pf', action: 'fold_steal', size: null, lean: 'under', strong: true })] } };
+    const reads = { BTN: { vpip: 35, pfr: 28, agg: 4, image: 0, reads: [general({ street: 'flop', action: 'cbet', texture: { suit: 'mono' }, size: null, lean: 'over' }), spot()] }, SB: { reads: [spot({ street: 'pf', action: 'fold_steal', size: null, lean: 'under', strong: true })] } };
     const r = await send(bb({ villain_reads: reads }));
     expect(r.status).toBe(201);
     expect(r.insertCalls).toBe(1);
@@ -124,6 +124,8 @@ describe('T4-02 違反は 422 で、保存しない（全部のコード）', ()
     ['席の値が null', H({ villain_reads: { BTN: null } }), 'malformed'],
     ['旧仕様 memo', H({ villain_reads: { BTN: { memo: 'x' } } }), 'malformed'],
     ['旧仕様 conf', H({ villain_reads: { BTN: { conf: 2 } } }), 'malformed'],
+    ['廃止した sample（V-007。範囲の内の値でも）', H({ villain_reads: { BTN: { vpip: 30, sample: 2 } } }), 'malformed'],
+    ['廃止した sample が 5', H({ villain_reads: { BTN: { sample: 5 } } }), 'malformed'],
     ['vpip が小数', H({ villain_reads: { BTN: { vpip: 30.5 } } }), 'malformed'],
     ['vpip が文字列', H({ villain_reads: { BTN: { vpip: '30' } } }), 'malformed'],
     ['vpip が null', H({ villain_reads: { BTN: { vpip: null } } }), 'malformed'],
@@ -157,7 +159,6 @@ describe('T4-02 違反は 422 で、保存しない（全部のコード）', ()
     ['agg が 5（0〜4 の外）', H({ villain_reads: { BTN: { agg: 5 } } }), 'invalid_reads'],
     ['旧仕様の agg 75（0〜100 の値）', H({ villain_reads: { BTN: { agg: 75 } } }), 'invalid_reads'],
     ['image が -1', H({ villain_reads: { BTN: { image: -1 } } }), 'invalid_reads'],
-    ['sample が 5', H({ villain_reads: { BTN: { sample: 5 } } }), 'invalid_reads'],
     ['PFR > VPIP', H({ villain_reads: { BTN: { vpip: 10, pfr: 11 } } }), 'invalid_reads'],
     ['Preflop の Read に Flop の Action', H({ villain_reads: { BTN: { reads: [general({ street: 'pf', action: 'cbet', size: null })] } } }), 'invalid_reads'],
     ['Flop の Read に Barrel', H({ villain_reads: { BTN: { reads: [general({ street: 'flop', action: 'barrel' })] } } }), 'invalid_reads'],
@@ -267,7 +268,7 @@ describe('T4-02 サイズの境目', () => {
         runout: ['brick', 'over', 'flush', 'straight', 'pair'].slice(0, 5 - (n % 1)),
       });
     // verifyReads は Spot Read を実際の Action と照合するので、登録できる席の全体の傾向と General Read 2 件で最大を作る（Spot Read の分は 1 件 200 バイト程度を足して見積もる）
-    const seat = { vpip: 100, pfr: 100, agg: 4, image: 4, sample: 4, reads: [fullGeneral(0), fullGeneral(1)] };
+    const seat = { vpip: 100, pfr: 100, agg: 4, image: 4, reads: [fullGeneral(0), fullGeneral(1)] };
     const reads = Object.fromEntries(['UTG', 'HJ', 'CO', 'BTN', 'SB'].map((s) => [s, seat]));
     const bytes = new TextEncoder().encode(pgText(reads)).length;
     const spotExtra = 5 * new TextEncoder().encode(pgText(spot({ street: 'turn', action: 'bet_vs_check', size: 'overbet', lean: 'bluff', strong: true }) as Record<string, unknown>) + ', ').length;

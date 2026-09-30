@@ -23,8 +23,11 @@ import {
 import type { Action, HandSetup } from '../poker/state.ts';
 import type { Fmt } from './validateInput.ts';
 
-/** 全体の傾向の項目。vpip・pfr は 0〜100 の整数（%。Slider）、agg・image・sample は 0〜4 の整数（5 分割のボタン） */
-export const TENDENCY_KEYS = ['vpip', 'pfr', 'agg', 'image', 'sample'] as const;
+/**
+ * 全体の傾向の項目。vpip・pfr は 0〜100 の整数（%。Slider）、agg・image は 0〜4 の整数（5 分割のボタン）。
+ * Sample（どれくらい見てきたか）は 2026-09-30 さつきの判断で項目ごと廃止（V-007。無くてよい情報）。新しい投稿に sample があれば断る
+ */
+export const TENDENCY_KEYS = ['vpip', 'pfr', 'agg', 'image'] as const;
 export type TendencyKey = (typeof TENDENCY_KEYS)[number];
 
 /** 数値（%）で持つ項目（HUD の値をそのまま入れられる） */

@@ -60,7 +60,7 @@ export type SliderDef = {
 type Five = readonly [string, string, string, string, string];
 
 export type PercentKey = 'vpip' | 'pfr';
-export type StepKey = 'agg' | 'image' | 'sample';
+export type StepKey = 'agg' | 'image';
 export type ReadDef = SliderDef & { key: PercentKey; labels: Five };
 
 /** VPIP・PFR の 5 段階の境目（2026-09-30 さつき: Claude の案。6-max の一般的な目安。18 章 §2.1）。PFR はレギュラーの 18〜22 が 1 つの段階に入るよう 10/16/23/30（V-006） */
@@ -81,13 +81,7 @@ export const STEP_DEFS: readonly StepDef[] = [
     hideMiddle: true,
   },
   { key: 'image', name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], ends: ['Tight', 'Loose'], hideMiddle: true },
-  {
-    key: 'sample',
-    name: 'Sample',
-    labels: ['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats'],
-    ends: ['First Impression', 'HUD Stats'],
-    hideMiddle: false,
-  },
+  // Sample は 2026-09-30 に廃止（V-007）。前の版の下書き・Preset の sample は読み直すときに捨てる
 ];
 export const STEP_DEF: Record<StepKey, StepDef> = Object.fromEntries(STEP_DEFS.map((d) => [d.key, d])) as Record<StepKey, StepDef>;
 
@@ -185,8 +179,8 @@ export function entryCheckRaise(e: ReadEntry, villain: Pos, hero: Pos, actions: 
 }
 
 /**
- * 全体の傾向のチップ（§2.1.6）: `VPIP 38` `PFR 12` `Passive` `Hero Image: Loose` `Sample: Long`。
- * Postflop Aggression・Hero Image の中央（Balanced・Standard）は出さない。Sample は中央も出す（§10 C-2）
+ * 全体の傾向のチップ（§2.1.6）: `VPIP 38` `PFR 12` `Passive` `Hero Image: Loose`。
+ * Postflop Aggression・Hero Image の中央（Balanced・Standard）は出さない（§10 C-2）
  */
 export function tendencyChips(t: Tendency): string[] {
   const out: string[] = [];
@@ -335,7 +329,7 @@ export function spotMatches(spot: SpotDraft, c: ReadCandidate): boolean {
   return c.street === spot.street && c.action === spot.action && (spot.size === undefined || c.size === spot.size);
 }
 
-const TENDENCY_OF: readonly (PercentKey | StepKey)[] = ['vpip', 'pfr', 'agg', 'image', 'sample'];
+const TENDENCY_OF: readonly (PercentKey | StepKey)[] = ['vpip', 'pfr', 'agg', 'image'];
 
 export function isEmptySeat(s: SeatDraft | undefined): boolean {
   return !s || (TENDENCY_OF.every((k) => s[k] === undefined) && !s.spot && (s.general ?? []).length === 0);

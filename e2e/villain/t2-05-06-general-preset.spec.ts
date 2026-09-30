@@ -571,8 +571,8 @@ for (const v of ['', ' @sp'] as const) {
     const items = presetDlg(page).getByRole('listitem');
     await expect(items).toHaveCount(2);
     await expect(items.nth(0).locator('.pr-name')).toHaveText('mix');
-    // 範囲外の vpip・agg・不正な image は捨て、pfr 20・sample 2・完全な General Read 1 件だけ
-    await expect(items.nth(0).locator('.pr-sum')).toHaveText('PFR 20 · Sample: Some History · 1 Read');
+    // 範囲外の vpip・agg・不正な image・廃止した sample（V-007）は捨て、pfr 20・完全な General Read 1 件だけ
+    await expect(items.nth(0).locator('.pr-sum')).toHaveText('PFR 20 · 1 Read');
     await expect(items.nth(1).locator('.pr-sum')).toHaveText('VPIP 10');
   });
 }

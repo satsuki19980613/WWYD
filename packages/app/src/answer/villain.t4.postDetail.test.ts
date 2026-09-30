@@ -48,6 +48,13 @@ describe('T4-04 前の版の投稿・形の違う情報でも、読み込みは�
     expect(p.hand.reads).toEqual({ BTN: { vpip: 30 } });
   });
 
+  it('V-007: 廃止した Sample が残る前の版の投稿は、sample だけ捨ててほかの情報を出す', () => {
+    expect(parsePostDetail(detailWith((h) => { h.villain_reads = { BTN: { vpip: 30, sample: 3 } }; })).hand.reads).toEqual({ BTN: { vpip: 30 } });
+    // Sample だけの席は情報なし、ほかの席はそのまま
+    const p = parsePostDetail(detailWith((h) => { h.villain_reads = { BTN: { vpip: 30, pfr: 20, agg: 1, sample: 4 }, SB: { sample: 0 } }; }));
+    expect(p.hand.reads).toEqual({ BTN: { vpip: 30, pfr: 20, agg: 1 } });
+  });
+
   it('記録（特性）: mtt は fmt が Cash の投稿でも、形が正しければそのまま読む', () => {
     const p = parsePostDetail(detailWith((h) => { h.mtt = { rank: 3 }; }));
     expect(p.post.fmt).toBe('cash');
@@ -118,7 +125,7 @@ describe('T4-01 一周（create-post の保存値 → 回答画面の読み込�
   const mttIn = { speed: 50, rank: 12, left: 58, paid: 50, entries: 320, avg: 35.5, prize: 'flat' };
 
   it('Cash・6 人: 入れた Read と全体の傾向が、未回答の画面の読み込みにそのまま出る。未回答には後の Action が無い', async () => {
-    const payload = await inserted({ ...hs1bb(), villain_reads: { BTN: { vpip: 40, pfr: 22, agg: 1, image: 3, sample: 4, reads: [general, spot] }, SB: { reads: [{ scope: 'spot', street: 'pf', action: 'fold_steal', texture: null, runout: null, size: null, lean: 'under', strong: false }] } } });
+    const payload = await inserted({ ...hs1bb(), villain_reads: { BTN: { vpip: 40, pfr: 22, agg: 1, image: 3, reads: [general, spot] }, SB: { reads: [{ scope: 'spot', street: 'pf', action: 'fold_steal', texture: null, runout: null, size: null, lean: 'under', strong: false }] } } });
     const p = parsePostDetail(detailJson(rawFromPayload(payload), { viewer: 'unanswered', id: ID }));
     expect(p.hand.reads.BTN?.vpip).toBe(40);
     expect(p.hand.reads.BTN?.reads).toEqual([spot, general]); // Spot Read が先
