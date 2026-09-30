@@ -151,6 +151,19 @@ for (const v of ['', ' @sp'] as const) {
     await expect(all.locator('details.rv-folded .rv-pos')).toHaveText(['UTG', 'HJ', 'SB']);
   });
 
+  test(`V-038 スマホの集計画面は最初のタブ（集計）からも All Villains を開ける。情報の無い投稿はボタンを出さない${v}`, async ({ page }) => {
+    test.skip(!isSp(page), 'スマホの集計画面のタブの話');
+    await openResult(page, { ...hmw(), villain_reads: { UTG: { vpip: 10 }, BB: { agg: 1 } } });
+    await expect(page.getByRole('tab', { name: '集計' })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('button', { name: 'All Villains' }).click();
+    await expect(dlg(page, 'All Villains').locator('.rv-all > .rv-seats > .rv-seat .rv-pos')).toHaveText(['BTN', 'BB']);
+    await page.keyboard.press('Escape');
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await openResult(page, hmw());
+    await expect(page.getByRole('tab', { name: '全体' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'All Villains' })).toHaveCount(0);
+  });
+
   test(`T3-02 All Villains: Preflop Fold が 1 席もなければ折りたたみを出さない（3 人・ヘッズアップ）${v}`, async ({ page }) => {
     await openAnswer(page, { ...threeHanded(), villain_reads: { BTN: { vpip: 40 }, SB: { pfr: 10 } } });
     await page.getByRole('button', { name: 'All Villains' }).click();
