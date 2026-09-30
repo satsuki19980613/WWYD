@@ -96,7 +96,8 @@ for (const v of ['', ' @sp'] as const) {
   test(`T2-02 VPIP・PFR: 段階の境目（VPIP 15・22・30・40、PFR 8・14・20・26）のラベルと読み上げ${v}`, async ({ page }) => {
     await open(page);
     const VPIP: [number, string][] = [[0, 'Very Tight'], [14, 'Very Tight'], [15, 'Tight'], [21, 'Tight'], [22, 'Standard'], [29, 'Standard'], [30, 'Loose'], [39, 'Loose'], [40, 'Very Loose'], [100, 'Very Loose']];
-    const PFR: [number, string][] = [[0, 'Very Low'], [7, 'Very Low'], [8, 'Low'], [13, 'Low'], [14, 'Standard'], [19, 'Standard'], [20, 'High'], [25, 'High'], [26, 'Very High'], [100, 'Very High']];
+    // V-006: PFR の境目は 10/16/23/30
+    const PFR: [number, string][] = [[0, 'Very Low'], [9, 'Very Low'], [10, 'Low'], [15, 'Low'], [16, 'Standard'], [22, 'Standard'], [23, 'High'], [29, 'High'], [30, 'Very High'], [100, 'Very High']];
     for (const [val, lab] of VPIP) {
       await num(page, 'VPIP', String(val));
       expect(await valtext(page, 'VPIP'), `VPIP ${val}`).toBe(`${lab} ${val}%`);

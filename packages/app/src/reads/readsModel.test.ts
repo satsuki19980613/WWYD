@@ -58,7 +58,9 @@ describe('VPIP・PFR の段階のラベル（18 章 §2.1）', () => {
   });
 
   it('PFR の境目', () => {
-    expect([7, 8, 13, 14, 19, 20, 25, 26].map((v) => labelOf('pfr', v))).toEqual(['Very Low', 'Low', 'Low', 'Standard', 'Standard', 'High', 'High', 'Very High']);
+    // V-006: レギュラーの PFR 18〜22 は Standard にまとまる
+    expect([9, 10, 15, 16, 22, 23, 29, 30].map((v) => labelOf('pfr', v))).toEqual(['Very Low', 'Low', 'Low', 'Standard', 'Standard', 'High', 'High', 'Very High']);
+    expect([18, 20, 22].map((v) => labelOf('pfr', v))).toEqual(['Standard', 'Standard', 'Standard']);
   });
 
   it('5 分割のボタンのラベル（§10 C-1）', () => {

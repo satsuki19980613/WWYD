@@ -40,7 +40,7 @@
 - 5 分割のボタンは、選んでいるボタンをもう一度押すと未入力に戻る。
 - ラベル（左から 0〜4。§10 C-1）: Postflop Aggression は Very Passive / Passive / Balanced / Aggressive / Very Aggressive、Hero Image は Very Tight / Tight / Standard / Loose / Very Loose、
   Sample は First Impression / Few Orbits / Some History / Long / HUD Stats。帯を 5 つに分けたボタンで、選んだ所まで黄。帯の下の左右に両端の名前。
-- VPIP・PFR の段階の境目: VPIP 15・22・30・40、PFR 8・14・20・26（その値以上で次の段階。Claude の案。`READ_DEFS`）。
+- VPIP・PFR の段階の境目: VPIP 15・22・30・40、PFR 10・16・23・30（その値以上で次の段階。Claude の案。`READ_DEFS`）。PFR は 2026-09-30 に 8・14・20・26 から改めた（レギュラーの 18〜22 が Standard にまとまるように。V-006、さつき）。保存するのは数なので、既存の投稿は表示の段階だけ変わる。
 
 #### 2.1.2 Read の型（1 つだけ）
 

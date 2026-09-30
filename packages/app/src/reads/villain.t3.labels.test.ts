@@ -156,16 +156,17 @@ describe('T3-01 VPIP・PFR の段階の境目（その値以上で次の段階�
     [100, 'Very Loose'],
   ];
   for (const [v, l] of cases) it(`VPIP ${v} は ${l}`, () => expect(labelOf('vpip', v)).toBe(l));
+  // V-006（2026-09-30 さつき）: 10/16/23/30
   const pfr: [number, string][] = [
     [0, 'Very Low'],
-    [7, 'Very Low'],
-    [8, 'Low'],
-    [13, 'Low'],
-    [14, 'Standard'],
-    [19, 'Standard'],
-    [20, 'High'],
-    [25, 'High'],
-    [26, 'Very High'],
+    [9, 'Very Low'],
+    [10, 'Low'],
+    [15, 'Low'],
+    [16, 'Standard'],
+    [22, 'Standard'],
+    [23, 'High'],
+    [29, 'High'],
+    [30, 'Very High'],
     [100, 'Very High'],
   ];
   for (const [v, l] of pfr) it(`PFR ${v} は ${l}`, () => expect(labelOf('pfr', v)).toBe(l));

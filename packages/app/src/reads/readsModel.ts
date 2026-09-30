@@ -63,10 +63,10 @@ export type PercentKey = 'vpip' | 'pfr';
 export type StepKey = 'agg' | 'image' | 'sample';
 export type ReadDef = SliderDef & { key: PercentKey; labels: Five };
 
-/** VPIP・PFR の 5 段階の境目（2026-09-30 さつき: Claude の案。6-max の一般的な目安。18 章 §2.1） */
+/** VPIP・PFR の 5 段階の境目（2026-09-30 さつき: Claude の案。6-max の一般的な目安。18 章 §2.1）。PFR はレギュラーの 18〜22 が 1 つの段階に入るよう 10/16/23/30（V-006） */
 export const READ_DEFS: readonly ReadDef[] = [
   { key: 'vpip', name: 'VPIP', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], cuts: [15, 22, 30, 40], max: PERCENT_MAX },
-  { key: 'pfr', name: 'PFR', labels: ['Very Low', 'Low', 'Standard', 'High', 'Very High'], cuts: [8, 14, 20, 26], max: PERCENT_MAX },
+  { key: 'pfr', name: 'PFR', labels: ['Very Low', 'Low', 'Standard', 'High', 'Very High'], cuts: [10, 16, 23, 30], max: PERCENT_MAX },
 ];
 export const READ_DEF: Record<PercentKey, ReadDef> = { vpip: READ_DEFS[0] as ReadDef, pfr: READ_DEFS[1] as ReadDef };
 
