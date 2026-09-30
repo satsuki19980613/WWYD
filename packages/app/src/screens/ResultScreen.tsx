@@ -1,4 +1,4 @@
-import { aggregateBar, labelOfCards, paintBar, type AnswerKey, type Card } from '@wwyd/core';
+import { aggregateBar, labelOfCards, paintBar, POSITIONS, type AnswerKey, type Card } from '@wwyd/core';
 import { useMemo, useState } from 'react';
 import { ComboBar } from '../answer/ComboBar.tsx';
 import type { PostDetail } from '../answer/postDetail.ts';
@@ -33,6 +33,8 @@ import { deletePost, useNextSpot } from '../list/useSpotList.ts';
 import { navigate } from '../router.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
 import { metaLine } from './AnswerScreen.tsx';
+import { useSetHeaderTitle } from '../components/headerTitle.ts';
+import { useReadsUi } from '../reads/ReadsView.tsx';
 
 type MobileTab = 'agg' | 'hand';
 const MOBILE_TABS: readonly { value: MobileTab; label: string }[] = [
@@ -64,11 +66,19 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   const myRatios = useMemo(() => (d.myAnswer ? paintBar(d.myAnswer.paint) : null), [d]);
   const heat = useMemo(() => (view === 'diff' ? diffHeat(d) : undefined), [d, view]);
   const next = useNextSpot(post.id);
+  // 投稿のタイトルはヘッダーに出す（18 章 §5.1）
+  useSetHeaderTitle(post.title);
+  const readsUi = useReadsUi({
+    seats: POSITIONS.filter((p) => d.hand.setup.stacks[p] > 0),
+    hero: post.hero,
+    actions: d.hand.actions,
+    reads: d.hand.reads,
+    mtt: d.hand.mtt,
+  });
 
   const head = (
     <div className="ans-head">
       <p className="ans-meta num">{metaLine(d)}</p>
-      <h1 className="ans-title">{post.title}</h1>
     </div>
   );
 
@@ -105,7 +115,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
   const frames = useMemo(() => resultFrames(d), [d]);
   const replay = useReplay(d.hand.actions.length, { atEnd: true });
   useReplayKeys(replay, !mobile);
-  const hand = <ResultReplay detail={d} frames={frames} c={replay} logInModal={mobile} />;
+  const hand = <ResultReplay detail={d} frames={frames} c={replay} logInModal={mobile} reads={readsUi} />;
 
   if (!mobile) {
     // PC（17 章）: 左にハンドヒストリーの再生、中央に集計の表と表示の切り替え、右に答え合わせ・バー・マスの内訳・操作。
@@ -300,7 +310,13 @@ function Operations(props: { detail: PostDetail }): JSX.Element | null {
 }
 
 /** ハンドヒストリーの再生（06 章 §5.4）: 最初から最後まで。初期表示は最後の状態。スマホのログはモーダル（14 章） */
-function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[]; c: ReplayControl; logInModal: boolean }): JSX.Element {
+function ResultReplay(props: {
+  detail: PostDetail;
+  frames: readonly ResultFrame[];
+  c: ReplayControl;
+  logInModal: boolean;
+  reads: ReturnType<typeof useReadsUi>;
+}): JSX.Element {
   const { detail: d, frames, c } = props;
   const { hand, post } = d;
   const f = frames[c.step] ?? frames[frames.length - 1];
@@ -319,7 +335,10 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
   );
   return (
     <div className="replay">
-      {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
+      <div className="rp-info">
+        {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
+        {props.reads.buttons}
+      </div>
       <PokerTable
         seats={seatViews(f.state, { hero: post.hero, actor: f.actor })}
         pot={f.state.pot}
@@ -327,7 +346,10 @@ function ResultReplay(props: { detail: PostDetail; frames: readonly ResultFrame[
         holes={f.holes}
         note={f.note}
         spot={c.step === hand.spotIndex}
+        marked={props.reads.marked}
+        onSeat={props.reads.onSeat}
       />
+      {props.reads.modal}
       <ReplayControls c={c} spot={hand.spotIndex} />
       {!props.logInModal && log}
     </div>

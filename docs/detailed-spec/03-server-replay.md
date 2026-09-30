@@ -2,6 +2,8 @@
 
 > **2026-09-29: 出題を Hero の手番に変え、Villain の概念をなくした**（[16 章](16-hero-spot.md)）。この章の Villain・停止位置・派生メタの記述より 16 章を優先する。
 
+> **2026-09-30: Villain の情報（Reads）と MTT の情報を足した**（[18 章](18-villain-reads-mtt.md)）。create-post の検証（`validateReads`・`validateMtt`、`invalid_reads`・`invalid_mtt`）は 18 章 §3。
+
 仕様書 §5.2.8「アクション列が 6 章のロジックで再生可能である（サーバー側は再生して派生メタを再計算し、
 クライアントの値と一致しない場合は拒否する）」を、どこで・どう実行するか。
 

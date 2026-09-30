@@ -250,6 +250,17 @@ function metaText(row: PostRow): string {
   return row.players ? `${formatLabel(row)} · ${row.players} Players` : formatLabel(row);
 }
 
+/** Villain・MTT の情報が登録された投稿の印（18 章 §6） */
+function InfoBadges(props: { row: PostRow }): JSX.Element | null {
+  if (!props.row.has_reads && !props.row.has_mtt) return null;
+  return (
+    <span className="spot-badges">
+      {props.row.has_reads && <span className="spot-badge">Reads</span>}
+      {props.row.has_mtt && <span className="spot-badge">MTT</span>}
+    </span>
+  );
+}
+
 function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JSX.Element {
   const { row } = props;
   const status = cardStatus(row);
@@ -261,7 +272,10 @@ function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JS
         <Link to={action.to} className="spot-link">
           {row.title}
         </Link>
-        <span className="st-meta num">{metaText(row)}</span>
+        <span className="st-meta num">
+          {metaText(row)}
+          <InfoBadges row={row} />
+        </span>
         {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
         {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
       </span>
@@ -291,34 +305,37 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
   const status = cardStatus(row);
   const action = cardAction(row);
   return (
-    // カード全体を押せる（タイトルのリンクをカードいっぱいに広げる。14 章）。削除のボタンはその上に重ねる
+    // 3 段（18 章 §6。2026-09-30 さつき）: タイトル / スポットの状況（Board・Hero・条件・印）/ 回答数・経過時間と CTA。
+    // 段は区切り線ではなく余白で分ける。カード全体を押せる（タイトルのリンクをカードいっぱいに広げる。14 章）。削除のボタンはその上に重ねる
     <article className={`spot-card${action.primary ? '' : ' done'}`}>
-      <div className="spot-top">
-        <SpotBoard row={row} size="sm" />
-        {status === 'mine' && <span className="spot-tag mine">自分の投稿</span>}
-        {status === 'answered' && <span className="spot-tag answered">回答済み</span>}
-        {/* 削除はカードの右上に固定（右下の「回答する」「結果を見る」の幅で位置が変わらないように。2026-09-29 さつき） */}
+      <div className="spot-t1">
+        <h2 className="spot-title">
+          <Link to={action.to} className="spot-link">
+            {row.title}
+          </Link>
+        </h2>
+        {/* 削除はカードの右上に固定（2026-09-29 さつき） */}
         {row.can_delete && (
           <button type="button" className="spot-del" aria-label="削除" onClick={props.onDelete}>
             <TrashIcon />
           </button>
         )}
       </div>
-      <h2 className="spot-title">
-        <Link to={action.to} className="spot-link">
-          {row.title}
-        </Link>
-      </h2>
-      <p className="spot-seats">
-        Hero{' '}
-        <b className="pos" style={{ color: POS_VAR[row.hero] }}>
-          {row.hero}
-        </b>
-        <span className="spot-fmt num"> · {metaText(row)}</span>
-      </p>
+      <div className="spot-t2">
+        <SpotBoard row={row} size="sm" />
+        <span className="spot-cond num" title={`Hero ${row.hero} · ${metaText(row)}`}>
+          <b className="pos" style={{ color: POS_VAR[row.hero] }}>
+            {row.hero}
+          </b>{' '}
+          · {metaText(row)}
+        </span>
+        <InfoBadges row={row} />
+      </div>
       <div className="spot-foot">
         <span className="spot-meta">
           <span className="num spot-count">{row.answer_count}</span> 人が回答 · {formatAgo(row.created_at, props.now)}
+          {status === 'mine' && <> · <span className="spot-tag mine">自分の投稿</span></>}
+          {status === 'answered' && <> · <span className="spot-tag answered">回答済み</span></>}
         </span>
         <span className={`spot-go${action.primary ? ' primary' : ''}`} aria-hidden="true">
           {action.label}

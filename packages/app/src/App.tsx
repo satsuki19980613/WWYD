@@ -3,12 +3,14 @@ import { APP_STATES, type AppState } from './appState.ts';
 import { useAuth } from './auth/useAuth.ts';
 import { ConfirmDialog } from './components/ConfirmDialog.tsx';
 import { Header, type HeaderTitle } from './components/Header.tsx';
+import { useHeaderTitle } from './components/headerTitle.ts';
 import { InfoModal } from './components/InfoModal.tsx';
 import { useToast } from './components/Toast.tsx';
 import { LegalScreen } from './legal/LegalScreen.tsx';
 import { LeaveDraftDialog } from './post/DraftDialogs.tsx';
 import { useLeaveGuard } from './post/draftStore.ts';
 import { clearDrafts, setActiveUser, useSavedDrafts } from './post/savedDrafts.ts';
+import { clearPresets } from './reads/readPresets.ts';
 import { DraftsScreen } from './screens/DraftsScreen.tsx';
 import { INFO_SECTIONS, infoSectionFor, type InfoSectionId } from './info/infoSections.ts';
 import { useLocation, useRoute, useScrollTopOnNavigate, type Route } from './router.ts';
@@ -60,6 +62,7 @@ export function App(): JSX.Element {
   const draftUser = state === 'ready' ? auth.userId : null;
   useEffect(() => setActiveUser(draftUser), [draftUser]);
   const drafts = useSavedDrafts();
+  const postTitle = useHeaderTitle();
 
   const [info, setInfo] = useState<InfoSectionId | null>(null);
   const [deleting, setDeleting] = useState<{ busy: boolean } | null>(null);
@@ -71,7 +74,10 @@ export function App(): JSX.Element {
     void auth.deleteAccount().then((ok) => {
       setDeleting(null);
       if (!ok) toast('削除できませんでした');
-      else if (uid) clearDrafts(uid);
+      else if (uid) {
+        clearDrafts(uid);
+        clearPresets(uid);
+      }
     });
   };
 
@@ -100,6 +106,7 @@ export function App(): JSX.Element {
     <>
       <Header
         title={state === 'ready' || isLegal ? SCREEN_TITLE[route.name] : undefined}
+        postTitle={state === 'ready' && (route.name === 'answer' || route.name === 'result') ? postTitle : null}
         back={showBack}
         nav={state === 'ready' ? (route.name === 'list' ? 'list' : route.name === 'new' ? 'new' : null) : undefined}
         showAccount={state === 'ready'}

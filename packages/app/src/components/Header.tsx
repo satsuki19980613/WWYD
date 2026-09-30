@@ -3,6 +3,7 @@ import { AccountIcon, DraftIcon } from './Icons.tsx';
 import { Link } from './Link.tsx';
 import { AccountMenu } from './AccountMenu.tsx';
 import { BackLink } from './BackLink.tsx';
+import { Marquee } from './Marquee.tsx';
 import { useIsMobile } from '../useMediaQuery.ts';
 
 /** ヘッダーの左に出す画面名。`heading` は画面の h1 にするか（本文に h1 を持つ画面は false） */
@@ -12,11 +13,13 @@ export type HeaderTitle = { text: string; heading: boolean };
 export type NavItem = 'list' | 'new' | null;
 
 /**
- * ヘッダー（06 章 §0.2）。左に「＜」（一覧へ。一覧以外）と画面名、右に下書き・ⓘ・アカウントアイコン。
+ * ヘッダー（06 章 §0.2）。左に「＜」（一覧へ。一覧以外）と投稿のタイトル（回答・集計）、右に下書き・ⓘ・アカウントアイコン。
  * ⓘ は `data-keep-open` を付けて、アカウントメニューを開いたまま押せるようにする（開いていればアカウントの節を出す）。
  */
 export function Header(props: {
   title?: HeaderTitle;
+  /** 回答・集計の画面の投稿のタイトル（あれば画面名の代わりに見出しとして出す。収まらなければ流す） */
+  postTitle?: string | null;
   back: boolean;
   /** PC のナビ（List・＋ Post）を出すか（ログイン中）と、いまいる項目 */
   nav?: NavItem;
@@ -32,9 +35,10 @@ export function Header(props: {
   const { title } = props;
   const Title = title?.heading ? 'h1' : 'span';
   const mobile = useIsMobile();
-  // PC はナビ（List・＋ Post）で居場所を示し、戻る「＜」は出さない。ナビの項目と同じ画面名は読み上げだけに残す（2026-09-29）
+  // PC はナビ（List・＋ Post）で居場所を示し、戻る「＜」は出さない（2026-09-29）
   const pcNav = !mobile && props.nav !== undefined;
-  const crumbHidden = pcNav && props.nav !== null;
+  // 画面名（回答・結果・List など）は画面に出さず、読み上げだけに残す。回答・集計の画面は代わりに投稿のタイトルを出す（18 章 §5.1。2026-09-30 さつき）
+  const post = props.postTitle ?? null;
 
   return (
     <header className="hdr">
@@ -51,8 +55,12 @@ export function Header(props: {
               </Link>
             </nav>
           )}
-          {title && (
-            <Title className={`hdr-title${crumbHidden ? ' sr-only' : ''}${pcNav && !crumbHidden ? ' crumb' : ''}`}>{title.text}</Title>
+          {post !== null ? (
+            <h1 className="hdr-title hdr-post">
+              <Marquee text={post} />
+            </h1>
+          ) : (
+            title && <Title className="hdr-title sr-only">{title.text}</Title>
           )}
         </div>
         <div className="hdr-actions">

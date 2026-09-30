@@ -366,8 +366,8 @@ test.describe('A-02 一覧 スマホ', () => {
     await expect(c.nth(2)).toContainText('0 人が回答 · 3時間前');
     await expect(c.nth(3)).toContainText('昨日');
     await expect(c.nth(4)).toContainText('5日前');
-    await expect(c.nth(0)).toContainText('Hero BTN');
-    await expect(c.nth(0)).toContainText('Cash · 100bb · 6 Players');
+    // 2 段目は Hero の席（席の色）と条件を 1 行に（18 章 §6。「Hero」の語は省く）
+    await expect(c.nth(0).locator('.spot-cond')).toHaveText('BTN · Cash · 100bb · 6 Players');
     await expect(c.nth(1).locator('.spot-tag.answered')).toHaveText('回答済み');
     await expect(c.nth(2).locator('.spot-tag.mine')).toHaveText('自分の投稿');
     await expect(c.getByRole('button', { name: '削除' })).toHaveCount(3);
@@ -424,7 +424,8 @@ test.describe('A-02 一覧 スマホ', () => {
     let fail = true;
     await page.route(`${DATA}/rpc/list_posts`, async (route) => {
       if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' } });
-      await new Promise((r) => setTimeout(r, 500));
+      // 骨組みを確かめる間は応答を遅らせる（500ms では負荷の高いときに取りこぼした。V-001）
+      await new Promise((r) => setTimeout(r, fail ? 2000 : 500));
       return fail ? fulfillJson(route, 500, { message: 'x' }) : fulfillJson(route, 200, rows());
     });
     await page.goto('/');

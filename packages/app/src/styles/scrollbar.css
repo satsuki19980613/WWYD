@@ -1,0 +1,17 @@
+/*
+ * スクロールバー（2026-09-30 さつき）: 細く（4px）、ふだんは見せず、スクロールしている間だけ出す（PC・スマホとも同じ）。
+ * スクロール中の印 `is-scrolling` は scrollIndicator.ts が付ける。つまみにマウスを乗せた・掴んだときも出す（ドラッグできるように）。
+ * Chromium・Safari は ::-webkit-scrollbar で描く（scrollbar-width / scrollbar-color を指定すると Chromium はこちらを無視するので、
+ * それは Firefox だけに使う）。スマホの OS が重ねて描く細いスクロールバー（iOS・Android）は、もともとスクロール中だけ出る。
+ */
+::-webkit-scrollbar { width: 4px; height: 4px; background: transparent; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+.is-scrolling::-webkit-scrollbar-thumb { background: rgba(167, 169, 140, 0.55); }
+::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background: var(--cyan); }
+
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  .is-scrolling { scrollbar-color: rgba(167, 169, 140, 0.55) transparent; }
+}

@@ -209,12 +209,16 @@ export function PokerTable(props: {
   boardContent?: ReactNode;
   /** 出題の局面（Hero の手番）を表示中。卓の縁を 1 回光らせ、Hero の席を脈打たせて「SPOT」の札を出す（17 章） */
   spot?: boolean;
+  /** Villain の情報がある席（小さな印を付け、押せるようにする。18 章 §5） */
+  marked?: ReadonlySet<Pos>;
+  onSeat?: (pos: Pos) => void;
 }): JSX.Element {
   const interactive = props.boardContent !== undefined;
+  const seatButtons = !!props.onSeat && (props.marked?.size ?? 0) > 0;
   return (
     <div
       className={`ptable${interactive ? ' live' : ''}${props.spot ? ' at-spot' : ''}`}
-      role={interactive ? 'group' : 'img'}
+      role={interactive || seatButtons ? 'group' : 'img'}
       aria-label={props.spot ? 'Table（Spot）' : 'Table'}
     >
       <div className="ptable-felt" />
@@ -251,15 +255,21 @@ export function PokerTable(props: {
               style={{ top: `${y}%`, ...(anchor === 'c' ? { left: `${x}%` } : {}) }}
             >
               <HoleCards hole={props.holes[seat.pos]} />
-              <div className="pseat-plate">
-                <span className="pseat-top">
-                  <b className="pseat-pos" style={{ color: POS_VAR[seat.pos] }}>
-                    {seat.pos}
-                  </b>
-                  {seat.hero && <span className="pseat-tag hero">{props.heroLabel ?? 'Hero'}</span>}
-                </span>
-                <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
-              </div>
+              {props.onSeat && props.marked?.has(seat.pos) ? (
+                <button
+                  type="button"
+                  className="pseat-plate pseat-btn"
+                  aria-label={`${seat.pos} の Villain の情報`}
+                  onClick={() => props.onSeat?.(seat.pos)}
+                >
+                  <PlateBody seat={seat} heroLabel={props.heroLabel} />
+                  <i className="pseat-read" aria-hidden="true" />
+                </button>
+              ) : (
+                <div className="pseat-plate">
+                  <PlateBody seat={seat} heroLabel={props.heroLabel} />
+                </div>
+              )}
               {props.spot && seat.hero && (
                 <span className="pseat-spot" aria-hidden="true">
                   Spot
@@ -273,6 +283,21 @@ export function PokerTable(props: {
         );
       })}
     </div>
+  );
+}
+
+function PlateBody(props: { seat: SeatView; heroLabel: string | undefined }): JSX.Element {
+  const { seat } = props;
+  return (
+    <>
+      <span className="pseat-top">
+        <b className="pseat-pos" style={{ color: POS_VAR[seat.pos] }}>
+          {seat.pos}
+        </b>
+        {seat.hero && <span className="pseat-tag hero">{props.heroLabel ?? 'Hero'}</span>}
+      </span>
+      <span className="pseat-stack num">{formatBb(seat.stack)}bb</span>
+    </>
   );
 }
 

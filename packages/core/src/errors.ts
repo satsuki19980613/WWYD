@@ -6,6 +6,8 @@ export type ValidationCode =
   | 'malformed'
   | 'invalid_settings'
   | 'invalid_title'
+  | 'invalid_reads'
+  | 'invalid_mtt'
   | 'hero_cards_required'
   | 'duplicate_card'
   | 'illegal_action'

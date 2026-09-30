@@ -35,7 +35,7 @@ for (const v of ['', ' @sp'] as const) {
       }
       // 回答画面
       await page.goto(`/s/${ID}/answer`);
-      await expect(page.locator('.ans-title')).toBeAttached();
+      await expect(page.locator('.hdr-post')).toBeAttached();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `回答 ${JSON.stringify(title)}`).toBe(true);
       await page.unrouteAll({ behavior: 'ignoreErrors' });
     }

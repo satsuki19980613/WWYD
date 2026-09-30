@@ -31,6 +31,15 @@
 
 ポーカー用語でない語（ボタン・タブ・キーボード・ログ・マス・ブラシ・スポイト・スライダー・モーダル・ログイン・アカウントなど）はカタカナのまま。
 
+### 1.1 Villain・MTT の情報の用語（2026-09-30。18 章）
+
+訳さずに英語で出す: Villain / All Villains / Reads / VPIP / PFR / Postflop Aggression / Hero Image / Sample / Preset / Spot Read / General Read / Lean /
+Over / Under / Value-heavy / Bluff-heavy / Action の語（3-Bet・Fold to Steal・C-Bet・Barrel・Delayed C-Bet・Donk・Probe・Bet vs Check・Check-Raise など。18 章 §2.1.5）/
+条件のタグ（A-high・Two-tone・Paired・Straight possible・Flush Complete・Small・Big・Overbet など。18 章 §2.1.3）/
+MTT / ICM / ITM / Tournament Type / Deep / Turbo / Avg Stack / Prize Structure / Top-heavy / Standard / Flat / 1st。
+MTT の数の欄の名前は日本語（スポットの順位・残りの人数・エントリー数。2026-09-30 さつき）。
+段階のラベル（Very Tight・Loose・Balanced・First Impression・Long・HUD Stats など）も英語（18 章 §2.1）。Read の 1 行は英語と記号だけ（`River · Barrel (Big) → Value-heavy`）。それ以外の文言（「呼び出す」「保存」「クリア」など）は日本語。
+
 ## 2. 書き方
 
 - 英単語と日本語の間は半角スペース（「Hero の Hand」「Flop 以降」）。括弧・句読点の隣には入れない（「（Spot）」「Fold、Check」）。

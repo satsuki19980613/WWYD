@@ -20,18 +20,19 @@ const INFO: Record<string, { title: string; items: [string, string][] }> = {
     items: [
       ['開く', '未回答は回答へ、回答済みは集計へ。集計は回答するまで見られない。'],
       ['削除', 'ごみ箱で自分の投稿を削除する（回答も消える。元に戻せない）。'],
+      ['印', 'Reads は Villain の情報、MTT は大会の状況が付いた投稿。'],
       ['キー（PC）', '↑ ↓（j k）で行を移り、Enter で開く。'],
     ],
   },
   answer: {
     title: 'Range 入力',
     items: [
-      ['回答', 'Hero の席で、この Spot の Range を塗る。塗らないマスは Range 外。'],
+      ['回答', 'Hero の席で、この Spot の Range を塗る。塗らないマスは Range 外。送信は 1 回で、後から変えられない。'],
       ['SPOT', '卓の SPOT とバーの黄の目盛りが出題の局面。Hero の Hand は回答後に見られる。'],
       ['色', '赤は Fold、シアンは Check・Call、黄は Bet・Raise。'],
       ['ブラシ', 'バーの境界をドラッグすると混合（5% 刻み）。同じ頻度のマスを押すと消える。長押しでそのマスの頻度を読み込む。'],
-      ['Size', '% は Call した後の Pot に対する割合。'],
-      ['送信', '1 Spot に 1 回。送信後は変えられない。'],
+      ['Size', '% は Call 後の Pot に対する割合。Read は 50% 未満が Small、100% までが Big、その上が Overbet。'],
+      ['Read', '◆ の席・All Villains で見る。Over・Under は頻度、Value・Bluff-heavy は打つ手の中身。++ は強い。'],
       ['キー（PC）', '← → で 1 手、Home で最初、End で Spot。Ctrl+Z・Ctrl+Y で戻す・やり直す。B でブラシ、E で消しゴム。'],
     ],
   },
@@ -43,6 +44,7 @@ const INFO: Record<string, { title: string; items: [string, string][] }> = {
       ['白枠', 'Hero の実際の Hand。'],
       ['自分との差', '全体との違い（黄が濃いほど違う）。正解・不正解ではない。'],
       ['SPOT', '卓の SPOT とバーの黄の目盛りが出題の局面。'],
+      ['Read', '◆ の席・All Villains で見る。Over・Under は頻度、Value・Bluff-heavy は打つ手の中身。++ は強い。'],
       ['キー（PC）', '← → で 1 手、Home で最初、End で最後。マスにマウスを乗せると内訳（押すと固定）。'],
     ],
   },
@@ -53,8 +55,8 @@ const INFO: Record<string, { title: string; items: [string, string][] }> = {
       ['投稿できない Hand', 'Flop 以降に Hero の Action が無い Hand と、Preflop で All-in になった Hand。'],
       ['Hand', '分かっている Hand だけ入れる（Hero は必須）。入れていない席は Showdown で Muck。'],
       ['Card キーボード', 'Q を押したまま上で K・左で T・下で J。♠ を押したまま上で ♥・左で ♦・下で ♣。'],
-      ['入れ直し', 'ログの Action や卓の Board の Card を押すと、そこから入れ直す。'],
-      ['設定の変更', '設定・人数・Stack・Hero は Action の後も変えられる。合わなくなった Action は外れる。'],
+      ['入れ直し', 'ログの Action や Board の Card を押すとそこから入れ直す。設定・人数・Stack・Hero も後から変えられる。'],
+      ['Villain', '参加した席と Steal に Fold した Blind。Lean を再度押すと強い（++）。Preset は端末だけ。'],
       ['キー（PC）', 'Card はキーでも打てる（A → s）。Ctrl+Z・Ctrl+Y で Action を戻す・進める。'],
     ],
   },
@@ -216,7 +218,7 @@ for (const v of VARIANTS) {
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
       await expect(page.getByRole('heading', { level: 1 })).toContainText('利用規約');
       const t = await page.locator('article').innerText();
-      for (const w of ['禁止事項', '運営者の対応', '不適切な投稿は、予告なく削除', '変更・中断・終了', '免責']) expect(t, w).toContain(w);
+      for (const w of ['禁止事項', '運営者の対応', '予告なく削除または非表示', '変更・中断・終了', '免責']) expect(t, w).toContain(w);
       const mail = page.locator('article a[href^="mailto:"]');
       await expect(mail).toHaveCount(1);
       await expect(mail).toHaveAttribute('href', /^mailto:[^@\s]+@[^@\s]+$/);

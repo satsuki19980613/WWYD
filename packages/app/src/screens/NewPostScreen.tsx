@@ -31,6 +31,7 @@ import {
   truncateActions,
   undoAction,
   usedCards,
+  villainContext,
   type Draft,
 } from '../post/draft.ts';
 import { draftSlot, getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
@@ -39,6 +40,8 @@ import { messageForCode } from '../post/errorMessages.ts';
 import { OcrImport } from '../post/OcrImport.tsx';
 import { sendPost } from '../post/sendPost.ts';
 import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
+import { MttSection } from '../reads/MttSection.tsx';
+import { VillainSection } from '../reads/VillainSection.tsx';
 import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
 import { navigate } from '../router.ts';
 import { useHeightVar } from '../useHeightVar.ts';
@@ -115,13 +118,15 @@ export function NewPostScreen(): JSX.Element {
     else update((x) => setPlayers(x, n));
   };
 
-  // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）
+  // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）。
+  // Villain・MTT の欄（data-own-keys）の Slider・ボタンを操作中も効かせない（Action が戻って Villain の入力が消えていた。V-030）
   const keys = useRef({ undoLast, redo });
   keys.current = { undoLast, redo: canReplay(phase, future[0]) ? redo : () => undefined };
   useEffect(() => {
     if (mobile) return;
     const onKeyDown = (e: KeyboardEvent): void => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || typingOrModal(e)) return;
+      if (e.target instanceof Element && e.target.closest('[data-own-keys]')) return;
       const k = e.key.toLowerCase();
       if (k === 'z' && !e.shiftKey) keys.current.undoLast();
       else if (k === 'y' || (k === 'z' && e.shiftKey)) keys.current.redo();
@@ -171,6 +176,18 @@ export function NewPostScreen(): JSX.Element {
       onChange={patch}
       onPlayers={changePlayers}
       onOpenHand={(p) => setSeat(p)}
+    />
+  );
+  // Villain・MTT の情報（全項目任意。18 章 §2）。MTT は基本設定の下。Villain は登録できる席と Spot Read の候補が Action と Spot で決まるので、Spot の下に置く
+  const mttSection = d.fmt === 'mtt' && <MttSection mtt={d.mtt} onChange={(mtt) => update((x) => ({ ...x, mtt }))} />;
+  const villain = villainContext(d);
+  const villains = (
+    <VillainSection
+      seats={villain.seats}
+      hero={d.hero}
+      cands={villain.cands}
+      reads={d.reads}
+      onChange={(reads) => update((x) => ({ ...x, reads }))}
     />
   );
   const actions = (
@@ -285,11 +302,13 @@ export function NewPostScreen(): JSX.Element {
           <div className="pf-grid">
             <div className="pf-col">
               {settings}
+              {mttSection}
               {players}
             </div>
             <div className="pf-col">{actions}</div>
             <div className="pf-col">
               {spot}
+              {villains}
               <ErrorList errors={errors} />
               {submitButton}
             </div>
@@ -326,9 +345,11 @@ export function NewPostScreen(): JSX.Element {
         </nav>
         {ocrPlace}
         {step === 0 && settings}
+        {step === 0 && mttSection}
         {step === 1 && players}
         {step === 2 && actions}
         {step === 3 && spot}
+        {step === 3 && villains}
         {/* 台を出している間は戻る・次へを隠す（13 章） */}
         {!seat && !docked && (
           <div className="pf-bar" ref={barRef}>

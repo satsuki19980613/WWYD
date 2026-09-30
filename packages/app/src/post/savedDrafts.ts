@@ -2,6 +2,7 @@ import { isCard, POSITIONS, PLAYER_COUNTS, type Pos } from '@wwyd/core';
 import { useSyncExternalStore } from 'react';
 import { cardText } from '../components/PlayingCard.tsx';
 import { handCards } from './cardInput.ts';
+import { sanitizeMtt, sanitizeReads } from '../reads/readsModel.ts';
 import { emptyDraft, normalizeSpot, parseSettings, phaseOf, settleActions, STREET_NAME, type Draft } from './draft.ts';
 
 /**
@@ -52,6 +53,9 @@ export function sanitizeDraft(raw: unknown): Draft {
     board: Array.isArray(raw.board) ? raw.board.filter(isCard) : [],
     spotIndex: Number.isInteger(raw.spotIndex) ? (raw.spotIndex as number) : null,
     title: str(raw.title, ''),
+    // 前の版の下書き（項目が無い）は情報なし
+    reads: sanitizeReads(raw.reads),
+    mtt: sanitizeMtt(raw.mtt),
   };
   try {
     // 保存されるのは、設定を変えて合わなくなった手を外す前の下書き（画面は settleActions の結果を出す）。

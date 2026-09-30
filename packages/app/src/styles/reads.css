@@ -1,0 +1,262 @@
+/* Villain・MTT の情報（詳細仕様 18 章）: 投稿の入力（Slider・席の折りたたみ・Preset・MTT）、回答・集計の表示（モーダル）、
+   ヘッダーの流れるタイトル、一覧の印 */
+
+/* ---- Slider（未入力・5 段階のラベル・数の直接入力・リセット） ---- */
+.rs { display: flex; flex-direction: column; gap: 2px; }
+.rs-head { display: flex; align-items: center; gap: var(--s2); min-height: 32px; }
+.rs-name { flex: none; }
+.rs-label { flex: 1 1 auto; min-width: 0; font-family: var(--disp); font-size: 15px; font-weight: 700; color: var(--dim2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs.set .rs-label { color: var(--yellow); }
+.rs-num {
+  flex: none;
+  min-width: 52px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 14px;
+  cursor: pointer;
+}
+.rs-num small { margin-left: 1px; font-size: 10px; color: var(--dim2); }
+.rs:not(.set) .rs-num { color: var(--dim2); }
+.rs-num:hover { border-color: var(--cyan); }
+.rs-num:focus-visible, .rs-clear:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* iPhone の Safari は 16px 未満の入力欄で画面を拡大するので 16px（リリース前テスト F-032） */
+.rs-input { flex: none; width: 64px; min-height: 32px; padding: 4px 8px; font-size: 16px; }
+.rs-clear {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+}
+.rs-clear:hover { color: var(--fg); border-color: var(--line-2); }
+/* 押す所は 36px の高さ。横になぞって動かし、縦のスクロールは妨げない */
+.rs-track { position: relative; height: 36px; display: flex; align-items: center; cursor: pointer; touch-action: pan-y; }
+.rs-track:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.rs-rail { position: relative; flex: 1; height: 6px; margin: 0 9px; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line); }
+.rs:not(.set) .rs-rail { background: repeating-linear-gradient(-45deg, var(--surface-2) 0 4px, var(--surface-3) 4px 8px); }
+.rs-tick { position: absolute; top: -3px; width: 1px; height: 12px; background: var(--line-2); transform: translateX(-0.5px); }
+.rs-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--yellow); }
+.rs-thumb {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  background: var(--yellow);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 10px rgba(252, 238, 10, 0.45);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* ---- 投稿の Villain（席ごとの折りたたみ） ---- */
+.vr-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); background: var(--surface); }
+.vr-row + .vr-row { border-top: 1px solid var(--line); }
+.vr-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--s3);
+  border: 0;
+  background: none;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+}
+.vr-head:hover { background: var(--surface-2); }
+.vr-head:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.vr-pos { flex: none; width: 36px; font-family: var(--disp); font-size: 15px; font-weight: 700; }
+.vr-sum { flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--dim2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vr-row.filled .vr-sum { color: var(--fg); }
+.vr-chev { flex: none; color: var(--dim); transition: transform 150ms var(--ease); }
+.vr-row.open .vr-chev { transform: rotate(180deg); }
+.vr-row.open > .vr-head { background: var(--surface-2); }
+.vr-body { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) var(--s3) var(--s3); background: var(--bg); border-top: 1px solid var(--line); }
+
+/* 5 分割のボタン（Postflop Aggression・Hero Image・Sample）: 1 本の帯を 5 つに分け、選んだ所まで黄。左右の端に名前（18 章 §2.1.1） */
+.seg5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; height: 32px; }
+.seg5-b { padding: 0; border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; }
+.rs.step:not(.set) .seg5-b { background: repeating-linear-gradient(-45deg, var(--surface-2) 0 4px, var(--surface-3) 4px 8px); }
+.seg5-b:hover { border-color: var(--line-2); }
+.seg5-b.lit { background: rgba(252, 238, 10, 0.18); border-color: rgba(252, 238, 10, 0.35); }
+.seg5-b[aria-pressed='true'] { background: var(--yellow); border-color: var(--yellow); }
+.seg5-b:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* スマホのタップは 36px 以上（5 分割のボタン・数のボタン・×。villain-reads-test V-034） */
+@media (max-width: 699.98px) {
+  .seg5 { height: 36px; }
+  .rs-num,
+  .rs-input { min-height: 36px; }
+  .rs-clear { width: 36px; height: 36px; }
+}
+
+/* Read（Spot Read・General Read）の入力 */
+.vr-read { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) 0 var(--s1); border-top: 1px solid var(--line); }
+.vr-read-h { display: flex; align-items: center; gap: var(--s2); min-height: 32px; flex-wrap: wrap; }
+/* 「この Hand の結果を知る前の読みで」（不変条件 1 の例外。18 章 §10 C-10） */
+.vr-note { font-size: 12px; color: var(--dim); }
+.vr-line { margin: 0; font-size: 14px; color: var(--fg); overflow-wrap: anywhere; }
+.vr-line.sm { flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--cyan); }
+.vr-read-h .rs-clear { margin-left: auto; }
+.vr-choice { display: flex; flex-direction: column; gap: 4px; }
+.vr-choice-l { font-size: 10px; }
+.vr-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip.vr-chip { min-height: 36px; padding: 0 10px; font-size: 13px; }
+/* 「強い」は ++ の文字が必ず付く。色を濃くするのは補助（18 章 §10 B-3） */
+.chip.vr-chip.strong { color: var(--bg); background: var(--yellow); border-color: var(--yellow); font-weight: 700; }
+.vr-cond-t {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 var(--s2);
+  border: 1px dashed var(--line-2);
+  background: none;
+  color: var(--cyan);
+  font-size: 16px;
+  cursor: pointer;
+}
+.vr-cond-t:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.vr-cond { display: flex; flex-direction: column; gap: var(--s2); padding-left: var(--s2); border-left: 2px solid var(--line); }
+.btn.vr-add { align-self: flex-start; }
+.vr-foot { display: flex; gap: var(--s2); justify-content: flex-end; }
+.btn.ghost.sm { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+
+/* ---- Preset ---- */
+.pr-save { display: flex; flex-direction: column; gap: var(--s1); }
+.pr-save-row { display: flex; gap: var(--s2); }
+.pr-save-row .inp { flex: 1; min-width: 0; }
+.pr-list { margin: var(--s4) 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.pr-item { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.pr-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pr-name { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.pr-sum { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-del { flex: none; color: var(--red); }
+
+/* ---- MTT の入力 ---- */
+.mtt-fields { grid-template-columns: 1fr 1fr; }
+/* Prize Structure の選択肢は 2 行（名前と目安） */
+.chip-row.segment .chip.chip-2l { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 2px; }
+.chip-2l small { font-size: 10px; color: var(--dim2); }
+.chip-2l[aria-pressed='true'] small { color: inherit; opacity: 0.8; }
+
+/* ---- 回答・集計の画面: 卓の上のボタンの行と、席の印 ---- */
+.rp-info { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rp-info .hist-btn { position: static; }
+/* 情報のある席は押せる。右上に小さなシアンの印 */
+.pseat-btn { position: relative; font: inherit; color: inherit; text-align: inherit; cursor: pointer; }
+.pseat-btn:hover { border-color: var(--cyan); }
+.pseat-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.pseat-read {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  background: var(--cyan);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 8px rgba(58, 230, 255, 0.6);
+  transform: rotate(45deg);
+}
+
+/* ---- 表示（モーダル）: 段階のラベルとバーだけ ---- */
+.rv-list { margin: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.rv-row { display: grid; grid-template-columns: 132px minmax(0, 1fr); align-items: center; gap: var(--s3); }
+.rv-row dt { margin: 0; }
+.rv-row dd { margin: 0; display: flex; align-items: center; gap: var(--s2); min-width: 0; font-size: 14px; }
+/* Villain の情報: 全体の傾向のチップと Read の行（18 章 §2.1.6） */
+.rv-card { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.rv-chips, .rv-reads { margin: 0; padding: 0; list-style: none; }
+.rv-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.rv-chip { padding: 2px 8px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 13px; color: var(--fg); white-space: nowrap; }
+.rv-reads { display: flex; flex-direction: column; gap: 4px; }
+.rv-read { font-size: 14px; line-height: 1.45; color: var(--dim); overflow-wrap: anywhere; }
+.rv-lean { color: var(--cyan); font-weight: 700; }
+.rv-read.strong .rv-lean { padding: 0 4px; background: rgba(58, 230, 255, 0.16); }
+.rv-hint { color: var(--dim2); font-size: 11px; }
+.rv-seats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.rv-seat { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3) 0; border-top: 1px solid var(--line); }
+.rv-seat:first-child { border-top: 0; padding-top: 0; }
+.rv-seat.none { flex-direction: row; align-items: center; gap: var(--s3); }
+.rv-pos { font-family: var(--disp); font-size: 16px; font-weight: 700; }
+.rv-none { color: var(--dim2); }
+.rv-folded { margin-top: var(--s2); border-top: 1px solid var(--line); }
+.rv-folded > summary { display: flex; align-items: center; gap: var(--s2); min-height: 44px; cursor: pointer; list-style: none; }
+.rv-folded > summary::-webkit-details-marker { display: none; }
+.rv-folded > summary::after { content: '+'; margin-left: auto; color: var(--cyan); font-size: 16px; }
+.rv-folded[open] > summary::after { content: '−'; }
+.rv-fcount { font-size: 12px; color: var(--dim); }
+@media (max-width: 699.98px) {
+  .rv-row { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/* ---- ヘッダーの投稿のタイトル（収まらなければ流す。18 章 §5.1） ---- */
+.hdr-lead { flex: 1 1 auto; margin-right: var(--s2); }
+/* 幅は中身に左右されない（flex-basis 0）。中身で幅が変わると Marquee の形の判定が揺れる（V-033） */
+.hdr-title.hdr-post { flex: 1 1 0; min-width: 0; font-family: var(--body); font-size: 16px; letter-spacing: 0.02em; }
+.mq { display: block; min-width: 0; overflow: hidden; white-space: nowrap; }
+.mq-inner { display: inline-block; white-space: nowrap; }
+.mq-run { mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 12px), transparent); }
+.mq-run .mq-inner { padding-left: 8px; animation: mq-scroll var(--mq-dur, 8s) linear infinite; }
+@keyframes mq-scroll {
+  0%, 18% { transform: translateX(0); }
+  82%, 100% { transform: translateX(calc(var(--mq-dist, 0px) - 20px)); }
+}
+/* 動きを減らす設定: 省略して、押すと全文を折り返して出す */
+/* 字間も引き継ぐ（ボタンは font: inherit でも letter-spacing を引き継がず、文字の幅が形で変わる。V-033） */
+.mq-toggle { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }
+.mq-toggle:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.mq-clip .mq-inner { display: block; overflow: hidden; text-overflow: ellipsis; }
+.mq-clip.open { white-space: normal; }
+.mq-clip.open .mq-inner { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+.hdr:has(.mq-clip.open) .hdr-inner { height: auto; min-height: var(--hdr-h); padding-top: 6px; padding-bottom: 6px; }
+/* PC はヘッダーを伸ばさない（伸ばすと 1 画面に収める FitStage の下がはみ出し、ページがスクロールする。villain-reads-test V-043）。
+   全文は小さくしてヘッダーの中に収め、入りきらなければタイトルの枠の中でスクロールする */
+@media (min-width: 700px) {
+  .hdr:has(.mq-clip.open) .hdr-inner { height: var(--hdr-h); padding-top: 0; padding-bottom: 0; }
+  .mq-clip.open .mq-inner { max-height: calc(var(--hdr-h) - 8px); overflow-y: auto; font-size: 13px; line-height: 1.25; }
+}
+
+/* ---- 一覧の印（Reads・MTT） ---- */
+.spot-badges { display: inline-flex; flex: none; gap: 4px; margin-left: 6px; vertical-align: 1px; }
+.spot-badge {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid rgba(58, 230, 255, 0.4);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+}
+/* カードは画面の幅に収める（2 段目は 1 行なので、グリッドの既定の min-width: auto だとカードが広がる） */
+.spot-card { min-width: 0; }
+/* 2 段目: Board は縮めない（条件の文字の方を「…」にする）。1 行に収めるため札を少し小さく */
+.spot-t2 .spot-board { flex: none; gap: 6px; }
+.spot-t2 .spot-board-cards { gap: 2px; }
+.spot-t2 .pcard.sm { width: 19px; height: 26px; font-size: 11px; }
+.spot-t2 .pcard.sm em { font-size: 8px; }
+.spot-t2 .street-badge { padding: 1px 6px; }
+
+/* 段階を付けない Slider（Tournament Type）: 目盛りを出さず、溝の下の左右に両端の名前（Deep・Turbo）。表示の画面も同じ形 */
+.rs.ends .rs-head { min-height: 24px; }
+.rs-ends {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0 0;
+  font-family: var(--disp);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}
+.rv-slider { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 6px; }
+.rv-slider .rs-rail { flex: none; margin: 0 7px; background: var(--surface-3); }
+.rv-slider .rs-fill { background: var(--cyan); }
+.rv-slider .rs-thumb { width: 12px; height: 12px; background: var(--cyan); box-shadow: 0 0 0 2px var(--bg); }
+.rv-slider .rs-ends { margin: 0; font-size: 12px; }

@@ -31,8 +31,13 @@ import {
   type Pos,
   type State,
   type Street,
+  hasReads,
+  readCandidates,
+  villainSeats,
+  type ReadCandidate,
 } from '@wwyd/core';
 import { handCards, isHandComplete } from './cardInput.ts';
+import { emptyMtt, incompleteSeats, MTT_FIELD_LABEL, parseMtt, readsForSubmit, type MttDraft, type ReadsDraft } from '../reads/readsModel.ts';
 import { messageForCode } from './errorMessages.ts';
 
 /**
@@ -57,6 +62,10 @@ export type Draft = {
   board: Card[];
   spotIndex: number | null;
   title: string;
+  /** Villain の情報（席ごとの入力。登録できない席の分は送らない。18 章 §2.1） */
+  reads: ReadsDraft;
+  /** MTT の情報（Game 形式が MTT のときだけ送る。18 章） */
+  mtt: MttDraft;
 };
 
 export function emptyDraft(): Draft {
@@ -74,6 +83,8 @@ export function emptyDraft(): Draft {
     board: [],
     spotIndex: null,
     title: '',
+    reads: {},
+    mtt: emptyMtt(),
   };
 }
 
@@ -560,6 +571,8 @@ export function buildSubmission(d: Draft): Submission {
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
   if (d.spotIndex === null) errors.push(phase.kind === 'done' && candidates(d).length === 0 ? noSpotError(d) : 'Spot を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
+  if (d.fmt === 'mtt') for (const f of parseMtt(d.mtt).invalid) errors.push(`MTT の ${MTT_FIELD_LABEL[f]} の値が正しくありません`);
+  for (const p of incompleteSeats(d.reads, villainContext(d).seats)) errors.push(`${p} の General Read を最後まで選んでください`);
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };
   }
@@ -616,6 +629,9 @@ export function submissionBody(d: Draft): Record<string, unknown> {
     }
   }
   const rake = d.rake.trim();
+  const vc = villainContext(d);
+  const reads = readsForSubmit(d.reads, vc.seats, vc.cands);
+  const mtt = d.fmt === 'mtt' ? parseMtt(d.mtt).info : null;
   return {
     title: d.title.trim(),
     fmt: d.fmt,
@@ -633,5 +649,26 @@ export function submissionBody(d: Draft): Record<string, unknown> {
     spot_index: d.spotIndex,
     // スポットが決まらなければ派生メタは null（サーバーは malformed で断る）
     derived,
+    // Villain の情報は登録できる席の分だけ（Spot Read は判断地点より前の実際の Action のときだけ）、MTT の情報は MTT のときだけ（18 章 §3）。情報が無ければキーごと送らない（前の版と同じ本文）
+    ...(hasReads(reads) ? { villain_reads: reads } : {}),
+    ...(mtt ? { mtt } : {}),
   };
+}
+
+/**
+ * Villain の情報を登録できる席と Spot Read の候補（18 章 §2.1.4・§10 B-2。判定は core）。
+ * 設定が読めない・Action が合法に再生できないときは空、Spot を選ぶまでは候補が空。
+ */
+export function villainContext(d: Draft): { seats: Pos[]; cands: ReadCandidate[] } {
+  const { setup } = parseSettings(d);
+  if (!setup || d.players === null) return { seats: [], cands: [] };
+  try {
+    const seated = seatsOf(d);
+    const seats = villainSeats(setup, d.actions, d.hero).filter((p) => seated.includes(p));
+    const cands = d.spotIndex !== null ? readCandidates(setup, d.actions, d.hero, d.spotIndex) : [];
+    return { seats, cands };
+  } catch (e) {
+    if (e instanceof ValidationError) return { seats: [], cands: [] };
+    throw e;
+  }
 }

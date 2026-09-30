@@ -153,6 +153,10 @@
   font-variant-numeric: tabular-nums;
   transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease);
 }
+/* タッチの端末では 16px（iPhone の Safari は 16px 未満の入力欄にフォーカスすると拡大する。F-032・villain-reads-test V-031） */
+@media (pointer: coarse) {
+  .inp { font-size: 16px; }
+}
 .inp::placeholder { color: var(--faint); }
 .inp:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan), 0 0 12px rgba(58, 230, 255, 0.15); }
 .inp:disabled { opacity: 0.45; }

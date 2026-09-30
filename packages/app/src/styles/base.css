@@ -122,8 +122,6 @@ a { color: var(--cyan); }
 .hdr-nav-item.post[aria-current='page'] { background: var(--yellow); color: var(--yellow-ink); border-color: var(--yellow); }
 .hdr-nav-item.post[aria-current='page']::after { display: none; }
 .hdr-nav-item:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-.hdr-title.crumb { font-size: 15px; color: var(--fg); }
-.hdr-title.crumb::before { content: '/'; margin-right: 2px; color: var(--dim2); font-family: var(--mono); font-weight: 400; }
 
 /* ---- アプリ面 ---- */
 /* 画面の中身を画面の高さちょうどにするときの高さ（ヘッダーとその下線 1px、.app-main の上下の余白を除く。卓で残りを埋める画面が使う） */
