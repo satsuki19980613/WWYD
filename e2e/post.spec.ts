@@ -298,8 +298,16 @@ test('PC の投稿: 卓と台は動かず、History は横一列で横にスク�
   expect(new Set(tops).size).toBe(1);
   const m = await strip.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, left: e.scrollLeft }));
   expect(m.sw).toBeGreaterThan(m.cw);
-  // FitStage の zoom で scrollLeft は小数になる（CI の Linux で右端でも 0.08px 足りなかった）ので 2px まで許す
-  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 2);
+  // 最新の手のカードが枠の中に欠けずに見えている。scrollLeft などの数値は FitStage の zoom で見た目と合わないことがある
+  // （CI の Linux で、見た目は右端でも 10px 足りない値になった）ので、要素の位置で確かめる
+  const edge = await strip.evaluate((e) => {
+    const s = e.getBoundingClientRect();
+    const items = e.querySelectorAll('li');
+    const l = (items[items.length - 1] as HTMLElement).getBoundingClientRect();
+    return { right: l.right - s.right, left: l.left - s.left };
+  });
+  expect(edge.right).toBeLessThanOrEqual(1);
+  expect(edge.left).toBeGreaterThanOrEqual(-1);
   await expect(strip.getByRole('button', { name: 'BB Check' }).last()).toBeInViewport();
   // 押すと入れ直しの確認
   await strip.getByRole('button', { name: 'BTN Raise 2.5' }).click();

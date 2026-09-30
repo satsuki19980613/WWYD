@@ -315,7 +315,24 @@ export function HandLog(props: {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
-    if (props.strip && el) el.scrollLeft = el.scrollWidth;
+    if (!props.strip || !el) return;
+    el.scrollLeft = el.scrollWidth;
+    // 書体の読み込みや FitStage の倍率の変化で後から中身の幅が変わっても、右端にいれば右端へ送り直す
+    // （CI で最後のカードが 10px 欠けたまま残った。2026-09-30）。利用者が左へ戻したときは動かさない
+    let atEnd = true;
+    const onScroll = (): void => {
+      atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+    };
+    const ro = new ResizeObserver(() => {
+      if (atEnd) el.scrollLeft = el.scrollWidth;
+    });
+    ro.observe(el);
+    for (const c of Array.from(el.children)) ro.observe(c);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', onScroll);
+    };
   }, [props.strip, items.length, props.board.length]);
   const last = items.length - 1;
   const streets = STREETS.filter((s) => items.some((it) => it.street === s));
