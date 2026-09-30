@@ -53,6 +53,13 @@ for (const v of VARIANTS) {
       await expect(page.getByRole('button', { name: 'Google でログイン' })).toBeEnabled();
     });
 
+    test(`F-027 #error= （ハッシュ）でも失敗として扱い、URL から消す${v}`, async ({ page }) => {
+      await fakeBackend(page, null, { signedIn: false });
+      await page.goto('/#error=access_denied');
+      await expect(page.getByText('ログインできませんでした')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('');
+    });
+
     test(`?error= だけでも失敗として扱う。元のパス・ほかのクエリは残す${v}`, async ({ page }) => {
       await fakeBackend(page, null, { signedIn: false });
       await page.goto('/?tab=mine&error=access_denied');

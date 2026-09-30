@@ -83,7 +83,11 @@ export function useAuth(): Auth {
     void (async () => {
       // verifier は一度しか使えない。セッションを確定させてから URL を戻す
       await resolve(cleaned.verifier);
-      if (cleaned.changed) navigate(cleaned.path, { replace: true });
+      if (cleaned.changed) {
+        navigate(cleaned.path, { replace: true });
+        // ハッシュ（#error= など）だけが違うときは navigate が何もしないので、URL から直接消す（F-027）
+        if (window.location.hash && !cleaned.path.includes('#')) window.history.replaceState(null, '', cleaned.path);
+      }
     })();
   }, [resolve]);
 

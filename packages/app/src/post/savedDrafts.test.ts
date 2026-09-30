@@ -52,6 +52,11 @@ describe('下書きの保存（14 章 §3.5）', () => {
     expect(list[0]?.draft).toEqual({ ...emptyDraft(), title: 't' });
   });
 
+  it('40 文字（コードポイント）を超えるタイトルは 40 文字に切る（F-027。前の版・改ざんした保存内容）', () => {
+    expect([...sanitizeDraft({ title: '😀'.repeat(45) }).title]).toHaveLength(40);
+    expect(sanitizeDraft({ title: 'a'.repeat(40) }).title).toBe('a'.repeat(40));
+  });
+
   it('再生できない Action はその手から後を捨てる（画面の settleActions と同じ。Board は残す。R3-1）', () => {
     const d = sanitizeDraft({
       ...draft('t'),

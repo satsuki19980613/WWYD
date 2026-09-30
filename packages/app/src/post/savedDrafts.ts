@@ -1,4 +1,4 @@
-import { isCard, POSITIONS, PLAYER_COUNTS, type Pos } from '@wwyd/core';
+import { isCard, POSITIONS, PLAYER_COUNTS, TITLE_MAX, type Pos } from '@wwyd/core';
 import { useSyncExternalStore } from 'react';
 import { cardText } from '../components/PlayingCard.tsx';
 import { handCards } from './cardInput.ts';
@@ -52,7 +52,8 @@ export function sanitizeDraft(raw: unknown): Draft {
     actions: Array.isArray(raw.actions) && raw.actions.every(isActionShape) ? (raw.actions as Draft['actions']) : [],
     board: Array.isArray(raw.board) ? raw.board.filter(isCard) : [],
     spotIndex: Number.isInteger(raw.spotIndex) ? (raw.spotIndex as number) : null,
-    title: str(raw.title, ''),
+    // 40 文字（コードポイント）を超える分は切る（入力欄と同じ。F-027）
+    title: [...str(raw.title, '')].slice(0, TITLE_MAX).join(''),
     // 前の版の下書き（項目が無い）は情報なし
     reads: sanitizeReads(raw.reads),
     mtt: sanitizeMtt(raw.mtt),
