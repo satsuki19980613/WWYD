@@ -43,9 +43,9 @@ describe('T4-04 前の版の投稿・形の違う情報でも、読み込みは�
     expect(parsePostDetail(detailWith((h) => { h.villain_reads = { XX: { vpip: 10 } }; })).hand.reads).toEqual({});
   });
 
-  it('記録（特性）: 1 席でも形が違うと、ほかの正しい席の情報も落ちる（全か無か）', () => {
+  it('V-040: 1 席の形が違っても、ほかの正しい席の情報は残る（形の違う席だけ情報なし）', () => {
     const p = parsePostDetail(detailWith((h) => { h.villain_reads = { BTN: { vpip: 30 }, SB: { memo: 'x' } }; }));
-    expect(p.hand.reads).toEqual({});
+    expect(p.hand.reads).toEqual({ BTN: { vpip: 30 } });
   });
 
   it('記録（特性）: mtt は fmt が Cash の投稿でも、形が正しければそのまま読む', () => {

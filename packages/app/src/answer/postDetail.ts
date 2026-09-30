@@ -225,7 +225,17 @@ function lenientReads(raw: unknown, seats: readonly Pos[], hero: unknown): Villa
   try {
     return validateReads(raw, seats, hero as Pos);
   } catch {
-    return {};
+    // 1 席の形が違うだけで全席を消さない。席ごとに検証し、通った席だけ残す（V-040）
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const out: VillainReads = {};
+    for (const [pos, seat] of Object.entries(raw as Record<string, unknown>)) {
+      try {
+        Object.assign(out, validateReads({ [pos]: seat }, seats, hero as Pos));
+      } catch {
+        // この席だけ「情報なし」
+      }
+    }
+    return out;
   }
 }
 
