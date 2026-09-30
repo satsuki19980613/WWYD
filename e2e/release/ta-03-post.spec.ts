@@ -117,12 +117,12 @@ for (const v of VARIANTS) {
       await expect(page.getByLabel('SB（bb）')).toHaveAttribute('aria-invalid', 'true');
     });
 
-    test(`Stack・SB・Ante・Rake の境界: 9999.999 まで、小数第 4 位・数でない値・Rake 100 超は不正${v}`, async ({ page }) => {
+    test(`Stack・SB・Ante・Rake の境界: Stack は 1000 まで（F-037）、小数第 4 位・数でない値・Rake 100 超は不正${v}`, async ({ page }) => {
       await openNew(page);
       await setPlayers(page, 2);
       await step(page, S_PLAYER);
       const stack = page.getByRole('textbox', { name: 'BTN の Stack（bb）' });
-      for (const [val, bad] of [['9999.999', false], ['10000', true], ['100.0004', true], ['1e3', true], ['-5', true], ['0.001', false], ['', true], ['１００', true]] as const) {
+      for (const [val, bad] of [['1000', false], ['1000.001', true], ['9999.999', true], ['10000', true], ['100.0004', true], ['1e3', true], ['-5', true], ['0.001', false], ['', true], ['１００', true]] as const) {
         await stack.fill(val);
         if (bad) await expect(stack, val).toHaveAttribute('aria-invalid', 'true');
         else await expect(stack, val).not.toHaveAttribute('aria-invalid', 'true');

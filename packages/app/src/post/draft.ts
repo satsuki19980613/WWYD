@@ -7,6 +7,7 @@ import {
   hasPreflopAllin,
   legal,
   mbbToBb,
+  MAX_STACK_MBB,
   POSITIONS,
   runActions,
   SEATS_BY_COUNT,
@@ -205,7 +206,8 @@ export function parseSettings(d: Draft): ParsedSettings {
       continue;
     }
     const s = parseAmount(d.stacks[p], null);
-    if (s === null || s <= 0) invalid.push(p);
+    // Stack は 1000bb まで（F-037）。入力の途中で欄を赤くする
+    if (s === null || s <= 0 || s > MAX_STACK_MBB) invalid.push(p);
     else stacks[p] = s;
   }
   if (invalid.some((f) => f !== 'rake') || seats.length === 0) return { setup: null, rake, invalid };

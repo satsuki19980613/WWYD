@@ -10,6 +10,9 @@ export type Mbb = number;
 /** 入力で受け付ける金額の上限（9999.999bb。DB の numeric(9,3)）。 */
 export const MAX_AMOUNT_MBB: Mbb = 9_999_999;
 
+/** 投稿できる Stack の上限（1000bb）。6 人が全員 All-in しても Pot が MAX_AMOUNT_MBB に届かない（F-037。2026-09-30 さつき）。 */
+export const MAX_STACK_MBB: Mbb = 1_000_000;
+
 /**
  * bb の数値を mbb に変換する。小数第 4 位以下がある、有限でない、絶対値が上限を超える場合は null。
  * 例: 2.5 → 2500、0.125 → 125、0.0001 → null。

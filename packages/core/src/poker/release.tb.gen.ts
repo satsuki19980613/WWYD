@@ -11,7 +11,7 @@
 import { POSITIONS, PLAYER_COUNTS, SEATS_BY_COUNT, type Pos, type PlayerCount, type Street } from '../constants.ts';
 import type { Card } from '../cards.ts';
 import { ValidationError } from '../errors.ts';
-import { MAX_AMOUNT_MBB, type Mbb } from '../money.ts';
+import { MAX_STACK_MBB, type Mbb } from '../money.ts';
 import { replay } from './replay.ts';
 import { advance, apply, initialState, legal, status, type Action, type ActionType, type HandSetup, type State } from './state.ts';
 
@@ -68,8 +68,8 @@ export function randomStack(rng: Rng): Mbb {
   if (r < 0.5) return rng.int(1000, 15000); // 1〜15bb（ミリ単位）
   if (r < 0.8) return rng.int(1, 40) * 1000 + (rng.chance(0.3) ? rng.int(0, 999) : 0); // 〜40bb
   if (r < 0.97) return rng.int(1, 200) * 1000 + (rng.chance(0.3) ? rng.int(0, 999) : 0); // 〜200bb
-  if (r < 0.985) return MAX_AMOUNT_MBB;
-  return rng.int(1000, MAX_AMOUNT_MBB);
+  if (r < 0.985) return MAX_STACK_MBB;
+  return rng.int(1000, MAX_STACK_MBB);
 }
 
 export function randomSetup(rng: Rng, players?: PlayerCount): HandSetup {

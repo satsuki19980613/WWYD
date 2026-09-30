@@ -1,7 +1,7 @@
 /**
  * リリース前の総合テスト B（探索）: 本文の上限（64KB）いっぱいの長いハンドでも、サーバーの検証（validateInput + verifyPost）と
  * 画面の再生（phaseOf を描画のたびに呼ぶ）が現実的な時間で終わること。
- * 2 人・9999.999bb で 1bb ずつレイズし合うハンド（Action が最も多くなる形）。
+ * 2 人・Stack の上限 1000bb（F-037）で 1bb ずつレイズし合うハンド（Action が最も多くなる形。レイズは 998 回まで）。
  */
 import { spotView, validateInput, verifyPost } from '@wwyd/core';
 import { describe, expect, it, vi } from 'vitest';
@@ -28,7 +28,7 @@ function longHand(n: number): Record<string, unknown> {
     bb: 1,
     ante: 0,
     rake: null,
-    stacks: { BTN: 9999.999, BB: 9999.999 },
+    stacks: { BTN: 1000, BB: 1000 },
     hero: 'BTN',
     hero_cards: ['As', 'Ks'],
     known_cards: {},
@@ -44,7 +44,8 @@ describe('B 長いハンドの処理時間', () => {
     // 上限に近い Action 数を探す
     let n = 100;
     while (new TextEncoder().encode(JSON.stringify(longHand(n * 2))).length < MAX_BODY_BYTES) n *= 2;
-    const body = longHand(n);
+    // 1000bb では 1bb ずつのレイズは 998 回まで（それより長い本文は Stack を超えて断られるだけ）
+    const body = longHand(Math.min(n, 998));
     const bytes = new TextEncoder().encode(JSON.stringify(body)).length;
     const t0 = Date.now();
     let code = 'ok';
@@ -58,13 +59,14 @@ describe('B 長いハンドの処理時間', () => {
     expect(ms).toBeLessThan(1000);
   });
 
-  it('画面の再生（phaseOf）は、上限いっぱいの Action 数（1000 手）でも 1 回 100ms 以内', () => {
-    const d: Draft = { ...emptyDraft(), players: 2, stacks: { ...emptyDraft().stacks, BTN: '9999.999', BB: '9999.999' } };
-    const b = longHand(1000);
+  it('画面の再生（phaseOf）は、1000bb で最も長い Action 数（999 手）でも 1 回 100ms 以内', () => {
+    const d: Draft = { ...emptyDraft(), players: 2, stacks: { ...emptyDraft().stacks, BTN: '1000', BB: '1000' } };
+    const b = longHand(998);
     d.actions = (b.actions as { street: 'pf'; pos: 'BTN' | 'BB'; type: 'raise' | 'call'; to?: number }[]).map((a) =>
       a.to === undefined ? { street: a.street, pos: a.pos, type: a.type } : { street: a.street, pos: a.pos, type: a.type, to: Math.round(a.to * 1000) },
     );
     const { setup } = parseSettings(d);
+    expect(setup).not.toBeNull();
     const t0 = Date.now();
     for (let i = 0; i < 5; i++) phaseOf(setup, d.actions, []);
     const per = (Date.now() - t0) / 5;

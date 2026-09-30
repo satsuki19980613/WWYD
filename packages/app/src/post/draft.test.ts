@@ -689,6 +689,7 @@ describe('画面のエラーはすべてサーバーも返す（2026-09-29 さ�
     ['Rake が 100 を超える', () => ({ ...ok(), rake: '101' }), 'Rake の値が正しくありません', 'invalid_settings'],
     ['Rake の小数が 3 桁', () => ({ ...ok(), rake: '1.234' }), 'Rake の値が正しくありません', 'malformed'],
     ['Stack が 0', () => ({ ...ok(), stacks: { ...ok().stacks, CO: '0' } }), 'CO の Stack の値が正しくありません', 'invalid_settings'],
+    ['Stack が 1000bb を超える（F-037）', () => ({ ...ok(), stacks: { ...ok().stacks, CO: '1000.001' } }), 'CO の Stack の値が正しくありません', 'invalid_settings'],
     ['Hero の Hand が無い', () => ({ ...ok(), hands: { ...ok().hands, BTN: '' } }), 'Hero（BTN）の Hand を入力してください', 'hero_cards_required'],
     ['ほかの席の Hand が途中', () => ({ ...ok(), hands: { ...ok().hands, CO: 'Ah' } }), 'CO の Hand が途中です', 'malformed'],
     ['同じカードを 2 度使う', () => ({ ...ok(), hands: { ...ok().hands, CO: 'AdQs' } }), '入力内容を確認してください', 'duplicate_card'],

@@ -192,8 +192,14 @@ describe('VAL 投稿の検証', () => {
     // 2〜6 人の席の組み合わせと一致しない（2026-09-29。04 章 §2.1）
     ['スタックの席が人数ごとの席と一致しない', { stacks: { UTG: 100 } }],
     ['空席のスタックが 0（席として送った）', { stacks: { ...STACKS100, UTG: 0 } }],
+    // Stack の上限 1000bb（F-037）
+    ['スタックが 1000bb を超える', { stacks: { ...STACKS100, CO: 1000.001 } }],
   ])('VAL-15 %s', (_name, patch) => {
     expect(codeOf({ ...hs1(), ...patch })).toBe('invalid_settings');
+  });
+
+  it('VAL-15b スタックはちょうど 1000bb まで受け付ける（F-037）', () => {
+    expect(() => validateInput({ ...hs1(), stacks: { ...STACKS100, CO: 1000 } })).not.toThrow();
   });
 
   it.each<[string, Raw]>([
