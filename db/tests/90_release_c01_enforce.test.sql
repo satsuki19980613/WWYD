@@ -3,7 +3,7 @@
 -- 許可リスト・sub の無いトークン、回答の二重・書き換えの回り道、識別情報の露出）。
 begin;
 \ir helpers/setup.psql
-select plan(82);
+select plan(83);
 
 -- 1 = 投稿者（post・pflop・priver・ppf）、2 = post2 の投稿者、3 = 未回答の閲覧者、4 = 回答者、5 = 許可リストの人、6 = 予備、7 = 管理者
 select pg_temp.create_user(n) from generate_series(1, 7) as n;
@@ -159,11 +159,10 @@ select is((select count(*)::int from information_schema.tables t
                   or has_any_column_privilege('anonymous', format('%I.%I', t.table_schema, t.table_name), 'SELECT'))), 0,
   'C-01 neon_auth（メール・名前）と migrations の表を authenticated・anonymous は読めない');
 
--- 観察（S4）: posts の author_uid（投稿者の UID。名前・メールではない）は、ログイン中なら誰でも Data API で読める。
--- プライバシーポリシー §3「投稿や回答が誰のものかは、他の利用者には表示されません」は画面の話で、API では UID が見える。
--- 隠すなら列単位の権限（author_uid を除く列の select）か、posts を直接読ませず list_posts 経由にする。今の挙動を記録する
+-- F-006（2026-09-30 さつき）: posts の author_uid（投稿者の UID）は Data API から読めない（列単位の権限）。ほかの列は読める
 select pg_temp.login(3);
-select is((select count(distinct author_uid)::int from public.posts), 2, 'C-01（観察・S4）他人の投稿の author_uid も posts から読める（投稿者 2 人分）');
+select throws_ok($$ select author_uid from public.posts $$, '42501', null, 'F-006 posts の author_uid は読めない');
+select ok((select count(*) from public.posts where title is not null) > 0, 'F-006 posts の author_uid 以外の列は読める');
 select pg_temp.logout();
 
 -- ================================================================
