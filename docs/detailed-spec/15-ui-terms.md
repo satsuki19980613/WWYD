@@ -34,7 +34,7 @@
 ### 1.1 Villain・MTT の情報の用語（2026-09-30。18 章）
 
 訳さずに英語で出す: Villain / All Villains / Reads / VPIP / PFR / Postflop Aggression / Read Confidence / Hero Image / Memo / Preset /
-MTT / ICM / ITM / Tournament Type / Deep / Semi-Deep / Regular / Semi-Turbo / Turbo / Avg Stack / Prize Structure / Top-heavy / Standard / Flat / 1st。
+MTT / ICM / ITM / Tournament Type / Deep / Turbo / Avg Stack / Prize Structure / Top-heavy / Standard / Flat / 1st。
 MTT の数の欄の名前は日本語（スポットの順位・残りの人数・エントリー数。2026-09-30 さつき）。
 段階のラベル（Very Tight・Loose・Balanced・First Impression・HUD Stats など）も英語（18 章 §2.1）。それ以外の文言（「呼び出す」「保存」「クリア」など）は日本語。
 

@@ -58,12 +58,12 @@
 
 | 項目 | 値 |
 |---|---|
-| Tournament Type（ストラクチャーの速さ） | **Slider**（§2.2 と同じ操作。未入力あり）。5 段階: Deep / Semi-Deep / Regular / Semi-Turbo / Turbo（0〜4）。表示も Slider（段階のラベルとバー） |
+| Tournament Type（ストラクチャーの速さ） | **段階の無い Slider**（0 = Deep 〜 100 = Turbo の整数。§2.2 と同じ操作。未入力あり）。段階のラベル・目盛り・数の表示は無く、溝の下の左に「Deep」、右に「Turbo」。**回答・集計の表示も Slider そのもの**（動かせない。つまみの位置で速さが分かる） |
 | スポットの順位・残りの人数・エントリー数・ITM（入賞する人数） | 1〜1,000,000 の整数。**欄の名前は日本語**、並びはこの順 |
 | Avg Stack（bb） | 0 より大きく 99,999 まで、小数第 1 位まで |
 | Prize Structure | Top-heavy（1st ≥ 25%）/ Standard（1st 15–25%）/ Flat（1st < 15%）。括弧の目安（1st prize が賞金総額に占める割合。暫定値）を選択肢の下に小さく出す |
 
-- **2026-09-30 さつきの修正**: Stage（Early / Bubble / ITM / Final Table）の項目をなくした。Tournament Type は Regular / PKO / Satellite の選択をやめ、Deep〜Turbo の Slider にした。数の欄は上の 5 つだけ（Paid Places は「ITM」の名前で残す）。
+- **2026-09-30 さつきの修正**: Stage（Early / Bubble / ITM / Final Table）の項目をなくした。Tournament Type は Regular / PKO / Satellite の選択をやめ、左端 Deep・右端 Turbo の段階の無い Slider にした（最初は 5 段階にしたが、さつきの指示で段階をやめた）。数の欄は上の 5 つだけ（Paid Places は「ITM」の名前で残す）。
 - Prize Structure の選択肢は押すと選び、もう一度押すと未選択に戻る（全項目任意）。
 - 人数の大小: スポットの順位 ≦ 残りの人数 ≦ エントリー数、ITM ≦ エントリー数（両方あるときだけ比べる。ITM は残りの人数を超えてよい＝入賞後）。
   読めない値は欄を赤い枠にし、投稿の時に「MTT の スポットの順位 の値が正しくありません」の形で出す。
@@ -109,7 +109,7 @@
 - 情報のある席は、席の札の右上に小さなシアンの ◆ を付け、押せるようにする。押すとその席のモーダル（「Villain · BTN」）。
 - All Villains: ポットに参加した席（Preflop で Fold していない席）を上に、Preflop で Fold した席は「Preflop Fold n」の下に折りたたむ。
   どちらも座席の順。情報の無い席は 1 行（「—」）。回答画面は見せている範囲（停止位置まで）の Action で並べる。
-- MTT: Tournament Type（Slider の表示）・「順位 / 残りの人数」の見出しと `12/58 ・ ITM 50 ・ 320 entries`（ツールチップにも項目名）・Avg Stack・Prize Structure（目安つき）。
+- MTT: Tournament Type（Slider そのものと左右の Deep・Turbo）・「順位 / 残りの人数」の見出しと `12/58 ・ ITM 50 ・ 320 entries`（ツールチップにも項目名）・Avg Stack・Prize Structure（目安つき）。
 - 表示は簡潔に: **未入力の項目は出さない**。Slider は段階のラベルとバーだけ（数は出さない）。
 - 集計画面にも同じボタンと席の印を置く。
 
