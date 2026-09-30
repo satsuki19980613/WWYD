@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { APP_STATES, type AppState } from './appState.ts';
 import { useAuth } from './auth/useAuth.ts';
 import { ConfirmDialog } from './components/ConfirmDialog.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { Header, type HeaderTitle } from './components/Header.tsx';
 import { useHeaderTitle } from './components/headerTitle.ts';
 import { InfoModal } from './components/InfoModal.tsx';
@@ -118,7 +119,8 @@ export function App(): JSX.Element {
       <DraftLeaveGuard />
       <LeaveDraftDialog active={state === 'ready' && route.name === 'new'} />
       <main className="app-main">
-        {body}
+        {/* 画面の中身が落ちてもヘッダーは残し、別の画面へ移れば元に戻す（F-004） */}
+        <ErrorBoundary resetKey={`${pathname}${search}`}>{body}</ErrorBoundary>
       </main>
       {deleting && state === 'ready' && (
         <ConfirmDialog
