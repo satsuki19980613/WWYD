@@ -36,8 +36,9 @@
 訳さずに英語で出す: Villain / All Villains / Reads / VPIP / PFR / Postflop Aggression / Hero Image / Sample / Preset / Spot Read / General Read / Lean /
 Over / Under / Value-heavy / Bluff-heavy / Action の語（3-Bet・Fold to Steal・C-Bet・Barrel・Delayed C-Bet・Donk・Probe・Bet vs Check・Check-Raise など。18 章 §2.1.5）/
 条件のタグ（A-high・Two-tone・Paired・Straight possible・Flush Complete・Small・Big・Overbet など。18 章 §2.1.3）/
-MTT / ICM / ITM / Tournament Type / Deep / Turbo / Avg Stack / Prize Structure / Top-heavy / Standard / Flat / 1st。
-MTT の数の欄の名前は日本語（スポットの順位・残りの人数・エントリー数。2026-09-30 さつき）。
+MTT / ICM / ITM / Tournament Type / Deep / Turbo / Avg Stack / Prize Structure / Top-heavy / Standard / Flat / 1st /
+表示の形の entries・left（`12/58 ・ ITM 50 ・ 320 entries`、`58 left`。18 章 §2.4。V-017）。
+MTT の数の欄の名前は日本語（スポットの順位・残りの人数・エントリー数。2026-09-30 さつき）。MTT のモーダルの見出し（「順位 / 残りの人数」など）はこの欄の名前なので、不変条件 1 の例外（数の欄の名前）に入る。
 段階のラベル（Very Tight・Loose・Balanced・First Impression・Long・HUD Stats など）も英語（18 章 §2.1）。Read の 1 行は英語と記号だけ（`River · Barrel (Big) → Value-heavy`）。それ以外の文言（「呼び出す」「保存」「クリア」など）は日本語。
 
 ## 2. 書き方
