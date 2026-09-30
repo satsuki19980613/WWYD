@@ -464,12 +464,11 @@ describe('T1-09 MTT の検証の境界', () => {
     expect(m({ avg: 1234.5 })).toBeNull();
   });
 
-  it('観察: Avg Stack の許容（1e-9）が小さすぎる数に効いて、小数第 1 位でない値が通る（1e-10・12.3 + 1e-11）', () => {
-    // 期待: invalid_mtt。実際: 通る（S3 の案）
+  it('Avg Stack の小数第 1 位でない値（1e-10・12.3 + 1e-11）は invalid_mtt（V-021 で直した）', () => {
     const r1 = codeOf(() => validateMtt({ avg: 1e-10 }, 'mtt'));
     const r2 = codeOf(() => validateMtt({ avg: 12.3 + 1e-11 }, 'mtt'));
-    // 通ってしまうこと自体を記録（直ったらこの試験を反転させる）
-    expect([r1, r2]).toEqual([null, null]);
+    expect([r1, r2]).toEqual(['invalid_mtt', 'invalid_mtt']);
+    for (const ok of [0.1, 0.3, 12.3, 35.5, 99999, 99998.9]) expect(codeOf(() => validateMtt({ avg: ok }, 'mtt')), String(ok)).toBeNull();
   });
 
   it('Prize Structure: top・standard・flat だけ。大文字・空・その他は malformed', () => {

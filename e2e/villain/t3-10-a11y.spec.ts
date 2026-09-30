@@ -202,7 +202,6 @@ for (const v of ['', ' @sp'] as const) {
 // ---- タップの大きさ（スマホ。36〜44px の目安） ----
 
 test('T3-10 タップの大きさ（スマホ）: Villain の欄の押せる要素は高さ・幅とも 36px 以上 @sp', async ({ page }) => {
-  test.fail(true, '既知: V-034（S3。さつきの判断待ち）。5 分割のボタン・数のボタン・× が 32px。直ったらこの行を消す');
   const sec = await openedSeat(page);
   const small = await sec.evaluate((root) => {
     const out: string[] = [];

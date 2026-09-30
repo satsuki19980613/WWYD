@@ -71,7 +71,7 @@
 
 | 種類 | 軸 | タグ |
 |---|---|---|
-| Flop texture（Flop の時点の Board） | High Card | A-high / K-high / Q-high・J-high / Middle（T〜8） / Low（7 以下） |
+| Flop texture（Flop の時点の Board） | High Card | A-high / K-high / Q/J-high / Middle（T〜8） / Low（7 以下） |
 | | Suit | Rainbow / Two-tone / Monotone |
 | | Pairing | Unpaired / Paired |
 | | Connectivity | **Straight possible** / **No straight**（Flop の 3 枚でストレートが完成しうるか。§10 B-4） |
@@ -86,10 +86,11 @@
 | General Read | Preset に残す汎用の読み。Street → Action → Lean の順に選び、必要なら条件を足す | 1 席 2 件まで |
 
 - Spot Read を付けられるのは **Hero の判断地点より前の Action だけ**（後の Action は候補に出さない。回答者に答えが漏れるため。不変条件 10 と同じ考え）。
-- Spot Read の欄に「このハンドの結果を知る前の読みで」と短く添える（後知恵の読みを抑える）。**不変条件 1（画面に説明を出さない）の例外になる**（§10 C-10）。
+- Spot Read の欄に「この Hand の結果を知る前の読みで」と短く添える（後知恵の読みを抑える）。**不変条件 1（画面に説明を出さない）の例外になる**（§10 C-10）。
 - 自動で入れられる Action が無い席では、Spot Read の枠を出さない。
 - Action の列から Action の名前を決める規則は §10.3。候補が複数なら投稿者が選ぶ（最初は判断地点にいちばん近いもの）。Size は実際の額から自動（§10 C-5）。
 - 情報を登録できる席: Preflop で Fold 以外の Action をした席と、Fold to Steal の Fold をした Blind（§10 B-2。`villainSeats`）。
+  Steal に Call が入った後の Blind の Fold は Fold to Steal ではないので、その Blind は登録できない（2026-09-30 さつき。§10.4）。
   このため Villain の欄は **Spot の下**に置く（PC は右の列の Spot の下、スマホはステップ 4（Spot））。Spot を選ぶまで Spot Read は出ない。
 
 #### 2.1.5 Action の語彙（安定した ID で持つ）
@@ -262,6 +263,8 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
   `packages/functions/src/createPost/handler.test.ts`（EF-05・EF-06）。
 - DB: `db/tests/08_reads.test.sql`（DB-20）。
 - E2E: `e2e/reads.spec.ts`（ヘッダーのタイトル・席のモーダルのチップと Read・All Villains・MTT・押せない状態・前の版の投稿・登録できる席・Spot Read・General Read・5 分割・PFR の追従・数の直接入力・Preset・MTT の欄・送る本文・一覧の印）。
+- テストとレビュー（2026-09-30。[villain-reads-test](../villain-reads-test/report.md)）で足した試験: `e2e/villain/`（T2〜T5。モンキーの全量は環境変数で。`e2e/villain/t5-monkey.spec.ts` の先頭）、
+  `packages/**/villain.*.test.ts`（T1・T3・T4）、`db/tests/91_villain_reads.test.sql`（T4）。
 
 ## 10. 論点（2026-09-30 の仕様変更。**さつきの回答: すべて推奨どおり**）
 
@@ -272,7 +275,7 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 | B-1 | Bet vs Check の名前 | Bet vs Check のまま | なし |
 | B-2 | 情報を登録できる席 | ハンド参加者と、Hero の後ろの未アクション席に絞る | ① Spot は Flop 以降なので、判断地点で Hero の後ろにいて未アクションの席は必ず Flop に残っている＝参加者に含まれる（2 つ目の条件は実質いらない）。② Preflop で Fold しただけの SB・BB を「参加者」から外すと、Fold to Steal の Spot Read を付けられない。案: 参加者＝Preflop で Fold 以外の Action を 1 回でもした席、または Fold to Steal の候補がある Blind。③ 今の実装は Hero 以外の座っている席すべて |
 | B-3 | 「強い」の表示 | `++` などの文字の印を必須、色の濃さは補助 | なし。読み上げは「Over（強い）」のように言葉にする |
-| B-4 | Connectivity | 2 値のまま、ラベルを `Straight possible / No straight` に | なし。判定は「Flop の 3 枚が連続する 5 つのランクに収まる」（A は 1 と 14 の両方）とする |
+| B-4 | Connectivity | 2 値のまま、ラベルを `Straight possible / No straight` に | なし。判定は「Flop の異なる 3 つのランクが連続する 5 つのランクに収まる」（A は 1 と 14 の両方。8-8-9 のような Paired Board は当たらない。2026-09-30 villain-reads-test V-008 で文を直した。判定のコードは無く、投稿者がタグを選ぶ）とする |
 | B-5 | MTT 固有の読み | MTT の情報の実装後にまとめて検討 | なし |
 
 ### 10.2 Claude が見つけた論点（選択肢と Claude の推奨）
@@ -288,7 +291,7 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 | C-7 | Check-Raise の表示の「OOP」の決め方 | Spot Read: その Street で先に Check していれば Check-Raise。General Read: (a) 投稿の Villain の席が Postflop で Hero より先に動くなら Check-Raise (b) General Read はいつも Raise | (a) |
 | C-8 | Preflop の Size | (a) Small・Big だけ (b) Overbet も | (a)（Preflop の Overbet は意味が薄い） |
 | C-9 | 表 2 枚の置き場所（「DB 側と共有」） | (a) `packages/core` に 1 つ置き、画面と create-post（サーバー）が使う。DB は形と大きさだけ (b) SQL にも同じ表を作る | (a)。(b) は不変条件 7（ロジックを SQL で二重に作らない）に反する。今の Villain・MTT の検証も (a) の形 |
-| C-10 | 注記「このハンドの結果を知る前の読みで」 | (a) 不変条件 1 の例外に加えて画面に出す (b) ⓘ に入れる | (a)（入力欄の近くにないと効かない） |
+| C-10 | 注記「この Hand の結果を知る前の読みで」 | (a) 不変条件 1 の例外に加えて画面に出す (b) ⓘ に入れる | (a)（入力欄の近くにないと効かない） |
 | C-11 | 集計（action × lean） | (a) 今回は保存だけ（あとで集計できる形で持つ）(b) 集計の画面も作る | (a)。今は Villain の情報を集計する画面が無く、何を見せるかが決まっていない |
 | C-12 | 条件の選び方 | Flop texture は軸ごとに 0〜1 つ（全部任意）。Runout は複数選べる（その Street で落ちたカードについて。Overcard と Flush Complete を両方など） | この形 |
 | C-13 | 「回答が付いたら編集不可」 | (a) 投稿を編集する機能は作らない（今と同じ。投稿後は回答の有無に関係なく変えられない）(b) 回答が付くまで Villain の情報だけ直せる機能を作る | (a)。(b) は新しい機能（画面・RPC・サーバーでの強制）になる |
@@ -303,17 +306,31 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 | 3-Bet / Squeeze | Preflop の 2 回目の Raise。最初の Raise との間に Call が無ければ 3-Bet、1 人以上あれば Squeeze |
 | 4-Bet | Preflop の 3 回目の Raise |
 | Fold to 3-Bet / Fold to 4-Bet | 最初の Raise をした席が 3-Bet・Squeeze に Fold / 3-Bet・Squeeze をした席が 4-Bet に Fold |
-| Fold to Steal | CO・BTN・SB の最初の Raise（それより前は全員 Fold）に、SB・BB が Fold |
+| Fold to Steal | CO・BTN・SB の最初の Raise（それより前は全員 Fold）に、SB・BB が Fold。**その Raise に Call が 1 人でも入ったら当たらない**（PT4 の定義。2026-09-30 さつき。§10.4） |
 | C-Bet | Flop で Aggressor がする最初の Bet |
 | Barrel | Turn・River で Aggressor がする最初の Bet（Delayed C-Bet に当たるものを除く） |
 | Delayed C-Bet | Flop が全員 Check のあと、Turn で Preflop の Aggressor がする最初の Bet |
-| Donk | 前の Street に Bet / Raise があり、Aggressor がまだ動いていない時に、Aggressor より先に動く席がする最初の Bet |
-| Probe | 前の Street が全員 Check のあと（Turn・River）、Aggressor より先に動く席がする最初の Bet |
+| Donk | 前の Street に Bet / Raise があり、Aggressor がまだ動いていない時に、Aggressor より先に動く席がする最初の Bet。**Aggressor が All-in（もう動けない）なら当たらない**（2026-09-30 さつき。§10.4） |
+| Probe | 前の Street が全員 Check のあと（Turn・River）、Aggressor より先に動く席がする最初の Bet（Aggressor が All-in なら当たらない） |
 | Bet vs Check | 上に当たらない最初の Bet で、その Street で先に Check があったもの |
 | Raise | Postflop の Raise（その Street で先に Check していれば Check-Raise と表示） |
 | Fold to C-Bet / Fold to Barrel | C-Bet / Barrel・Delayed C-Bet に Fold |
 | Fold to Bet / Fold to Raise | そのほかの Bet に Fold / Raise に Fold |
 | 候補にしない | 最初の Raise（Open）、Limp 以外の Call、Check、5-Bet 以降、上に当たらない Fold・Bet（Limp のポットで最初に動く席の Bet など） |
+
+### 10.4 テストとレビューを受けた決定（2026-09-30 さつき。[villain-reads-test](../villain-reads-test/report.md)）
+
+プロのポーカープレイヤーの知見（[poker-review.md](../villain-reads-test/poker-review.md)）と試験の指摘を受けて、さつきが決めた。
+
+| # | 論点 | 決定 |
+|---|---|---|
+| V-002 | Steal に Call が入った後の Blind の Fold | **Fold to Steal にしない**（PT4 の定義。Call が入ると Steal ではなくなる）。その Blind は登録できる席からも外れる |
+| V-003 | 前の Street で All-in した Aggressor への Bet | **Donk・Probe にしない**（もう動けない相手への Side Pot の Bet）。先に Check があれば Bet vs Check、無ければ候補にしない |
+| V-004 | Flop・Turn とも全員 Check の後の PFR の River の Bet | 今のまま Barrel（§10.3 のとおり） |
+| V-024 | Donk した人が次の Street でも打つ Bet | 今のまま（Donk した人が Aggressor になるので、次の Street の Bet は Barrel。同じ Street の Raise を受けた後の Bet は Donk のまま） |
+| V-005 | Size の境目（§10 C-5） | 今のまま（50% 未満 Small・100% まで Big・その上 Overbet）。**ⓘ に定義を書く**（回答画面の Size の項目。09 章） |
+| V-015・V-016 | ⓘ の Villain の項目 | 投稿は「参加した席と Steal に Fold した Blind」。回答・集計は Read の項目にし、「Over・Under は頻度、Value・Bluff-heavy は打つ手の中身」を書く（09 章） |
+| V-036 | Spot Read の注記のカタカナ | 「この Hand の結果を知る前の読みで」（不変条件 2 に合わせる。CLAUDE.md の不変条件 1 も直した） |
 
 ## 11. 前の実装・スキーマとの食い違い（2026-09-30 の仕様変更。すべて実装で直した）
 

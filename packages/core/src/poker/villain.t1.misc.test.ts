@@ -83,8 +83,8 @@ describe('T1 観察: 仕様どおりだが、ポーカーとして不自然に�
     expect(names(acts({ pf: 'HJ r2.5, CO f, BTN f, SB f, BB f' }), five)).toEqual([]);
   });
 
-  it('[O-7] BTN の Open に SB が Call してから BB が Fold しても BB の Fold は Fold to Steal', () => {
-    expect(names(acts({ pf: 'UTG..CO f, BTN r2.5, SB c, BB f' }))).toEqual(['BB fold_steal']);
+  it('[O-7] BTN の Open に SB が Call してから BB が Fold すると、BB の Fold は Fold to Steal にしない（V-002 で直した）', () => {
+    expect(names(acts({ pf: 'UTG..CO f, BTN r2.5, SB c, BB f' }))).toEqual([]);
   });
 
   it('[O-8] 50〜75% の Bet も 75〜100% の Bet も Big（2 段階のため Medium が無い）。33% も 49% も Small', () => {

@@ -33,7 +33,6 @@ for (const v of ['', ' @sp'] as const) {
 
 for (const [w, h] of [[1024, 640], [800, 600]] as const) {
   test(`V-T5-02 長いタイトルを開いても、PC（${w}x${h}）でページがスクロールしない`, async ({ page }) => {
-    test.fail(true, '既知: V-043（S3。さつきの判断待ち）。直ったらこの行を消す。題は上限の 40 文字でも起きる');
     await page.setViewportSize({ width: w, height: h });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const title = [...'😀🎉🃏♠♥♦♣'.repeat(12)].slice(0, 40).join('');

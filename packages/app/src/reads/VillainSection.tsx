@@ -12,7 +12,7 @@ import {
   type ReadCandidate,
   type Street,
 } from '@wwyd/core';
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { POS_VAR } from '../components/posColor.ts';
 import { PresetDialog } from './PresetDialog.tsx';
 import { ReadSlider, SliderEnds } from './ReadSlider.tsx';
@@ -77,7 +77,7 @@ export function VillainSection(props: {
   };
 
   return (
-    <section className="pf-sec" aria-labelledby={`${baseId}-h`}>
+    <section className="pf-sec" aria-labelledby={`${baseId}-h`} data-own-keys="">
       <h2 id={`${baseId}-h`} className="sec-h">
         Villain
       </h2>
@@ -248,7 +248,7 @@ const candText = (c: ReadCandidate): string => `${STREET_NAME[c.street]} · ${ac
 /**
  * Spot Read（§2.1.4）: Hero の判断地点より前に、この席が実際に取った Action に Lean を付ける。When と Action は Action の列から。
  * 候補が複数なら投稿者が 1 つ選ぶ（最初は判断地点にいちばん近いもの。§10 C-4）。
- * 「このハンドの結果を知る前の読みで」の注記は不変条件 1 の例外（§10 C-10。2026-09-30 さつき）。
+ * 「この Hand の結果を知る前の読みで」の注記は不変条件 1 の例外（§10 C-10。2026-09-30 さつき）。
  */
 function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]; spot: SpotDraft | undefined; onChange: (s: SpotDraft | undefined) => void }): JSX.Element {
   const { cands, spot } = props;
@@ -267,7 +267,7 @@ function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]
     <div className="vr-read">
       <div className="vr-read-h">
         <span className="mono-lbl">Spot Read</span>
-        <span className="vr-note">このハンドの結果を知る前の読みで</span>
+        <span className="vr-note">この Hand の結果を知る前の読みで</span>
       </div>
       {cands.length > 1 ? (
         <ChoiceRow label="Action">
@@ -294,17 +294,25 @@ function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]
 /** General Read（1 席 2 件まで。Street → Action → Lean の順、条件は任意で後から） */
 function GeneralReads(props: { seat: Pos; hero: Pos; list: readonly GeneralDraft[]; onChange: (list: GeneralDraft[]) => void }): JSX.Element {
   const set = (i: number, g: GeneralDraft): void => props.onChange(props.list.map((x, j) => (j === i ? g : x)));
+  // 部品の key は General Read ごとに固定する（添字にすると、1 件目を消したとき 2 件目が「Board · Size」の開閉を取り違える。V-013）
+  const ids = useRef<number[]>([]);
+  const nextId = useRef(0);
+  while (ids.current.length < props.list.length) ids.current.push(nextId.current++);
+  if (ids.current.length > props.list.length) ids.current = ids.current.slice(0, props.list.length);
   return (
     <>
       {props.list.map((g, i) => (
         <GeneralEditor
-          key={i}
+          key={ids.current[i]}
           n={i + 1}
           seat={props.seat}
           hero={props.hero}
           g={g}
           onChange={(x) => set(i, x)}
-          onRemove={() => props.onChange(props.list.filter((_, j) => j !== i))}
+          onRemove={() => {
+            ids.current = ids.current.filter((_, j) => j !== i);
+            props.onChange(props.list.filter((_, j) => j !== i));
+          }}
         />
       ))}
       {props.list.length < 2 && (

@@ -109,7 +109,13 @@ for (const v of ['', ' @sp'] as const) {
     const m2 = await metrics(page);
     expect(m2.over).toBeLessThanOrEqual(1);
     const h1 = (await page.locator('header').boundingBox())?.height ?? 0;
-    expect(h1).toBeGreaterThan(h0);
+    if (isSp(page)) expect(h1).toBeGreaterThan(h0);
+    else {
+      // PC はヘッダーを伸ばさず（1 画面に収める。V-043）、全文はタイトルの枠の中でスクロールして読む
+      expect(Math.abs(h1 - h0)).toBeLessThan(1);
+      const oy = await page.locator('.hdr-post .mq-inner').evaluate((e) => getComputedStyle(e).overflowY);
+      expect(oy).toBe('auto');
+    }
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(Math.abs(((await page.locator('header').boundingBox())?.height ?? 0) - h0)).toBeLessThan(1);

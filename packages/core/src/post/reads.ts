@@ -239,7 +239,9 @@ export function validateMtt(raw: unknown, fmt: Fmt): MttInfo | null {
         break;
       case 'avg':
         if (typeof v !== 'number' || !Number.isFinite(v)) fail('malformed', undefined, 'mtt.avg');
-        if (v <= 0 || v > MTT_AVG_MAX || Math.abs(v * 10 - Math.round(v * 10)) > 1e-9) fail('invalid_mtt', undefined, 'mtt.avg');
+        // 0.1 以上、小数第 1 位まで。浮動小数の誤差（0.1 + 0.2）は許すが、許容は値の大きさに比例させる
+        // （絶対の許容 1e-9 だと 1e-10・12.3 + 1e-11 が通っていた。villain-reads-test V-021）
+        if (v < 0.1 || v > MTT_AVG_MAX || Math.abs(v * 10 - Math.round(v * 10)) > 16 * Number.EPSILON * v * 10) fail('invalid_mtt', undefined, 'mtt.avg');
         out.avg = v;
         break;
       default: {

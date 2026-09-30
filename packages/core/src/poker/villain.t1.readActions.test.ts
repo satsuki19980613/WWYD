@@ -83,10 +83,11 @@ describe('T1-01 Action の決め方（手で作ったハンド）', () => {
     // SB が先に Donk
     expect(named(acts({ pf, flop: 'SB b2, BB c, BTN f' }))).toEqual(['SB donk small', 'BTN fold_bet']);
     // Aggressor（BTN）が Check してから後ろの席が Bet する場面（CO が Aggressor、BTN が後ろ）
+    // BTN が Call したので SB の Fold は Fold to Steal ではない（V-002）
     const pf2 = 'UTG..HJ f, CO r2.5, BTN c, SB f, BB c';
-    expect(named(acts({ pf: pf2, flop: 'BB x, CO x, BTN b2' }))).toEqual(['SB fold_steal', 'BTN bet_vs_check small']);
+    expect(named(acts({ pf: pf2, flop: 'BB x, CO x, BTN b2' }))).toEqual(['BTN bet_vs_check small']);
     // Aggressor が Bet したあとの Raise は Donk でも Bet vs Check でもなく Raise
-    expect(named(acts({ pf: pf2, flop: 'BB x, CO b3, BTN r10' }))).toEqual(['SB fold_steal', 'CO cbet small', 'BTN raise big']);
+    expect(named(acts({ pf: pf2, flop: 'BB x, CO b3, BTN r10' }))).toEqual(['CO cbet small', 'BTN raise big']);
   });
 
   it('Aggressor が Fold したあとの Bet: 新しい Aggressor を基準に名前が決まる', () => {
@@ -287,7 +288,8 @@ describe('T1-03 登録できる席（villainSeats。18 章 §10 B-2）', () => {
   it('Hero の Preflop の Fold to Steal は除く（Hero は常に除く）', () => {
     const a = acts({ pf: 'UTG..CO f, BTN r2.5, SB c, BB f' });
     expect(villainSeats(S, a, 'BB')).toEqual(['BTN', 'SB']);
-    expect(villainSeats(S, a, 'SB')).toEqual(['BTN', 'BB']);
+    // SB が Call したので BB の Fold は Fold to Steal ではなく、BB は登録できない（V-002）
+    expect(villainSeats(S, a, 'SB')).toEqual(['BTN']);
   });
 
   it('2〜6 人のすべての人数: 空席は入らない。Ante ありでも同じ', () => {
@@ -397,7 +399,15 @@ describe('T1-03 登録できる席（villainSeats。18 章 §10 B-2）', () => {
         const ok = new Set<string>();
         actions.forEach((a, j) => {
           if (a.type !== 'fold') ok.add(a.pos);
-          else if (steal && (a.pos === 'SB' || a.pos === 'BB') && j > firstRaise && (secondRaise < 0 || j < secondRaise)) ok.add(a.pos);
+          else if (
+            steal &&
+            (a.pos === 'SB' || a.pos === 'BB') &&
+            j > firstRaise &&
+            (secondRaise < 0 || j < secondRaise) &&
+            // Steal に Call が入ったら Fold to Steal にしない（V-002）
+            !actions.slice(firstRaise + 1, j).some((b) => b.type === 'call')
+          )
+            ok.add(a.pos);
         });
         // 3-Bet に Fold した席は Steal の Fold ではなく、Raise 済みか
         const expected = POSITIONS.filter((p) => p !== hero && ok.has(p));

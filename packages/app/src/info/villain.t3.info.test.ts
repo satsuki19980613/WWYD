@@ -74,14 +74,19 @@ describe('T3-11 ⓘ の文言は 09 章と同じ', () => {
     expect(has('drafts')).toBe(false);
     expect(has('account')).toBe(false);
   });
-  it('項目の文は説明だけで、英語の用語は 15 章のとおり（Preset・Spot Read・Lean・All Villains・MTT）', () => {
+  it('項目の文は説明だけで、英語の用語は 15 章のとおり（Steal・Lean・Preset・All Villains・Over・Value-heavy など）', () => {
+    // 2026-09-30 さつき: 登録できる席に Steal に Fold した Blind を足し（V-015）、回答・集計に Read の定義と Size の境目を足した（V-016）
     const t = INFO_SECTIONS.new.items.find((i) => i.term === 'Villain')?.desc ?? '';
-    expect(t).toContain('Spot Read');
+    expect(t).toContain('Steal');
     expect(t).toContain('Lean');
     expect(t).toContain('Preset');
-    const a = INFO_SECTIONS.answer.items.find((i) => i.term === 'Villain')?.desc ?? '';
-    expect(a).toContain('All Villains');
-    expect(a).toContain('MTT');
+    for (const id of ['answer', 'result'] as const) {
+      const a = INFO_SECTIONS[id].items.find((i) => i.term === 'Read')?.desc ?? '';
+      expect(a).toContain('All Villains');
+      expect(a).toContain('Over・Under は頻度');
+      expect(a).toContain('Value・Bluff-heavy は打つ手の中身');
+    }
+    expect(INFO_SECTIONS.answer.items.find((i) => i.term === 'Size')?.desc).toContain('50% 未満が Small');
     // カタカナのポーカー用語（ヴィラン・リード・プリセット・ストリート・ベット等）を使わない
     for (const w of ['ヴィラン', 'ビラン', 'リード', 'プリセット', 'ストリート', 'ベット', 'レイズ', 'スタック', 'スポットリード']) {
       expect(JSON.stringify(INFO_SECTIONS), w).not.toContain(w);

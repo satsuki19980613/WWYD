@@ -120,7 +120,7 @@ for (const v of ['', ' @sp'] as const) {
     await openSeat(page, 'SB');
     const spot = villains(page).locator('.vr-read').first();
     await expect(spot.locator('.vr-line')).toHaveText('Preflop · Fold to Steal');
-    await expect(spot.getByText('このハンドの結果を知る前の読みで')).toBeVisible();
+    await expect(spot.getByText('この Hand の結果を知る前の読みで')).toBeVisible();
     // 候補が 1 つのときは Action の選択肢を出さない
     await expect(spot.getByRole('group', { name: 'Action' })).toHaveCount(0);
     await expect(leanBtns(page)).toHaveText(['Over', 'Under']);

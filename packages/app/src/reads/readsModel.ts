@@ -455,7 +455,13 @@ export function seatSummary(s: SeatDraft | undefined, cands?: readonly ReadCandi
   if (s.vpip !== undefined && s.pfr !== undefined) parts.push(`${s.vpip}/${s.pfr}`);
   else if (s.vpip !== undefined) parts.push(`VPIP ${s.vpip}`);
   else if (s.pfr !== undefined) parts.push(`PFR ${s.pfr}`);
-  parts.push(...tendencyChips({ agg: s.agg, image: s.image, sample: s.sample }).map((c) => c));
+  // 入力の画面の要約は中央（Balanced・Standard）も出す。出さないと未入力の席と見分けられない（V-029。表示の画面のチップは §10 C-2 のまま）
+  for (const d of STEP_DEFS) {
+    const v = s[d.key];
+    if (v === undefined) continue;
+    const label = d.labels[v] as string;
+    parts.push(d.key === 'agg' ? label : `${d.name}: ${label}`);
+  }
   const spot = s.spot;
   const spotOk = spot !== undefined && (cands === undefined || cands.some((c) => spotMatches(spot, c)));
   const n = (spotOk ? 1 : 0) + (s.general ?? []).filter(isCompleteGeneral).length;

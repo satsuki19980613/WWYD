@@ -179,7 +179,7 @@ for (const v of ['', ' @sp'] as const) {
     await seatBtn(page, 'SB').click();
     const spot = sec.locator('.vr-read').first();
     await expect(spot).toContainText('Spot Read');
-    await expect(spot).toContainText('このハンドの結果を知る前の読みで');
+    await expect(spot).toContainText('この Hand の結果を知る前の読みで');
     await expect(spot).toContainText('Preflop · Fold to Steal');
     // Fold 系は Over・Under だけ。押すと通常、もう一度で強い（++）、もう一度で外れる
     const lean = spot.getByRole('group', { name: 'Lean' }).getByRole('button');

@@ -12,7 +12,7 @@ import { baseHs1bb, checkRaiseHand, JP, KATAKANA, openAnswer, openResult, visibl
 
 // 画面に出してよい日本語の文字列（ラベル・ボタン・状態。説明文ではない）
 const ALLOWED_JP: RegExp[] = [
-  /^このハンドの結果を知る前の読みで$/, // 不変条件 1 の例外（18 章 §10 C-10）
+  /^この Hand の結果を知る前の読みで$/, // 不変条件 1 の例外（18 章 §10 C-10）
   /^スポットの順位$/,
   /^残りの人数$/,
   /^エントリー数$/,
@@ -53,11 +53,7 @@ function audit(where: string, texts: string[]): { extra: string[]; katakana: str
     const isErr = ERROR_JP.some((r) => r.test(t));
     if (!isErr && !isAllowed(t)) expect(looksLikeSentence(t), `${where}: 説明文らしい文字列「${t}」`).toBe(false);
     if (JP.test(t) && !isAllowed(t)) extra.push(t);
-    // Spot Read の注記（「ハンド」とカタカナ。CLAUDE.md 不変条件 1 が文言を固定している）は、不変条件 2 との食い違いとして別に報告する
-    if (t === 'このハンドの結果を知る前の読みで') {
-      console.log('[T3-09 所見] 注記「このハンドの結果を知る前の読みで」にカタカナの「ハンド」（15 章の用語表は Hand）');
-      continue;
-    }
+    // Spot Read の注記は「Hand」を英語で書く（2026-09-30 さつき。V-036）ので、カタカナの点検からも外さない
     for (const m of t.match(KATAKANA) ?? []) kata.push(m);
   }
   return { extra, katakana: kata };

@@ -250,8 +250,8 @@ for (const v of ['', ' @sp'] as const) {
 // ---- T2-03 5 分割のボタン ----
 
 const STEPS = [
-  { name: 'Postflop Aggression', labels: ['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive'], ends: ['Passive', 'Aggressive'], chip: [undefined, 'Passive', undefined, 'Aggressive', 'Very Aggressive'] },
-  { name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], ends: ['Tight', 'Loose'], chip: ['Hero Image: Very Tight', 'Hero Image: Tight', undefined, 'Hero Image: Loose', 'Hero Image: Very Loose'] },
+  { name: 'Postflop Aggression', labels: ['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive'], ends: ['Passive', 'Aggressive'], chip: ['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive'] },
+  { name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], ends: ['Tight', 'Loose'], chip: ['Hero Image: Very Tight', 'Hero Image: Tight', 'Hero Image: Standard', 'Hero Image: Loose', 'Hero Image: Very Loose'] },
   { name: 'Sample', labels: ['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats'], ends: ['First Impression', 'HUD Stats'], chip: ['Sample: First Impression', 'Sample: Few Orbits', 'Sample: Some History', 'Sample: Long', 'Sample: HUD Stats'] },
 ] as const;
 
@@ -296,20 +296,20 @@ for (const v of ['', ' @sp'] as const) {
     expect(await noOverflow(page)).toBe(true);
   });
 
-  test(`T2-03 5 分割のボタン: 席の要約の 1 行（中央は出さない。Sample は中央も出す）${v}`, async ({ page }) => {
+  test(`T2-03 5 分割のボタン: 席の要約の 1 行（投稿画面の要約は中央も出す。V-029）${v}`, async ({ page }) => {
     await open(page);
     const sum = seatBtn(page, 'BB').locator('.vr-sum');
     const press = async (name: string, i: number): Promise<void> => {
       await villains(page).getByRole('group', { name }).getByRole('button').nth(i).click();
     };
     await expect(sum).toHaveText('—');
-    // 中央（Balanced・Standard）だけ → 要約には出ない（— のまま）
+    // 中央（Balanced・Standard）だけでも要約に出す（未入力の「—」と見分ける。V-029）
     await press('Postflop Aggression', 2);
-    const onlyMid = await sum.innerText();
-    test.info().annotations.push({ type: 'summary-only-center', description: JSON.stringify(onlyMid) });
+    await expect(sum).toHaveText('Balanced');
     await press('Hero Image', 2);
+    await expect(sum).toHaveText('Balanced · Hero Image: Standard');
     await press('Postflop Aggression', 1);
-    await expect(sum).toHaveText('Passive');
+    await expect(sum).toHaveText('Passive · Hero Image: Standard');
     await press('Hero Image', 4);
     await expect(sum).toHaveText('Passive · Hero Image: Very Loose');
     await press('Sample', 2);

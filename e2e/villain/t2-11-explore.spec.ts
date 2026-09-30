@@ -59,8 +59,7 @@ for (const v of ['', ' @sp'] as const) {
   });
 }
 
-test('T2-11 PC: Villain の Slider・ボタンにフォーカスがあるとき Ctrl+Z は Action の 1 つ戻しとして効いてしまう', async ({ page }) => {
-  test.fail(true, '既知: 投稿画面の Ctrl+Z は入力欄・モーダル以外ならどこにフォーカスがあっても Action を 1 つ戻す。Villain の Slider・ボタンの操作中も効く（S3）。直ったらこの行を消す');
+test('T2-11 PC: Villain の Slider・ボタンにフォーカスがあるとき Ctrl+Z でハンドの Action は戻らない（V-030）', async ({ page }) => {
   await openDraft(page, draftJson({ ...srpTurn(), reads: {} }));
   await openSeat(page, 'BB');
   const before = await page.locator('.hlog').innerText();

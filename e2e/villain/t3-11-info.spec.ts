@@ -23,8 +23,8 @@ for (const v of ['', ' @sp'] as const) {
     await openAnswer(page, { ...baseHs1bb(), villain_reads: { BTN: { vpip: 20 } } });
     let r = await infoItems(page);
     expect(r.items.length).toBeLessThanOrEqual(7);
-    const vA = r.items.find((i) => i.term === 'Villain');
-    expect(vA?.desc).toBe('◆ の付いた席を押すと投稿者の Read（++ は強い偏り）。All Villains で全席、MTT で大会の状況を見る。');
+    const vA = r.items.find((i) => i.term === 'Read');
+    expect(vA?.desc).toBe('◆ の席・All Villains で見る。Over・Under は頻度、Value・Bluff-heavy は打つ手の中身。++ は強い。');
     for (const i of r.items) expect([...i.desc].length, i.term).toBeLessThanOrEqual(70);
     expect(await noHScroll(page)).toBe(true);
     // ⓘ のモーダルの上で Villain の情報のモーダルと重ならない（閉じてから）
@@ -34,13 +34,13 @@ for (const v of ['', ' @sp'] as const) {
     await page.unrouteAll({ behavior: 'ignoreErrors' });
     await openResult(page, baseHs1bb());
     r = await infoItems(page);
-    expect(r.items.find((i) => i.term === 'Villain')?.desc).toContain('◆ の付いた席');
+    expect(r.items.find((i) => i.term === 'Read')?.desc).toContain('◆ の席');
     await page.keyboard.press('Escape');
     // Post
     await page.unrouteAll({ behavior: 'ignoreErrors' });
     await openNew(page);
     r = await infoItems(page);
-    expect(r.items.find((i) => i.term === 'Villain')?.desc).toBe('参加した席だけ。Spot Read は Spot より前の Action に。Lean を再度押すと強い（++）。Preset は端末だけ。');
+    expect(r.items.find((i) => i.term === 'Villain')?.desc).toBe('参加した席と Steal に Fold した Blind。Lean を再度押すと強い（++）。Preset は端末だけ。');
     expect(r.items.length).toBeLessThanOrEqual(7);
     await page.keyboard.press('Escape');
     // List

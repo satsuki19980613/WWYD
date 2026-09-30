@@ -286,7 +286,6 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`T2-05 General Read: 1 件目を消したあとの 2 件目（条件つき）の「Board · Size」の開閉の状態${v}`, async ({ page }) => {
-    test.fail(true, '既知: GeneralEditor が index の key で、開閉の state を前の Read から引き継ぐ（S3）。直ったらこの行を消す');
     await open(page);
     await addGen(page);
     await addGen(page);

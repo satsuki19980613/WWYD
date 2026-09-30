@@ -24,7 +24,7 @@ export function MttSection(props: { mtt: MttDraft; onChange: (mtt: MttDraft) => 
     />
   );
   return (
-    <section className="pf-sec" aria-labelledby={headId}>
+    <section className="pf-sec" aria-labelledby={headId} data-own-keys="">
       <h2 id={headId} className="sec-h">
         MTT
       </h2>

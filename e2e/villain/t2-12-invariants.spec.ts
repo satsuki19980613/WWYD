@@ -40,7 +40,7 @@ for (const v of ['', ' @sp'] as const) {
     await g.getByRole('button', { name: 'Board · Size' }).click();
     const found = await japaneseTexts(page, 'section[aria-labelledby]:has(.vr-list)');
     // 許す: Spot Read の注記（18 章 C-10）、操作のボタン「クリア」
-    const allowed = new Set(['このハンドの結果を知る前の読みで', 'クリア', '＋ General Read']);
+    const allowed = new Set(['この Hand の結果を知る前の読みで', 'クリア', '＋ General Read']);
     const extra = found.filter((t) => !allowed.has(t));
     expect(extra, `説明文が出ている: ${JSON.stringify(extra)}`).toEqual([]);
     // Preset のダイアログ
@@ -63,7 +63,8 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`入力欄の文字は 16px 以上（iPhone の Safari が拡大しない）: MTT の数の欄・Preset の名前${v}`, async ({ page }) => {
-    test.fail(true, '既知: .inp の font-size が 15px（components.css）。MTT の数の欄・Preset の名前は VPIP の直接入力（16px）と違い iPhone の Safari で拡大される（S3。前からの全体の設定）。直ったらこの行を消す');
+    // タッチの端末（pointer: coarse）だけ 16px にした（V-031）。PC（マウス）は拡大の問題が無いので 15px のまま
+    test.skip(v === '', 'PC（マウス）は対象外');
     await openDraft(page, draftJson({ ...srpTurn(), fmt: 'mtt' }));
     await step(page, S_SETTINGS);
     const sizes = await page.locator('.mtt-fields input').evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).fontSize)));

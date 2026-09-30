@@ -123,7 +123,30 @@ describe('RA 表と登録できる席', () => {
     const h1 = hs1();
     const a1 = acts({ pf: 'UTG f, HJ f, CO f, BTN r2.5, SB f, BB c' });
     expect(villainSeats(S, a1, h1.hero as 'BTN')).toEqual(['SB', 'BB']);
-    expect(villainSeats(S, acts({ pf: 'UTG f, HJ f, CO r2.5, BTN c, SB f, BB c' }), hmw().hero as 'CO')).toEqual(['BTN', 'SB', 'BB']);
+    // Steal に BTN が Call したあとの SB の Fold は Fold to Steal ではないので、SB は登録できない（V-002）
+    expect(villainSeats(S, acts({ pf: 'UTG f, HJ f, CO r2.5, BTN c, SB f, BB c' }), hmw().hero as 'CO')).toEqual(['BTN', 'BB']);
     expect(villainSeats(S, acts({ pf: 'UTG r2.5, HJ..SB f, BB c' }), 'BB')).toEqual(['UTG']);
+  });
+});
+
+describe('RA villain-reads-test の指摘（2026-09-30 さつき）', () => {
+  it('RA-13 Steal に Call が入ったら、Blind の Fold は Fold to Steal にしない（PT4 の定義。V-002）', () => {
+    expect(named(acts({ pf: 'UTG..CO f, BTN r2.5, SB c, BB f' }))).toEqual([]);
+    expect(named(acts({ pf: 'UTG..HJ f, CO r2.5, BTN c, SB f, BB f' }))).toEqual([]);
+    expect(villainSeats(S, acts({ pf: 'UTG..CO f, BTN r2.5, SB c, BB f' }), 'BTN')).toEqual(['SB']);
+    // Call が無ければ今までどおり
+    expect(named(acts({ pf: 'UTG..CO f, BTN r2.5, SB f, BB f' }))).toEqual(['SB fold_steal', 'BB fold_steal']);
+  });
+
+  it('RA-14 前の Street で All-in した Aggressor への Bet は Donk・Probe にしない（V-003）', () => {
+    const st = setup({ BTN: 20 });
+    const a = acts({ pf: 'UTG..CO f, BTN r2.5, SB c, BB c', flop: 'SB x, BB x, BTN b17.5, SB c, BB c', turn: 'SB b10, BB f' });
+    const got = classifyActions(st, a)
+      .filter((c) => c !== null)
+      .map((c) => `${c.pos} ${c.action}`);
+    // 最初に動く SB の Bet は Check が先に無いので候補にしない。BB の Fold は Bet への Fold
+    expect(got).toEqual(['BTN cbet', 'BB fold_bet']);
+    // All-in でない Aggressor なら今までどおり Donk
+    expect(named(acts({ pf: 'UTG..CO f, BTN r2.5, SB c, BB c', flop: 'SB x, BB x, BTN b3, SB c, BB c', turn: 'SB b10, BB f' }))).toContain('SB donk big');
   });
 });

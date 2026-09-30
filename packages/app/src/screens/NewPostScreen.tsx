@@ -118,13 +118,15 @@ export function NewPostScreen(): JSX.Element {
     else update((x) => setPlayers(x, n));
   };
 
-  // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）
+  // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）。
+  // Villain・MTT の欄（data-own-keys）の Slider・ボタンを操作中も効かせない（Action が戻って Villain の入力が消えていた。V-030）
   const keys = useRef({ undoLast, redo });
   keys.current = { undoLast, redo: canReplay(phase, future[0]) ? redo : () => undefined };
   useEffect(() => {
     if (mobile) return;
     const onKeyDown = (e: KeyboardEvent): void => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || typingOrModal(e)) return;
+      if (e.target instanceof Element && e.target.closest('[data-own-keys]')) return;
       const k = e.key.toLowerCase();
       if (k === 'z' && !e.shiftKey) keys.current.undoLast();
       else if (k === 'y' || (k === 'z' && e.shiftKey)) keys.current.redo();

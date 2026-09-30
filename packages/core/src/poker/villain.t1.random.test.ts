@@ -61,7 +61,16 @@ function reference(setup: HandSetup, actions: readonly Action[]): (string | null
     } else if (a.type === 'fold') {
       if (nRaisesBefore === 2 && r1 !== undefined && a.pos === actions[r1]?.pos) out[i] = 'fold_3bet||0';
       else if (nRaisesBefore === 3 && r2 !== undefined && a.pos === actions[r2]?.pos) out[i] = 'fold_4bet||0';
-      else if (nRaisesBefore === 1 && steal && r1 !== undefined && (a.pos === 'SB' || a.pos === 'BB') && a.pos !== actions[r1]?.pos) out[i] = 'fold_steal||0';
+      else if (
+        nRaisesBefore === 1 &&
+        steal &&
+        r1 !== undefined &&
+        // Steal に Call が入ったら Fold to Steal にしない（V-002）
+        !pf.some((j) => j > r1 && j < i && actions[j]?.type === 'call') &&
+        (a.pos === 'SB' || a.pos === 'BB') &&
+        a.pos !== actions[r1]?.pos
+      )
+        out[i] = 'fold_steal||0';
     }
   }
 
@@ -104,7 +113,8 @@ function reference(setup: HandSetup, actions: readonly Action[]): (string | null
         let name: string | null = null;
         if (!firstBetDone) {
           if (agg !== null && a.pos === agg) name = st === 'flop' ? 'cbet' : st === 'turn' && !prevHadBet ? 'delayed_cbet' : 'barrel';
-          else if (agg !== null && !actedBy.has(agg) && ORDER_POST.indexOf(a.pos) < ORDER_POST.indexOf(agg)) name = prevHadBet ? 'donk' : 'probe';
+          // All-in の Aggressor への Bet は Donk・Probe にしない（V-003）
+          else if (agg !== null && s.stacks[agg] !== 0 && !actedBy.has(agg) && ORDER_POST.indexOf(a.pos) < ORDER_POST.indexOf(agg)) name = prevHadBet ? 'donk' : 'probe';
           else if (checkedBy.size > 0) name = 'bet_vs_check';
         }
         firstBetDone = true;

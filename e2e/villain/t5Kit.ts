@@ -607,7 +607,8 @@ export const SNAPSHOT_JS = `(async () => {
         for (const h of heads) {
           const pos = (h.getAttribute('aria-label') || '').replace(' の Villain の情報', '');
           const sum = (h.querySelector('.vr-sum') || {}).textContent || '';
-          const want = rm.seatSummary(d.reads[pos]) || '—';
+          // 要約は候補に当たる Spot Read だけを数える（V-012）
+          const want = rm.seatSummary(d.reads[pos], vc.cands.filter((c) => c.pos === pos)) || '—';
           if (sum !== want) problems.push({ kind: 'summary-mismatch', detail: pos + ' shown=' + JSON.stringify(sum) + ' expected=' + JSON.stringify(want) });
         }
         // 開いている席の Spot Read: 候補と選んでいる Lean が下書きと合う

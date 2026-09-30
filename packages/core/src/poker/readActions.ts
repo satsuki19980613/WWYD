@@ -145,7 +145,8 @@ export function classifyActions(setup: HandSetup, actions: readonly Action[]): (
       } else if (a.type === 'fold') {
         if (raises === 2 && a.pos === opener) c = cand('fold_3bet');
         else if (raises === 3 && a.pos === threeBettor) c = cand('fold_4bet');
-        else if (raises === 1 && steal && (a.pos === 'SB' || a.pos === 'BB') && a.pos !== opener) c = cand('fold_steal');
+        // Steal に Call が入ったら Steal ではなくなる（PT4 の定義。2026-09-30 さつき。villain-reads-test V-002）
+        else if (raises === 1 && steal && callersAfterOpen === 0 && (a.pos === 'SB' || a.pos === 'BB') && a.pos !== opener) c = cand('fold_steal');
       } else if (a.type === 'check' && raises === 0) anyBefore = true;
       out.push(c);
       return;
@@ -168,7 +169,8 @@ export function classifyActions(setup: HandSetup, actions: readonly Action[]): (
     } else if (a.type === 'bet' && a.to !== undefined) {
       const size = sizeOf(s, a.pos, a.to);
       let action: ReadAction | null = null;
-      const aggInHand = aggressor !== null && !s.folded.has(aggressor);
+      // All-in の Aggressor はもう動けないので、その人への Bet は Donk・Probe にしない（2026-09-30 さつき。villain-reads-test V-003）
+      const aggInHand = aggressor !== null && !s.folded.has(aggressor) && !s.allin.has(aggressor);
       if (a.pos === aggressor) {
         if (street === 'flop') action = 'cbet';
         else if (street === 'turn' && !prevHadBet) action = 'delayed_cbet';

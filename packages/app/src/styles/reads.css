@@ -88,11 +88,18 @@
 .seg5-b.lit { background: rgba(252, 238, 10, 0.18); border-color: rgba(252, 238, 10, 0.35); }
 .seg5-b[aria-pressed='true'] { background: var(--yellow); border-color: var(--yellow); }
 .seg5-b:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* スマホのタップは 36px 以上（5 分割のボタン・数のボタン・×。villain-reads-test V-034） */
+@media (max-width: 699.98px) {
+  .seg5 { height: 36px; }
+  .rs-num,
+  .rs-input { min-height: 36px; }
+  .rs-clear { width: 36px; height: 36px; }
+}
 
 /* Read（Spot Read・General Read）の入力 */
 .vr-read { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) 0 var(--s1); border-top: 1px solid var(--line); }
 .vr-read-h { display: flex; align-items: center; gap: var(--s2); min-height: 32px; flex-wrap: wrap; }
-/* 「このハンドの結果を知る前の読みで」（不変条件 1 の例外。18 章 §10 C-10） */
+/* 「この Hand の結果を知る前の読みで」（不変条件 1 の例外。18 章 §10 C-10） */
 .vr-note { font-size: 12px; color: var(--dim); }
 .vr-line { margin: 0; font-size: 14px; color: var(--fg); overflow-wrap: anywhere; }
 .vr-line.sm { flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--cyan); }
@@ -208,6 +215,12 @@
 .mq-clip.open { white-space: normal; }
 .mq-clip.open .mq-inner { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .hdr:has(.mq-clip.open) .hdr-inner { height: auto; min-height: var(--hdr-h); padding-top: 6px; padding-bottom: 6px; }
+/* PC はヘッダーを伸ばさない（伸ばすと 1 画面に収める FitStage の下がはみ出し、ページがスクロールする。villain-reads-test V-043）。
+   全文は小さくしてヘッダーの中に収め、入りきらなければタイトルの枠の中でスクロールする */
+@media (min-width: 700px) {
+  .hdr:has(.mq-clip.open) .hdr-inner { height: var(--hdr-h); padding-top: 0; padding-bottom: 0; }
+  .mq-clip.open .mq-inner { max-height: calc(var(--hdr-h) - 8px); overflow-y: auto; font-size: 13px; line-height: 1.25; }
+}
 
 /* ---- 一覧の印（Reads・MTT） ---- */
 .spot-badges { display: inline-flex; flex: none; gap: 4px; margin-left: 6px; vertical-align: 1px; }
