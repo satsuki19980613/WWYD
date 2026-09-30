@@ -39,9 +39,19 @@ for (const [w, h] of [[1024, 640], [800, 600]] as const) {
     for (const path of ['answer', 'result']) {
       await fakeBackend(page, detailJson({ ...hs1bb(), title }, { viewer: path === 'answer' ? 'unanswered' : 'answered', id: ID, answerCount: 1 }));
       await page.goto(`/s/${ID}/${path}`);
+      await expect(page.locator('.hdr-post')).toBeVisible();
+      // 絵文字の幅はフォントで変わる（CI の Linux では 1024 幅に収まる）。はみ出すときだけ開くボタンがあり、開いてもスクロールしないこと
+      const fits = await page.locator('.hdr-post').evaluate((box) => {
+        const r = document.createRange();
+        r.selectNodeContents(box.querySelector('.mq-inner') ?? box);
+        return r.getBoundingClientRect().width <= box.getBoundingClientRect().width + 1;
+      });
       const toggle = page.locator('.hdr-post').getByRole('button');
-      await toggle.click();
-      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      if (fits) await expect(toggle).toHaveCount(0);
+      else {
+        await toggle.click();
+        await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      }
       const over = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: window.innerHeight }));
       expect(over.sh, `${path}: scrollHeight ${over.sh} / innerHeight ${over.ih}`).toBeLessThanOrEqual(over.ih + 1);
       await page.unrouteAll({ behavior: 'ignoreErrors' });

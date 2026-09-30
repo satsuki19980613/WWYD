@@ -286,7 +286,10 @@ for (const v of ['', ' @sp'] as const) {
     // 擬似要素の幅（Chromium）
     const w = await page.evaluate(() => {
       const f = (el: Element) => getComputedStyle(el, '::-webkit-scrollbar');
-      return { html: f(document.documentElement).width, body: f(document.body).width, thumb: getComputedStyle(document.documentElement, '::-webkit-scrollbar-thumb').backgroundColor };
+      // つまみの色は getComputedStyle だと OS で変わる（Linux の Chromium は :hover の色を返す）ので、CSS の規則を読む
+      const rules = Array.from(document.styleSheets).flatMap((ss) => Array.from(ss.cssRules)).filter((r): r is CSSStyleRule => r instanceof CSSStyleRule);
+      const thumb = rules.find((r) => r.selectorText === '::-webkit-scrollbar-thumb')?.style.background ?? '';
+      return { html: f(document.documentElement).width, body: f(document.body).width, thumb };
     });
     expect(parseFloat(w.html)).toBeLessThanOrEqual(4);
     expect(parseFloat(w.body)).toBeLessThanOrEqual(4);
