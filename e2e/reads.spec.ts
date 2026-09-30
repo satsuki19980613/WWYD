@@ -1,7 +1,8 @@
 /**
  * Villain・MTT の情報（詳細仕様 18 章）の E2E。バックエンドは偽物（fakeBackend.ts）。
  * - 回答画面: ヘッダーの投稿のタイトル（流れる・止まる・動きを減らす設定）、席の印と席のモーダル、All Villains、MTT、情報なしで押せない
- * - 投稿画面: 席ごとの折りたたみ、Slider の未入力・リセット・PFR ≦ VPIP、数の直接入力、Memo の 30 文字、Preset、MTT の欄、送る本文
+ * - 投稿画面: 登録できる席、Spot Read、General Read、5 分割のボタン、Slider の未入力・リセット・PFR ≦ VPIP、数の直接入力、Preset、MTT の欄、送る本文
+ *   （2026-09-30 さつきの仕様変更: Memo を廃止し、構造化した Read に。18 章 §2.1）
  * - 一覧: Reads・MTT の印
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -9,13 +10,25 @@ import { detailJson } from '../packages/app/src/answer/detailFixtures.ts';
 import { hs1bb, type Raw } from '../packages/core/src/post/postFixtures.ts';
 import { fakeBackend } from './fakeBackend.ts';
 import { fakeList, row } from './release/taKit.ts';
-import { openNew, playSrpTurn, pickSpot, S_PLAYER, S_SETTINGS, setTitle, step, submit } from './release/taPost.ts';
+import { openNew, playSrpTurn, pickSpot, S_SETTINGS, setTitle, step, submit } from './release/taPost.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
 
 // H-S1（Hero は BB）。Preflop: UTG・HJ・CO・SB が Fold、BTN が Raise → ポットに残るのは BTN
+// BTN はターンの Barrel（Big）に Spot Read、SB は中央（Balanced）だけなので表示しない
 const READS = {
-  BTN: { vpip: 32, pfr: 25, agg: 72, conf: 4, image: 3, memo: '3bet 多め' },
+  BTN: {
+    vpip: 32,
+    pfr: 25,
+    agg: 4,
+    image: 3,
+    sample: 4,
+    reads: [
+      { scope: 'spot', street: 'turn', action: 'barrel', texture: null, runout: null, size: 'big', lean: 'value', strong: true },
+      { scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'a' }, runout: null, size: null, lean: 'over', strong: false },
+    ],
+  },
+  SB: { agg: 2 },
   UTG: { vpip: 12 },
 };
 const MTT = { speed: 80, rank: 12, left: 58, paid: 50, entries: 320, avg: 35, prize: 'top' };
@@ -49,17 +62,14 @@ for (const v of ['', ' @sp'] as const) {
 
   test(`回答画面: 席の印を押すとその席、All Villains は参加した席を上に、MTT は 1 行の人数${v}`, async ({ page }) => {
     await openAnswer(page, detail({ fmt: 'mtt', rake: null, villain_reads: READS, mtt: MTT }));
-    // 印は情報のある席だけ（BTN・UTG）
+    // 印は表示する情報のある席だけ（BTN・UTG。SB は中央だけなので出さない）
     await expect(page.locator('.pseat-read')).toHaveCount(2);
     await page.getByRole('button', { name: 'BTN の Villain の情報' }).click();
     const seat = page.getByRole('dialog', { name: 'Villain · BTN' });
-    await expect(seat).toContainText('VPIP');
-    await expect(seat).toContainText('Loose');
-    await expect(seat).toContainText('Very Aggressive');
-    await expect(seat).toContainText('HUD Stats');
-    await expect(seat).toContainText('3bet 多め');
-    // 数は出さない（段階のラベルとバーだけ）
-    await expect(seat).not.toContainText('32');
+    // 全体の傾向はチップ（VPIP・PFR は数）、Read は 1 行ずつ（Spot Read が先、強いは ++）
+    await expect(seat.locator('.rv-chip')).toHaveText(['VPIP 32', 'PFR 25', 'Very Aggressive', 'Hero Image: Loose', 'Sample: HUD Stats']);
+    await expect(seat.locator('.rv-read')).toHaveText(['Turn · Barrel (Big) → Value-heavy++', 'Flop · A-high · C-Bet → Over']);
+    await expect(seat.locator('.rv-read').first()).toHaveAccessibleName('Turn · Barrel (Big) → Value-heavy（強い）');
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'All Villains' }).click();
@@ -71,7 +81,8 @@ for (const v of ['', ' @sp'] as const) {
     await expect(folded.locator('.rv-fcount')).toHaveText('4');
     await folded.locator('summary').click();
     await expect(folded.locator('.rv-pos')).toHaveText(['UTG', 'HJ', 'CO', 'SB']);
-    await expect(folded.locator('.rv-seat').first()).toContainText('Very Tight');
+    await expect(folded.locator('.rv-seat').first()).toContainText('VPIP 12');
+    await expect(folded.locator('.rv-seat').last()).toContainText('—');
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'MTT', exact: true }).click();
@@ -133,7 +144,7 @@ test('集計画面でも Villain の情報を見られ、タイトルはヘッ�
   await expect(page.locator('header h1')).toHaveText('K83r のターンのバレルを受ける');
   await expect(page.getByRole('button', { name: 'All Villains' })).toBeEnabled();
   await page.getByRole('button', { name: 'UTG の Villain の情報' }).click();
-  await expect(page.getByRole('dialog', { name: 'Villain · UTG' })).toContainText('Very Tight');
+  await expect(page.getByRole('dialog', { name: 'Villain · UTG' })).toContainText('VPIP 12');
 });
 
 test('前の版の投稿（情報のキーが無い）も表示できる', async ({ page }) => {
@@ -150,43 +161,101 @@ test('前の版の投稿（情報のキーが無い）も表示できる', async
 
 const villains = (page: Page) => page.getByRole('region', { name: 'Villain' });
 const slider = (page: Page, name: string) => page.getByRole('slider', { name, exact: true });
+const seatBtn = (page: Page, p: string) => villains(page).getByRole('button', { name: `${p} の Villain の情報` });
+
+/** SRP のターンまで入れて、Turn の BTN の Bet を Spot に選ぶ（Hero は BTN。登録できる席は SB（Fold to Steal）と BB） */
+async function toVillains(page: Page): Promise<void> {
+  await playSrpTurn(page);
+  await pickSpot(page, 'Turn / BTN Bet 3');
+}
 
 for (const v of ['', ' @sp'] as const) {
-  test(`投稿: Villain は Hero 以外の席ごとに 1 行。開くと Slider は未入力、触ると入力、× で未入力に戻る${v}`, async ({ page }) => {
+  test(`投稿: Villain は Hand に参加した席だけで Spot の下。Spot Read は判断地点より前の実際の Action に Lean を付ける${v}`, async ({ page }) => {
     await openNew(page);
-    await step(page, S_PLAYER);
-    await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '3', exact: true }).click();
+    await toVillains(page);
     const sec = villains(page);
-    // 3 人（BTN・SB・BB）で Hero は BTN → SB・BB の 2 行
-    await expect(sec.getByRole('button', { name: /の Villain の情報$/ })).toHaveCount(2);
-    await sec.getByRole('button', { name: 'SB の Villain の情報' }).click();
+    // Preflop で Fold しただけの UTG・HJ・CO は出さない。SB は Fold to Steal なので出す
+    await expect(sec.getByRole('button', { name: /の Villain の情報$/ })).toHaveText([/^SB/, /^BB/]);
+    await seatBtn(page, 'SB').click();
+    const spot = sec.locator('.vr-read').first();
+    await expect(spot).toContainText('Spot Read');
+    await expect(spot).toContainText('このハンドの結果を知る前の読みで');
+    await expect(spot).toContainText('Preflop · Fold to Steal');
+    // Fold 系は Over・Under だけ。押すと通常、もう一度で強い（++）、もう一度で外れる
+    const lean = spot.getByRole('group', { name: 'Lean' }).getByRole('button');
+    await expect(lean).toHaveText(['Over', 'Under']);
+    await lean.nth(1).click();
+    await expect(lean.nth(1)).toHaveAttribute('aria-pressed', 'true');
+    await lean.nth(1).click();
+    await expect(lean.nth(1)).toHaveText('Under++');
+    await expect(lean.nth(1)).toHaveAccessibleName('Under（強い）');
+    await expect(seatBtn(page, 'SB')).toContainText('1 Read');
+    await lean.nth(1).click();
+    await expect(lean.nth(1)).toHaveAttribute('aria-pressed', 'false');
+    // BB は判断地点より前に語彙に当たる Action が無い（Call・Check だけ）→ Spot Read の枠を出さない
+    await seatBtn(page, 'SB').click();
+    await seatBtn(page, 'BB').click();
+    await expect(sec.getByText('Spot Read')).toHaveCount(0);
+    // 5 分割のボタン: 押すと選び、もう一度押すと未入力。左右の端に名前
+    const agg = sec.getByRole('group', { name: 'Postflop Aggression' });
+    await agg.getByRole('button', { name: 'Passive', exact: true }).click();
+    await expect(agg.getByRole('button', { name: 'Passive', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(seatBtn(page, 'BB')).toContainText('Passive');
+    await agg.getByRole('button', { name: 'Passive', exact: true }).click();
+    await expect(agg.getByRole('button', { name: 'Passive', exact: true })).toHaveAttribute('aria-pressed', 'false');
+    await expect(sec.locator('.rs.step').first().locator('.rs-ends span')).toHaveText(['Passive', 'Aggressive']);
+    // VPIP の Slider: 未入力 → 最初の矢印で真ん中 → × で未入力
     const vpip = slider(page, 'VPIP');
     await expect(vpip).toHaveAttribute('aria-valuetext', '未入力');
     await vpip.focus();
-    await page.keyboard.press('ArrowRight'); // 未入力の最初の矢印は真ん中
+    await page.keyboard.press('ArrowRight');
     await expect(vpip).toHaveAttribute('aria-valuetext', 'Very Loose 50%');
-    await page.keyboard.press('PageDown');
-    await page.keyboard.press('PageDown');
-    await expect(vpip).toHaveAttribute('aria-valuetext', 'Loose 30%');
     await page.getByRole('button', { name: 'VPIP をリセット' }).click();
     await expect(vpip).toHaveAttribute('aria-valuetext', '未入力');
-    // 段階だけの項目（Read Confidence）は押した位置の段階
-    const conf = slider(page, 'Read Confidence');
-    await conf.scrollIntoViewIfNeeded();
-    const box = await conf.boundingBox();
-    if (!box) throw new Error('見えない');
-    await page.mouse.click(box.x + box.width - 4, box.y + box.height / 2);
-    await expect(conf).toHaveAttribute('aria-valuetext', 'HUD Stats');
-    // 閉じると 1 行の要約
-    await sec.getByRole('button', { name: 'SB の Villain の情報' }).click();
-    await expect(slider(page, 'VPIP')).toHaveCount(0);
+    // Memo は無い
+    await expect(page.getByRole('textbox', { name: /Memo/ })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test(`投稿: General Read は Street → Action → Lean の順。条件は後から、Street を変えると合わない選択は外れる${v}`, async ({ page }) => {
+    await openNew(page);
+    await toVillains(page);
+    const sec = villains(page);
+    await seatBtn(page, 'BB').click();
+    await sec.getByRole('button', { name: '＋ General Read' }).click();
+    const g = sec.locator('.vr-read').filter({ hasText: 'General Read 1' });
+    await g.getByRole('group', { name: 'Street' }).getByRole('button', { name: 'Turn' }).click();
+    // Turn の Action（C-Bet は無く、Barrel と Delayed C-Bet がある。BB は Hero（BTN）より先に動くので Raise は Check-Raise）
+    const actions = g.getByRole('group', { name: 'Action' }).getByRole('button');
+    await expect(actions).toHaveText(['Barrel', 'Fold to Barrel', 'Delayed C-Bet', 'Donk', 'Probe', 'Bet vs Check', 'Check-Raise', 'Fold to Bet', 'Fold to Raise']);
+    await g.getByRole('button', { name: 'Barrel', exact: true }).click();
+    await g.getByRole('button', { name: 'Board · Size' }).click();
+    await g.getByRole('group', { name: 'Runout' }).getByRole('button', { name: 'Flush Complete' }).click();
+    await g.getByRole('group', { name: 'Size' }).getByRole('button', { name: 'Big' }).click();
+    // Bet / Raise 系は 4 つの Lean
+    await expect(g.getByRole('group', { name: 'Lean' }).getByRole('button')).toHaveText(['Over', 'Under', 'Value-heavy', 'Bluff-heavy']);
+    await g.getByRole('group', { name: 'Lean' }).getByRole('button', { name: 'Value-heavy' }).click();
+    await expect(g.locator('.vr-line')).toHaveText('Turn · Flush Complete · Barrel (Big) → Value-heavy');
+    // Flop に変えると Barrel・Runout・Lean は外れる
+    await g.getByRole('group', { name: 'Street' }).getByRole('button', { name: 'Flop', exact: true }).click();
+    await expect(g.locator('.vr-line')).toHaveText('—');
+    await expect(g.getByRole('group', { name: 'Runout' })).toHaveCount(0);
+    await expect(g.getByRole('group', { name: 'Lean' })).toHaveCount(0);
+    // 2 件まで
+    await sec.getByRole('button', { name: '＋ General Read' }).click();
+    await expect(sec.getByRole('button', { name: '＋ General Read' })).toHaveCount(0);
+    // 途中の General Read は投稿の前のエラー
+    await setTitle(page, 'Reads 付き');
+    await submit(page);
+    await expect(page.locator('.pf-errors')).toContainText('BB の General Read を最後まで選んでください');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
 
 test('投稿: PFR を VPIP より上げると VPIP も上がり、VPIP を PFR より下げると PFR も下がる。数を直接入れられる', async ({ page }) => {
   await openNew(page);
-  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6', exact: true }).click();
-  await page.getByRole('button', { name: 'BB の Villain の情報' }).click();
+  await toVillains(page);
+  await seatBtn(page, 'BB').click();
   await page.getByRole('button', { name: 'VPIP を数で入力' }).click();
   await page.getByRole('textbox', { name: 'VPIP（%）' }).fill('20');
   await page.keyboard.press('Enter');
@@ -209,42 +278,44 @@ test('投稿: PFR を VPIP より上げると VPIP も上がり、VPIP を PFR �
   expect(await page.getByRole('textbox', { name: 'VPIP（%）' }).evaluate((el) => getComputedStyle(el).fontSize)).toBe('16px');
 });
 
-test('投稿: Memo は 30 文字まで、プレースホルダーで個人情報を書かないことを示す', async ({ page }) => {
+test('投稿: Preset は全体の傾向と General Read を端末だけに保存し、呼び出すと Spot Read は残す', async ({ page }) => {
   await openNew(page);
-  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6', exact: true }).click();
-  await page.getByRole('button', { name: 'BB の Villain の情報' }).click();
-  const memo = page.getByRole('textbox', { name: 'BB の Memo' });
-  await expect(memo).toHaveAttribute('placeholder', '個人を特定できる情報は書かない');
-  await memo.fill('あ'.repeat(35));
-  await expect(memo).toHaveValue('あ'.repeat(30));
-  await expect(page.locator('.vr-count')).toHaveText('30/30');
-});
-
-test('投稿: Preset に保存・呼び出し・削除（端末だけ）', async ({ page }) => {
-  await openNew(page);
-  await page.getByRole('group', { name: '人数' }).getByRole('button', { name: '6', exact: true }).click();
-  await page.getByRole('button', { name: 'BB の Villain の情報' }).click();
+  await toVillains(page);
+  const sec = villains(page);
+  await seatBtn(page, 'BB').click();
   await page.getByRole('button', { name: 'VPIP を数で入力' }).click();
   await page.getByRole('textbox', { name: 'VPIP（%）' }).fill('45');
   await page.keyboard.press('Enter');
-  await page.getByRole('button', { name: 'Preset' }).click();
+  await sec.getByRole('button', { name: '＋ General Read' }).click();
+  const g = sec.locator('.vr-read').filter({ hasText: 'General Read 1' });
+  await g.getByRole('group', { name: 'Street' }).getByRole('button', { name: 'Flop', exact: true }).click();
+  await g.getByRole('button', { name: 'Fold to C-Bet' }).click();
+  await g.getByRole('group', { name: 'Lean' }).getByRole('button', { name: 'Over', exact: true }).click();
+  await sec.getByRole('button', { name: 'Preset' }).click();
   const dlg = page.getByRole('dialog', { name: 'Preset · BB' });
   await dlg.getByPlaceholder('Preset の名前').fill('Fish');
   await dlg.getByRole('button', { name: '保存' }).click();
   await expect(dlg.getByRole('listitem')).toHaveCount(1);
-  await expect(dlg.getByRole('listitem')).toContainText('Very Loose');
+  await expect(dlg.getByRole('listitem')).toContainText('VPIP 45 · 1 Read');
   await page.keyboard.press('Escape');
-  // localStorage に保存（サーバーには送らない）
-  expect(await page.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith('wwyd.readPresets.v1.')))).toBe(true);
+  // localStorage に schema version つきで保存（サーバーには送らない）
+  const saved = await page.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('wwyd.readPresets.'));
+    return k ? JSON.parse(localStorage.getItem(k) ?? '{}') : null;
+  });
+  expect(saved?.schema).toBe(2);
 
-  // 別の席で呼び出す
-  await page.getByRole('button', { name: 'BB の Villain の情報' }).click(); // 閉じる
-  await page.getByRole('button', { name: 'SB の Villain の情報' }).click();
-  await page.getByRole('button', { name: 'Preset' }).click();
+  // SB（Spot Read あり）で呼び出す
+  await seatBtn(page, 'BB').click();
+  await seatBtn(page, 'SB').click();
+  await sec.locator('.vr-read').first().getByRole('button', { name: 'Under', exact: true }).click();
+  await sec.getByRole('button', { name: 'Preset' }).click();
   await page.getByRole('button', { name: 'Fish を呼び出す' }).click();
   await expect(slider(page, 'VPIP')).toHaveAttribute('aria-valuenow', '45');
+  await expect(sec.locator('.vr-read').filter({ hasText: 'General Read 1' }).locator('.vr-line')).toHaveText('Flop · Fold to C-Bet → Over');
+  await expect(seatBtn(page, 'SB')).toContainText('2 Reads');
   // 削除
-  await page.getByRole('button', { name: 'Preset' }).click();
+  await sec.getByRole('button', { name: 'Preset' }).click();
   await page.getByRole('button', { name: 'Fish を削除' }).click();
   await expect(page.getByRole('dialog', { name: 'Preset · SB' }).getByRole('listitem')).toHaveCount(0);
 });
@@ -280,7 +351,7 @@ test('投稿: MTT の欄は Game 形式が MTT のときだけ。Tournament Type
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('投稿: 送る本文に Villain（Hero 以外）と MTT の情報が入り、情報なしならキーを送らない', async ({ page }) => {
+test('投稿: 送る本文に Villain（登録できる席）と MTT の情報が入り、情報なしならキーを送らない', async ({ page }) => {
   const { cp } = await openNew(page);
   await page.getByRole('group', { name: 'Game 形式' }).getByRole('button', { name: 'MTT' }).click();
   await page.getByRole('slider', { name: 'Tournament Type' }).focus();
@@ -288,18 +359,40 @@ test('投稿: 送る本文に Villain（Hero 以外）と MTT の情報が入り
   await page.getByRole('textbox', { name: 'スポットの順位' }).fill('12');
   await page.getByRole('textbox', { name: '残りの人数' }).fill('58');
   await page.getByRole('group', { name: 'Prize Structure' }).getByRole('button', { name: /Flat/ }).click();
-  await playSrpTurn(page);
-  await page.getByRole('button', { name: 'BB の Villain の情報' }).click();
+  await toVillains(page);
+  const sec = villains(page);
+  await seatBtn(page, 'BB').click();
   await page.getByRole('button', { name: 'VPIP を数で入力' }).click();
   await page.getByRole('textbox', { name: 'VPIP（%）' }).fill('40');
   await page.keyboard.press('Enter');
-  await page.getByRole('textbox', { name: 'BB の Memo' }).fill(' sticky ');
-  await pickSpot(page, 'Turn / BTN Bet 3');
+  await sec.getByRole('group', { name: 'Sample' }).getByRole('button', { name: 'Long', exact: true }).click();
+  await sec.getByRole('button', { name: '＋ General Read' }).click();
+  const g = sec.locator('.vr-read').filter({ hasText: 'General Read 1' });
+  await g.getByRole('group', { name: 'Street' }).getByRole('button', { name: 'Flop', exact: true }).click();
+  await g.getByRole('button', { name: 'Check-Raise' }).click();
+  await g.getByRole('button', { name: 'Board · Size' }).click();
+  await g.getByRole('group', { name: 'High Card' }).getByRole('button', { name: 'A-high' }).click();
+  await g.getByRole('group', { name: 'Connectivity' }).getByRole('button', { name: 'Straight possible' }).click();
+  const leans = g.getByRole('group', { name: 'Lean' });
+  await leans.getByRole('button', { name: 'Bluff-heavy' }).click();
+  await leans.getByRole('button', { name: 'Bluff-heavy' }).click();
+  await seatBtn(page, 'BB').click();
+  await seatBtn(page, 'SB').click();
+  await sec.locator('.vr-read').first().getByRole('button', { name: 'Under', exact: true }).click();
   await setTitle(page, 'Reads 付き');
   await submit(page);
   await expect.poll(() => cp.calls.length).toBe(1);
   const body = cp.calls[0]?.body ?? {};
-  expect(body.villain_reads).toEqual({ BB: { vpip: 40, memo: 'sticky' } });
+  expect(body.villain_reads).toEqual({
+    SB: { reads: [{ scope: 'spot', street: 'pf', action: 'fold_steal', texture: null, runout: null, size: null, lean: 'under', strong: false }] },
+    BB: {
+      vpip: 40,
+      sample: 3,
+      reads: [
+        { scope: 'general', street: 'flop', action: 'raise', texture: { high: 'a', connect: 'straight' }, runout: null, size: null, lean: 'bluff', strong: true },
+      ],
+    },
+  });
   expect(body.mtt).toEqual({ speed: 50, rank: 12, left: 58, prize: 'flat' });
 });
 

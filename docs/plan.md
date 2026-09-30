@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P11 Villain・MTT の情報**（MTT とヘッダー・一覧は実装済み。**Villain の情報は 2026-09-30 の仕様変更（Memo の廃止・構造化した Read）で作り直し。仕様は 18 章に反映、未決定の論点の回答待ち**）。P10 はさつきの判断と iPhone 実機（保留）が残り |
-| 直近で完了したこと | **Villain・MTT の情報**（[18 章](detailed-spec/18-villain-reads-mtt.md)。2026-09-30）: MTT の欄をさつきの指示で直した（Stage なし・Tournament Type は Deep〜Turbo の Slider・数の欄は日本語の 5 つ）。スクロールバーを細く、スクロール中だけに。投稿画面の席ごとの Slider（未入力・5 段階・数の直接入力・PFR ≦ VPIP）・Memo・Preset（端末だけ）と MTT の欄、回答・集計のヘッダーの投稿のタイトル（流れる）と席の印・All Villains・MTT のモーダル、スマホの一覧のカードの 3 段と印。DB `20260930000000_villain_reads_mtt.sql`、core の `reads.ts`、規約・プライバシーポリシー・ⓘ。試験: 単体 1023・pgTAP 320（DB-20 を追加）・E2E（reads.spec を追加）・型検査・ビルド。前の経緯はセッションログ |
-| 次にやること | 0. さつきが 18 章 §10 の論点（B-1〜B-5・C-1〜C-13）に回答 → Villain の情報を作り直す（T-1108）。dev・本番への反映は作り直しの後にまとめて行う（案）<br>1. さつきが規約・プライバシーポリシーの差分と見た目を確認<br>2. dev にマイグレーション → create-post を dev に配備（さつきの確認）→ push → PR → マージ<br>3. 本番にマイグレーション（さつき）→ create-post を本番に配備（さつき）。**順番: マイグレーション → create-post → 画面**（前の create-post は情報を捨てるだけで投稿は通る）<br>4. P10 の残り（確認待ちの判断、iPhone 実機） |
+| 現在のフェーズ | **P11 Villain・MTT の情報**（実装と試験は済み。Villain の情報は 2026-09-30 の仕様変更（Memo の廃止・構造化した Read）で作り直した。さつきの確認 → dev・本番への反映が残り）。P10 はさつきの判断と iPhone 実機（保留）が残り |
+| 直近で完了したこと | **Villain の情報の作り直し**（18 章 §2.1・§10。2026-09-30）: Memo を廃止し、全体の傾向（VPIP・PFR の Slider、Postflop Aggression・Hero Image・Sample の 5 分割のボタン）と Read（Spot Read は判断地点より前の実際の Action から自動、General Read は 2 件まで。`[When] · [Action] → [Lean]`）に。登録できる席は参加した席だけ、Villain の欄は Spot の下へ。core に `readActions.ts`（語彙・表・Action の決め方）と `verifyReads`、DB の上限 8KB、Preset は schema 2、規約から Memo を消した。試験: 単体 1043・pgTAP・E2E 418・型検査・ビルド。**前の作業**: MTT の欄をさつきの指示で直した（Stage なし・Tournament Type は Deep〜Turbo の Slider・数の欄は日本語の 5 つ）。スクロールバーを細く、スクロール中だけに。投稿画面の席ごとの Slider（未入力・5 段階・数の直接入力・PFR ≦ VPIP）・Memo・Preset（端末だけ）と MTT の欄、回答・集計のヘッダーの投稿のタイトル（流れる）と席の印・All Villains・MTT のモーダル、スマホの一覧のカードの 3 段と印。DB `20260930000000_villain_reads_mtt.sql`、core の `reads.ts`、規約・プライバシーポリシー・ⓘ。試験: 単体 1023・pgTAP 320（DB-20 を追加）・E2E（reads.spec を追加）・型検査・ビルド。前の経緯はセッションログ |
+| 次にやること | 1. さつきが Villain の入力と表示の見た目、規約の差分（18 章 §7）を確認<br>2. dev にマイグレーション → create-post を dev に配備（さつきの確認）→ push → PR → マージ<br>3. 本番にマイグレーション（さつき）→ create-post を本番に配備（さつき）。**順番: マイグレーション → create-post → 画面**（前の create-post は情報を捨てるだけで投稿は通る）<br>4. P10 の残り（確認待ちの判断、iPhone 実機） |
 | ブロッカー | なし |
-| さつきの確認待ち | **Villain の情報の仕様変更**: 18 章 §10（さつきの推奨 5 件への Claude の懸念、Claude が見つけた論点 13 件）と §11（今の実装との食い違い）。**Villain・MTT**: 規約・プライバシーポリシーの文言（18 章 §7）、スマホの一覧の 2 段目が River＋印 2 つで条件の文字が「…」になること。**リリース前テスト**（findings.md）: F-006 posts の author_uid を誰でも読める（列を絞るか）、F-012 CI の NEON_API_KEY を PR でも渡している、F-021 無料枠の compute の監視と `/api/auth` の大量アクセス、F-029 一覧のタブレットの幅の見た目、F-032〜F-034（iPhone の入力欄の拡大・FitStage の縮小しすぎ・コントラストとタップの大きさ）、F-037 Pot の上限、F-028・F-036（仕様の確認 Q-1〜Q-5）。以前から: wwyd-ui-concept の 420px、13 章 §5.4、シグネチャー 3、「投稿する」を Post に、Replay の「最初から」、iPhone 実機 |
+| さつきの確認待ち | **Villain・MTT**: 作り直した Villain の入力と表示の見た目、規約・プライバシーポリシーの文言（18 章 §7）、スマホの一覧の 2 段目が River＋印 2 つで条件の文字が「…」になること。**リリース前テスト**（findings.md）: F-006 posts の author_uid を誰でも読める（列を絞るか）、F-012 CI の NEON_API_KEY を PR でも渡している、F-021 無料枠の compute の監視と `/api/auth` の大量アクセス、F-029 一覧のタブレットの幅の見た目、F-032〜F-034（iPhone の入力欄の拡大・FitStage の縮小しすぎ・コントラストとタップの大きさ）、F-037 Pot の上限、F-028・F-036（仕様の確認 Q-1〜Q-5）。以前から: wwyd-ui-concept の 420px、13 章 §5.4、シグネチャー 3、「投稿する」を Post に、Replay の「最初から」、iPhone 実機 |
 
 ---
 
@@ -183,7 +183,7 @@
 | T-1104 | 回答・集計（ヘッダーの投稿のタイトル・流れる、席の印とモーダル、All Villains、MTT） | T-1102 | E2E が緑 | 完了 | | 18 §5 |
 | T-1105 | スマホの一覧のカード（3 段）と印、PC の表の印 | T-1102 | E2E が緑 | 完了 | | 18 §6 |
 | T-1106 | 規約・プライバシーポリシー・ⓘ | T-1101 | 差分をさつきに報告 | 完了（さつきの確認待ち） | | 18 §7、09 |
-| T-1108 | Villain の情報の作り直し（Memo の廃止、全体の傾向の 5 分割のボタン、構造化した Read・Spot Read の自動の Action・General Read、チップの表示、Preset の schema version、規約） | T-1101 | 18 章 §10 の回答 → 単体・pgTAP・E2E が緑 | 確認待ち（さつきの回答） | | 18 §2.1・§10・§11 |
+| T-1108 | Villain の情報の作り直し（Memo の廃止、全体の傾向の 5 分割のボタン、構造化した Read・Spot Read の自動の Action・General Read、チップの表示、Preset の schema version、規約） | T-1101 | 18 章 §10 の回答 → 単体・pgTAP・E2E が緑 | 完了（さつきの確認待ち） | | 18 §2.1・§10・§11 |
 | T-1107 | dev にマイグレーション → create-post を dev に配備 → push・PR → 本番のマイグレーションと配備 | T-1102〜1106 | 本番で情報つきの投稿 → 回答画面で表示 | 未着手（さつきの確認） | さつき | 18 §4 |
 
 ---
@@ -330,6 +330,7 @@
 | 2026-09-30 | **Villain の情報（Reads）と MTT の情報を足す**（18 章）。① Memo（30 文字）は作り、個人を識別できる情報と誹謗中傷を規約で禁止し、違反は運営者が削除・非表示にする（機械では防がない。不変条件 6 に注記）② Prize Structure の目安と MTT の人数の欄の名前は、不変条件 1 の例外として画面に出す ③ 新しいカードのデザインはスマホだけ（PC の表は印と黄の使い方だけ合わせる）④ Slider の 5 段階の境目は Claude の案（18 章 §2.1）。ほか: 画面名はヘッダーに出さず、回答・集計は投稿のタイトルをヘッダーに（流れる）。「Villain」は Hero 以外の席の情報の呼び名としてだけ使う（16 章の出題の仕組みは戻さない）。情報は回答の前でも返す。Preset は端末の localStorage だけ | さつきの依頼と判断（①〜④ は Claude の推奨どおり） |
 | 2026-09-30 | **MTT の欄を直す**: Stage をなくす。Tournament Type は Regular / PKO / Satellite をやめて、段階の無い Slider（0 = Deep 〜 100 = Turbo。左右に Deep・Turbo。表示も Slider そのもの）。数の欄はスポットの順位・残りの人数・エントリー数・ITM・Avg Stack（bb）だけで、名前は日本語（不変条件 2 の英語の表記の例外）。**スクロールバー**はアプリ全体で 4px・スクロール中だけ表示（PC・スマホとも） | さつきの指示（最初は 5 段階にしたが、段階をやめた）。Villain の情報は一旦おく |
 | 2026-09-30 | **Villain の情報の Memo を廃止し、構造化した Read（`[When] · [Action] → [Lean]`。Spot Read 1 件・General Read 2 件まで）に置き換える**。全体の傾向は VPIP・PFR の Slider と、Postflop Aggression・Hero Image・Sample（旧 Read Confidence）の 5 分割のボタン。表示はチップ。規約の Memo の行を消し、個人を特定できる情報の禁止はタイトルに残す。仕様は 18 章 §2.1 に反映。未決定の論点は §10、実装との食い違いは §11。**承認まで実装しない** | 自由記述の Memo は誹謗中傷のリスクと運営の監視の負担が大きい。選択肢の組み合わせなら表現の幅を保ったまま書ける内容を構造で制限できる | さつき |
+| 2026-09-30 | **Villain の情報の論点（18 章 §10）はすべて推奨どおり**: Bet vs Check のまま・登録できる席は Preflop で Fold 以外をした席と Fold to Steal の Blind・強いは `++`・Connectivity は Straight possible / No straight・MTT の読みは後で（B-1〜5）。5 分割のラベル、中央を出さないのは Aggression と Hero Image だけ、§10.3 の Action の決め方、候補が複数なら投稿者が選ぶ、Spot Read の Size は実際の額から（50% 未満 Small・100% まで Big）、Lean は 未選択 → 通常 → 強い → 未選択、Check-Raise の表示、Preflop の Size は Small・Big、表は core に 1 つ、注記は不変条件 1 の例外、集計は保存だけ、条件の選び方、投稿の編集機能は作らない（C-1〜13）。Villain の欄は Spot の下へ移した（登録できる席と Spot Read の候補が Action と Spot で決まるため） | さつき「推奨通り進めてください」 | さつき |
 
 ---
 
@@ -870,3 +871,4 @@
 - **追記（2026-09-30）**: さつきの指示で MTT の欄を直した（Stage をなくし、Tournament Type を Deep〜Turbo の Slider に、数の欄をスポットの順位・残りの人数・エントリー数・ITM・Avg Stack の日本語の 5 つに）。Slider の部品を Villain と共通にした（`SliderDef`）。スクロールバーをアプリ全体で 4px・スクロール中だけに（`styles/scrollbar.css`・`scrollIndicator.ts`・`e2e/scrollbar.spec.ts`）。Villain の情報は一旦おく（さつき）。
 - **追記（2026-09-30）**: さつきの指示で Tournament Type の Slider の段階をやめた（0〜100、目盛り・段階のラベルなし、溝の下の左右に Deep・Turbo。回答・集計の MTT の表示も Slider そのもの）。
 - **追記（2026-09-30）**: さつきの仕様変更（Villain の Memo を廃止し、構造化した Read に）を 18 章 §2.1 に反映した。未決定の論点（§10）と今の実装との食い違い（§11）を報告。実装はさつきの承認待ち（T-1108）。CLAUDE.md の不変条件 6 も直した。
+- **追記（2026-09-30）**: さつきの回答（§10 はすべて推奨どおり）を受けて Villain の情報を作り直した（T-1108）。core `poker/readActions.ts`（新規）・`post/reads.ts`・`post/verifyPost.ts`、app `reads/`（readsModel・VillainSection・ReadsView・readPresets・PresetDialog）・`post/draft.ts`・`screens/NewPostScreen.tsx`・`styles/reads.css`・ⓘ・規約、DB のマイグレーション（上限 8KB）と DB-20、試験（RA 12 件を新規、RD・readsModel・EF-05/06・E2E reads.spec を書き直し）。単体 1043・E2E 418（1 件は前から skip）・型検査・ビルドが緑。

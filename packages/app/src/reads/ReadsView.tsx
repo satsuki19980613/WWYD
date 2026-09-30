@@ -1,16 +1,20 @@
-import { READ_KEYS, type Action, type MttInfo, type Pos, type VillainRead, type VillainReads } from '@wwyd/core';
+import type { Action, MttInfo, Pos, VillainRead, VillainReads } from '@wwyd/core';
 import { useState } from 'react';
 import { Modal } from '../components/Modal.tsx';
 import { SliderEnds } from './ReadSlider.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import {
-  defLabel,
+  entryCheckRaise,
   hasMttInfo,
+  hasVisibleRead,
+  leanText,
   mttCountsLine,
   PRIZE_HINT,
   PRIZE_LABEL,
-  READ_DEF,
+  readLine,
+  readSpeech,
   SPEED_DEF,
+  tendencyChips,
   villainOrder,
   type SliderDef,
 } from './readsModel.ts';
@@ -18,24 +22,8 @@ import {
 /**
  * 回答・集計の画面の Villain・MTT の情報（詳細仕様 18 章 §5）。
  * 席を押すとその席の情報、All Villains で全席、MTT で MTT の情報をモーダルで出す。未入力の項目は出さない。
- * Slider は段階のラベルとバーだけ（数は出さない）。
+ * Villain の情報は、中央以外の全体の傾向をチップで、Read を 1 行ずつ出す（§2.1.6。2026-09-30 さつきの仕様変更）。
  */
-
-/** Slider の値の表示（段階のラベルとバーだけ。数は出さない） */
-function SliderRow(props: { def: SliderDef; value: number }): JSX.Element {
-  const { def, value } = props;
-  return (
-    <div className="rv-row">
-      <dt className="mono-lbl">{def.name}</dt>
-      <dd>
-        <span className="rv-label">{defLabel(def, value)}</span>
-        <span className="rv-bar" aria-hidden="true">
-          <i style={{ width: `${Math.max(value / def.max, 0.02) * 100}%` }} />
-        </span>
-      </dd>
-    </div>
-  );
-}
 
 /** 段階を付けない Slider（Tournament Type）の表示: Slider そのもの（動かせない）と両端の名前 */
 function EndsRow(props: { def: SliderDef; value: number }): JSX.Element {
@@ -58,21 +46,39 @@ function EndsRow(props: { def: SliderDef; value: number }): JSX.Element {
   );
 }
 
-/** 1 席分（入力のある項目だけ） */
-export function ReadCard(props: { read: VillainRead }): JSX.Element {
-  const { read } = props;
+/** 1 席分: 全体の傾向のチップ（中央は出さない）と Read の行（Spot Read が先。強いは ++） */
+export function ReadCard(props: { seat: Pos; hero: Pos; actions: readonly Action[]; read: VillainRead }): JSX.Element {
+  const chips = tendencyChips(props.read);
+  const reads = props.read.reads ?? [];
   return (
-    <dl className="rv-list">
-      {READ_KEYS.filter((k) => read[k] !== undefined).map((k) => (
-        <SliderRow key={k} def={READ_DEF[k]} value={read[k] as number} />
-      ))}
-      {read.memo && (
-        <div className="rv-row memo">
-          <dt className="mono-lbl">Memo</dt>
-          <dd className="rv-memo">{read.memo}</dd>
-        </div>
+    <div className="rv-card">
+      {chips.length > 0 && (
+        <ul className="rv-chips">
+          {chips.map((c) => (
+            <li key={c} className="rv-chip">
+              {c}
+            </li>
+          ))}
+        </ul>
       )}
-    </dl>
+      {reads.length > 0 && (
+        <ul className="rv-reads">
+          {reads.map((e, i) => {
+            const xr = entryCheckRaise(e, props.seat, props.hero, props.actions);
+            const line = readLine(e, xr);
+            const lean = leanText(e.lean, e.strong);
+            return (
+              <li key={i} className={`rv-read${e.strong ? ' strong' : ''}`} aria-label={readSpeech(e, xr)}>
+                <span aria-hidden="true">{line.slice(0, line.length - lean.length)}</span>
+                <b className="rv-lean" aria-hidden="true">
+                  {lean}
+                </b>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -89,10 +95,11 @@ function AllVillains(props: { seats: readonly Pos[]; hero: Pos; actions: readonl
   const { active, folded } = villainOrder(props.seats, props.hero, props.actions);
   const item = (p: Pos): JSX.Element => {
     const read = props.reads[p];
+    const has = hasVisibleRead(read);
     return (
-      <li key={p} className={`rv-seat${read ? '' : ' none'}`}>
+      <li key={p} className={`rv-seat${has ? '' : ' none'}`}>
         <SeatHead pos={p} />
-        {read ? <ReadCard read={read} /> : <span className="rv-none">—</span>}
+        {read && has ? <ReadCard seat={p} hero={props.hero} actions={props.actions} read={read} /> : <span className="rv-none">—</span>}
       </li>
     );
   };
@@ -163,7 +170,7 @@ export function useReadsUi(props: {
   mtt: MttInfo | null;
 }): { buttons: JSX.Element; onSeat: (pos: Pos) => void; marked: ReadonlySet<Pos>; modal: JSX.Element | null } {
   const [open, setOpen] = useState<Open>(null);
-  const marked = new Set(props.seats.filter((p) => p !== props.hero && props.reads[p]));
+  const marked = new Set(props.seats.filter((p) => p !== props.hero && hasVisibleRead(props.reads[p])));
   const hasMtt = hasMttInfo(props.mtt);
   const close = (): void => setOpen(null);
 
@@ -183,7 +190,7 @@ export function useReadsUi(props: {
     const read = props.reads[open.pos];
     modal = read ? (
       <Modal title={`Villain · ${open.pos}`} tone="info" onClose={close}>
-        <ReadCard read={read} />
+        <ReadCard seat={open.pos} hero={props.hero} actions={props.actions} read={read} />
       </Modal>
     ) : null;
   } else if (open?.kind === 'all') {

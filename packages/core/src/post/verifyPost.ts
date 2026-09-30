@@ -7,6 +7,7 @@ import { findDuplicateCard, type Card } from '../cards.ts';
 import { fail } from '../errors.ts';
 import { replay, type HandResult } from '../poker/replay.ts';
 import { hasPreflopAllin, spotCandidates, spotView, type Derived } from '../poker/spot.ts';
+import { verifyReads } from './reads.ts';
 import type { PostInput } from './validateInput.ts';
 
 /** 保存する known_cards。ショーダウンでカードが無い席は `'muck'`。 */
@@ -49,6 +50,9 @@ export function verifyPost(input: PostInput): VerifiedPost {
   // 5〜6. スポットと派生メタの再計算・照合（金額は mbb の整数で比較）
   const view = spotView(input.setup, input.actions, input.hero, input.spotIndex);
   if (!sameDerived(view.derived, input.derived)) fail('derived_mismatch');
+
+  // Villain の情報: 登録できる席だけか、Spot Read が判断地点より前の実際の Action に合うか（18 章 §3）
+  verifyReads(input.reads, input.setup, input.actions, input.hero, input.spotIndex);
 
   // 7. ショーダウンに残った Hero 以外の席でカードが無ければマック
   const knownCards: KnownCards = { ...input.knownCards };

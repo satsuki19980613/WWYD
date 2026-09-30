@@ -21,9 +21,10 @@
 
 ## 2. 投稿画面
 
-### 2.1 Villain の情報（2026-09-30 さつきの仕様変更。Memo を廃止。**承認まで実装しない**）
+### 2.1 Villain の情報（2026-09-30 さつきの仕様変更。Memo を廃止）
 
-今のブランチ（`feature/villain-reads-mtt`）の実装は変更前の形（Slider 5 つ＋Memo。§2.1 旧）のまま。承認のあとで作り直す。
+2026-09-30 にさつきの承認（§10 の論点はすべて推奨どおり）を受けて実装した。判定は core の `poker/readActions.ts`（Action の語彙・表 2 枚・Spot Read の Action の決め方・登録できる席）と
+`post/reads.ts`（`validateReads`・`verifyReads`）、画面は `packages/app/src/reads/`。
 
 #### 2.1.1 全体の傾向（席ごと。全項目任意。上から この順）
 
@@ -37,7 +38,9 @@
 
 - VPIP・PFR は「未入力」を持ち、初めは未入力。× で未入力に戻す。
 - 5 分割のボタンは、選んでいるボタンをもう一度押すと未入力に戻る。
-- 中間の 3 つのラベルは未決定（§10 C-1）。
+- ラベル（左から 0〜4。§10 C-1）: Postflop Aggression は Very Passive / Passive / Balanced / Aggressive / Very Aggressive、Hero Image は Very Tight / Tight / Standard / Loose / Very Loose、
+  Sample は First Impression / Few Orbits / Some History / Long / HUD Stats。帯を 5 つに分けたボタンで、選んだ所まで黄。帯の下の左右に両端の名前。
+- VPIP・PFR の段階の境目: VPIP 15・22・30・40、PFR 8・14・20・26（その値以上で次の段階。Claude の案。`READ_DEFS`）。
 
 #### 2.1.2 Read の型（1 つだけ）
 
@@ -61,7 +64,7 @@
 | Value-heavy | やるときは強い | Bet / Raise 系だけ |
 | Bluff-heavy | やるときは弱い | Bet / Raise 系だけ |
 
-- 強さは 2 段（通常・強い）。同じ Lean をもう一度押すと「強い」。3 回目の扱いは未決定（§10 C-6）。
+- 強さは 2 段（通常・強い）。同じ Lean をもう一度押すと「強い」（`++`）、もう一度押すと外れる（§10 C-6）。
 - 中央（GTO 並み）と未入力の Lean は無い。偏りが無ければ Read を作らない。
 
 #### 2.1.3 条件（任意。付けなければ「その Street 全般」）
@@ -71,7 +74,7 @@
 | Flop texture（Flop の時点の Board） | High Card | A-high / K-high / Q-high・J-high / Middle（T〜8） / Low（7 以下） |
 | | Suit | Rainbow / Two-tone / Monotone |
 | | Pairing | Unpaired / Paired |
-| | Connectivity | Disconnected / Connected（Flop でストレートが完成しうる）。名前の変更は未決定（§10 B-4） |
+| | Connectivity | **Straight possible** / **No straight**（Flop の 3 枚でストレートが完成しうるか。§10 B-4） |
 | Runout（Turn・River だけ） | — | Brick / Overcard / Flush Complete / Straight Complete / Board Pair |
 | Size（Bet / Raise 系だけ） | — | Small / Big / Overbet |
 
@@ -85,7 +88,9 @@
 - Spot Read を付けられるのは **Hero の判断地点より前の Action だけ**（後の Action は候補に出さない。回答者に答えが漏れるため。不変条件 10 と同じ考え）。
 - Spot Read の欄に「このハンドの結果を知る前の読みで」と短く添える（後知恵の読みを抑える）。**不変条件 1（画面に説明を出さない）の例外になる**（§10 C-10）。
 - 自動で入れられる Action が無い席では、Spot Read の枠を出さない。
-- Action の列から Action の名前を決める規則は未決定（§10 C-3。案を §10 に書いた）。
+- Action の列から Action の名前を決める規則は §10.3。候補が複数なら投稿者が選ぶ（最初は判断地点にいちばん近いもの）。Size は実際の額から自動（§10 C-5）。
+- 情報を登録できる席: Preflop で Fold 以外の Action をした席と、Fold to Steal の Fold をした Blind（§10 B-2。`villainSeats`）。
+  このため Villain の欄は **Spot の下**に置く（PC は右の列の Spot の下、スマホはステップ 4（Spot））。Spot を選ぶまで Spot Read は出ない。
 
 #### 2.1.5 Action の語彙（安定した ID で持つ）
 
@@ -97,12 +102,12 @@
 
 - C-Bet は Flop だけ。Turn・River は Barrel。
 - Block Bet・Call Down は作らない（Block Bet は Size: Small、Call Down は Fold to Bet → Under で表す）。
-- Check-Raise は Raise にまとめ、OOP のときだけ表示名を Check-Raise にする（OOP の判定は §10 C-7）。
+- Check-Raise は Raise にまとめ、OOP のときだけ表示名を Check-Raise にする（Spot Read はその Street で先に Check したか、General Read は Villain が Postflop で Hero より先に動くか。§10 C-7）。
 - **Bet / Raise 系**（Value-heavy・Bluff-heavy を選べる）: 3-Bet / 4-Bet / Squeeze / C-Bet / Barrel / Delayed C-Bet / Donk / Probe / Bet vs Check / Raise。ほかは Over・Under だけ。
 
 #### 2.1.6 表示
 
-- 中央以外の値と Read だけをチップで出す（中央の扱いは §10 C-2）。1 席の例:
+- 中央以外の値と Read だけを出す（VPIP・PFR は数でいつも、Postflop Aggression・Hero Image は中央を出さない、Sample は中央も出す。§10 C-2）。1 席の例:
 
 ```
 BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
@@ -115,8 +120,9 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 #### 2.1.7 データ
 
 - 投稿には Preset の参照ではなく**写し**を保存する（今と同じ）。
-- 回答が 1 件でも付いたら Villain の情報は編集できない（§11 の 7）。
-- Preset: 名前は端末の中だけ（サーバーに送らない）。schema version を持つ。
+- 回答が 1 件でも付いたら Villain の情報は編集できない（投稿を編集する機能が無いので、投稿後はいつも変えられない。§10 C-13）。
+- Preset: 名前は端末の中だけ（サーバーに送らない）。中身は全体の傾向と、最後まで選んだ General Read（Spot Read は入れない。呼び出しても今の Spot Read は残す）。
+  `wwyd.readPresets.<uid>` に `{ schema: 2, presets }`。前の版（`wwyd.readPresets.v1.<uid>`。Memo の形）は読まず、書くときに消す。
 - Read 1 件の形（案）:
 
 ```
@@ -126,44 +132,30 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
   lean: 'over' | 'under' | 'value' | 'bluff', strong: boolean }
 ```
 
-- 検証: 表 2 枚（Street → 選べる Action、Action → 選べる Lean）を画面とサーバーで共有する（置き場所は §10 C-9）。Preflop の Read に texture・runout があれば断る。
-- 集計のキーは粗く（action × lean）。条件は保存だけで集計に使わない（§10 C-11）。
-- 旧仕様の Memo（30 文字）のスキーマ・画面・検証は消す。
+- 検証: 表 2 枚（Street → 選べる Action、Action → 選べる Lean）は core に 1 つ置き、画面と create-post が使う（§10 C-9。DB は形と大きさだけ）。Preflop の Read に texture・runout があれば断る。
+- 集計のキーは粗く（action × lean）。条件は保存だけで集計に使わない。今回は保存だけで、集計の画面は作らない（§10 C-11）。
+- 旧仕様の Memo（30 文字）のスキーマ・画面・検証は消した。途中の General Read（Street だけ選んだもの等）があると投稿の前に「{席} の General Read を最後まで選んでください」。
 
-### 2.1 旧（2026-09-30 の最初の実装。§2.1 の承認後に置き換える）
-
-
-| 項目 | 値 | 5 段階のラベル（左から 0〜4） | 境目 |
-|---|---|---|---|
-| VPIP | 0〜100 の整数（%） | Very Tight / Tight / Standard / Loose / Very Loose | 15・22・30・40（その値以上で次の段階） |
-| PFR | 0〜100 の整数（%） | Very Low / Low / Standard / High / Very High | 8・14・20・26 |
-| Postflop Aggression | 0〜100 の整数（AFq の %） | Very Passive / Passive / Balanced / Aggressive / Very Aggressive | 25・40・55・70 |
-| Read Confidence | 0〜4（段階だけ） | First Impression / Few Orbits / Some History / Long Session / HUD Stats | — |
-| Hero Image（Villain から見た Hero の印象） | 0〜4（段階だけ） | Very Tight / Tight / Standard / Loose / Very Loose | — |
-| Memo | 30 文字まで（コードポイント数。1 行。前後の空白は除く） | — | — |
-
-- 境目は 6-max のキャッシュの一般的な目安（HUD の統計の読み方）。`packages/app/src/reads/readsModel.ts` の `READ_DEFS` で変える。
-
-### 2.2 Slider の操作
+### 2.2 Slider の操作（VPIP・PFR と MTT の Tournament Type）
 
 - **未入力と中央値は別**。初めは未入力（つまみを出さず、溝を斜線にし、ラベルは「—」）。触ると入力になる。× で未入力に戻す。
-- 表示は 5 段階のラベルが基本。VPIP・PFR・Postflop Aggression は右の数（%）を押すと数を直接入れられる（HUD の値。0〜100 の整数でなければ変えない）。
+- 表示は 5 段階のラベルが基本。VPIP・PFR は右の数（%）を押すと数を直接入れられる（HUD の値。0〜100 の整数でなければ変えない）。
   入力欄は 16px（iPhone の Safari が拡大しないように。リリース前テスト F-032）。
 - **PFR は VPIP を超えない**: PFR を VPIP より上げると VPIP も同じ値に上がる。VPIP を PFR より下げると PFR も同じ値に下がる。
   片方が未入力なら追従しない（触っていない項目を勝手に入力にしない）。サーバーも PFR > VPIP を断る（§3）。
 - 横になぞって動かす（縦のスクロールは妨げない。`touch-action: pan-y`）。キーボードは ←→ で 1、PageUp/Down で %の項目は 10・段階の項目は 1、
   Home・End で端、Delete で未入力。未入力のときの最初の矢印は真ん中（50% または 2）に置く。
-- 読み上げは `role="slider"`。値は「Loose 30%」「HUD Stats」「未入力」。
+- 読み上げは `role="slider"`。値は「Loose 30%」「未入力」。5 分割のボタンは `aria-pressed` のボタンの組（名前は段階のラベル）。
 
 ### 2.3 席ごとの折りたたみと Preset
 
-- 見出し「Villain」の下に、Hero 以外の座っている席を 1 行ずつ並べる（人数を選ぶまでは出さない）。閉じた席は 1 行（席と、入力した項目の要約。
-  VPIP と PFR があれば「28/21」、Postflop Aggression のラベル、Memo）。未入力の席は「—」。開けるのは 1 席ずつ。
-- 開いた席の下に「Preset」「クリア」。Preset は名前（20 文字まで）を付けて今の席の情報を保存し、保存したものを呼び出す（今の席に入れる）・削除する。
-  同じ名前は上書き。20 件まで。**端末の localStorage にだけ、ログインしている利用者ごとに保存する**（`wwyd.readPresets.v1.<uid>`。サーバーには送らない。
-  プライバシーポリシー §1）。アカウントを削除したら、その利用者の Preset も消す。
-- Hero を変えた・人数を減らしたときは、Hero・空席の情報を画面に出さず送らない（下書きには残る。戻せば出る）。
-- 置き場所: PC は左の列の「Player と Hand」の下、スマホはステップ 2（Player）の下。
+- 見出し「Villain」の下に、情報を登録できる席（§2.1.4）を 1 行ずつ並べる。閉じた席は 1 行（席と要約。例「38/12 · Passive · Sample: Long · 1 Read」）。
+  未入力の席は「—」。開けるのは 1 席ずつ。
+- 開いた席の中: VPIP・PFR の Slider、5 分割のボタン 3 つ、Spot Read（候補があるときだけ）、General Read（「＋ General Read」で 2 件まで。× で消す）。
+  General Read の条件（Board・Size）は「Board · Size」を押して開く。
+- 開いた席の下に「Preset」「クリア」。Preset は名前（20 文字まで）を付けて保存・呼び出し・削除。同じ名前は上書き。20 件まで。
+  **端末の localStorage にだけ、ログインしている利用者ごとに保存する**（サーバーには送らない。プライバシーポリシー §1）。アカウントを削除したら、その利用者の Preset も消す。
+- 登録できなくなった席（Hero・Action を変えた）の情報は画面に出さず送らない（下書きには残る。戻せば出る）。
 
 ### 2.4 MTT の情報（Game 形式が MTT のときだけ）
 
@@ -183,22 +175,22 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 
 ## 3. サーバーでの検証（不変条件 4・7）
 
-> 2026-09-30 の仕様変更（§2.1）の後は、Memo の行を消し、Read の検証（Street と Action の組、Action と Lean の組、Preflop の texture・runout、Spot Read が判断地点より前の実際の Action に合うか）を足す。下の表は今の実装。
+ハンドに照らした検証（登録できる席か、Spot Read が判断地点より前の実際の Action に合うか）は `verifyReads`（`verifyPost` がハンドを再生したあとに呼ぶ）。
 
 `packages/core/src/post/reads.ts` の `validateReads`・`validateMtt`。画面（送信前の `buildSubmission`）と create-post の `validateInput` の両方がこれを通す。
 
 | 違反 | コード | 画面の文言 |
 |---|---|---|
 | 形が違う（オブジェクトでない・知らない項目・整数でない・選択肢の外）、Hero・空席・席でないキー | `malformed` | 入力内容を確認してください |
-| 範囲の外（% は 0〜100、段階は 0〜4）、PFR > VPIP、Memo が 30 文字を超える・改行や制御文字・NUL・対のないサロゲート | `invalid_reads` | Villain の情報を確認してください |
+| 範囲の外（% は 0〜100、5 分割は 0〜4）、PFR > VPIP、Street と Action・Action と Lean の組、条件（Preflop の texture、Turn・River 以外の runout、Bet / Raise 系以外の Size、Preflop の Overbet、Spot Read の条件）、Spot Read 2 件以上・General Read 3 件以上、**登録できない席、実際の Action（Street・Action・Size）に合わない Spot Read** | `invalid_reads` | Villain の情報を確認してください |
 | 人数・Avg Stack の範囲、人数の大小、Cash に MTT の情報 | `invalid_mtt` | MTT の情報を確認してください |
 
-- 中身の無い席・空の MTT の情報は落とす（保存しない）。Memo は前後の空白を除いて保存する。
+- 中身の無い席・空の MTT の情報は落とす（保存しない）。空の texture・runout は null、runout は決まった順に並べ、Spot Read を先にして保存する。
 - 画面は情報が無ければ本文にキー（`villain_reads`・`mtt`）を入れない（前の版と同じ本文。前の版の create-post が動いていても投稿できる）。
 
 ## 4. DB（マイグレーション `20260930000000_villain_reads_mtt.sql`）
 
-- `post_hands.villain_reads jsonb not null default '{}'`（オブジェクト、4KB まで）、`post_hands.mtt jsonb`（null かオブジェクト、1KB まで）。
+- `post_hands.villain_reads jsonb not null default '{}'`（オブジェクト、8KB まで。2026-09-30 の仕様変更で 4KB から上げた。未適用のうちにマイグレーションを直した）、`post_hands.mtt jsonb`（null かオブジェクト、1KB まで）。
   中身の検証は create-post で行い、DB は形と大きさだけを強制する（最後の砦）。既存の投稿は `{}` と null。
 - `insert_post`: `p->'villain_reads'`（無ければ `{}`）と `p->'mtt'`（無い・JSON の null なら null）を保存する。
 - `get_post_detail`: `hand` に `villain_reads` と `mtt` を足す。**回答の前でも返す**（回答の手がかり。不変条件 10 の対象外）。
@@ -218,14 +210,13 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 
 ### 5.2 Villain・MTT の情報の表示
 
-> Villain の情報の表示は、2026-09-30 の仕様変更（§2.1.6）の後はチップにする。下は今の実装。
 
 - 卓の上の 1 行に「History」（スマホだけ）「All Villains」「MTT」。情報が 1 つも無ければ All Villains・MTT は押せない。
-- 情報のある席は、席の札の右上に小さなシアンの ◆ を付け、押せるようにする。押すとその席のモーダル（「Villain · BTN」）。
+- 表示する情報のある席（中央の値だけの席は除く）は、席の札の右上に小さなシアンの ◆ を付け、押せるようにする。押すとその席のモーダル（「Villain · BTN」）。
 - All Villains: ポットに参加した席（Preflop で Fold していない席）を上に、Preflop で Fold した席は「Preflop Fold n」の下に折りたたむ。
   どちらも座席の順。情報の無い席は 1 行（「—」）。回答画面は見せている範囲（停止位置まで）の Action で並べる。
 - MTT: Tournament Type（Slider そのものと左右の Deep・Turbo）・「順位 / 残りの人数」の見出しと `12/58 ・ ITM 50 ・ 320 entries`（ツールチップにも項目名）・Avg Stack・Prize Structure（目安つき）。
-- 表示は簡潔に: **未入力の項目は出さない**。Slider は段階のラベルとバーだけ（数は出さない）。
+- 表示は簡潔に: **未入力の項目は出さない**。Villain は全体の傾向のチップと Read の行（§2.1.6。Lean はシアン、強いは `++` と背景）。
 - 集計画面にも同じボタンと席の印を置く。
 
 ### 5.3 レイアウト
@@ -252,7 +243,7 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 - 利用規約 §3 の冒頭に追加: 「投稿に付いた Villain の情報（スライダーと Memo）は、投稿者の主観的な評価です。」
 - プライバシーポリシー §1: 「投稿の下書きは、その端末のブラウザにだけ保存します。」→「投稿の下書きと Villain の情報の Preset は、その端末のブラウザにだけ保存し、サーバーには送信しません。」
 - 非表示の機能は作っていない（違反した投稿は管理者の削除で消す。06 章 §2）。
-- **2026-09-30 の仕様変更（Memo の廃止）で直す予定**（承認後に実装と一緒に直す）:
+- **2026-09-30 の仕様変更（Memo の廃止）で直した**:
   - 利用規約 §1: 「Villain の情報（Memo など）に、実名・…を書くこと」の行を消す。タイトルの行（「スポットのタイトルに、実在の人物を特定できる情報…」）は残す。「他人を誹謗中傷すること」は残す。
   - 利用規約 §3: 「Villain の情報（スライダーと Memo）」→「Villain の情報」。
   - プライバシーポリシー §1: Preset を端末にだけ保存する文は残す（変えない）。
@@ -266,12 +257,13 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 
 ## 9. 試験
 
-- 単体: `packages/core/src/post/reads.test.ts`（RD・MT）、`packages/app/src/reads/readsModel.test.ts`（段階・追従・送る形・MTT の欄・並び・下書きの読み直し・Preset）、
+- 単体: `packages/core/src/poker/readActions.test.ts`（RA。Action の決め方・Size・登録できる席）、`packages/core/src/post/reads.test.ts`（RD・MT）、
+  `packages/app/src/reads/readsModel.test.ts`（ラベル・追従・5 分割・Lean の順・General Read の操作・表示・送る形・下書きの読み直し・Preset・MTT の欄・並び）、
   `packages/functions/src/createPost/handler.test.ts`（EF-05・EF-06）。
 - DB: `db/tests/08_reads.test.sql`（DB-20）。
-- E2E: `e2e/reads.spec.ts`（ヘッダーのタイトル・席のモーダル・All Villains・MTT・押せない状態・前の版の投稿・Slider・PFR の追従・数の直接入力・Memo・Preset・MTT の欄・送る本文・一覧の印）。
+- E2E: `e2e/reads.spec.ts`（ヘッダーのタイトル・席のモーダルのチップと Read・All Villains・MTT・押せない状態・前の版の投稿・登録できる席・Spot Read・General Read・5 分割・PFR の追従・数の直接入力・Preset・MTT の欄・送る本文・一覧の印）。
 
-## 10. 未決定の論点（2026-09-30 の仕様変更。さつきの回答待ち）
+## 10. 論点（2026-09-30 の仕様変更。**さつきの回答: すべて推奨どおり**）
 
 ### 10.1 さつきの推奨がある論点（Claude の懸念を添える）
 
@@ -323,7 +315,7 @@ BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
 | Fold to Bet / Fold to Raise | そのほかの Bet に Fold / Raise に Fold |
 | 候補にしない | 最初の Raise（Open）、Limp 以外の Call、Check、5-Bet 以降、上に当たらない Fold・Bet（Limp のポットで最初に動く席の Bet など） |
 
-## 11. 今の実装・スキーマとの食い違い（2026-09-30 の仕様変更）
+## 11. 前の実装・スキーマとの食い違い（2026-09-30 の仕様変更。すべて実装で直した）
 
 1. **Memo**: core（`MEMO_MAX`・`normalizeMemo`）、投稿画面の欄、Preset、表示、規約 §1・§3、CLAUDE.md 不変条件 6、ⓘ、試験（RD・E2E）にある → すべて消す。
 2. **Postflop Aggression**: 今は 0〜100%（AFq）の Slider で数を直接入れられる → 0〜4 の 5 分割のボタン（数は無い）。

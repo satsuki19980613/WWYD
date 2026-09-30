@@ -34,7 +34,7 @@
 | 色 | 赤は Fold、シアンは Check・Call、黄は Bet・Raise。 |
 | ブラシ | バーの境界をドラッグすると混合（5% 刻み）。同じ頻度のマスを押すと消える。長押しでそのマスの頻度を読み込む。 |
 | Size | % は Call した後の Pot に対する割合。 |
-| Villain | ◆ の付いた席を押すと投稿者の Read。All Villains で全席、MTT で大会の状況を見る。 |
+| Villain | ◆ の付いた席を押すと投稿者の Read（++ は強い偏り）。All Villains で全席、MTT で大会の状況を見る。 |
 | キー（PC） | ← → で 1 手、Home で最初、End で Spot。Ctrl+Z・Ctrl+Y で戻す・やり直す。B でブラシ、E で消しゴム。 |
 
 ## §3 集計
@@ -46,7 +46,7 @@
 | 白枠 | Hero の実際の Hand。 |
 | 自分との差 | 全体との違い（黄が濃いほど違う）。正解・不正解ではない。 |
 | SPOT | 卓の SPOT とバーの黄の目盛りが出題の局面。 |
-| Villain | ◆ の付いた席を押すと投稿者の Read。All Villains で全席、MTT で大会の状況を見る。 |
+| Villain | ◆ の付いた席を押すと投稿者の Read（++ は強い偏り）。All Villains で全席、MTT で大会の状況を見る。 |
 | キー（PC） | ← → で 1 手、Home で最初、End で最後。マスにマウスを乗せると内訳（押すと固定）。 |
 
 ## §4 Post
@@ -58,7 +58,7 @@
 | Hand | 分かっている Hand だけ入れる（Hero は必須）。入れていない席は Showdown で Muck。 |
 | Card キーボード | Q を押したまま上で K・左で T・下で J。♠ を押したまま上で ♥・左で ♦・下で ♣。 |
 | 入れ直し | ログの Action や Board の Card を押すとそこから入れ直す。設定・人数・Stack・Hero も後から変えられる。 |
-| Villain | 席ごとの Read（任意）。触ると入力、× で未入力に戻る。PFR は VPIP を超えない。Preset は端末だけに保存。 |
+| Villain | 参加した席だけ。Spot Read は Spot より前の Action に。Lean を再度押すと強い（++）。Preset は端末だけ。 |
 | キー（PC） | Card はキーでも打てる（A → s）。Ctrl+Z・Ctrl+Y で Action を戻す・進める。 |
 
 ## §4.1 下書き

@@ -79,9 +79,45 @@
 .vr-row.open .vr-chev { transform: rotate(180deg); }
 .vr-row.open > .vr-head { background: var(--surface-2); }
 .vr-body { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) var(--s3) var(--s3); background: var(--bg); border-top: 1px solid var(--line); }
-.vr-memo-head { display: flex; align-items: baseline; justify-content: space-between; }
-.vr-count { font-size: 11px; color: var(--dim2); }
-.vr-count.full { color: var(--fg); }
+
+/* 5 分割のボタン（Postflop Aggression・Hero Image・Sample）: 1 本の帯を 5 つに分け、選んだ所まで黄。左右の端に名前（18 章 §2.1.1） */
+.seg5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; height: 32px; }
+.seg5-b { padding: 0; border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; }
+.rs.step:not(.set) .seg5-b { background: repeating-linear-gradient(-45deg, var(--surface-2) 0 4px, var(--surface-3) 4px 8px); }
+.seg5-b:hover { border-color: var(--line-2); }
+.seg5-b.lit { background: rgba(252, 238, 10, 0.18); border-color: rgba(252, 238, 10, 0.35); }
+.seg5-b[aria-pressed='true'] { background: var(--yellow); border-color: var(--yellow); }
+.seg5-b:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* Read（Spot Read・General Read）の入力 */
+.vr-read { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) 0 var(--s1); border-top: 1px solid var(--line); }
+.vr-read-h { display: flex; align-items: center; gap: var(--s2); min-height: 32px; flex-wrap: wrap; }
+/* 「このハンドの結果を知る前の読みで」（不変条件 1 の例外。18 章 §10 C-10） */
+.vr-note { font-size: 12px; color: var(--dim); }
+.vr-line { margin: 0; font-size: 14px; color: var(--fg); overflow-wrap: anywhere; }
+.vr-line.sm { flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--cyan); }
+.vr-read-h .rs-clear { margin-left: auto; }
+.vr-choice { display: flex; flex-direction: column; gap: 4px; }
+.vr-choice-l { font-size: 10px; }
+.vr-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip.vr-chip { min-height: 36px; padding: 0 10px; font-size: 13px; }
+/* 「強い」は ++ の文字が必ず付く。色を濃くするのは補助（18 章 §10 B-3） */
+.chip.vr-chip.strong { color: var(--bg); background: var(--yellow); border-color: var(--yellow); font-weight: 700; }
+.vr-cond-t {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 var(--s2);
+  border: 1px dashed var(--line-2);
+  background: none;
+  color: var(--cyan);
+  font-size: 16px;
+  cursor: pointer;
+}
+.vr-cond-t:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.vr-cond { display: flex; flex-direction: column; gap: var(--s2); padding-left: var(--s2); border-left: 2px solid var(--line); }
+.btn.vr-add { align-self: flex-start; }
 .vr-foot { display: flex; gap: var(--s2); justify-content: flex-end; }
 .btn.ghost.sm { min-height: 36px; padding: 6px 12px; font-size: 14px; }
 
@@ -126,11 +162,15 @@
 .rv-row { display: grid; grid-template-columns: 132px minmax(0, 1fr); align-items: center; gap: var(--s3); }
 .rv-row dt { margin: 0; }
 .rv-row dd { margin: 0; display: flex; align-items: center; gap: var(--s2); min-width: 0; font-size: 14px; }
-.rv-label { flex: none; min-width: 104px; font-family: var(--disp); font-size: 15px; font-weight: 700; color: var(--fg); }
-.rv-bar { flex: 1; height: 4px; background: var(--surface-3); }
-.rv-bar i { display: block; height: 100%; background: var(--cyan); }
-.rv-row.memo { align-items: start; }
-.rv-memo { overflow-wrap: anywhere; color: var(--fg); }
+/* Villain の情報: 全体の傾向のチップと Read の行（18 章 §2.1.6） */
+.rv-card { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.rv-chips, .rv-reads { margin: 0; padding: 0; list-style: none; }
+.rv-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.rv-chip { padding: 2px 8px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 13px; color: var(--fg); white-space: nowrap; }
+.rv-reads { display: flex; flex-direction: column; gap: 4px; }
+.rv-read { font-size: 14px; line-height: 1.45; color: var(--dim); overflow-wrap: anywhere; }
+.rv-lean { color: var(--cyan); font-weight: 700; }
+.rv-read.strong .rv-lean { padding: 0 4px; background: rgba(58, 230, 255, 0.16); }
 .rv-hint { color: var(--dim2); font-size: 11px; }
 .rv-seats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .rv-seat { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3) 0; border-top: 1px solid var(--line); }
@@ -146,7 +186,6 @@
 .rv-fcount { font-size: 12px; color: var(--dim); }
 @media (max-width: 699.98px) {
   .rv-row { grid-template-columns: 1fr; gap: 2px; }
-  .rv-label { min-width: 96px; }
 }
 
 /* ---- ヘッダーの投稿のタイトル（収まらなければ流す。18 章 §5.1） ---- */

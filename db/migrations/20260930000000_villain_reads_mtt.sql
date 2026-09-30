@@ -1,11 +1,12 @@
 -- Villain の情報（Reads）と MTT の情報（詳細仕様 18 章 §4。2026-09-30 さつき）。
 -- 中身の検証は create-post（packages/core の validateReads・validateMtt）で行い、DB は形と大きさだけを強制する（不変条件 4 の最後の砦）。
+-- villain_reads の上限 8KB は、Read（1 席に Spot Read 1 件・General Read 2 件）が 5 席に付いても収まる大きさ（18 章 §11 の 10。2026-09-30 の仕様変更で 4KB から上げた。未適用のうちに直した）。
 -- 既存の投稿は「情報なし」（villain_reads = {}、mtt = null）になる（後方互換）。
 
 alter table public.post_hands
   add column villain_reads jsonb not null default '{}'::jsonb
     constraint post_hands_villain_reads_shape
-      check (jsonb_typeof(villain_reads) = 'object' and octet_length(villain_reads::text) <= 4096),
+      check (jsonb_typeof(villain_reads) = 'object' and octet_length(villain_reads::text) <= 8192),
   add column mtt jsonb
     constraint post_hands_mtt_shape
       check (mtt is null or (jsonb_typeof(mtt) = 'object' and octet_length(mtt::text) <= 1024));

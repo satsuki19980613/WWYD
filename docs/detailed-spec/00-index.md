@@ -31,7 +31,7 @@
 | 15 | [15-ui-terms.md](15-ui-terms.md) | 画面のポーカー用語（英語の表記）の用語表 |
 | 16 | [16-hero-spot.md](16-hero-spot.md) | 出題は Hero の手番（Villain をなくす。回答者は Hero の席で Range を答える。01〜06 章の Villain の記述より優先） |
 | 17 | [17-pc-ui.md](17-pc-ui.md) | PC（700px 以上）の UI: デスクトップ版の類似アプリの調査と、ヘッダーのナビ・一覧の表・回答と集計の 3 列・PC のハンドの Card の選択ボード・キー操作 |
-| 18 | [18-villain-reads-mtt.md](18-villain-reads-mtt.md) | Villain の情報（Reads。Hero 以外の席ごとの Slider・Memo・Preset）と MTT の情報、回答・集計のヘッダーの投稿のタイトル（流れる）、スマホの一覧のカードの 3 段（2026-09-30。16 章と 06 章の該当部分より優先） |
+| 18 | [18-villain-reads-mtt.md](18-villain-reads-mtt.md) | Villain の情報（Reads。参加した席ごとの全体の傾向・Spot Read・General Read・Preset。Memo は廃止）と MTT の情報、回答・集計のヘッダーの投稿のタイトル（流れる）、スマホの一覧のカードの 3 段（2026-09-30。16 章と 06 章の該当部分より優先） |
 
 ## 共通の表記
 

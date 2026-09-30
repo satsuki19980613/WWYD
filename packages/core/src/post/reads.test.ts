@@ -1,10 +1,10 @@
 /**
- * Villain・MTT の情報の検証（詳細仕様 18 章 §3。RD-01〜）。
+ * Villain・MTT の情報の検証（詳細仕様 18 章 §2.1・§3。RD-01〜）。
  */
 import { describe, expect, it } from 'vitest';
 import { ValidationError, type ValidationCode } from '../errors.ts';
-import { hs1, type Raw } from './postFixtures.ts';
-import { MEMO_MAX, validateMtt, validateReads } from './reads.ts';
+import { hs1, hs1bb, type Raw } from './postFixtures.ts';
+import { validateMtt, validateReads } from './reads.ts';
 import { validateInput } from './validateInput.ts';
 import { verifyPost } from './verifyPost.ts';
 
@@ -20,19 +20,32 @@ function codeOf(f: () => unknown): ValidationCode | null {
   }
 }
 
+/** General Read の見本（Turn の Barrel、Big → Value-heavy） */
+const general = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
+  scope: 'general',
+  street: 'turn',
+  action: 'barrel',
+  texture: null,
+  runout: null,
+  size: 'big',
+  lean: 'value',
+  strong: false,
+  ...over,
+});
+
 describe('RD Reads の検証', () => {
   it('RD-01 省略・null は情報なし', () => {
     expect(validateReads(undefined, SEATS, 'BTN')).toEqual({});
     expect(validateReads(null, SEATS, 'BTN')).toEqual({});
   });
 
-  it('RD-02 全項目を入れた席はそのまま、中身の無い席は落とす', () => {
-    const r = validateReads(
-      { SB: { vpip: 30, pfr: 20, agg: 55, conf: 3, image: 1, memo: '  3bet 多め  ' }, BB: {}, CO: { memo: '  ' } },
-      SEATS,
-      'BTN',
-    );
-    expect(r).toEqual({ SB: { vpip: 30, pfr: 20, agg: 55, conf: 3, image: 1, memo: '3bet 多め' } });
+  it('RD-02 全項目を入れた席はそのまま、中身の無い席は落とす。Spot Read を先に、Runout は決まった順、空の texture は null', () => {
+    const spot = { scope: 'spot', street: 'flop', action: 'cbet', texture: null, runout: null, size: 'small', lean: 'over', strong: true };
+    const g = general({ texture: {}, runout: ['pair', 'over'] });
+    const r = validateReads({ SB: { vpip: 30, pfr: 20, agg: 1, image: 3, sample: 4, reads: [g, spot] }, BB: {}, CO: { reads: [] } }, SEATS, 'BTN');
+    expect(r).toEqual({
+      SB: { vpip: 30, pfr: 20, agg: 1, image: 3, sample: 4, reads: [spot, { ...g, texture: null, runout: ['over', 'pair'] }] },
+    });
   });
 
   it('RD-03 Hero の席・空席・席でないキーは malformed', () => {
@@ -42,19 +55,36 @@ describe('RD Reads の検証', () => {
     expect(codeOf(() => validateReads([], SEATS, 'BTN'))).toBe('malformed');
   });
 
-  it('RD-04 知らない項目・整数でない値・文字列の数は malformed', () => {
-    expect(codeOf(() => validateReads({ SB: { foo: 1 } }, SEATS, 'BTN'))).toBe('malformed');
+  it('RD-04 知らない項目（旧仕様の memo・conf を含む）・型の違い・選択肢の外は malformed', () => {
+    expect(codeOf(() => validateReads({ SB: { memo: 'x' } }, SEATS, 'BTN'))).toBe('malformed');
+    expect(codeOf(() => validateReads({ SB: { conf: 1 } }, SEATS, 'BTN'))).toBe('malformed');
     expect(codeOf(() => validateReads({ SB: { vpip: 20.5 } }, SEATS, 'BTN'))).toBe('malformed');
     expect(codeOf(() => validateReads({ SB: { vpip: '20' } }, SEATS, 'BTN'))).toBe('malformed');
-    expect(codeOf(() => validateReads({ SB: { memo: 1 } }, SEATS, 'BTN'))).toBe('malformed');
+    expect(codeOf(() => validateReads({ SB: { reads: {} } }, SEATS, 'BTN'))).toBe('malformed');
+    for (const bad of [
+      { scope: 'other' },
+      { street: 'preflop' },
+      { action: 'block_bet' },
+      { lean: 'gto' },
+      { strong: 1 },
+      { size: 'huge' },
+      { texture: { high: 'z' } },
+      { texture: { foo: 'a' } },
+      { runout: ['over', 'over'] },
+      { runout: 'over' },
+      { memo: 'x' },
+    ]) {
+      expect(codeOf(() => validateReads({ SB: { reads: [general(bad)] } }, SEATS, 'BTN')), JSON.stringify(bad)).toBe('malformed');
+    }
   });
 
-  it('RD-05 範囲の外は invalid_reads（% は 0〜100、段階は 0〜4）', () => {
+  it('RD-05 範囲の外は invalid_reads（% は 0〜100、5 分割は 0〜4）', () => {
     expect(codeOf(() => validateReads({ SB: { vpip: 101 } }, SEATS, 'BTN'))).toBe('invalid_reads');
     expect(codeOf(() => validateReads({ SB: { agg: -1 } }, SEATS, 'BTN'))).toBe('invalid_reads');
-    expect(codeOf(() => validateReads({ SB: { conf: 5 } }, SEATS, 'BTN'))).toBe('invalid_reads');
+    expect(codeOf(() => validateReads({ SB: { agg: 5 } }, SEATS, 'BTN'))).toBe('invalid_reads');
+    expect(codeOf(() => validateReads({ SB: { sample: 5 } }, SEATS, 'BTN'))).toBe('invalid_reads');
     expect(codeOf(() => validateReads({ SB: { image: 5 } }, SEATS, 'BTN'))).toBe('invalid_reads');
-    expect(validateReads({ SB: { vpip: 100, pfr: 0, agg: 0, conf: 0, image: 4 } }, SEATS, 'BTN').SB).toBeDefined();
+    expect(validateReads({ SB: { vpip: 100, pfr: 0, agg: 0, sample: 0, image: 4 } }, SEATS, 'BTN').SB).toBeDefined();
   });
 
   it('RD-06 PFR は VPIP を超えない（両方あるときだけ）', () => {
@@ -63,13 +93,51 @@ describe('RD Reads の検証', () => {
     expect(validateReads({ SB: { pfr: 40 } }, SEATS, 'BTN')).toEqual({ SB: { pfr: 40 } });
   });
 
-  it('RD-07 Memo は 30 文字まで（コードポイント数）。改行・NUL・対のないサロゲートは断る', () => {
-    expect(validateReads({ SB: { memo: 'あ'.repeat(MEMO_MAX) } }, SEATS, 'BTN').SB?.memo).toHaveLength(MEMO_MAX);
-    expect(validateReads({ SB: { memo: '🂡'.repeat(MEMO_MAX) } }, SEATS, 'BTN').SB?.memo).toBeDefined();
-    expect(codeOf(() => validateReads({ SB: { memo: 'あ'.repeat(MEMO_MAX + 1) } }, SEATS, 'BTN'))).toBe('invalid_reads');
-    expect(codeOf(() => validateReads({ SB: { memo: 'a\nb' } }, SEATS, 'BTN'))).toBe('invalid_reads');
-    expect(codeOf(() => validateReads({ SB: { memo: 'a\u0000b' } }, SEATS, 'BTN'))).toBe('invalid_reads');
-    expect(codeOf(() => validateReads({ SB: { memo: 'a\uD800b' } }, SEATS, 'BTN'))).toBe('invalid_reads');
+  it('RD-07 Street と Action、Action と Lean、条件の組み合わせの違反は invalid_reads', () => {
+    for (const bad of [
+      { street: 'flop', action: '3bet' },
+      { street: 'turn', action: 'cbet' },
+      { street: 'river', action: 'delayed_cbet' },
+      { action: 'fold_bet', size: null, lean: 'value' },
+      { street: 'pf', action: '3bet', size: null, texture: { high: 'a' } },
+      { street: 'flop', action: 'cbet', runout: ['brick'] },
+      { action: 'fold_barrel', lean: 'over', size: 'small' },
+      { street: 'pf', action: '3bet', size: 'overbet' },
+      { scope: 'spot', texture: { suit: 'mono' } },
+      { scope: 'spot', runout: ['flush'] },
+    ]) {
+      expect(codeOf(() => validateReads({ SB: { reads: [general(bad)] } }, SEATS, 'BTN')), JSON.stringify(bad)).toBe('invalid_reads');
+    }
+    // Spot Read は 1 件、General Read は 2 件まで
+    const spot = general({ scope: 'spot' });
+    expect(codeOf(() => validateReads({ SB: { reads: [spot, spot] } }, SEATS, 'BTN'))).toBe('invalid_reads');
+    expect(codeOf(() => validateReads({ SB: { reads: [general(), general(), general()] } }, SEATS, 'BTN'))).toBe('invalid_reads');
+    // 通るもの: Preflop の 3-Bet（Big → Value-heavy）、条件つきの Flop の C-Bet
+    const ok = [
+      general({ street: 'pf', action: '3bet', size: 'big' }),
+      general({ street: 'flop', action: 'cbet', size: null, lean: 'over', texture: { high: 'a', suit: 'two', paired: 'unpaired', connect: 'none' } }),
+    ];
+    expect(validateReads({ SB: { reads: ok } }, SEATS, 'BTN').SB?.reads).toHaveLength(2);
+  });
+});
+
+describe('RD-08 ハンドに照らした検証（verifyReads）', () => {
+  // H-S1 を BB の手番で出題（ターンの BTN b6.5 に向き合う）。BTN の候補は Flop の C-Bet（Small）とターンの Barrel（Big）
+  const spot = (over: Record<string, unknown>): Record<string, unknown> => general({ scope: 'spot', ...over });
+
+  it('Spot Read が判断地点より前の実際の Action（Street・Action・Size）に合えば通る', () => {
+    const raw: Raw = { ...hs1bb(), villain_reads: { BTN: { vpip: 30, reads: [spot({}), general({ street: 'river' })] }, SB: { reads: [spot({ street: 'pf', action: 'fold_steal', size: null, lean: 'under' })] } } };
+    expect(verifyPost(validateInput(raw)).reads.BTN?.reads?.[0]).toMatchObject({ scope: 'spot', action: 'barrel' });
+  });
+
+  it('Size が違う・判断地点より後・した事の無い Action の Spot Read は invalid_reads', () => {
+    for (const s of [spot({ size: 'small' }), spot({ street: 'river' }), spot({ street: 'flop', action: 'donk', size: 'small' })]) {
+      expect(codeOf(() => verifyPost(validateInput({ ...hs1bb(), villain_reads: { BTN: { reads: [s] } } }))), JSON.stringify(s)).toBe('invalid_reads');
+    }
+  });
+
+  it('登録できない席（Preflop で Fold しただけの UTG）は invalid_reads', () => {
+    expect(codeOf(() => verifyPost(validateInput({ ...hs1bb(), villain_reads: { UTG: { vpip: 20 } } })))).toBe('invalid_reads');
   });
 });
 
@@ -130,8 +198,8 @@ describe('RD-10 投稿の本文に入れる', () => {
   });
 
   it('Reads を付けた投稿', () => {
-    const raw: Raw = { ...hs1(), villain_reads: { BB: { vpip: 25, memo: 'sticky' } } };
-    expect(verifyPost(validateInput(raw)).reads).toEqual({ BB: { vpip: 25, memo: 'sticky' } });
+    const raw: Raw = { ...hs1(), villain_reads: { BB: { vpip: 25, sample: 3 } } };
+    expect(verifyPost(validateInput(raw)).reads).toEqual({ BB: { vpip: 25, sample: 3 } });
   });
 
   it('Hero（BTN）に Reads は malformed、Cash に MTT は invalid_mtt', () => {

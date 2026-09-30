@@ -31,6 +31,7 @@ import {
   truncateActions,
   undoAction,
   usedCards,
+  villainContext,
   type Draft,
 } from '../post/draft.ts';
 import { draftSlot, getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
@@ -175,11 +176,14 @@ export function NewPostScreen(): JSX.Element {
       onOpenHand={(p) => setSeat(p)}
     />
   );
-  // Villain・MTT の情報（全項目任意。18 章 §2）。基本設定・Player の下に置く
+  // Villain・MTT の情報（全項目任意。18 章 §2）。MTT は基本設定の下。Villain は登録できる席と Spot Read の候補が Action と Spot で決まるので、Spot の下に置く
   const mttSection = d.fmt === 'mtt' && <MttSection mtt={d.mtt} onChange={(mtt) => update((x) => ({ ...x, mtt }))} />;
+  const villain = villainContext(d);
   const villains = (
     <VillainSection
-      seats={seatsOf(d).filter((p) => p !== d.hero)}
+      seats={villain.seats}
+      hero={d.hero}
+      cands={villain.cands}
       reads={d.reads}
       onChange={(reads) => update((x) => ({ ...x, reads }))}
     />
@@ -298,11 +302,11 @@ export function NewPostScreen(): JSX.Element {
               {settings}
               {mttSection}
               {players}
-              {villains}
             </div>
             <div className="pf-col">{actions}</div>
             <div className="pf-col">
               {spot}
+              {villains}
               <ErrorList errors={errors} />
               {submitButton}
             </div>
@@ -341,9 +345,9 @@ export function NewPostScreen(): JSX.Element {
         {step === 0 && settings}
         {step === 0 && mttSection}
         {step === 1 && players}
-        {step === 1 && villains}
         {step === 2 && actions}
         {step === 3 && spot}
+        {step === 3 && villains}
         {/* 台を出している間は戻る・次へを隠す（13 章） */}
         {!seat && !docked && (
           <div className="pf-bar" ref={barRef}>

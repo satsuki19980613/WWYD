@@ -1,27 +1,76 @@
 /**
- * Villain の情報（Reads）と MTT の情報の検証（詳細仕様 18 章 §3）。全項目が任意。
+ * Villain の情報（Reads）と MTT の情報の検証（詳細仕様 18 章 §2.1・§3）。全項目が任意。
  * クライアント（送信前）と Neon Function `create-post` の両方がこの関数を使う（不変条件 4・7）。
- * 形が違う値は malformed、範囲・制約の違反は invalid_reads / invalid_mtt。
+ * 形が違う値は malformed、範囲・組み合わせの違反は invalid_reads / invalid_mtt。
+ * 2026-09-30 さつきの仕様変更: Memo を廃止し、選択肢を組み合わせる Read（[When] · [Action] → [Lean]）に置き換えた。
  */
-import { POSITIONS, type Pos } from '../constants.ts';
+import { POSITIONS, STREETS, type Pos, type Street } from '../constants.ts';
 import { fail } from '../errors.ts';
+import {
+  AGGRESSIVE_ACTIONS,
+  LEANS,
+  leansOf,
+  READ_ACTIONS,
+  READ_SIZES,
+  readCandidates,
+  sizesOf,
+  STREET_ACTIONS,
+  villainSeats,
+  type Lean,
+  type ReadAction,
+  type ReadSize,
+} from '../poker/readActions.ts';
+import type { Action, HandSetup } from '../poker/state.ts';
 import type { Fmt } from './validateInput.ts';
 
-/** Slider の項目。vpip・pfr・agg は 0〜100 の整数（%）、conf・image は 0〜4 の整数（5 段階） */
-export const READ_KEYS = ['vpip', 'pfr', 'agg', 'conf', 'image'] as const;
-export type ReadKey = (typeof READ_KEYS)[number];
+/** 全体の傾向の項目。vpip・pfr は 0〜100 の整数（%。Slider）、agg・image・sample は 0〜4 の整数（5 分割のボタン） */
+export const TENDENCY_KEYS = ['vpip', 'pfr', 'agg', 'image', 'sample'] as const;
+export type TendencyKey = (typeof TENDENCY_KEYS)[number];
 
-/** 数値（%）で持つ Slider（HUD の値をそのまま入れられる） */
-export const PERCENT_READS: readonly ReadKey[] = ['vpip', 'pfr', 'agg'];
+/** 数値（%）で持つ項目（HUD の値をそのまま入れられる） */
+export const PERCENT_READS: readonly TendencyKey[] = ['vpip', 'pfr'];
 export const PERCENT_MAX = 100;
-/** 5 段階だけで持つ Slider の最大（0〜4） */
+/** 5 分割の項目の最大（0〜4） */
 export const STEP_MAX = 4;
 
-/** Memo の最大文字数（コードポイント数） */
-export const MEMO_MAX = 30;
+export type Tendency = Partial<Record<TendencyKey, number>>;
 
-/** 1 席分の情報。無い項目は未入力 */
-export type VillainRead = Partial<Record<ReadKey, number>> & { memo?: string };
+/** Flop texture（Flop の時点の Board。軸ごとに 0〜1 つ。§2.1.3） */
+export const TEXTURE_AXES = {
+  high: ['a', 'k', 'qj', 'mid', 'low'],
+  suit: ['rainbow', 'two', 'mono'],
+  paired: ['unpaired', 'paired'],
+  connect: ['straight', 'none'],
+} as const;
+export type TextureAxis = keyof typeof TEXTURE_AXES;
+export const TEXTURE_KEYS = Object.keys(TEXTURE_AXES) as TextureAxis[];
+export type Texture = { [K in TextureAxis]?: (typeof TEXTURE_AXES)[K][number] };
+
+/** Runout（Turn・River だけ。その Street で落ちたカードについて。複数選べる） */
+export const RUNOUTS = ['brick', 'over', 'flush', 'straight', 'pair'] as const;
+export type Runout = (typeof RUNOUTS)[number];
+
+export const READ_SCOPES = ['spot', 'general'] as const;
+export type ReadScope = (typeof READ_SCOPES)[number];
+
+/** Read 1 件 */
+export type ReadEntry = {
+  scope: ReadScope;
+  street: Street;
+  action: ReadAction;
+  texture: Texture | null;
+  runout: Runout[] | null;
+  size: ReadSize | null;
+  lean: Lean;
+  strong: boolean;
+};
+
+/** Spot Read は 1 席 1 件、General Read は 1 席 2 件まで */
+export const SPOT_READ_MAX = 1;
+export const GENERAL_READ_MAX = 2;
+
+/** 1 席分の情報。無い項目は未入力、Read が無ければ `reads` を持たない */
+export type VillainRead = Tendency & { reads?: ReadEntry[] };
 /** 席ごとの情報（Hero と空席は持たない。情報の無い席はキーを持たない） */
 export type VillainReads = Partial<Record<Pos, VillainRead>>;
 
@@ -57,52 +106,113 @@ export type MttInfo = {
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isPos = (v: string): v is Pos => (POSITIONS as readonly string[]).includes(v);
+const oneOf = <T extends string>(v: unknown, all: readonly T[]): v is T => typeof v === 'string' && (all as readonly string[]).includes(v);
 
-// DB（jsonb）が受け付けない文字（validateInput の題名と同じ）と、1 行にならない制御文字
-const UNSTORABLE = /\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
-const CONTROL = /[\u0000-\u001F\u007F]/;
+const ENTRY_KEYS = ['scope', 'street', 'action', 'texture', 'runout', 'size', 'lean', 'strong'] as const;
 
-/** Memo を保存する形に（前後の空白を除く。空なら undefined）。文字数・文字の違反は invalid_reads */
-export function normalizeMemo(v: string): string | undefined {
-  const memo = v.trim();
-  if (memo === '') return undefined;
-  if ([...memo].length > MEMO_MAX || UNSTORABLE.test(memo) || CONTROL.test(memo)) fail('invalid_reads', undefined, 'memo');
-  return memo;
+/** Read 1 件の検証（形は malformed、Street・Action・Lean・条件の組み合わせは invalid_reads） */
+function validateEntry(v: unknown, at: string): ReadEntry {
+  if (!isObj(v)) fail('malformed', undefined, at);
+  for (const k of Object.keys(v)) if (!(ENTRY_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `${at}.${k}`);
+  const { scope, street, action, lean, strong } = v;
+  if (!oneOf(scope, READ_SCOPES)) fail('malformed', undefined, `${at}.scope`);
+  if (!oneOf(street, STREETS)) fail('malformed', undefined, `${at}.street`);
+  if (!oneOf(action, READ_ACTIONS)) fail('malformed', undefined, `${at}.action`);
+  if (!oneOf(lean, LEANS)) fail('malformed', undefined, `${at}.lean`);
+  if (typeof strong !== 'boolean') fail('malformed', undefined, `${at}.strong`);
+
+  let texture: Texture | null = null;
+  if (v.texture !== undefined && v.texture !== null) {
+    const t = v.texture;
+    if (!isObj(t)) fail('malformed', undefined, `${at}.texture`);
+    const out: Record<string, string> = {};
+    for (const k of TEXTURE_KEYS) {
+      const x = t[k];
+      if (x === undefined) continue;
+      if (!oneOf(x, TEXTURE_AXES[k])) fail('malformed', undefined, `${at}.texture.${k}`);
+      out[k] = x;
+    }
+    if (Object.keys(t).some((k) => !(TEXTURE_KEYS as string[]).includes(k))) fail('malformed', undefined, `${at}.texture`);
+    if (Object.keys(out).length > 0) texture = out as Texture;
+  }
+  let runout: Runout[] | null = null;
+  if (v.runout !== undefined && v.runout !== null) {
+    const r = v.runout;
+    if (!Array.isArray(r) || !r.every((x) => oneOf(x, RUNOUTS)) || new Set(r).size !== r.length) fail('malformed', undefined, `${at}.runout`);
+    if (r.length > 0) runout = RUNOUTS.filter((x) => r.includes(x));
+  }
+  let size: ReadSize | null = null;
+  if (v.size !== undefined && v.size !== null) {
+    if (!oneOf(v.size, READ_SIZES)) fail('malformed', undefined, `${at}.size`);
+    size = v.size;
+  }
+
+  // 組み合わせ（表 2 枚と条件の決まり）
+  if (!STREET_ACTIONS[street].includes(action)) fail('invalid_reads', undefined, `${at}: ${street} に ${action} は無い`);
+  if (!leansOf(action).includes(lean)) fail('invalid_reads', undefined, `${at}: ${action} に ${lean} は選べない`);
+  if (texture && street === 'pf') fail('invalid_reads', undefined, `${at}: Preflop に texture`);
+  if (runout && street !== 'turn' && street !== 'river') fail('invalid_reads', undefined, `${at}: runout は Turn・River だけ`);
+  if (size && (!AGGRESSIVE_ACTIONS.includes(action) || !sizesOf(street).includes(size))) fail('invalid_reads', undefined, `${at}: size`);
+  // Spot Read は Board を入れない（実際の Board が画面にある）
+  if (scope === 'spot' && (texture || runout)) fail('invalid_reads', undefined, `${at}: Spot Read に条件`);
+  return { scope, street, action, texture, runout, size, lean, strong };
 }
 
 /**
- * Reads の検証。`seats` は座っている席、`hero` は Hero の席。
+ * Reads の形の検証。`seats` は座っている席、`hero` は Hero の席。
  * 省略（undefined・null）は情報なし（{}）。中身の無い席は落とす。
+ * 席が登録できる席か・Spot Read が実際の Action に合うかは、ハンドを再生したあとの `verifyReads` で確かめる。
  */
 export function validateReads(raw: unknown, seats: readonly Pos[], hero: Pos): VillainReads {
   if (raw === undefined || raw === null) return {};
   if (!isObj(raw)) fail('malformed', undefined, 'villain_reads');
   const out: VillainReads = {};
   for (const [seat, v] of Object.entries(raw)) {
-    if (!isPos(seat) || !seats.includes(seat) || seat === hero) fail('malformed', undefined, `villain_reads.${seat}`);
-    if (!isObj(v)) fail('malformed', undefined, `villain_reads.${seat}`);
+    const at = `villain_reads.${seat}`;
+    if (!isPos(seat) || !seats.includes(seat) || seat === hero) fail('malformed', undefined, at);
+    if (!isObj(v)) fail('malformed', undefined, at);
     const read: VillainRead = {};
     for (const [k, x] of Object.entries(v)) {
-      if (k === 'memo') {
-        if (typeof x !== 'string') fail('malformed', undefined, `villain_reads.${seat}.memo`);
-        const memo = normalizeMemo(x);
-        if (memo !== undefined) read.memo = memo;
+      if (k === 'reads') {
+        if (!Array.isArray(x)) fail('malformed', undefined, `${at}.reads`);
+        const entries = x.map((e, i) => validateEntry(e, `${at}.reads[${i}]`));
+        if (entries.filter((e) => e.scope === 'spot').length > SPOT_READ_MAX) fail('invalid_reads', undefined, `${at}: Spot Read が多い`);
+        if (entries.filter((e) => e.scope === 'general').length > GENERAL_READ_MAX) fail('invalid_reads', undefined, `${at}: General Read が多い`);
+        // Spot Read を先に
+        if (entries.length > 0) read.reads = [...entries.filter((e) => e.scope === 'spot'), ...entries.filter((e) => e.scope === 'general')];
         continue;
       }
-      if (!(READ_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `villain_reads.${seat}.${k}`);
-      const key = k as ReadKey;
-      if (typeof x !== 'number' || !Number.isInteger(x)) fail('malformed', undefined, `villain_reads.${seat}.${k}`);
+      if (!(TENDENCY_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `${at}.${k}`);
+      const key = k as TendencyKey;
+      if (typeof x !== 'number' || !Number.isInteger(x)) fail('malformed', undefined, `${at}.${k}`);
       const max = PERCENT_READS.includes(key) ? PERCENT_MAX : STEP_MAX;
-      if (x < 0 || x > max) fail('invalid_reads', undefined, `villain_reads.${seat}.${k}`);
+      if (x < 0 || x > max) fail('invalid_reads', undefined, `${at}.${k}`);
       read[key] = x;
     }
     // PFR は VPIP を超えない（両方あるときだけ）
     if (read.vpip !== undefined && read.pfr !== undefined && read.pfr > read.vpip) {
-      fail('invalid_reads', undefined, `villain_reads.${seat} の PFR が VPIP を超える`);
+      fail('invalid_reads', undefined, `${at} の PFR が VPIP を超える`);
     }
     if (Object.keys(read).length > 0) out[seat] = read;
   }
   return out;
+}
+
+/**
+ * ハンドに照らした Reads の検証（create-post はハンドを再生したあとに呼ぶ。18 章 §3）:
+ * 情報を登録できる席（`villainSeats`）だけか、Spot Read が Hero の判断地点より前の実際の Action（Street・Action・Size）に合うか。
+ */
+export function verifyReads(reads: VillainReads, setup: HandSetup, actions: readonly Action[], hero: Pos, spotIndex: number): void {
+  const eligible = villainSeats(setup, actions, hero);
+  const cands = readCandidates(setup, actions, hero, spotIndex);
+  for (const [seat, read] of Object.entries(reads) as [Pos, VillainRead][]) {
+    if (!eligible.includes(seat)) fail('invalid_reads', undefined, `villain_reads.${seat}: 登録できない席`);
+    for (const e of read.reads ?? []) {
+      if (e.scope !== 'spot') continue;
+      const ok = cands.some((c) => c.pos === seat && c.street === e.street && c.action === e.action && c.size === e.size);
+      if (!ok) fail('invalid_reads', undefined, `villain_reads.${seat}: Spot Read が実際の Action に合わない`);
+    }
+  }
 }
 
 const MTT_KEYS = ['speed', 'rank', 'left', 'paid', 'entries', 'avg', 'prize'] as const;
