@@ -7,9 +7,9 @@
     <meta name="color-scheme" content="dark" />
     <title>WWYD</title>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <!-- ホーム画面に追加したときのアイコン（iPhone は apple-touch-icon、Android は manifest。scripts/genIcons.mjs で icon.svg から作る） -->
+    <!-- ホーム画面に追加したときのアイコン（scripts/genIcons.mjs で icon.svg から作る）。manifest は置かない:
+         置くと Android の Chrome がインストールできるかを調べ「このアプリはインストールできません」と出る（2026-10-01。ブラウザで開くままにするため） -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body>
     <div id="root"></div>
