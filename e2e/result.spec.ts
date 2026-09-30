@@ -318,9 +318,16 @@ test('PC の Hand History は卓の下に横一列（横にスクロール。押
   const tops = await strip.locator('li').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
   expect(new Set(tops).size).toBe(1);
   // 最後の手まで送ってある
-  const m = await strip.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, left: e.scrollLeft }));
-  // FitStage の zoom で scrollLeft は小数になるので 2px まで許す（post.spec.ts と同じ）
-  expect(m.left + m.cw).toBeGreaterThanOrEqual(m.sw - 2);
+  // 最新の手のカードが枠の中に欠けずに見えている。scrollLeft などの数値は FitStage の zoom で見た目と合わないことがある
+  // （CI の Linux で、見た目は右端でも 10px 足りない値になった）ので、要素の位置で確かめる
+  const edge = await strip.evaluate((e) => {
+    const s = e.getBoundingClientRect();
+    const items = e.querySelectorAll('li');
+    const l = (items[items.length - 1] as HTMLElement).getBoundingClientRect();
+    return { right: l.right - s.right, left: l.left - s.left };
+  });
+  expect(edge.right).toBeLessThanOrEqual(1);
+  expect(edge.left).toBeGreaterThanOrEqual(-1);
   // 卓は縦長にしない（460px まで）
   const t = await page.locator('.ans-replay .ptable').boundingBox();
   expect(t!.height).toBeLessThanOrEqual(461);
