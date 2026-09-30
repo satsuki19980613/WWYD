@@ -99,9 +99,10 @@ describe('MT MTT の情報の検証', () => {
     expect(codeOf(() => validateMtt('bubble', 'mtt'))).toBe('malformed');
   });
 
-  it('MT-05 Tournament Type は 0〜4、人数は 1 以上、Avg Stack は 0 より大きく小数第 1 位まで', () => {
+  it('MT-05 Tournament Type は 0〜100、人数は 1 以上、Avg Stack は 0 より大きく小数第 1 位まで', () => {
     expect(codeOf(() => validateMtt({ rank: 0 }, 'mtt'))).toBe('invalid_mtt');
-    expect(codeOf(() => validateMtt({ speed: 5 }, 'mtt'))).toBe('invalid_mtt');
+    expect(codeOf(() => validateMtt({ speed: 101 }, 'mtt'))).toBe('invalid_mtt');
+    expect(validateMtt({ speed: 100 }, 'mtt')).toEqual({ speed: 100 });
     expect(codeOf(() => validateMtt({ speed: -1 }, 'mtt'))).toBe('invalid_mtt');
     expect(validateMtt({ speed: 0 }, 'mtt')).toEqual({ speed: 0 });
     expect(codeOf(() => validateMtt({ entries: 1_000_001 }, 'mtt'))).toBe('invalid_mtt');

@@ -25,8 +25,11 @@ export type VillainRead = Partial<Record<ReadKey, number>> & { memo?: string };
 /** 席ごとの情報（Hero と空席は持たない。情報の無い席はキーを持たない） */
 export type VillainReads = Partial<Record<Pos, VillainRead>>;
 
-/** Tournament Type（ストラクチャーの速さ。Deep〜Turbo の 5 段階 0〜4。2026-09-30 さつき: Stage と Regular/PKO/Satellite の選択をやめた） */
-export const SPEED_MAX = 4;
+/**
+ * Tournament Type（ストラクチャーの速さ。0 = Deep 〜 100 = Turbo の連続した値。段階は付けない。
+ * 2026-09-30 さつき: Stage と Regular/PKO/Satellite の選択をやめ、左端 Deep・右端 Turbo の Slider にした）
+ */
+export const SPEED_MAX = 100;
 export const PRIZE_STRUCTURES = ['top', 'standard', 'flat'] as const;
 export type PrizeStructure = (typeof PRIZE_STRUCTURES)[number];
 
@@ -36,7 +39,7 @@ export const MTT_COUNT_MAX = 1_000_000;
 export const MTT_AVG_MAX = 99_999;
 
 export type MttInfo = {
-  /** Tournament Type（0 = Deep 〜 4 = Turbo） */
+  /** Tournament Type（0 = Deep 〜 100 = Turbo） */
   speed?: number;
   /** スポットの順位 */
   rank?: number;

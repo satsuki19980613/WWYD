@@ -18,7 +18,7 @@ const READS = {
   BTN: { vpip: 32, pfr: 25, agg: 72, conf: 4, image: 3, memo: '3bet 多め' },
   UTG: { vpip: 12 },
 };
-const MTT = { speed: 4, rank: 12, left: 58, paid: 50, entries: 320, avg: 35, prize: 'top' };
+const MTT = { speed: 80, rank: 12, left: 58, paid: 50, entries: 320, avg: 35, prize: 'top' };
 
 function detail(over: Partial<Raw> = {}): Record<string, unknown> {
   return detailJson({ ...hs1bb(), ...over }, { viewer: 'unanswered', id: ID });
@@ -76,10 +76,12 @@ for (const v of ['', ' @sp'] as const) {
 
     await page.getByRole('button', { name: 'MTT', exact: true }).click();
     const mtt = page.getByRole('dialog', { name: 'MTT' });
-    // Tournament Type は Slider の表示（段階のラベルとバー）
+    // Tournament Type
     await expect(mtt).toContainText('Tournament Type');
     await expect(mtt).toContainText('Turbo');
-    await expect(mtt.locator('.rv-bar')).toHaveCount(1);
+    // 表示も Slider そのもの（段階のラベルは無く、左右に Deep・Turbo。80 の位置）
+    await expect(mtt.locator('.rv-slider .rs-ends span')).toHaveText(['Deep', 'Turbo']);
+    expect(await mtt.locator('.rv-slider .rs-thumb').evaluate((el) => (el as HTMLElement).style.left)).toBe('80%');
     await expect(mtt).toContainText('順位 / 残りの人数');
     await expect(mtt).toContainText('12/58 ・ ITM 50 ・ 320 entries');
     await expect(mtt).toContainText('35bb');
@@ -247,7 +249,7 @@ test('投稿: Preset に保存・呼び出し・削除（端末だけ）', async
   await expect(page.getByRole('dialog', { name: 'Preset · SB' }).getByRole('listitem')).toHaveCount(0);
 });
 
-test('投稿: MTT の欄は Game 形式が MTT のときだけ。Tournament Type は Deep〜Turbo の Slider、数の欄は日本語の 5 つ @sp', async ({ page }) => {
+test('投稿: MTT の欄は Game 形式が MTT のときだけ。Tournament Type は左端 Deep・右端 Turbo の段階の無い Slider、数の欄は日本語の 5 つ @sp', async ({ page }) => {
   await openNew(page);
   await step(page, S_SETTINGS);
   const speed = page.getByRole('slider', { name: 'Tournament Type' });
@@ -260,9 +262,12 @@ test('投稿: MTT の欄は Game 形式が MTT のときだけ。Tournament Type
   await expect(speed).toHaveAttribute('aria-valuetext', '未入力');
   await speed.focus();
   await page.keyboard.press('End');
-  await expect(speed).toHaveAttribute('aria-valuetext', 'Turbo');
+  await expect(speed).toHaveAttribute('aria-valuetext', '100 / 100（Deep 0 〜 Turbo 100）');
   await page.keyboard.press('Home');
-  await expect(speed).toHaveAttribute('aria-valuetext', 'Deep');
+  await expect(speed).toHaveAttribute('aria-valuetext', '0 / 100（Deep 0 〜 Turbo 100）');
+  // 段階のラベル・目盛りは無く、溝の下の左右に Deep と Turbo
+  await expect(page.locator('.rs.ends .rs-tick')).toHaveCount(0);
+  await expect(page.locator('.rs.ends .rs-ends span')).toHaveText(['Deep', 'Turbo']);
   await page.getByRole('button', { name: 'Tournament Type をリセット' }).click();
   await expect(speed).toHaveAttribute('aria-valuetext', '未入力');
   // 数の欄は 5 つ（日本語の名前）
@@ -279,7 +284,7 @@ test('投稿: 送る本文に Villain（Hero 以外）と MTT の情報が入り
   const { cp } = await openNew(page);
   await page.getByRole('group', { name: 'Game 形式' }).getByRole('button', { name: 'MTT' }).click();
   await page.getByRole('slider', { name: 'Tournament Type' }).focus();
-  await page.keyboard.press('ArrowRight'); // 未入力の最初の矢印は真ん中（Regular）
+  await page.keyboard.press('ArrowRight'); // 未入力の最初の矢印は真ん中（50）
   await page.getByRole('textbox', { name: 'スポットの順位' }).fill('12');
   await page.getByRole('textbox', { name: '残りの人数' }).fill('58');
   await page.getByRole('group', { name: 'Prize Structure' }).getByRole('button', { name: /Flat/ }).click();
@@ -295,7 +300,7 @@ test('投稿: 送る本文に Villain（Hero 以外）と MTT の情報が入り
   await expect.poll(() => cp.calls.length).toBe(1);
   const body = cp.calls[0]?.body ?? {};
   expect(body.villain_reads).toEqual({ BB: { vpip: 40, memo: 'sticky' } });
-  expect(body.mtt).toEqual({ speed: 2, rank: 12, left: 58, prize: 'flat' });
+  expect(body.mtt).toEqual({ speed: 50, rank: 12, left: 58, prize: 'flat' });
 });
 
 test('一覧: Reads・MTT の印（スマホのカードは 3 段） @sp', async ({ page }) => {

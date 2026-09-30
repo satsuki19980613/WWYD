@@ -188,3 +188,21 @@
 .spot-t2 .pcard.sm { width: 19px; height: 26px; font-size: 11px; }
 .spot-t2 .pcard.sm em { font-size: 8px; }
 .spot-t2 .street-badge { padding: 1px 6px; }
+
+/* 段階を付けない Slider（Tournament Type）: 目盛りを出さず、溝の下の左右に両端の名前（Deep・Turbo）。表示の画面も同じ形 */
+.rs.ends .rs-head { min-height: 24px; }
+.rs-ends {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0 0;
+  font-family: var(--disp);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}
+.rv-slider { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 6px; }
+.rv-slider .rs-rail { flex: none; margin: 0 7px; background: var(--surface-3); }
+.rv-slider .rs-fill { background: var(--cyan); }
+.rv-slider .rs-thumb { width: 12px; height: 12px; background: var(--cyan); box-shadow: 0 0 0 2px var(--bg); }
+.rv-slider .rs-ends { margin: 0; font-size: 12px; }

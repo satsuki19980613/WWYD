@@ -1,6 +1,7 @@
 import { READ_KEYS, type Action, type MttInfo, type Pos, type VillainRead, type VillainReads } from '@wwyd/core';
 import { useState } from 'react';
 import { Modal } from '../components/Modal.tsx';
+import { SliderEnds } from './ReadSlider.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import {
   defLabel,
@@ -30,6 +31,27 @@ function SliderRow(props: { def: SliderDef; value: number }): JSX.Element {
         <span className="rv-label">{defLabel(def, value)}</span>
         <span className="rv-bar" aria-hidden="true">
           <i style={{ width: `${Math.max(value / def.max, 0.02) * 100}%` }} />
+        </span>
+      </dd>
+    </div>
+  );
+}
+
+/** 段階を付けない Slider（Tournament Type）の表示: Slider そのもの（動かせない）と両端の名前 */
+function EndsRow(props: { def: SliderDef; value: number }): JSX.Element {
+  const { def, value } = props;
+  const ratio = Math.min(1, Math.max(0, value / def.max));
+  const ends = def.ends ?? ['', ''];
+  return (
+    <div className="rv-row">
+      <dt className="mono-lbl">{def.name}</dt>
+      <dd>
+        <span className="rv-slider" role="img" aria-label={`${def.name} ${value} / ${def.max}（${ends[0]} 0 〜 ${ends[1]} ${def.max}）`}>
+          <span className="rs-rail">
+            <i className="rs-fill" style={{ width: `${ratio * 100}%` }} />
+            <i className="rs-thumb" style={{ left: `${ratio * 100}%` }} />
+          </span>
+          <SliderEnds ends={ends} />
         </span>
       </dd>
     </div>
@@ -90,7 +112,7 @@ function AllVillains(props: { seats: readonly Pos[]; hero: Pos; actions: readonl
   );
 }
 
-/** MTT の情報。Tournament Type は Slider の表示、人数は「12/58 ・ ITM 50 ・ 320 entries」に「順位 / 残りの人数」の見出し（18 章 §5.2） */
+/** MTT の情報。Tournament Type は Slider そのもの（左端 Deep・右端 Turbo）、人数は「12/58 ・ ITM 50 ・ 320 entries」に「順位 / 残りの人数」の見出し（18 章 §5.2） */
 export function MttView(props: { mtt: MttInfo }): JSX.Element {
   const m = props.mtt;
   const counts = mttCountsLine(m);
@@ -116,7 +138,7 @@ export function MttView(props: { mtt: MttInfo }): JSX.Element {
     });
   return (
     <dl className="rv-list">
-      {m.speed !== undefined && <SliderRow def={SPEED_DEF} value={m.speed} />}
+      {m.speed !== undefined && <EndsRow def={SPEED_DEF} value={m.speed} />}
       {rows.map((r) => (
         <div key={r.k} className="rv-row">
           <dt className="mono-lbl">{r.k}</dt>

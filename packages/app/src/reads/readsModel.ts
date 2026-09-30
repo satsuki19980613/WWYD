@@ -27,8 +27,16 @@ import {
  * Slider の定義（Villain の情報と MTT の Tournament Type で共通）。`cuts` は段階の境目（% の値。値がこれ以上なら次の段階）。
  * 段階だけの項目は null（値がそのまま段階 0〜`max`）。% の項目は 0〜100 で、数を直接入れられる
  */
-export type SliderDef = { name: string; labels: readonly [string, string, string, string, string]; cuts: readonly number[] | null; max: number };
-export type ReadDef = SliderDef & { key: ReadKey };
+export type SliderDef = {
+  name: string;
+  /** 5 段階のラベル（段階を付けない Slider には無い） */
+  labels?: readonly [string, string, string, string, string];
+  cuts: readonly number[] | null;
+  max: number;
+  /** 段階を付けず、両端に名前を出す Slider（Tournament Type の Deep・Turbo） */
+  ends?: readonly [string, string];
+};
+export type ReadDef = SliderDef & { key: ReadKey; labels: readonly [string, string, string, string, string] };
 
 /** 5 段階の境目（2026-09-30 さつき: Claude の案。6-max の一般的な目安。18 章 §2.1） */
 export const READ_DEFS: readonly ReadDef[] = [
@@ -51,20 +59,15 @@ export const READ_DEFS: readonly ReadDef[] = [
   { key: 'image', name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], cuts: null, max: STEP_MAX },
 ];
 
-/** MTT の Tournament Type（ストラクチャーの速さ。Deep〜Turbo の 5 段階。2026-09-30 さつき） */
-export const SPEED_DEF: SliderDef = {
-  name: 'Tournament Type',
-  labels: ['Deep', 'Semi-Deep', 'Regular', 'Semi-Turbo', 'Turbo'],
-  cuts: null,
-  max: SPEED_MAX,
-};
+/** MTT の Tournament Type（ストラクチャーの速さ。段階を付けず、左端 Deep・右端 Turbo。表示も Slider。2026-09-30 さつき） */
+export const SPEED_DEF: SliderDef = { name: 'Tournament Type', cuts: null, max: SPEED_MAX, ends: ['Deep', 'Turbo'] };
 
 /** Slider の値の段階（0〜4）とラベル */
 export function defLevel(def: SliderDef, value: number): number {
   if (!def.cuts) return Math.min(def.max, Math.max(0, Math.round(value)));
   return def.cuts.filter((c) => value >= c).length;
 }
-export const defLabel = (def: SliderDef, value: number): string => def.labels[defLevel(def, value)] as string;
+export const defLabel = (def: SliderDef, value: number): string => def.labels?.[defLevel(def, value)] ?? '';
 export const defPercent = (def: SliderDef): boolean => def.cuts !== null;
 /** 未入力の Slider をキーボードで最初に動かしたときの値（真ん中） */
 export const defMiddle = (def: SliderDef): number => Math.round(def.max / 2);
@@ -202,7 +205,7 @@ export const PRIZE_HINT: Record<PrizeStructure, string> = { top: '1st ≥ 25%', 
 
 /** 投稿画面の MTT の欄（数の欄は入力のままの文字列） */
 export type MttDraft = {
-  /** Tournament Type（0 = Deep 〜 4 = Turbo。null は未入力） */
+  /** Tournament Type（0 = Deep 〜 100 = Turbo。null は未入力） */
   speed: number | null;
   prize: PrizeStructure | null;
   rank: string;

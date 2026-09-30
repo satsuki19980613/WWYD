@@ -4,7 +4,8 @@ import { defLabel, defMiddle, defPercent, type SliderDef } from './readsModel.ts
 /**
  * Villain の情報と MTT の Tournament Type の Slider（詳細仕様 18 章 §2.2）。初めは未入力（つまみを出さない）。触ると入力になり、× で未入力に戻す。
  * 表示は 5 段階のラベル。VPIP・PFR・Postflop Aggression は数（%）を押して直接入れられる（HUD の値）。
- * 横になぞって動かす（縦のスクロールは妨げない）。キーボードは ←→ で 1、PageUp/Down で 10、Delete で未入力。
+ * `def.ends` のある Slider（Tournament Type）は段階も目盛りも付けず、溝の下の左右に両端の名前（Deep・Turbo）を出す。
+ * 横になぞって動かす（縦のスクロールは妨げない）。キーボードは ←→ で 1、PageUp/Down で 10（段階だけの項目は 1）、Delete で未入力。
  */
 export function ReadSlider(props: {
   def: SliderDef;
@@ -20,6 +21,7 @@ export function ReadSlider(props: {
   const [editing, setEditing] = useState(false);
   const set = value !== undefined;
   const ratio = set ? value / max : 0;
+  const ends = def.ends;
   const label = set ? defLabel(def, value) : '—';
 
   const at = (clientX: number): void => {
@@ -46,7 +48,7 @@ export function ReadSlider(props: {
       return;
     }
     const base = value ?? defMiddle(def);
-    const big = percent ? 10 : 1;
+    const big = max >= 20 ? 10 : 1;
     const moves: Record<string, number> = {
       ArrowRight: base + 1,
       ArrowUp: base + 1,
@@ -65,13 +67,14 @@ export function ReadSlider(props: {
   };
 
   // 段階の境目の目盛り（% の項目は境目の値、段階だけの項目は 5 つの点）
-  const ticks = def.cuts ? def.cuts.map((c) => c / max) : Array.from({ length: max - 1 }, (_, i) => (i + 1) / max);
+  const ticks = ends ? [] : def.cuts ? def.cuts.map((c) => c / max) : Array.from({ length: max - 1 }, (_, i) => (i + 1) / max);
+  const valueText = !set ? '未入力' : ends ? `${value} / ${max}（${ends[0]} 0 〜 ${ends[1]} ${max}）` : percent ? `${label} ${value}%` : label;
 
   return (
-    <div className={`rs${set ? ' set' : ''}`}>
+    <div className={`rs${set ? ' set' : ''}${ends ? ' ends' : ''}`}>
       <div className="rs-head">
         <span className="mono-lbl rs-name">{def.name}</span>
-        <span className="rs-label">{label}</span>
+        <span className="rs-label">{ends ? '' : label}</span>
         {percent &&
           (editing ? (
             <NumberEdit value={value} max={max} name={def.name} onDone={(v) => {
@@ -101,7 +104,7 @@ export function ReadSlider(props: {
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
-        aria-valuetext={set ? (percent ? `${label} ${value}%` : label) : '未入力'}
+        aria-valuetext={valueText}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
@@ -116,6 +119,17 @@ export function ReadSlider(props: {
           {set && <i className="rs-thumb" style={{ left: `${ratio * 100}%` }} />}
         </span>
       </div>
+      {ends && <SliderEnds ends={ends} />}
+    </div>
+  );
+}
+
+/** 段階を付けない Slider の両端の名前（左・右）。表示の画面でも使う */
+export function SliderEnds(props: { ends: readonly [string, string] }): JSX.Element {
+  return (
+    <div className="rs-ends" aria-hidden="true">
+      <span>{props.ends[0]}</span>
+      <span>{props.ends[1]}</span>
     </div>
   );
 }

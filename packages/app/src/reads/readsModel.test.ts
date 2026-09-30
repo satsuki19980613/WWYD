@@ -25,7 +25,6 @@ import {
   villainOrder,
 } from './readsModel.ts';
 
-const labelOfSpeed = (v: number): string => defLabel(SPEED_DEF, v);
 
 describe('段階のラベル（18 章 §2.1）', () => {
   it('VPIP の境目', () => {
@@ -99,11 +98,11 @@ describe('MTT の欄（18 章 §2.3・§2.4）', () => {
     expect(parseMtt(m)).toEqual({ info: { speed: 4, rank: 12, left: 58, entries: 320, paid: 50, avg: 32.5 }, invalid: [] });
     expect(parseMtt({ ...emptyMtt(), rank: '1.5', avg: '3.25', entries: '0' }).invalid).toEqual(['rank', 'entries', 'avg']);
   });
-  it('Tournament Type は Deep〜Turbo の 5 段階。0（Deep）も入力として送る', () => {
+  it('Tournament Type は 0（Deep）〜 100（Turbo）の連続した値で、段階を付けない。0 も入力として送る', () => {
     expect(parseMtt({ ...emptyMtt(), speed: 0 })).toEqual({ info: { speed: 0 }, invalid: [] });
-    expect(labelOfSpeed(0)).toBe('Deep');
-    expect(labelOfSpeed(2)).toBe('Regular');
-    expect(labelOfSpeed(4)).toBe('Turbo');
+    expect(parseMtt({ ...emptyMtt(), speed: 100 })).toEqual({ info: { speed: 100 }, invalid: [] });
+    expect(SPEED_DEF.ends).toEqual(['Deep', 'Turbo']);
+    expect(defLabel(SPEED_DEF, 70)).toBe(''); // 段階のラベルは付けない
   });
   it('数の欄の名前は日本語（スポットの順位・残りの人数・エントリー数・ITM・Avg Stack の順）', () => {
     expect(MTT_FIELDS.map((f) => MTT_FIELD_LABEL[f])).toEqual(['スポットの順位', '残りの人数', 'エントリー数', 'ITM', 'Avg Stack（bb）']);
@@ -159,7 +158,7 @@ describe('下書きの読み直し（前の版の下書き・壊れた値）', (
   it('範囲の外・型の違う値は捨て、PFR が VPIP を超えていれば PFR を捨てる', () => {
     const d = sanitizeDraft({
       reads: { SB: { vpip: 20, pfr: 30, agg: 101, conf: 2 }, XX: { vpip: 1 }, BB: 'x' },
-      mtt: { stage: 'bubble', type: 'pko', speed: 9, prize: 'flat', rank: 3 },
+      mtt: { stage: 'bubble', type: 'pko', speed: 150, prize: 'flat', rank: 3 },
     });
     expect(d.reads).toEqual({ SB: { vpip: 20, conf: 2 } });
     expect(d.mtt).toEqual({ ...emptyMtt(), prize: 'flat' });
