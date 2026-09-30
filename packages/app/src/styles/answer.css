@@ -243,6 +243,9 @@
   height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  /* 右端の余白。FitStage の zoom の下では横の中身の幅がわずかに小さく計算されることがあり（CI の Linux で 11px）、
+     右端まで送っても最後のカードが欠けた（2026-09-30）ので、その分の空きを取る */
+  padding-right: var(--s4);
   scrollbar-width: thin;
   scrollbar-color: var(--line-2) transparent;
 }
