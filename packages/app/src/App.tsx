@@ -64,6 +64,12 @@ export function App(): JSX.Element {
   useEffect(() => setActiveUser(draftUser), [draftUser]);
   const drafts = useSavedDrafts();
   const postTitle = useHeaderTitle();
+  // ブラウザのタブ・履歴の名前を画面ごとに（F-035）。回答・結果は投稿のタイトル。ログイン前などは WWYD だけ
+  const screenName = state === 'ready' || route.name === 'terms' || route.name === 'privacy' ? SCREEN_TITLE[route.name]?.text : undefined;
+  const tabTitle = (route.name === 'answer' || route.name === 'result') && postTitle ? postTitle : screenName;
+  useEffect(() => {
+    document.title = tabTitle ? `${tabTitle} · WWYD` : 'WWYD';
+  }, [tabTitle]);
 
   const [info, setInfo] = useState<InfoSectionId | null>(null);
   const [deleting, setDeleting] = useState<{ busy: boolean } | null>(null);
