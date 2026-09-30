@@ -322,3 +322,37 @@ describe('T4-02 プロトタイプ汚染・特殊なキー', () => {
   });
 });
 
+describe('T4-02 人数が少ないハンド（3 人: BTN・SB・BB）', () => {
+  // hs1 から UTG・HJ・CO を外した 3 人のハンド（Hero = BTN。Spot は Turn の BTN の Bet）
+  const three = (): Raw => {
+    const raw = hs1();
+    const actions = (raw.actions as Raw[]).slice(3); // 先頭の 3 つ（UTG・HJ・CO の Fold）を外す
+    return {
+      ...raw,
+      stacks: { BTN: 100, SB: 100, BB: 100 },
+      actions,
+      spot_index: 7,
+      derived: { ...(raw.derived as Raw), stop_index: 7 },
+    };
+  };
+
+  it('座っていない席（UTG・HJ・CO）の情報は malformed', async () => {
+    expect((await send(three())).status).toBe(201);
+    for (const seat of ['UTG', 'HJ', 'CO']) {
+      const r = await send({ ...three(), villain_reads: { [seat]: { vpip: 10 } } });
+      expect(r.status, seat).toBe(422);
+      expect(r.json, seat).toEqual({ error: 'malformed' });
+    }
+  });
+
+  it('SB（Fold to Steal）と BB の情報は通り、Spot Read は SB の Fold to Steal だけ', async () => {
+    const steal = { scope: 'spot', street: 'pf', action: 'fold_steal', texture: null, runout: null, size: null, lean: 'over', strong: false };
+    const r = await send({ ...three(), villain_reads: { SB: { reads: [steal] }, BB: { vpip: 20 } } });
+    expect(r.status).toBe(201);
+    expect(r.payload?.villain_reads.SB?.reads?.[0]?.action).toBe('fold_steal');
+    // BB の Spot Read（Call・Check だけなので語彙に当たる Action が無い）は断る
+    const bad = await send({ ...three(), villain_reads: { BB: { reads: [{ ...steal, action: 'limp' }] } } });
+    expect(bad.json).toEqual({ error: 'invalid_reads' });
+  });
+});
+
