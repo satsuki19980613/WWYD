@@ -18,6 +18,10 @@ import {
   type Paint,
   type Pos,
   type Street,
+  validateMtt,
+  validateReads,
+  type MttInfo,
+  type VillainReads,
 } from '@wwyd/core';
 
 /**
@@ -55,6 +59,10 @@ export type PostDetail = {
     spotIndex: number;
     stopIndex: number;
     truncated: boolean;
+    /** Villain の情報（18 章。情報なし・前の版の投稿は {}） */
+    reads: VillainReads;
+    /** MTT の情報（18 章。情報なしは null） */
+    mtt: MttInfo | null;
   };
   /** Hero のハンドと判明しているハンド。未回答者には返らない。 */
   secrets: { heroCards: Card[]; knownCards: Partial<Record<Pos, Card[] | 'muck'>> } | null;
@@ -200,11 +208,33 @@ export function parsePostDetail(raw: unknown): PostDetail {
       spotIndex: int(h.spot_index, 'hand.spot_index'),
       stopIndex: int(h.stop_index, 'hand.stop_index'),
       truncated: h.truncated === true,
+      reads: lenientReads(h.villain_reads, seats, p.hero),
+      mtt: lenientMtt(h.mtt),
     },
     secrets,
     myAnswer: parseSaved(r.my_answer, 'my_answer'),
     aggregate,
   };
+}
+
+/**
+ * Villain・MTT の情報は回答の手がかりにすぎないので、形が違っても画面を落とさず「情報なし」にする
+ * （保存するときに create-post が core の同じ検証を通している。18 章 §4）。
+ */
+function lenientReads(raw: unknown, seats: readonly Pos[], hero: unknown): VillainReads {
+  try {
+    return validateReads(raw, seats, hero as Pos);
+  } catch {
+    return {};
+  }
+}
+
+function lenientMtt(raw: unknown): MttInfo | null {
+  try {
+    return validateMtt(raw, 'mtt');
+  } catch {
+    return null;
+  }
 }
 
 // ---- エラー ----

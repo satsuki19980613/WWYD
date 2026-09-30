@@ -23,6 +23,10 @@ export function messageForCode(code: string, index?: number): string {
   switch (code) {
     case 'daily_limit':
       return '本日の投稿上限（5件）に達しました';
+    case 'invalid_reads':
+      return 'Villain の情報を確認してください';
+    case 'invalid_mtt':
+      return 'MTT の情報を確認してください';
     case 'invalid_spot':
       return 'Spot を選び直してください';
     case 'preflop_allin':

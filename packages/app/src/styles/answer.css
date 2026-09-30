@@ -9,13 +9,6 @@
 /* ---- 画面の骨組み ---- */
 .ans-head { display: flex; flex-direction: column; gap: var(--s1); }
 .ans-meta { font-size: 12px; color: var(--dim); }
-.ans-title {
-  font-family: var(--body);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
 .ans-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -537,7 +530,6 @@
 /* ---- スマホ（上部固定のタブとパネル、下部固定のバー。06 章 §4.1） ---- */
 /* 下の余白 = 下部固定バーの実際の高さ（AnswerScreen の useBottomBarHeight が --ans-bottom-h を入れる） */
 .ans.sp { gap: var(--s3); padding-bottom: calc(var(--ans-bottom-h, 110px) - var(--s6) - var(--sab) + var(--s2)); }
-.ans.sp .ans-title { font-size: 17px; }
 .ans-top {
   position: sticky;
   top: calc(var(--hdr-h) + var(--sat));
@@ -607,7 +599,8 @@
  */
 .ans.sp.tab-replay, .res.sp.tab-hand { min-height: var(--screen-fill-h); }
 .ans.sp.tab-replay > .replay, .res.sp.tab-hand > .replay { flex: 1 1 auto; }
-.ans.sp .replay > .ptable { flex: 1 1 auto; height: auto; min-height: 380px; }
+/* 卓の上に History・All Villains・MTT の行がある（18 章 §5.3）。重なる端末では卓を縦に少し縮める */
+.ans.sp .replay > .ptable { flex: 1 1 auto; height: auto; min-height: 340px; }
 .ans.sp .pseat-plate { min-width: 76px; padding: 3px 6px; }
 .ans.sp .rp-btns .btn { font-size: 13px; }
 .ans-bottom {

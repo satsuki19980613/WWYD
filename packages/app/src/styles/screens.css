@@ -164,12 +164,13 @@
   gap: var(--s3);
 }
 .list-screen.sp .spot-grid { grid-template-columns: 1fr; }
+/* 3 段（タイトル / スポットの状況 / 回答数・経過時間と CTA）。段は区切り線ではなく余白で分ける（18 章 §6） */
 .spot-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: var(--s3) var(--s4);
+  gap: var(--s3);
+  padding: var(--s4);
   background: var(--surface);
   border: 1px solid var(--line);
   transition: border-color 150ms var(--ease);
@@ -205,7 +206,12 @@
 .spot-tag + .spot-del { margin-left: 2px; }
 .spot-go { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; color: var(--cyan); white-space: nowrap; }
 .spot-go.primary { color: var(--yellow); }
-.spot-top { display: flex; align-items: center; gap: var(--s2); min-height: 22px; }
+.spot-t1 { display: flex; align-items: flex-start; gap: var(--s2); }
+.spot-t1 .spot-del { margin: -6px -10px -6px auto; }
+.spot-t2 { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.spot-cond { flex: 0 1 auto; min-width: 0; font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spot-cond .pos { font-family: var(--disp); font-size: 14px; font-weight: 700; letter-spacing: 0.03em; }
+.spot-t2 .spot-badges { margin-left: 0; }
 .street-badge {
   flex: none;
   padding: 2px 8px;
@@ -215,27 +221,28 @@
   font-weight: 700;
   color: var(--fg);
 }
-.spot-fmt { font-size: 12px; color: var(--dim); }
 .spot-tag {
   margin-left: auto;
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.08em;
 }
-.spot-tag.mine { color: var(--yellow); }
-.spot-tag.answered { color: var(--cyan); }
+/* 黄は CTA と回答数だけに使う（18 章 §6）。状態の札は控えめの色 */
+.spot-tag.mine, .spot-tag.answered { color: var(--dim); }
+.spot-meta .spot-tag { margin-left: 0; font-size: 11px; }
 .spot-title {
-  font-size: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 17px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.45;
+  color: var(--fg);
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.spot-seats { font-family: var(--disp); font-size: 14px; font-weight: 600; letter-spacing: 0.03em; color: var(--dim); }
-.spot-seats .pos { font-weight: 700; }
 .spot-foot {
   margin-top: auto;
   display: flex;
@@ -244,7 +251,7 @@
   gap: var(--s2);
 }
 .spot-meta { font-size: 12px; color: var(--dim); white-space: nowrap; }
-.spot-count { font-size: 18px; color: var(--fg); }
+.spot-count { font-size: 18px; color: var(--yellow); }
 .btn.sm { font-size: 14px; padding: 8px 14px; text-decoration: none; }
 a.btn { text-decoration: none; }
 
@@ -398,10 +405,11 @@ a.btn { text-decoration: none; }
   font-weight: 700;
   line-height: 1.45;
 }
-.st-meta { font-size: 13px; color: var(--dim); }
+.st-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px; font-size: 13px; color: var(--dim); }
+.st-meta .spot-badges { margin-left: 0; }
 .st-title .spot-tag { margin-left: 0; font-size: 11px; }
 .st-pos { font-family: var(--disp); font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
-.st-count { font-size: 22px; color: var(--fg); }
+.st-count { font-size: 22px; color: var(--yellow); }
 .st-ago { font-size: 13px; color: var(--dim); white-space: nowrap; }
 .st-row > .spot-go { font-size: 14px; }
 .st-del { display: flex; justify-content: center; }

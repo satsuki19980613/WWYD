@@ -36,6 +36,9 @@ export type PostRow = {
   /** 人数（2〜6）と、スポットの Street までの Board（17 章。マイグレーション 20260929000002 より前のサーバーは返さない） */
   players?: number;
   board?: string[];
+  /** Villain・MTT の情報があるか（一覧の印 `Reads`・`MTT`。18 章。マイグレーション 20260930000000 より前のサーバーは返さない） */
+  has_reads?: boolean;
+  has_mtt?: boolean;
 };
 
 export const TAB_ITEMS: readonly { value: ListTab; label: string }[] = [

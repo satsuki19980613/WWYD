@@ -16,6 +16,7 @@ import './styles/components.css';
 import './styles/screens.css';
 import './styles/post.css';
 import './styles/answer.css';
+import './styles/reads.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root がありません');

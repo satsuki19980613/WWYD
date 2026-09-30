@@ -4,6 +4,7 @@ import {
   encodePaint,
   formatBb,
   paintBar,
+  POSITIONS,
   toHex,
   totalPot,
   type AnswerKey,
@@ -16,7 +17,9 @@ import {
   type State,
   type Street,
 } from '@wwyd/core';
+import { useSetHeaderTitle } from '../components/headerTitle.ts';
 import { PlayingCard } from '../components/PlayingCard.tsx';
+import { useReadsUi } from '../reads/ReadsView.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import { ACTION_NAME, STREET_NAME } from '../post/draft.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -100,6 +103,16 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
     [hand.setup, hand.actions, hand.stopIndex, post.street],
   );
   const replay = useReplay(hand.stopIndex);
+  // 投稿のタイトルはヘッダーに出す（18 章 §5.1）
+  useSetHeaderTitle(post.title);
+  // Villain・MTT の情報（18 章 §5）。All Villains の並びは見せている範囲（停止位置まで）の Action で決める
+  const readsUi = useReadsUi({
+    seats: POSITIONS.filter((p) => hand.setup.stacks[p] > 0),
+    hero: post.hero,
+    actions: hand.actions.slice(0, hand.stopIndex),
+    reads: hand.reads,
+    mtt: hand.mtt,
+  });
   useReplayKeys(replay, !mobile);
   const stop = frames[hand.stopIndex] as (typeof frames)[number];
 
@@ -271,12 +284,11 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
       {busy ? '送信中…' : '回答する'}
     </button>
   );
-  const replayView = <ReplayView detail={d} frames={frames} c={replay} logInModal={mobile} />;
+  const replayView = <ReplayView detail={d} frames={frames} c={replay} logInModal={mobile} reads={readsUi} />;
 
   const head = (
     <div className="ans-head">
       <p className="ans-meta num">{metaLine(d)}</p>
-      <h1 className="ans-title">{post.title}</h1>
     </div>
   );
   const dialog = confirming && (
@@ -458,6 +470,7 @@ function ReplayView(props: {
   frames: ReturnType<typeof answerFrames>;
   c: ReplayControl;
   logInModal: boolean;
+  reads: ReturnType<typeof useReadsUi>;
 }): JSX.Element {
   const { detail: d, c } = props;
   const { hand, post } = d;
@@ -480,7 +493,11 @@ function ReplayView(props: {
   );
   return (
     <div className="replay">
-      {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
+      {/* History・All Villains・MTT は卓の上の 1 行（18 章 §5.2。タイトルがヘッダーへ移って空いた所） */}
+      <div className="rp-info">
+        {props.logInModal && <HistoryButton disabled={c.step === 0}>{log}</HistoryButton>}
+        {props.reads.buttons}
+      </div>
       <PokerTable
         seats={seatViews(state, { hero: post.hero, actor, you: true })}
         pot={state.pot}
@@ -488,7 +505,10 @@ function ReplayView(props: {
         holes={state.folded.has(post.hero) ? {} : { [post.hero]: 'back' }}
         heroLabel="Hero（あなた）"
         spot={c.step === hand.stopIndex}
+        marked={props.reads.marked}
+        onSeat={props.reads.onSeat}
       />
+      {props.reads.modal}
       <ReplayControls c={c} spot={hand.stopIndex} />
       {!props.logInModal && log}
     </div>

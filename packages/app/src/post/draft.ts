@@ -31,8 +31,11 @@ import {
   type Pos,
   type State,
   type Street,
+  hasReads,
+  type VillainReads,
 } from '@wwyd/core';
 import { handCards, isHandComplete } from './cardInput.ts';
+import { emptyMtt, MTT_FIELD_LABEL, parseMtt, readsForSubmit, type MttDraft } from '../reads/readsModel.ts';
 import { messageForCode } from './errorMessages.ts';
 
 /**
@@ -57,6 +60,10 @@ export type Draft = {
   board: Card[];
   spotIndex: number | null;
   title: string;
+  /** Villain の情報（席ごと。Hero・空席の分は送らない。18 章） */
+  reads: VillainReads;
+  /** MTT の情報（Game 形式が MTT のときだけ送る。18 章） */
+  mtt: MttDraft;
 };
 
 export function emptyDraft(): Draft {
@@ -74,6 +81,8 @@ export function emptyDraft(): Draft {
     board: [],
     spotIndex: null,
     title: '',
+    reads: {},
+    mtt: emptyMtt(),
   };
 }
 
@@ -560,6 +569,7 @@ export function buildSubmission(d: Draft): Submission {
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
   if (d.spotIndex === null) errors.push(phase.kind === 'done' && candidates(d).length === 0 ? noSpotError(d) : 'Spot を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
+  if (d.fmt === 'mtt') for (const f of parseMtt(d.mtt).invalid) errors.push(`MTT の ${MTT_FIELD_LABEL[f]} の値が正しくありません`);
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };
   }
@@ -616,6 +626,8 @@ export function submissionBody(d: Draft): Record<string, unknown> {
     }
   }
   const rake = d.rake.trim();
+  const reads = readsForSubmit(d.reads, seats.filter((p) => p !== d.hero));
+  const mtt = d.fmt === 'mtt' ? parseMtt(d.mtt).info : null;
   return {
     title: d.title.trim(),
     fmt: d.fmt,
@@ -633,5 +645,8 @@ export function submissionBody(d: Draft): Record<string, unknown> {
     spot_index: d.spotIndex,
     // スポットが決まらなければ派生メタは null（サーバーは malformed で断る）
     derived,
+    // Villain の情報は Hero 以外の座っている席の分だけ、MTT の情報は MTT のときだけ（18 章 §3）。情報が無ければキーごと送らない（前の版と同じ本文）
+    ...(hasReads(reads) ? { villain_reads: reads } : {}),
+    ...(mtt ? { mtt } : {}),
   };
 }

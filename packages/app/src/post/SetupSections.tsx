@@ -12,13 +12,14 @@ const FMT_ITEMS = [
 ] as const;
 
 /** 数値の入力欄（ラベル付き）。不正な値は赤い枠。 */
-function NumField(props: {
+export function NumField(props: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
   invalid?: boolean;
   placeholder?: string;
+  inputMode?: 'decimal' | 'numeric';
 }): JSX.Element {
   const id = useId();
   return (
@@ -29,7 +30,7 @@ function NumField(props: {
       <input
         id={id}
         className="inp num"
-        inputMode="decimal"
+        inputMode={props.inputMode ?? 'decimal'}
         autoComplete="off"
         value={props.value}
         placeholder={props.placeholder}

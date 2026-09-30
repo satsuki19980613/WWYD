@@ -39,6 +39,8 @@ import { messageForCode } from '../post/errorMessages.ts';
 import { OcrImport } from '../post/OcrImport.tsx';
 import { sendPost } from '../post/sendPost.ts';
 import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
+import { MttSection } from '../reads/MttSection.tsx';
+import { VillainSection } from '../reads/VillainSection.tsx';
 import { ErrorList, SpotSection } from '../post/SpotSection.tsx';
 import { navigate } from '../router.ts';
 import { useHeightVar } from '../useHeightVar.ts';
@@ -173,6 +175,15 @@ export function NewPostScreen(): JSX.Element {
       onOpenHand={(p) => setSeat(p)}
     />
   );
+  // Villain・MTT の情報（全項目任意。18 章 §2）。基本設定・Player の下に置く
+  const mttSection = d.fmt === 'mtt' && <MttSection mtt={d.mtt} onChange={(mtt) => update((x) => ({ ...x, mtt }))} />;
+  const villains = (
+    <VillainSection
+      seats={seatsOf(d).filter((p) => p !== d.hero)}
+      reads={d.reads}
+      onChange={(reads) => update((x) => ({ ...x, reads }))}
+    />
+  );
   const actions = (
     <ActionSection
       draft={d}
@@ -285,7 +296,9 @@ export function NewPostScreen(): JSX.Element {
           <div className="pf-grid">
             <div className="pf-col">
               {settings}
+              {mttSection}
               {players}
+              {villains}
             </div>
             <div className="pf-col">{actions}</div>
             <div className="pf-col">
@@ -326,7 +339,9 @@ export function NewPostScreen(): JSX.Element {
         </nav>
         {ocrPlace}
         {step === 0 && settings}
+        {step === 0 && mttSection}
         {step === 1 && players}
+        {step === 1 && villains}
         {step === 2 && actions}
         {step === 3 && spot}
         {/* 台を出している間は戻る・次へを隠す（13 章） */}

@@ -72,6 +72,9 @@ export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unkn
       spot_index: raw.spot_index,
       stop_index: stop,
       truncated: !canView,
+      // Villain・MTT の情報（18 章）。見本に無ければ情報なし
+      villain_reads: raw.villain_reads ?? {},
+      mtt: raw.mtt ?? null,
     },
     secrets: canView ? { hero_cards: raw.hero_cards, known_cards: raw.known_cards } : null,
     my_answer: o.myAnswer ? { ...o.myAnswer, created_at: '2026-09-28T00:00:00+00:00' } : null,
