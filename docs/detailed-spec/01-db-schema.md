@@ -2,6 +2,8 @@
 
 > **2026-09-29: 出題を Hero の手番に変え、Villain の概念をなくした**（[16 章](16-hero-spot.md)）。この章の Villain・停止位置・派生メタの記述より 16 章を優先する。
 
+> **2026-09-30: Villain の情報（Reads）と MTT の情報を足した**（[18 章](18-villain-reads-mtt.md)）。`post_hands` の `villain_reads`・`mtt` 列（18 章 §4）。
+
 仕様書 §7 の論理形式を Supabase（Postgres 15 以降）の物理スキーマにしたもの。マイグレーションは
 `supabase/migrations/` に置き、この章の DDL をそのまま最初のマイグレーション群にする。
 

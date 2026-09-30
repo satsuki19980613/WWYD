@@ -31,6 +31,13 @@
 
 ポーカー用語でない語（ボタン・タブ・キーボード・ログ・マス・ブラシ・スポイト・スライダー・モーダル・ログイン・アカウントなど）はカタカナのまま。
 
+### 1.1 Villain・MTT の情報の用語（2026-09-30。18 章）
+
+訳さずに英語で出す: Villain / All Villains / Reads / VPIP / PFR / Postflop Aggression / Read Confidence / Hero Image / Memo / Preset /
+MTT / ICM / Stage / Early / Bubble / ITM / Final Table / Tournament Type / Regular / PKO / Satellite / Rank / Players Left / Paid Places /
+Entries / Avg Stack / Prize Structure / Top-heavy / Standard / Flat / 1st。
+段階のラベル（Very Tight・Loose・Balanced・First Impression・HUD Stats など）も英語（18 章 §2.1）。それ以外の文言（「呼び出す」「保存」「クリア」など）は日本語。
+
 ## 2. 書き方
 
 - 英単語と日本語の間は半角スペース（「Hero の Hand」「Flop 以降」）。括弧・句読点の隣には入れない（「（Spot）」「Fold、Check」）。
