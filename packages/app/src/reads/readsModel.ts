@@ -558,6 +558,23 @@ export function parseMtt(m: MttDraft): { info: MttInfo | null; invalid: MttField
   return { info: Object.keys(info).length > 0 ? info : null, invalid };
 }
 
+/**
+ * MTT の人数の大小の誤り（core の validateMtt と同じ規則: 順位 ≦ 残りの人数 ≦ エントリー数、ITM ≦ エントリー数）を、どの欄かが分かる文にする（V-018）。
+ * 順位とエントリー数の比べは、残りの人数が無いときだけ（あれば 2 つの比べで足りる）
+ */
+export function mttOrderErrors(m: MttInfo | null): string[] {
+  if (!m) return [];
+  const pairs: [MttField, MttField][] = [['rank', 'left'], ['left', 'entries'], ['paid', 'entries']];
+  if (m.left === undefined) pairs.push(['rank', 'entries']);
+  const out: string[] = [];
+  for (const [a, b] of pairs) {
+    const x = m[a];
+    const y = m[b];
+    if (x !== undefined && y !== undefined && x > y) out.push(`MTT の ${MTT_FIELD_LABEL[a]} は ${MTT_FIELD_LABEL[b]} 以下にしてください`);
+  }
+  return out;
+}
+
 /** 「12/58 ・ ITM 50 ・ 320 entries」（無い項目は出さない。18 章 §2.4） */
 export function mttCountsLine(m: MttInfo): string {
   const parts: string[] = [];

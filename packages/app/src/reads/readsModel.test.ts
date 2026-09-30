@@ -1,7 +1,7 @@
 /**
  * Villain・MTT の情報の画面での扱い（詳細仕様 18 章）。
  */
-import { bbToMbb, validateInput, verifyPost, type Action, type Pos, type ReadEntry } from '@wwyd/core';
+import { bbToMbb, validateInput, validateMtt, ValidationError, verifyPost, type Action, type MttInfo, type Pos, type ReadEntry } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
 import { hs1bb, type Raw } from '../../../core/src/post/postFixtures.ts';
 import { buildSubmission, emptyDraft, submissionBody, villainContext, type Draft } from '../post/draft.ts';
@@ -20,6 +20,7 @@ import {
   MTT_FIELD_LABEL,
   MTT_FIELDS,
   mttCountsLine,
+  mttOrderErrors,
   parseMtt,
   readLine,
   readSpeech,
@@ -197,6 +198,27 @@ describe('MTT の欄（18 章 §2.4）', () => {
     expect(mttCountsLine({ paid: 50 })).toBe('ITM 50');
     expect(mttCountsLine({ rank: 3 })).toBe('#3');
     expect(mttCountsLine({})).toBe('');
+  });
+  it('V-018: 人数の大小の誤りはどの欄かを示す。規則は core の validateMtt と同じ（全組）', () => {
+    expect(mttOrderErrors({ rank: 60, left: 58 })).toEqual(['MTT の スポットの順位 は 残りの人数 以下にしてください']);
+    expect(mttOrderErrors({ paid: 400, entries: 320 })).toEqual(['MTT の ITM は エントリー数 以下にしてください']);
+    expect(mttOrderErrors({ paid: 100, left: 50 })).toEqual([]); // ITM は残りの人数を超えてよい
+    const vals = [undefined, 1, 5, 10];
+    for (const rank of vals) for (const left of vals) for (const entries of vals) for (const paid of vals) {
+      const m: MttInfo = {};
+      if (rank !== undefined) m.rank = rank;
+      if (left !== undefined) m.left = left;
+      if (entries !== undefined) m.entries = entries;
+      if (paid !== undefined) m.paid = paid;
+      let serverOk = true;
+      try {
+        validateMtt(m, 'mtt');
+      } catch (e) {
+        if (!(e instanceof ValidationError)) throw e;
+        serverOk = false;
+      }
+      expect(mttOrderErrors(m).length === 0, JSON.stringify(m)).toBe(serverOk);
+    }
   });
 });
 

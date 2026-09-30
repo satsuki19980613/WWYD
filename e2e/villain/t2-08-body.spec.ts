@@ -72,17 +72,17 @@ test('T2-08 MTT の値: 数の欄は数で、空白は削り、先頭のゼロ�
   expect(body.rake).toBeNull();
 });
 
-for (const [mtt, label] of [
-  [{ rank: '60', left: '58' }, 'rank>left'],
-  [{ left: '400', entries: '320' }, 'left>entries'],
-  [{ rank: '400', entries: '320' }, 'rank>entries'],
-  [{ paid: '400', entries: '320' }, 'paid>entries'],
+for (const [mtt, label, msg] of [
+  [{ rank: '60', left: '58' }, 'rank>left', 'MTT の スポットの順位 は 残りの人数 以下にしてください'],
+  [{ left: '400', entries: '320' }, 'left>entries', 'MTT の 残りの人数 は エントリー数 以下にしてください'],
+  [{ rank: '400', entries: '320' }, 'rank>entries', 'MTT の スポットの順位 は エントリー数 以下にしてください'],
+  [{ paid: '400', entries: '320' }, 'paid>entries', 'MTT の ITM は エントリー数 以下にしてください'],
 ] as const) {
-  test(`T2-08 MTT の人数の大小（${label}）は画面でもエラー（サーバーと同じ文言）で、本文は送らない`, async ({ page }) => {
+  test(`T2-08 MTT の人数の大小（${label}）は画面でどの欄かを示すエラー（V-018）で、本文は送らない`, async ({ page }) => {
     const { cp } = await openDraft(page, draftJson({ ...srpTurn(), fmt: 'mtt', mtt: { ...{ speed: null, prize: null, rank: '', left: '', paid: '', entries: '', avg: '' }, ...mtt } }));
     await step(page, S_SPOT);
     await submitBtn(page).click();
-    await expect(page.locator('.pf-errors')).toContainText('MTT の情報を確認してください');
+    await expect(page.locator('.pf-errors')).toContainText(msg);
     expect(cp.calls.length).toBe(0);
   });
 }
