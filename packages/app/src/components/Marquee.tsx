@@ -18,13 +18,16 @@ export function Marquee(props: { text: string; className?: string }): JSX.Elemen
   const [expanded, setExpanded] = useState(false);
 
   const mode = over <= 1 && !expanded ? 'static' : reduced ? 'clip' : 'run';
-  // 表示の形が変わると要素が作り直されるので、そのたびに測り直して監視し直す。全文を折り返している間は測らない
+  // 表示の形が変わると要素が作り直されるので、そのたびに測り直して監視し直す。全文を折り返している間は測らない。
+  // 省略（clip）の形では文字が箱の幅に切られて scrollWidth が箱の幅になるので、文字そのものの幅を測る。
+  // そうしないと境目の幅で static と clip が切り替わり続け、画面が落ちる（V-033。villain-reads-test）
   useLayoutEffect(() => {
     const measure = (): void => {
       const b = box.current;
       const i = inner.current;
       if (!b || !i || expanded) return;
-      setOver(Math.max(0, Math.ceil(i.scrollWidth - b.clientWidth)));
+      const width = mode === 'clip' ? textWidth(i) : i.scrollWidth;
+      setOver(Math.max(0, Math.ceil(width - b.clientWidth)));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -65,4 +68,13 @@ export function Marquee(props: { text: string; className?: string }): JSX.Elemen
       </span>
     </span>
   );
+}
+
+/** 要素の中の文字そのものの幅（箱に切られていても、折り返さない 1 行の幅） */
+function textWidth(el: HTMLElement): number {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const w = range.getBoundingClientRect().width;
+  range.detach();
+  return w;
 }

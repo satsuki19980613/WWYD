@@ -190,7 +190,8 @@
 
 /* ---- ヘッダーの投稿のタイトル（収まらなければ流す。18 章 §5.1） ---- */
 .hdr-lead { flex: 1 1 auto; margin-right: var(--s2); }
-.hdr-title.hdr-post { flex: 1 1 auto; min-width: 0; font-family: var(--body); font-size: 16px; letter-spacing: 0.02em; }
+/* 幅は中身に左右されない（flex-basis 0）。中身で幅が変わると Marquee の形の判定が揺れる（V-033） */
+.hdr-title.hdr-post { flex: 1 1 0; min-width: 0; font-family: var(--body); font-size: 16px; letter-spacing: 0.02em; }
 .mq { display: block; min-width: 0; overflow: hidden; white-space: nowrap; }
 .mq-inner { display: inline-block; white-space: nowrap; }
 .mq-run { mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 12px), transparent); }
@@ -200,7 +201,8 @@
   82%, 100% { transform: translateX(calc(var(--mq-dist, 0px) - 20px)); }
 }
 /* 動きを減らす設定: 省略して、押すと全文を折り返して出す */
-.mq-toggle { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+/* 字間も引き継ぐ（ボタンは font: inherit でも letter-spacing を引き継がず、文字の幅が形で変わる。V-033） */
+.mq-toggle { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }
 .mq-toggle:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .mq-clip .mq-inner { display: block; overflow: hidden; text-overflow: ellipsis; }
 .mq-clip.open { white-space: normal; }
