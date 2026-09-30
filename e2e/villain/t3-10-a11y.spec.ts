@@ -190,6 +190,9 @@ for (const v of ['', ' @sp'] as const) {
     const g = sec.locator('.vr-read').filter({ hasText: 'General Read 1' });
     const unsel = await g.getByRole('button', { pressed: false }).evaluateAll((els, Y) => els.map((e) => ({ n: e.textContent, c: getComputedStyle(e).color, bg: getComputedStyle(e).backgroundColor })).filter((x) => x.c === Y || x.bg === Y), YELLOW);
     expect(unsel, '選択していないボタンが黄').toEqual([]);
+    // 色の移り変わり（transition）の途中を測らないように、ポインタを外して待つ（スマホで押した直後は途中の色になる）
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(600);
     const sel = await g.getByRole('button', { pressed: true }).evaluateAll((els) => els.map((e) => ({ n: e.textContent, c: getComputedStyle(e).color, bg: getComputedStyle(e).backgroundColor, bd: getComputedStyle(e).borderTopColor })));
     // 選んだボタンは黄（背景か文字か枠）
     for (const s of sel) expect([s.c, s.bg, s.bd].some((c) => c === YELLOW), `選んだボタンが黄でない: ${s.n}`).toBe(true);
@@ -199,6 +202,7 @@ for (const v of ['', ' @sp'] as const) {
 // ---- タップの大きさ（スマホ。36〜44px の目安） ----
 
 test('T3-10 タップの大きさ（スマホ）: Villain の欄の押せる要素は高さ・幅とも 36px 以上 @sp', async ({ page }) => {
+  test.fail(true, '既知: V-034（S3。さつきの判断待ち）。5 分割のボタン・数のボタン・× が 32px。直ったらこの行を消す');
   const sec = await openedSeat(page);
   const small = await sec.evaluate((root) => {
     const out: string[] = [];

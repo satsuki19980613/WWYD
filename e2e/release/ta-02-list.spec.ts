@@ -424,7 +424,8 @@ test.describe('A-02 一覧 スマホ', () => {
     let fail = true;
     await page.route(`${DATA}/rpc/list_posts`, async (route) => {
       if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' } });
-      await new Promise((r) => setTimeout(r, 500));
+      // 骨組みを確かめる間は応答を遅らせる（500ms では負荷の高いときに取りこぼした。V-001）
+      await new Promise((r) => setTimeout(r, fail ? 2000 : 500));
       return fail ? fulfillJson(route, 500, { message: 'x' }) : fulfillJson(route, 200, rows());
     });
     await page.goto('/');
