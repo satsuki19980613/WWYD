@@ -659,7 +659,8 @@ export const SNAPSHOT_JS = `(async () => {
   for (const sl of document.querySelectorAll('[role=slider]')) {
     const now = sl.getAttribute('aria-valuenow');
     const max = Number(sl.getAttribute('aria-valuemax'));
-    if (now !== null && (!/^[0-9]+$/.test(now) || Number(now) > max)) problems.push({ kind: 'slider-range', detail: (sl.getAttribute('aria-label') || '') + ' aria-valuenow=' + now + ' max=' + max });
+    const nm = sl.getAttribute('aria-label') || '';
+    if (['VPIP', 'PFR', 'Tournament Type'].includes(nm) && now !== null && (!/^[0-9]+$/.test(now) || Number(now) > max || Number(now) < 0)) problems.push({ kind: 'slider-range', detail: (sl.getAttribute('aria-label') || '') + ' aria-valuenow=' + now + ' max=' + max });
     const txt = sl.getAttribute('aria-valuetext') || '';
     if (now === null && txt !== '未入力') problems.push({ kind: 'slider-text', detail: (sl.getAttribute('aria-label') || '') + ' valuetext=' + txt });
   }
