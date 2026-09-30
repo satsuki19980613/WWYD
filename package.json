@@ -24,6 +24,8 @@
     "db:sample": "node scripts/db.mjs sample",
     "db:sample-large": "node scripts/db.mjs sample-large",
     "db:sample-clean": "node scripts/db.mjs sample-clean",
+    "db:showcase": "node scripts/db.mjs showcase",
+    "gen:showcase": "node --experimental-strip-types --no-warnings scripts/genShowcaseSql.ts",
     "e2e": "playwright test",
     "ocr:accuracy": "node --experimental-strip-types --no-warnings scripts/ocr/accuracy.mts",
     "ocr:templates": "node --experimental-strip-types --no-warnings scripts/ocr/genRankTemplates.mts"
