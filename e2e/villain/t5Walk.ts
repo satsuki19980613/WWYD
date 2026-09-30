@@ -147,7 +147,7 @@ export async function walkHand(env: WalkEnv, seed: number, hand: number, opts: {
   if (varied) {
     for (const p of seats) {
       if (!rng.chance(0.5)) continue;
-      const st = rng.pick(['100', '50', '20.5', '12', '8.25', '200', '35', '150.5', '15', '9999.999', '3']);
+      const st = rng.pick(['100', '50', '20.5', '12', '8.25', '200', '35', '150.5', '15', '1000', '3']); // Stack の上限は 1000bb（F-037。前は 9999.999 で Pot の上限に当たっていた）
       log(`stack ${p}=${st}`);
       await page.getByRole('textbox', { name: `${p} の Stack（bb）` }).fill(st);
     }

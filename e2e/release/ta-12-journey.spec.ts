@@ -109,6 +109,8 @@ for (const v of ['', ' @sp'] as const) {
     if (sp) await page.getByRole('tab', { name: 'Range' }).click();
     await page.getByRole('button', { name: /^AA / }).click();
     await page.goBack();
+    // 塗ったまま戻ると「塗った Range を捨てますか」（F-028）。捨てて戻る
+    await page.getByRole('alertdialog', { name: '塗った Range を捨てますか' }).getByRole('button', { name: '捨てて移動' }).click();
     await expect(page).toHaveURL('/');
     await page.goForward();
     await expect(page).toHaveURL(`/s/${idOf(B)}/answer`);
