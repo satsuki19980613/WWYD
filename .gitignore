@@ -25,3 +25,6 @@ sample/
 # Playwright の結果（E2E）
 test-results/
 playwright-report/
+
+# モンキーテストの結果（e2e/villain/t5-*。villain-reads-test）
+t5-monkey-results/
