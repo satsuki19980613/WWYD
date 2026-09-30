@@ -296,3 +296,29 @@ describe('T4-02 通った本文は通った値のまま保存に渡る', () => {
     expect(a.payload?.villain_reads.BTN?.reads?.[1]).toMatchObject({ texture: null, runout: null });
   });
 });
+
+describe('T4-02 プロトタイプ汚染・特殊なキー', () => {
+  const base = (extra: string): string => JSON.stringify(bb()).replace(/}$/, `,${extra}}`);
+  it.each<[string, string]>([
+    ['villain_reads の __proto__', '"villain_reads":{"__proto__":{"vpip":10}}'],
+    ['席の中の __proto__', '"villain_reads":{"BTN":{"__proto__":{"vpip":10}}}'],
+    ['席の中の constructor', '"villain_reads":{"BTN":{"constructor":{"vpip":10}}}'],
+    ['Read の __proto__', '"villain_reads":{"BTN":{"reads":[{"__proto__":{"x":1},"scope":"spot"}]}}'],
+    ['texture の __proto__', '"villain_reads":{"BTN":{"reads":[{"scope":"general","street":"flop","action":"cbet","texture":{"__proto__":{"high":"a"}},"runout":null,"size":null,"lean":"over","strong":false}]}}'],
+    ['mtt の __proto__', '"mtt":{"__proto__":{"rank":1}}'],
+    ['mtt の toString', '"mtt":{"toString":1}'],
+  ])('%s は malformed で、保存しない', async (_n, extra) => {
+    const r = await send(base(extra));
+    expect(r.status).toBe(422);
+    expect(r.json).toEqual({ error: 'malformed' });
+    expect(r.insertCalls).toBe(0);
+    expect(({} as Record<string, unknown>).vpip).toBeUndefined(); // Object.prototype が汚れていない
+  });
+
+  it('villain_reads が同じキーを 2 回（JSON の重複キー）は後の値が使われ、通常の検証を受ける', async () => {
+    const r = await send(base('"villain_reads":{"BTN":{"vpip":10}},"villain_reads":{"BTN":{"vpip":101}}'));
+    expect(r.status).toBe(422);
+    expect(r.json).toEqual({ error: 'invalid_reads' });
+  });
+});
+
