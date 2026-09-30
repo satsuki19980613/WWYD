@@ -218,7 +218,7 @@ for (const v of VARIANTS) {
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
       await expect(page.getByRole('heading', { level: 1 })).toContainText('利用規約');
       const t = await page.locator('article').innerText();
-      for (const w of ['禁止事項', '運営者の対応', '予告なく削除または非表示', '変更・中断・終了', '免責']) expect(t, w).toContain(w);
+      for (const w of ['禁止事項', '運営者の対応', '予告なく削除すること', '変更・中断・終了', '免責']) expect(t, w).toContain(w);
       const mail = page.locator('article a[href^="mailto:"]');
       await expect(mail).toHaveCount(1);
       await expect(mail).toHaveAttribute('href', /^mailto:[^@\s]+@[^@\s]+$/);

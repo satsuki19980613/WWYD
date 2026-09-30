@@ -71,10 +71,10 @@ for (const v of ['', ' @sp'] as const) {
     await page.goto('/terms');
     const t = page.locator('main');
     await expect(t).toContainText('投稿に付いた Villain の情報は、投稿者の主観的な評価です。');
-    await expect(t).toContainText('禁止事項に反する投稿や不適切な投稿は、予告なく削除または非表示にすることがあります。');
+    await expect(t).toContainText('禁止事項に反する投稿や不適切な投稿は、予告なく削除することがあります。');
     await expect(t).toContainText('他人を誹謗中傷すること');
     await expect(t).not.toContainText('Memo');
-    await expect(t).toContainText('スポットのタイトルに、実在の人物を特定できる情報');
+    await expect(t).toContainText('Spot のタイトルに、実在の人物を特定できる情報');
     expect(await noHScroll(page)).toBe(true);
     await page.goto('/privacy');
     await expect(page.locator('main')).toContainText('投稿の下書きと Villain の情報の Preset は、その端末のブラウザにだけ保存し、サーバーには送信しません。');
