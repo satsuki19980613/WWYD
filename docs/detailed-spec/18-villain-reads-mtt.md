@@ -13,14 +13,125 @@
 
 | 論点 | 決定 |
 |---|---|
-| Memo に実在のプレイヤーの名前を書けてしまう（不変条件 6） | Memo は作る。利用規約で実名・アカウント名・ハンドルネームなど個人を識別できる情報と誹謗中傷を禁止し、違反した投稿は運営者が予告なく削除・非表示にできる。機械では防がない（書かれた文字を判定しない）。プレースホルダーで「個人を特定できる情報は書かない」と示す |
+| Memo に実在のプレイヤーの名前を書けてしまう（不変条件 6） | ~~Memo は作る（規約で禁止）~~ → **2026-09-30 さつきの仕様変更で Memo を廃止**し、選択肢を組み合わせて一文を作る Read（§2.1）に置き換える。自由記述は投稿のタイトルだけになり、運営者が見張る対象をそこに絞る。個人を特定できる情報の禁止は、タイトルに対する規定として規約に残す |
 | 画面に説明を出さない（不変条件 1） | 例外として画面に出す: Prize Structure の目安（選択肢の一部として小さく）、MTT の数の欄の名前、回答画面の MTT のモーダルの「順位 / 残りの人数」の見出し。詳しい説明は ⓘ（09 章） |
 | 新しいカードのデザインの範囲 | スマホのカードだけ。PC の一覧は表のまま（17 章。F-029 で直したばかり）で、印（Reads・MTT）と黄の使い方だけ合わせる |
 | Slider の 5 段階の境目 | Claude の案（§2.1）。数字はあとで変えてよい |
+| Villain の情報の形（2026-09-30 仕様変更） | 全体の傾向（VPIP・PFR の Slider と、Postflop Aggression・Hero Image・Sample の 5 分割のボタン）と、構造化した Read（`[When] · [Action] → [Lean]`）。§2.1。**未決定の論点は §10、今の実装との食い違いは §11**。承認まで実装しない |
 
 ## 2. 投稿画面
 
-### 2.1 Villain の情報（Hero 以外の座っている席ごと）
+### 2.1 Villain の情報（2026-09-30 さつきの仕様変更。Memo を廃止。**承認まで実装しない**）
+
+今のブランチ（`feature/villain-reads-mtt`）の実装は変更前の形（Slider 5 つ＋Memo。§2.1 旧）のまま。承認のあとで作り直す。
+
+#### 2.1.1 全体の傾向（席ごと。全項目任意。上から この順）
+
+| 順 | 項目 | 入力 | 値 |
+|---|---|---|---|
+| 1 | VPIP | Slider（§2.2 の操作のまま） | 0〜100 の整数（%）。表示は段階のラベルが基本、数を押して直接入れられる |
+| 2 | PFR | Slider（同上） | 0〜100 の整数（%）。PFR ≦ VPIP（PFR を上げたら VPIP も追従） |
+| 3 | Postflop Aggression（Passive〜Aggressive） | 5 分割のボタン | 0〜4 |
+| 4 | Hero Image（Tight〜Loose） | 5 分割のボタン | 0〜4 |
+| 5 | Sample（First Impression〜Long / HUD Stats） | 5 分割のボタン | 0〜4。旧 Read Confidence を改名。プレイヤーに 1 つだけ（Read ごとには持たない） |
+
+- VPIP・PFR は「未入力」を持ち、初めは未入力。× で未入力に戻す。
+- 5 分割のボタンは、選んでいるボタンをもう一度押すと未入力に戻る。
+- 中間の 3 つのラベルは未決定（§10 C-1）。
+
+#### 2.1.2 Read の型（1 つだけ）
+
+```
+[When] · [Action] → [Lean]
+```
+
+表示は英語と記号だけ（日本語の助詞を入れない）。例: `River · Barrel (Big) → Value-heavy` / `Flop · Fold to C-Bet → Over` /
+`Turn · Flush Complete · Barrel → Under` / `Flop · A-high · C-Bet → Over`。
+
+| スロット | 内容 | 必須 |
+|---|---|---|
+| When | Street。任意で条件（Board・Size）を足せる | Street だけ必須 |
+| Action | Street を選ぶと候補が絞られる（§2.1.5） | 必須 |
+| Lean | 下の 4 語から 1 つ | 必須 |
+
+| Lean | 意味 | 使える Action |
+|---|---|---|
+| Over | やりすぎる | すべて |
+| Under | やらなさすぎる | すべて |
+| Value-heavy | やるときは強い | Bet / Raise 系だけ |
+| Bluff-heavy | やるときは弱い | Bet / Raise 系だけ |
+
+- 強さは 2 段（通常・強い）。同じ Lean をもう一度押すと「強い」。3 回目の扱いは未決定（§10 C-6）。
+- 中央（GTO 並み）と未入力の Lean は無い。偏りが無ければ Read を作らない。
+
+#### 2.1.3 条件（任意。付けなければ「その Street 全般」）
+
+| 種類 | 軸 | タグ |
+|---|---|---|
+| Flop texture（Flop の時点の Board） | High Card | A-high / K-high / Q-high・J-high / Middle（T〜8） / Low（7 以下） |
+| | Suit | Rainbow / Two-tone / Monotone |
+| | Pairing | Unpaired / Paired |
+| | Connectivity | Disconnected / Connected（Flop でストレートが完成しうる）。名前の変更は未決定（§10 B-4） |
+| Runout（Turn・River だけ） | — | Brick / Overcard / Flush Complete / Straight Complete / Board Pair |
+| Size（Bet / Raise 系だけ） | — | Small / Big / Overbet |
+
+#### 2.1.4 Read の 2 種類
+
+| 種類 | 内容 | 件数 |
+|---|---|---|
+| Spot Read | 投稿のスポットで Villain が実際に取った Action に付ける。When と Action は Action の列から自動で入り、投稿者は Lean を選ぶだけ。Board は入れない（実際の Board が画面にある） | 1 席 1 件 |
+| General Read | Preset に残す汎用の読み。Street → Action → Lean の順に選び、必要なら条件を足す | 1 席 2 件まで |
+
+- Spot Read を付けられるのは **Hero の判断地点より前の Action だけ**（後の Action は候補に出さない。回答者に答えが漏れるため。不変条件 10 と同じ考え）。
+- Spot Read の欄に「このハンドの結果を知る前の読みで」と短く添える（後知恵の読みを抑える）。**不変条件 1（画面に説明を出さない）の例外になる**（§10 C-10）。
+- 自動で入れられる Action が無い席では、Spot Read の枠を出さない。
+- Action の列から Action の名前を決める規則は未決定（§10 C-3。案を §10 に書いた）。
+
+#### 2.1.5 Action の語彙（安定した ID で持つ）
+
+| Street | Action |
+|---|---|
+| Preflop | 3-Bet / Fold to 3-Bet / 4-Bet / Fold to 4-Bet / Squeeze / Limp / Fold to Steal |
+| Flop | C-Bet / Fold to C-Bet / Donk / Bet vs Check / Raise / Fold to Bet / Fold to Raise |
+| Turn・River | Barrel / Fold to Barrel / Delayed C-Bet（Turn だけ）/ Donk / Probe / Bet vs Check / Raise / Fold to Bet / Fold to Raise |
+
+- C-Bet は Flop だけ。Turn・River は Barrel。
+- Block Bet・Call Down は作らない（Block Bet は Size: Small、Call Down は Fold to Bet → Under で表す）。
+- Check-Raise は Raise にまとめ、OOP のときだけ表示名を Check-Raise にする（OOP の判定は §10 C-7）。
+- **Bet / Raise 系**（Value-heavy・Bluff-heavy を選べる）: 3-Bet / 4-Bet / Squeeze / C-Bet / Barrel / Delayed C-Bet / Donk / Probe / Bet vs Check / Raise。ほかは Over・Under だけ。
+
+#### 2.1.6 表示
+
+- 中央以外の値と Read だけをチップで出す（中央の扱いは §10 C-2）。1 席の例:
+
+```
+BTN  VPIP 38 · PFR 12 · Passive · Sample: Long
+     River · Barrel (Big) → Value-heavy
+     Flop · Fold to C-Bet → Over
+```
+
+- 全体の傾向と Read が食い違ってもエラーにしない（全体の傾向に対する例外として扱う）。
+
+#### 2.1.7 データ
+
+- 投稿には Preset の参照ではなく**写し**を保存する（今と同じ）。
+- 回答が 1 件でも付いたら Villain の情報は編集できない（§11 の 7）。
+- Preset: 名前は端末の中だけ（サーバーに送らない）。schema version を持つ。
+- Read 1 件の形（案）:
+
+```
+{ scope: 'spot' | 'general', street, action,          // enum。安定した ID
+  texture: { high, suit, paired, connect } | null,
+  runout: [enum] | null, size: enum | null,
+  lean: 'over' | 'under' | 'value' | 'bluff', strong: boolean }
+```
+
+- 検証: 表 2 枚（Street → 選べる Action、Action → 選べる Lean）を画面とサーバーで共有する（置き場所は §10 C-9）。Preflop の Read に texture・runout があれば断る。
+- 集計のキーは粗く（action × lean）。条件は保存だけで集計に使わない（§10 C-11）。
+- 旧仕様の Memo（30 文字）のスキーマ・画面・検証は消す。
+
+### 2.1 旧（2026-09-30 の最初の実装。§2.1 の承認後に置き換える）
+
 
 | 項目 | 値 | 5 段階のラベル（左から 0〜4） | 境目 |
 |---|---|---|---|
@@ -72,6 +183,8 @@
 
 ## 3. サーバーでの検証（不変条件 4・7）
 
+> 2026-09-30 の仕様変更（§2.1）の後は、Memo の行を消し、Read の検証（Street と Action の組、Action と Lean の組、Preflop の texture・runout、Spot Read が判断地点より前の実際の Action に合うか）を足す。下の表は今の実装。
+
 `packages/core/src/post/reads.ts` の `validateReads`・`validateMtt`。画面（送信前の `buildSubmission`）と create-post の `validateInput` の両方がこれを通す。
 
 | 違反 | コード | 画面の文言 |
@@ -105,6 +218,8 @@
 
 ### 5.2 Villain・MTT の情報の表示
 
+> Villain の情報の表示は、2026-09-30 の仕様変更（§2.1.6）の後はチップにする。下は今の実装。
+
 - 卓の上の 1 行に「History」（スマホだけ）「All Villains」「MTT」。情報が 1 つも無ければ All Villains・MTT は押せない。
 - 情報のある席は、席の札の右上に小さなシアンの ◆ を付け、押せるようにする。押すとその席のモーダル（「Villain · BTN」）。
 - All Villains: ポットに参加した席（Preflop で Fold していない席）を上に、Preflop で Fold した席は「Preflop Fold n」の下に折りたたむ。
@@ -137,6 +252,10 @@
 - 利用規約 §3 の冒頭に追加: 「投稿に付いた Villain の情報（スライダーと Memo）は、投稿者の主観的な評価です。」
 - プライバシーポリシー §1: 「投稿の下書きは、その端末のブラウザにだけ保存します。」→「投稿の下書きと Villain の情報の Preset は、その端末のブラウザにだけ保存し、サーバーには送信しません。」
 - 非表示の機能は作っていない（違反した投稿は管理者の削除で消す。06 章 §2）。
+- **2026-09-30 の仕様変更（Memo の廃止）で直す予定**（承認後に実装と一緒に直す）:
+  - 利用規約 §1: 「Villain の情報（Memo など）に、実名・…を書くこと」の行を消す。タイトルの行（「スポットのタイトルに、実在の人物を特定できる情報…」）は残す。「他人を誹謗中傷すること」は残す。
+  - 利用規約 §3: 「Villain の情報（スライダーと Memo）」→「Villain の情報」。
+  - プライバシーポリシー §1: Preset を端末にだけ保存する文は残す（変えない）。
 
 ## 8. スクロールバー（2026-09-30 さつき。アプリ全体）
 
@@ -151,3 +270,71 @@
   `packages/functions/src/createPost/handler.test.ts`（EF-05・EF-06）。
 - DB: `db/tests/08_reads.test.sql`（DB-20）。
 - E2E: `e2e/reads.spec.ts`（ヘッダーのタイトル・席のモーダル・All Villains・MTT・押せない状態・前の版の投稿・Slider・PFR の追従・数の直接入力・Memo・Preset・MTT の欄・送る本文・一覧の印）。
+
+## 10. 未決定の論点（2026-09-30 の仕様変更。さつきの回答待ち）
+
+### 10.1 さつきの推奨がある論点（Claude の懸念を添える）
+
+| # | 論点 | さつきの推奨 | Claude の懸念 |
+|---|---|---|---|
+| B-1 | Bet vs Check の名前 | Bet vs Check のまま | なし |
+| B-2 | 情報を登録できる席 | ハンド参加者と、Hero の後ろの未アクション席に絞る | ① Spot は Flop 以降なので、判断地点で Hero の後ろにいて未アクションの席は必ず Flop に残っている＝参加者に含まれる（2 つ目の条件は実質いらない）。② Preflop で Fold しただけの SB・BB を「参加者」から外すと、Fold to Steal の Spot Read を付けられない。案: 参加者＝Preflop で Fold 以外の Action を 1 回でもした席、または Fold to Steal の候補がある Blind。③ 今の実装は Hero 以外の座っている席すべて |
+| B-3 | 「強い」の表示 | `++` などの文字の印を必須、色の濃さは補助 | なし。読み上げは「Over（強い）」のように言葉にする |
+| B-4 | Connectivity | 2 値のまま、ラベルを `Straight possible / No straight` に | なし。判定は「Flop の 3 枚が連続する 5 つのランクに収まる」（A は 1 と 14 の両方）とする |
+| B-5 | MTT 固有の読み | MTT の情報の実装後にまとめて検討 | なし |
+
+### 10.2 Claude が見つけた論点（選択肢と Claude の推奨）
+
+| # | 論点 | 選択肢 | Claude の推奨 |
+|---|---|---|---|
+| C-1 | 5 分割のボタンの中間のラベル | 下の案 / ほかの語 | Postflop Aggression: Very Passive / Passive / Balanced / Aggressive / Very Aggressive。Hero Image: Very Tight / Tight / Standard / Loose / Very Loose（どちらも今のまま）。Sample: First Impression / Few Orbits / Some History / **Long** / HUD Stats（例の「Sample: Long」に合わせ Long Session を Long に） |
+| C-2 | 表示で「中央」を出さないこと（前の決定「未入力と中央は別」と、見る側からは区別できなくなる） | (a) 項目ごとに決める (b) 5 分割の 3 つすべてで中央を出さない (c) 入力した値はすべて出す | (a): VPIP・PFR は数でいつも出す（例のとおり）。Postflop Aggression・Hero Image は中央（Balanced・Standard）を出さない。Sample は入っていれば中央でも出す（読みの確かさなので中央にも意味がある） |
+| C-3 | Spot Read の Action を Action の列から決める規則 | 下の案 / 直す | 下の案（§10.3） |
+| C-4 | 1 席に候補が複数ある（例: Preflop の 3-Bet と Flop の C-Bet） | (a) 投稿者が候補から 1 つ選ぶ (b) 判断地点にいちばん近い Action に決める | (a)。最初は判断地点にいちばん近い Action を選んだ状態にする |
+| C-5 | Spot Read の Size | (a) 実際の額から自動で付ける (b) 付けない | (a)。Pot に対して 50% 未満 Small・50〜100% Big・100% 超 Overbet。Preflop は付けない |
+| C-6 | 「強い」の Lean を 3 回目に押したとき | (a) 選んでいない状態に戻る (b) 通常に戻る | (a)（未選択 → 通常 → 強い → 未選択）。Spot Read はそれで消え、General Read は作りかけに戻る |
+| C-7 | Check-Raise の表示の「OOP」の決め方 | Spot Read: その Street で先に Check していれば Check-Raise。General Read: (a) 投稿の Villain の席が Postflop で Hero より先に動くなら Check-Raise (b) General Read はいつも Raise | (a) |
+| C-8 | Preflop の Size | (a) Small・Big だけ (b) Overbet も | (a)（Preflop の Overbet は意味が薄い） |
+| C-9 | 表 2 枚の置き場所（「DB 側と共有」） | (a) `packages/core` に 1 つ置き、画面と create-post（サーバー）が使う。DB は形と大きさだけ (b) SQL にも同じ表を作る | (a)。(b) は不変条件 7（ロジックを SQL で二重に作らない）に反する。今の Villain・MTT の検証も (a) の形 |
+| C-10 | 注記「このハンドの結果を知る前の読みで」 | (a) 不変条件 1 の例外に加えて画面に出す (b) ⓘ に入れる | (a)（入力欄の近くにないと効かない） |
+| C-11 | 集計（action × lean） | (a) 今回は保存だけ（あとで集計できる形で持つ）(b) 集計の画面も作る | (a)。今は Villain の情報を集計する画面が無く、何を見せるかが決まっていない |
+| C-12 | 条件の選び方 | Flop texture は軸ごとに 0〜1 つ（全部任意）。Runout は複数選べる（その Street で落ちたカードについて。Overcard と Flush Complete を両方など） | この形 |
+| C-13 | 「回答が付いたら編集不可」 | (a) 投稿を編集する機能は作らない（今と同じ。投稿後は回答の有無に関係なく変えられない）(b) 回答が付くまで Villain の情報だけ直せる機能を作る | (a)。(b) は新しい機能（画面・RPC・サーバーでの強制）になる |
+
+### 10.3 Spot Read の Action の決め方（案。C-3）
+
+「Aggressor」＝それまでに最後に Bet / Raise した席（前の Street が全員 Check なら、さらに前の Street。Flop では Preflop の最後の Raise）。
+
+| Action | 決め方 |
+|---|---|
+| Limp | だれも Raise していない Preflop の Call（BB を除く） |
+| 3-Bet / Squeeze | Preflop の 2 回目の Raise。最初の Raise との間に Call が無ければ 3-Bet、1 人以上あれば Squeeze |
+| 4-Bet | Preflop の 3 回目の Raise |
+| Fold to 3-Bet / Fold to 4-Bet | 最初の Raise をした席が 3-Bet・Squeeze に Fold / 3-Bet・Squeeze をした席が 4-Bet に Fold |
+| Fold to Steal | CO・BTN・SB の最初の Raise（それより前は全員 Fold）に、SB・BB が Fold |
+| C-Bet | Flop で Aggressor がする最初の Bet |
+| Barrel | Turn・River で Aggressor がする最初の Bet（Delayed C-Bet に当たるものを除く） |
+| Delayed C-Bet | Flop が全員 Check のあと、Turn で Preflop の Aggressor がする最初の Bet |
+| Donk | 前の Street に Bet / Raise があり、Aggressor がまだ動いていない時に、Aggressor より先に動く席がする最初の Bet |
+| Probe | 前の Street が全員 Check のあと（Turn・River）、Aggressor より先に動く席がする最初の Bet |
+| Bet vs Check | 上に当たらない最初の Bet で、その Street で先に Check があったもの |
+| Raise | Postflop の Raise（その Street で先に Check していれば Check-Raise と表示） |
+| Fold to C-Bet / Fold to Barrel | C-Bet / Barrel・Delayed C-Bet に Fold |
+| Fold to Bet / Fold to Raise | そのほかの Bet に Fold / Raise に Fold |
+| 候補にしない | 最初の Raise（Open）、Limp 以外の Call、Check、5-Bet 以降、上に当たらない Fold・Bet（Limp のポットで最初に動く席の Bet など） |
+
+## 11. 今の実装・スキーマとの食い違い（2026-09-30 の仕様変更）
+
+1. **Memo**: core（`MEMO_MAX`・`normalizeMemo`）、投稿画面の欄、Preset、表示、規約 §1・§3、CLAUDE.md 不変条件 6、ⓘ、試験（RD・E2E）にある → すべて消す。
+2. **Postflop Aggression**: 今は 0〜100%（AFq）の Slider で数を直接入れられる → 0〜4 の 5 分割のボタン（数は無い）。
+3. **Hero Image・Read Confidence**: 今は Slider → 5 分割のボタン。Read Confidence は Sample に改名（C-1）。
+4. **回答・集計の表示**: 今は「段階のラベルとバー」（前回の指示）→ チップ。中央を出さないと、前回決めた「未入力と中央は別」が見る側からは区別できない（C-2）。
+5. **席**: 今は Hero 以外の座っている席すべて → 絞る（B-2）。
+6. **表の共有先**: 指示の「DB 側」は、今の作りと不変条件 7 では core の 1 か所（C-9）。
+7. **編集不可**: 投稿を編集する機能は今も無い（C-13）。
+8. **画面の注記**: 不変条件 1 に反する（C-10）。
+9. **新しく要る処理**: Action の列から Spot Read の Action の名前を決める処理（ポーカーのロジックなので core に 1 つ。不変条件 7）と、Spot Read が判断地点より前の実際の Action に合っているかのサーバーでの確認（create-post はハンドを再生しているので、そこで確かめる）。
+10. **DB**: マイグレーション `20260930000000_villain_reads_mtt.sql` は dev・本番とも未適用なので、新しいマイグレーションを足さずにこのファイルを直す。`villain_reads` の上限 4KB は、Read が 1 席 3 件×5 席だと足りなくなるおそれ → 8KB に上げる（案）。
+11. **Preset**: 今は鍵の名前に版（`wwyd.readPresets.v1.<uid>`）→ 中身に schema version を持たせ、前の形（Memo・Slider）は読み捨てる（まだ公開していないので、利用者の Preset は無い）。
+12. **用語**: 15 章 §1.1 と ⓘ（09 章）に Sample・Lean の 4 語・Action の語・条件のタグを足し、Memo・Read Confidence を消す。
+13. **MTT**: 「前回の指示のまま」は、そのあとの修正（Stage なし・段階の無い Slider・日本語の 5 つの欄）を含むものとして扱う。
