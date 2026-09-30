@@ -191,6 +191,25 @@ describe('保存（EF-02・EF-04）', () => {
     expect(p).toMatchObject({ fmt: 'mtt', rake: null, ante: 0.125, max_to: 21.775, pot_base: 5.45, effective_stack: 22 });
   });
 
+  it('EF-05 Villain・MTT の情報はサーバーで整えた値を渡す。情報なしは {} と null（18 章）', async () => {
+    const { handler, insertPost } = setup();
+    await handler(post(hs1()));
+    expect(insertPost.mock.calls[0]?.[1]).toMatchObject({ villain_reads: {}, mtt: null });
+    const mtt = { stage: 'bubble', rank: 12, left: 58, paid: 50, entries: 320 };
+    const res = await handler(post({ ...hs3(), villain_reads: { HJ: { vpip: 40, pfr: 10, memo: ' 見本 ' }, SB: {} }, mtt }));
+    expect(res.status).toBe(201);
+    expect(insertPost.mock.calls[1]?.[1]).toMatchObject({ villain_reads: { HJ: { vpip: 40, pfr: 10, memo: '見本' } }, mtt });
+  });
+
+  it('EF-06 Villain・MTT の情報の違反は 422 で、保存しない', async () => {
+    const { handler, insertPost } = setup();
+    expect(await json(await handler(post({ ...hs1(), villain_reads: { BB: { vpip: 10, pfr: 20 } } })))).toEqual({ error: 'invalid_reads' });
+    expect(await json(await handler(post({ ...hs1(), villain_reads: { BB: { memo: 'x'.repeat(31) } } })))).toEqual({ error: 'invalid_reads' });
+    expect(await json(await handler(post({ ...hs1(), mtt: { stage: 'itm' } })))).toEqual({ error: 'invalid_mtt' });
+    expect(await json(await handler(post({ ...hs1(), villain_reads: { BTN: { vpip: 10 } } })))).toEqual({ error: 'malformed' });
+    expect(insertPost).not.toHaveBeenCalled();
+  });
+
   it('EF-04 タイトルはサーバーで整えた値（前後の空白を除く）', async () => {
     const { handler, insertPost } = setup();
     await handler(post({ ...hs1(), title: '  見本  ' }));

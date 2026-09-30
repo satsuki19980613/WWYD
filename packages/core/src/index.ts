@@ -10,4 +10,5 @@ export * from './paint/codec.ts';
 export * from './paint/validate.ts';
 export * from './paint/aggregate.ts';
 export * from './post/validateInput.ts';
+export * from './post/reads.ts';
 export * from './post/verifyPost.ts';

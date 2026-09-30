@@ -1,4 +1,4 @@
-import { mbbToBb, seatedOf, type VerifiedPost } from '@wwyd/core';
+import { mbbToBb, seatedOf, type MttInfo, type VerifiedPost, type VillainReads } from '@wwyd/core';
 
 /**
  * `insert_post(p_author, p)` の `p`（詳細仕様 02 章 §4.1）。金額は bb の数値（DB の numeric）。
@@ -26,6 +26,10 @@ export type InsertPayload = {
   stop_index: number;
   hero_cards: string[];
   known_cards: Record<string, string[] | 'muck'>;
+  /** Villain の情報（18 章。情報なしは {}） */
+  villain_reads: VillainReads;
+  /** MTT の情報（18 章。情報なし・Cash は null） */
+  mtt: MttInfo | null;
 };
 
 const bbOrNull = (mbb: number | null): number | null => (mbb === null ? null : mbbToBb(mbb));
@@ -63,5 +67,7 @@ export function toInsertPayload(v: VerifiedPost): InsertPayload {
     stop_index: d.stopIndex,
     hero_cards: [...v.heroCards],
     known_cards: known,
+    villain_reads: v.reads,
+    mtt: v.mtt,
   };
 }

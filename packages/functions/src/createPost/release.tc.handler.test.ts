@@ -212,7 +212,7 @@ describe('C-03 クライアントが混ぜた値は使われない（不変条�
     expect(Object.keys(p).sort()).toEqual(
       [
         'actions', 'ante', 'bb', 'board', 'effective_stack', 'fmt', 'hero', 'hero_cards', 'keys', 'known_cards', 'max_to', 'min_to',
-        'pot_base', 'rake', 's1_label', 'sb', 'spot_index', 'stacks', 'stop_index', 'street', 'title',
+        'pot_base', 'rake', 's1_label', 'sb', 'spot_index', 'stacks', 'stop_index', 'street', 'title', 'villain_reads', 'mtt',
       ].sort(),
     );
     expect(p.pot_base).toBe(9.1); // サーバーの計算値（本文の pot_base: 1 は無視）

@@ -9,6 +9,7 @@ import { fail } from '../errors.ts';
 import { bbToMbb, type Mbb } from '../money.ts';
 import type { Derived } from '../poker/spot.ts';
 import type { Action, ActionType, HandSetup } from '../poker/state.ts';
+import { validateMtt, validateReads, type MttInfo, type VillainReads } from './reads.ts';
 
 export type Fmt = 'cash' | 'mtt';
 
@@ -25,6 +26,10 @@ export type PostInput = {
   actions: Action[];
   spotIndex: number;
   derived: Derived;
+  /** Villain の情報（18 章。情報なしは {}） */
+  reads: VillainReads;
+  /** MTT の情報（18 章。MTT 以外・情報なしは null） */
+  mtt: MttInfo | null;
 };
 
 /** タイトルの最大文字数（コードポイント数。DB の char_length と同じ数え方）。 */
@@ -131,6 +136,10 @@ export function validateInput(raw: unknown): PostInput {
   }
   const board: Card[] = raw.board;
 
+  // Villain・MTT の情報（全項目任意。18 章 §3）
+  const reads = validateReads(raw.villain_reads, seats, hero);
+  const mtt = validateMtt(raw.mtt, fmt);
+
   // アクション
   if (!Array.isArray(raw.actions)) fail('malformed', undefined, 'actions');
   const actions: Action[] = raw.actions.map((a: unknown, i: number) => {
@@ -180,5 +189,7 @@ export function validateInput(raw: unknown): PostInput {
     actions,
     spotIndex: raw.spot_index,
     derived,
+    reads,
+    mtt,
   };
 }
