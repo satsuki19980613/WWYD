@@ -5,7 +5,8 @@
 
 - **16 章との関係**: 出題は Hero の手番のまま（回答者は Hero の席で答える）。「Villain」は **Hero 以外の席の呼び名**として、この情報にだけ使う。
   出題の仕組み（Villain の席を 1 つ選ぶ）は戻さない。
-- **用語**: ポーカーの専門用語は英語のまま（VPIP・PFR・ICM・ITM・Bubble・Final Table・PKO・Satellite など。15 章 §1.1）。それ以外の文言は日本語。
+- **用語**: ポーカーの専門用語は英語のまま（VPIP・PFR・ICM・ITM・Deep・Turbo など。15 章 §1.1）。それ以外の文言は日本語。
+  **ただし MTT の数の欄の名前は日本語**（スポットの順位・残りの人数・エントリー数。ITM と Avg Stack はそのまま。2026-09-30 さつき）。
 - **全項目が任意**。何も入れなくても投稿できる。既存の投稿は「情報なし」として扱う（後方互換）。
 
 ## 1. さつきの判断（2026-09-30）
@@ -13,7 +14,7 @@
 | 論点 | 決定 |
 |---|---|
 | Memo に実在のプレイヤーの名前を書けてしまう（不変条件 6） | Memo は作る。利用規約で実名・アカウント名・ハンドルネームなど個人を識別できる情報と誹謗中傷を禁止し、違反した投稿は運営者が予告なく削除・非表示にできる。機械では防がない（書かれた文字を判定しない）。プレースホルダーで「個人を特定できる情報は書かない」と示す |
-| 画面に説明を出さない（不変条件 1） | 例外として画面に出す: Prize Structure の目安（選択肢の一部として小さく）、MTT の人数の欄の名前（Rank・Players Left など）、回答画面の MTT のモーダルの「Rank / Players Left」の見出し。詳しい説明は ⓘ（09 章） |
+| 画面に説明を出さない（不変条件 1） | 例外として画面に出す: Prize Structure の目安（選択肢の一部として小さく）、MTT の数の欄の名前、回答画面の MTT のモーダルの「順位 / 残りの人数」の見出し。詳しい説明は ⓘ（09 章） |
 | 新しいカードのデザインの範囲 | スマホのカードだけ。PC の一覧は表のまま（17 章。F-029 で直したばかり）で、印（Reads・MTT）と黄の使い方だけ合わせる |
 | Slider の 5 段階の境目 | Claude の案（§2.1）。数字はあとで変えてよい |
 
@@ -57,17 +58,17 @@
 
 | 項目 | 値 |
 |---|---|
-| Stage（最初に選ぶ） | Early / Bubble / ITM / Final Table |
-| Tournament Type | Regular / PKO / Satellite |
-| Rank・Players Left・Paid Places・Entries | 1〜1,000,000 の整数 |
-| Avg Stack（bb） | 0 より大きく 99,999 まで、小数第 1 位まで。**Final Table では出さない・送らない** |
+| Tournament Type（ストラクチャーの速さ） | **Slider**（§2.2 と同じ操作。未入力あり）。5 段階: Deep / Semi-Deep / Regular / Semi-Turbo / Turbo（0〜4）。表示も Slider（段階のラベルとバー） |
+| スポットの順位・残りの人数・エントリー数・ITM（入賞する人数） | 1〜1,000,000 の整数。**欄の名前は日本語**、並びはこの順 |
+| Avg Stack（bb） | 0 より大きく 99,999 まで、小数第 1 位まで |
 | Prize Structure | Top-heavy（1st ≥ 25%）/ Standard（1st 15–25%）/ Flat（1st < 15%）。括弧の目安（1st prize が賞金総額に占める割合。暫定値）を選択肢の下に小さく出す |
 
-- 選択肢は押すと選び、もう一度押すと未選択に戻る（全項目任意）。
-- 人数の大小: Rank ≦ Players Left ≦ Entries、Paid Places ≦ Entries（両方あるときだけ比べる。Paid Places は Players Left を超えてよい＝入賞後）。
-  読めない値は欄を赤い枠にし、投稿の時に「MTT の Rank の値が正しくありません」。
+- **2026-09-30 さつきの修正**: Stage（Early / Bubble / ITM / Final Table）の項目をなくした。Tournament Type は Regular / PKO / Satellite の選択をやめ、Deep〜Turbo の Slider にした。数の欄は上の 5 つだけ（Paid Places は「ITM」の名前で残す）。
+- Prize Structure の選択肢は押すと選び、もう一度押すと未選択に戻る（全項目任意）。
+- 人数の大小: スポットの順位 ≦ 残りの人数 ≦ エントリー数、ITM ≦ エントリー数（両方あるときだけ比べる。ITM は残りの人数を超えてよい＝入賞後）。
+  読めない値は欄を赤い枠にし、投稿の時に「MTT の スポットの順位 の値が正しくありません」の形で出す。
 - 置き場所: PC は左の列の「基本設定」の下、スマホはステップ 1（基本設定）の下。
-- **表示の形**: `12/58 ・ ITM 50 ・ 320 entries`（Rank/Players Left・Paid Places・Entries。無い項目は出さない。Rank だけなら `#12`、Players Left だけなら `58 left`）。
+- **表示の形**: `12/58 ・ ITM 50 ・ 320 entries`（スポットの順位 / 残りの人数・ITM・エントリー数。無い項目は出さない。Rank だけなら `#12`、Players Left だけなら `58 left`）。
 
 ## 3. サーバーでの検証（不変条件 4・7）
 
@@ -108,7 +109,7 @@
 - 情報のある席は、席の札の右上に小さなシアンの ◆ を付け、押せるようにする。押すとその席のモーダル（「Villain · BTN」）。
 - All Villains: ポットに参加した席（Preflop で Fold していない席）を上に、Preflop で Fold した席は「Preflop Fold n」の下に折りたたむ。
   どちらも座席の順。情報の無い席は 1 行（「—」）。回答画面は見せている範囲（停止位置まで）の Action で並べる。
-- MTT: Stage・Tournament Type・「Rank / Players Left」の見出しと `12/58 ・ ITM 50 ・ 320 entries`（ツールチップにも項目名）・Avg Stack・Prize Structure（目安つき）。
+- MTT: Tournament Type（Slider の表示）・「順位 / 残りの人数」の見出しと `12/58 ・ ITM 50 ・ 320 entries`（ツールチップにも項目名）・Avg Stack・Prize Structure（目安つき）。
 - 表示は簡潔に: **未入力の項目は出さない**。Slider は段階のラベルとバーだけ（数は出さない）。
 - 集計画面にも同じボタンと席の印を置く。
 
@@ -137,7 +138,14 @@
 - プライバシーポリシー §1: 「投稿の下書きは、その端末のブラウザにだけ保存します。」→「投稿の下書きと Villain の情報の Preset は、その端末のブラウザにだけ保存し、サーバーには送信しません。」
 - 非表示の機能は作っていない（違反した投稿は管理者の削除で消す。06 章 §2）。
 
-## 8. 試験
+## 8. スクロールバー（2026-09-30 さつき。アプリ全体）
+
+- 細く（4px）、ふだんは見せず、**スクロールしている間だけ**出す（止まって 0.9 秒で消える）。つまみにマウスを乗せた・掴んだときはシアンで出す。PC・スマホとも同じ。
+- `styles/scrollbar.css`（Chromium・Safari は `::-webkit-scrollbar`、Firefox は `scrollbar-width: thin` と `scrollbar-color`）と
+  `scrollIndicator.ts`（スクロールした要素に `is-scrolling` を付ける）。スマホの OS が重ねて描くスクロールバー（iOS・Android）は、もともと細くスクロール中だけ出る。
+- 試験: `e2e/scrollbar.spec.ts`（幅 4px 以下、スクロール中だけ `is-scrolling`）。Playwright の画面なしの Chromium はスクロールバーを描かないので、色は目で確かめる。
+
+## 9. 試験
 
 - 単体: `packages/core/src/post/reads.test.ts`（RD・MT）、`packages/app/src/reads/readsModel.test.ts`（段階・追従・送る形・MTT の欄・並び・下書きの読み直し・Preset）、
   `packages/functions/src/createPost/handler.test.ts`（EF-05・EF-06）。
