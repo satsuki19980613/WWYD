@@ -65,7 +65,9 @@ export function AccountMenu(props: {
         className="menu-item danger"
         disabled={!props.onDeleteAccount}
         onClick={() => {
-          props.onClose();
+          // 先にフォーカスをアカウントのボタンへ戻してから確認を開く。確認（Modal）は開いたときのフォーカスを覚えて閉じたときに戻すので、
+          // メニューの項目（閉じると消える）のままだと body に落ちる（リリース前テスト F-031）
+          close();
           props.onDeleteAccount?.();
         }}
       >

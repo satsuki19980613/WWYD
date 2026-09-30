@@ -2,9 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 
 /**
  * トースト（06 章 §0.4）。エラーと、仕様書が明示したもの（スポイトの「レンジ外」）だけに使う。
- * 完了通知と操作説明には使わない（CLAUDE.md 不変条件 1）。2.2 秒で消える。
+ * 完了通知と操作説明には使わない（CLAUDE.md 不変条件 1）。エラーは 4 秒（読み切れるように。F-035）、スポイトの「レンジ外」は 2.2 秒で消える。
  */
 export const TOAST_MS = 2200;
+export const TOAST_ERROR_MS = 4000;
 
 type ToastKind = 'error' | 'notice';
 type ToastItem = { id: number; message: string; kind: ToastKind };
@@ -27,7 +28,7 @@ export function ToastProvider(props: { children: ReactNode }): JSX.Element {
 
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), TOAST_MS);
+    const t = window.setTimeout(() => setToast(null), toast.kind === 'error' ? TOAST_ERROR_MS : TOAST_MS);
     return () => window.clearTimeout(t);
   }, [toast]);
 

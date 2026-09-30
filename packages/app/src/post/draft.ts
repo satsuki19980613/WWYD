@@ -7,6 +7,7 @@ import {
   hasPreflopAllin,
   legal,
   mbbToBb,
+  MAX_STACK_MBB,
   POSITIONS,
   runActions,
   SEATS_BY_COUNT,
@@ -37,7 +38,7 @@ import {
   type ReadCandidate,
 } from '@wwyd/core';
 import { handCards, isHandComplete } from './cardInput.ts';
-import { emptyMtt, incompleteSeats, MTT_FIELD_LABEL, parseMtt, readsForSubmit, type MttDraft, type ReadsDraft } from '../reads/readsModel.ts';
+import { emptyMtt, incompleteSeats, MTT_FIELD_LABEL, mttOrderErrors, parseMtt, readsForSubmit, type MttDraft, type ReadsDraft } from '../reads/readsModel.ts';
 import { messageForCode } from './errorMessages.ts';
 
 /**
@@ -205,7 +206,8 @@ export function parseSettings(d: Draft): ParsedSettings {
       continue;
     }
     const s = parseAmount(d.stacks[p], null);
-    if (s === null || s <= 0) invalid.push(p);
+    // Stack は 1000bb まで（F-037）。入力の途中で欄を赤くする
+    if (s === null || s <= 0 || s > MAX_STACK_MBB) invalid.push(p);
     else stacks[p] = s;
   }
   if (invalid.some((f) => f !== 'rake') || seats.length === 0) return { setup: null, rake, invalid };
@@ -571,7 +573,11 @@ export function buildSubmission(d: Draft): Submission {
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
   if (d.spotIndex === null) errors.push(phase.kind === 'done' && candidates(d).length === 0 ? noSpotError(d) : 'Spot を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
-  if (d.fmt === 'mtt') for (const f of parseMtt(d.mtt).invalid) errors.push(`MTT の ${MTT_FIELD_LABEL[f]} の値が正しくありません`);
+  if (d.fmt === 'mtt') {
+    const mtt = parseMtt(d.mtt);
+    for (const f of mtt.invalid) errors.push(`MTT の ${MTT_FIELD_LABEL[f]} の値が正しくありません`);
+    errors.push(...mttOrderErrors(mtt.info));
+  }
   for (const p of incompleteSeats(d.reads, villainContext(d).seats)) errors.push(`${p} の General Read を最後まで選んでください`);
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };

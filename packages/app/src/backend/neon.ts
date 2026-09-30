@@ -21,9 +21,31 @@ export const SESSION_VERIFIER_PARAM = 'neon_auth_session_verifier';
 
 export type AuthUser = { id: string };
 
+/** 通信の打ち切り時間（F-016）。ログインまわりは 10 秒、Data API は 20 秒。打ち切ると例外（通信エラーと同じ扱い） */
+export const SESSION_TIMEOUT_MS = 10_000;
+export const DATA_TIMEOUT_MS = 20_000;
+
+/** `ms` で打ち切る fetch。呼び出し側の signal（取り消し）も生かす */
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  const outer = init.signal;
+  const onAbort = (): void => ctrl.abort();
+  if (outer) {
+    if (outer.aborted) ctrl.abort();
+    else outer.addEventListener('abort', onAbort, { once: true });
+  }
+  try {
+    return await fetch(input, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+    outer?.removeEventListener('abort', onAbort);
+  }
+}
+
 /** 自サイトの中継を通す（セッションのクッキーは自サイトのもの） */
 function sessionFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(`${SESSION_URL}${path}`, { ...init, credentials: 'same-origin' });
+  return fetchWithTimeout(`${SESSION_URL}${path}`, { ...init, credentials: 'same-origin' }, SESSION_TIMEOUT_MS);
 }
 
 /**
@@ -128,7 +150,7 @@ export const db = new PostgrestClient(DATA_API_URL, {
     const token = await getToken();
     const headers = new Headers(init?.headers);
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    const res = await fetch(input, { ...init, headers });
+    const res = await fetchWithTimeout(input, { ...init, headers }, DATA_TIMEOUT_MS);
     // JWT が通らない（401）・サーバーが not_authenticated を返した → ログインし直してもらう
     if (res.status === 401 || (res.status === 400 && (await isNotAuthenticated(res)))) sessionLost();
     return res;

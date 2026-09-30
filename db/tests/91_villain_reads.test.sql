@@ -64,7 +64,7 @@ select pg_temp.make_post(1, pg_temp.hs1('一周') || $j$ {
   "fmt": "mtt", "rake": null,
   "villain_reads": {
     "SB": {"vpip": 18, "reads": [{"scope":"spot","street":"pf","action":"fold_steal","texture":null,"runout":null,"size":null,"lean":"under","strong":true}]},
-    "BB": {"vpip": 30, "pfr": 12, "agg": 1, "image": 3, "sample": 4,
+    "BB": {"vpip": 30, "pfr": 12, "agg": 1, "image": 3,
            "reads": [{"scope":"general","street":"turn","action":"barrel","texture":null,"runout":["flush","pair"],"size":"big","lean":"value","strong":false},
                      {"scope":"general","street":"flop","action":"raise","texture":{"high":"a","connect":"none"},"runout":null,"size":null,"lean":"bluff","strong":true}]}
   },

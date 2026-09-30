@@ -98,11 +98,56 @@
 
 Claude が起案した文面（06 章 §6.2）を読み、承認または修正指示を出す。問い合わせ先【Q-19】を決める。
 
-## M-12 運用: 休止からの再開・容量の整理
+## M-12 運用（Neon 版。2026-09-30 に書き直し。F-021）
 
-- Supabase が休止したら（メンテナンス画面が出たら）: ダッシュボードでプロジェクトを開き「Restore / Resume」。【Q-12】で自動の防止策を採る場合は不要になる。
-- 容量が 70% に達したら（ダッシュボード「Reports → Database」で確認）: SQL エディタで `select public.admin_delete_unanswered_posts('<基準日時>');` を実行（02 章 §4.7）。
-- 荒らし・無料枠の逼迫で利用者を限定するとき: `insert into public.app_allowlist (uid) values (...)` で許可するユーザーを登録してから、`update public.app_settings set allowlist_enabled = true;`。
+SQL はすべて Neon のコンソールの「SQL Editor」で、ブランチを選んでから実行する（本番は **production**。試すときは **dev**）。
+SQL Editor は DB の所有者の権限で動くので、書き間違えると本番のデータが変わる。**本番で実行する前に、同じ SQL を dev で一度試す**。
+
+### 1. 毎週の見張り（5 分ほど）
+
+無料枠で先に尽きるのは Neon の計算時間（月 100 CU 時間）と、Cloudflare の Pages Functions（`/api/auth/*`。1 日 10 万回）。
+
+| 見る場所 | 見る値 | 目安と対応 |
+|---|---|---|
+| Neon のコンソール → プロジェクト `patient-leaf-06853495` の使用量（Usage / Monitoring） | 今月の Compute（CU 時間）と Storage | Compute は「今月の日数 ÷ 30 × 100」を超えるペースなら使いすぎ（例: 15 日目で 50 を超える）→ Claude に相談（許可リストで利用者を絞る、など）。Storage が 0.35GB（70%）を超えたら §3 の整理 |
+| Cloudflare のダッシュボード → Workers & Pages → `wwyd` → Functions の要求数 | 1 日の要求数 | 数千を超えていたら、外からの大量のアクセスの疑い（ふつうは 1 回の利用で数回）→ Claude に相談 |
+
+### 2. DB が止まったとき（メンテナンス画面が出る）
+
+- Neon は 5 分使わないと自動で止まり、次のアクセスで自動で起動する（操作は要らない。1 週間の休止も無い。T-1003 の休止対策は不要）。
+- 月の計算時間（100 CU 時間）を使い切ると、翌月まで DB が止まる。そのときは翌月を待つか、Claude に相談する（有料プランには上げない。不変条件 3）。
+
+### 3. 容量の整理（回答の無い古い投稿を消す。02 章 §4.7）
+
+管理者（M-09 で登録した自分）として実行する。`90 days` を消したい古さに変える。投稿者本人の回答だけの投稿も「回答なし」として消える。
+
+```sql
+begin;
+select set_config('request.jwt.claims', json_build_object('sub', (select uid from public.app_admins limit 1))::text, true);
+select public.admin_delete_unanswered_posts(now() - interval '90 days');  -- 消した件数が出る
+commit;
+```
+
+### 4. 利用者を絞る（荒らし・無料枠の逼迫）
+
+```sql
+-- 許可する人を登録する（相手に一度ログインしてもらってから。メールアドレスで選ぶ）
+insert into public.app_allowlist (uid) select id from neon_auth."user" where email = '<相手の Gmail>';
+-- 許可リストを有効にする（管理者と許可リストの人だけが使える。ほかの人は「このアカウントは利用できません」の画面）
+update public.app_settings set allowlist_enabled = true;
+-- 元に戻す
+update public.app_settings set allowlist_enabled = false;
+```
+
+### 5. 管理者が投稿を消す
+
+画面から: 管理者でログインすると、一覧のすべての投稿にごみ箱が出る（06 章 §2）。
+
+### 6. dev で一度試す（さつき。15 分ほど。F-06）
+
+1. §1 の 2 つの画面を開き、値の場所を確かめる。
+2. SQL Editor でブランチ **dev** を選び、§3 の SQL を `interval '3650 days'`（10 年前より古い投稿 = 0 件）で実行し、`0` が出ることを確かめる。
+3. §4 の `allowlist_enabled = true` を dev で実行 → 手元（`npm run dev`）で自分（管理者）は使え続けることを確かめる → `false` に戻す。
 
 ## M-13 OCR の流用元の確認と正解データの扱い
 

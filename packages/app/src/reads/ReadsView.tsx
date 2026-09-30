@@ -168,7 +168,7 @@ export function useReadsUi(props: {
   actions: readonly Action[];
   reads: VillainReads;
   mtt: MttInfo | null;
-}): { buttons: JSX.Element; onSeat: (pos: Pos) => void; marked: ReadonlySet<Pos>; modal: JSX.Element | null } {
+}): { buttons: JSX.Element; any: boolean; onSeat: (pos: Pos) => void; marked: ReadonlySet<Pos>; modal: JSX.Element | null } {
   const [open, setOpen] = useState<Open>(null);
   const marked = new Set(props.seats.filter((p) => p !== props.hero && hasVisibleRead(props.reads[p])));
   const hasMtt = hasMttInfo(props.mtt);
@@ -207,5 +207,5 @@ export function useReadsUi(props: {
     );
   }
 
-  return { buttons, onSeat: (pos) => marked.has(pos) && setOpen({ kind: 'seat', pos }), marked, modal };
+  return { buttons, any: marked.size > 0 || hasMtt, onSeat: (pos) => marked.has(pos) && setOpen({ kind: 'seat', pos }), marked, modal };
 }

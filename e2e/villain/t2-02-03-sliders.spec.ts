@@ -96,7 +96,8 @@ for (const v of ['', ' @sp'] as const) {
   test(`T2-02 VPIP・PFR: 段階の境目（VPIP 15・22・30・40、PFR 8・14・20・26）のラベルと読み上げ${v}`, async ({ page }) => {
     await open(page);
     const VPIP: [number, string][] = [[0, 'Very Tight'], [14, 'Very Tight'], [15, 'Tight'], [21, 'Tight'], [22, 'Standard'], [29, 'Standard'], [30, 'Loose'], [39, 'Loose'], [40, 'Very Loose'], [100, 'Very Loose']];
-    const PFR: [number, string][] = [[0, 'Very Low'], [7, 'Very Low'], [8, 'Low'], [13, 'Low'], [14, 'Standard'], [19, 'Standard'], [20, 'High'], [25, 'High'], [26, 'Very High'], [100, 'Very High']];
+    // V-006: PFR の境目は 10/16/23/30
+    const PFR: [number, string][] = [[0, 'Very Low'], [9, 'Very Low'], [10, 'Low'], [15, 'Low'], [16, 'Standard'], [22, 'Standard'], [23, 'High'], [29, 'High'], [30, 'Very High'], [100, 'Very High']];
     for (const [val, lab] of VPIP) {
       await num(page, 'VPIP', String(val));
       expect(await valtext(page, 'VPIP'), `VPIP ${val}`).toBe(`${lab} ${val}%`);
@@ -252,11 +253,10 @@ for (const v of ['', ' @sp'] as const) {
 const STEPS = [
   { name: 'Postflop Aggression', labels: ['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive'], ends: ['Passive', 'Aggressive'], chip: ['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive'] },
   { name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], ends: ['Tight', 'Loose'], chip: ['Hero Image: Very Tight', 'Hero Image: Tight', 'Hero Image: Standard', 'Hero Image: Loose', 'Hero Image: Very Loose'] },
-  { name: 'Sample', labels: ['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats'], ends: ['First Impression', 'HUD Stats'], chip: ['Sample: First Impression', 'Sample: Few Orbits', 'Sample: Some History', 'Sample: Long', 'Sample: HUD Stats'] },
 ] as const;
 
 for (const v of ['', ' @sp'] as const) {
-  test(`T2-03 5 分割のボタン: 3 つとも 押すと選ぶ・もう一度で未入力・別のボタンで移る。帯は選んだ所まで点灯。左右の端の名前${v}`, async ({ page }) => {
+  test(`T2-03 5 分割のボタン: 2 つとも 押すと選ぶ・もう一度で未入力・別のボタンで移る。帯は選んだ所まで点灯。左右の端の名前${v}`, async ({ page }) => {
     await open(page);
     for (const st of STEPS) {
       const grp = villains(page).getByRole('group', { name: st.name });
@@ -296,6 +296,18 @@ for (const v of ['', ' @sp'] as const) {
     expect(await noOverflow(page)).toBe(true);
   });
 
+  test(`T2-03 5 分割のボタンは Postflop Aggression・Hero Image の 2 つだけ（Sample は廃止。V-007）${v}`, async ({ page }) => {
+    await open(page);
+    const sec = villains(page);
+    await expect(sec.locator('.seg5')).toHaveCount(2);
+    expect(await sec.locator('.seg5').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))).toEqual(['Postflop Aggression', 'Hero Image']);
+    await expect(sec.getByRole('group', { name: 'Sample' })).toHaveCount(0);
+    for (const name of ['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats']) {
+      await expect(sec.getByRole('button', { name, exact: true }), name).toHaveCount(0);
+    }
+    await expect(sec).not.toContainText('Sample');
+  });
+
   test(`T2-03 5 分割のボタン: 席の要約の 1 行（投稿画面の要約は中央も出す。V-029）${v}`, async ({ page }) => {
     await open(page);
     const sum = seatBtn(page, 'BB').locator('.vr-sum');
@@ -312,11 +324,9 @@ for (const v of ['', ' @sp'] as const) {
     await expect(sum).toHaveText('Passive · Hero Image: Standard');
     await press('Hero Image', 4);
     await expect(sum).toHaveText('Passive · Hero Image: Very Loose');
-    await press('Sample', 2);
-    await expect(sum).toHaveText('Passive · Hero Image: Very Loose · Sample: Some History');
     await num(page, 'VPIP', '38');
     await num(page, 'PFR', '12');
-    await expect(sum).toHaveText('38/12 · Passive · Hero Image: Very Loose · Sample: Some History');
+    await expect(sum).toHaveText('38/12 · Passive · Hero Image: Very Loose');
     // チップの文言の表（tendencyChips と同じ）を要約で 1 つずつ確かめる
     await villains(page).getByRole('button', { name: 'クリア' }).click();
     for (const st of STEPS) {
@@ -330,7 +340,6 @@ for (const v of ['', ' @sp'] as const) {
     // 全部の Read の要約が長くても、要約は 1 行に収まって、はみ出さない
     await press('Postflop Aggression', 4);
     await press('Hero Image', 4);
-    await press('Sample', 0);
     await num(page, 'VPIP', '100');
     await num(page, 'PFR', '100');
     const r = await seatBtn(page, 'BB').boundingBox();

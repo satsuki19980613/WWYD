@@ -116,7 +116,7 @@ for (const v of ['', ' @sp'] as const) {
   test(`T3-08・T3-09 回答画面・集計画面の Villain の表示: 説明文が無く、英語と記号だけ（例外は MTT の見出し）${v}`, async ({ page }) => {
     const errors = watchErrors(page);
     const reads = {
-      UTG: { vpip: 12, pfr: 8, agg: 0, image: 4, sample: 3, reads: [{ scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'a', suit: 'two', paired: 'paired', connect: 'straight' }, runout: null, size: 'big', lean: 'bluff', strong: true }] },
+      UTG: { vpip: 12, pfr: 8, agg: 0, image: 4, reads: [{ scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'a', suit: 'two', paired: 'paired', connect: 'straight' }, runout: null, size: 'big', lean: 'bluff', strong: true }] },
       BTN: { agg: 4, reads: [{ scope: 'spot', street: 'turn', action: 'barrel', texture: null, runout: null, size: 'big', lean: 'value', strong: false }] },
     };
     const mtt = { speed: 10, rank: 12, left: 58, paid: 50, entries: 320, avg: 35, prize: 'standard' };

@@ -504,20 +504,27 @@ test.describe('A-07 スマホ（@sp）', () => {
   });
 });
 
-test.describe('A-07 観察（仕様の確認が必要）', () => {
-  test('塗ったまま一覧へ移る（アプリ内の移動・ブラウザの戻る）と、確認なしで塗りが失われる。Post は確認する（06 章 §3.2）が回答は beforeunload だけ（§4.9）', async ({ page }) => {
+test.describe('A-07 塗ったままアプリ内で移る（F-028。2026-09-30 さつき）', () => {
+  test('塗ったまま一覧へ移ると「塗った Range を捨てますか」。やめると残り、捨てると移る', async ({ page }) => {
     await open(page);
-    let unloadAsked = false;
-    page.on('dialog', (d) => {
-      unloadAsked = true;
-      void d.dismiss();
-    });
+    const url = page.url();
     await cell(page, 'AA').click();
+    const list = page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: 'List' });
+    await list.click();
+    const dlg = page.getByRole('alertdialog', { name: '塗った Range を捨てますか' });
+    await expect(dlg).toBeVisible();
+    await dlg.getByRole('button', { name: 'やめる' }).click();
+    await expect(dlg).toHaveCount(0);
+    await expect(page).toHaveURL(url);
+    await list.click();
+    await dlg.getByRole('button', { name: '捨てて移動' }).click();
+    await expect(page).toHaveURL('/');
+  });
+
+  test('塗っていなければ確認せずに移る', async ({ page }) => {
+    await open(page);
     await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: 'List' }).click();
     await expect(page).toHaveURL('/');
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
-    expect(unloadAsked).toBe(false);
-    await page.goBack();
-    await expect(page.locator('.rcell.on')).toHaveCount(0); // 塗りは残っていない
   });
 });

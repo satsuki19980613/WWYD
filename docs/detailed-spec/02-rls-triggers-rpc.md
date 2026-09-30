@@ -171,6 +171,8 @@ revoke all on all tables    in schema public from anon, authenticated;
 revoke all on all functions in schema public from public, anon, authenticated;
 
 grant select, delete on public.posts           to authenticated;
+-- 2026-09-30（F-006）: posts の select は author_uid を除く列だけに改めた（マイグレーション 20260930000001_hide_author_uid.sql）。
+--   同じ人の投稿を結び付けられないように。削除のポリシーの author_uid は RLS の条件なので列の権限が無くても評価される
 grant select         on public.post_secrets    to authenticated;
 grant select         on public.host_answers    to authenticated;
 grant select         on public.post_aggregates to authenticated;

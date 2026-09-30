@@ -84,7 +84,7 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`T2-01 席: 「すべて消す」で席が無くなり、同じ Action を入れ直すと入力が戻る${v}`, async ({ page }) => {
-    await openDraft(page, draftJson({ ...srpTurn(), reads: { BB: { vpip: 40, sample: 3 }, SB: { agg: 1 } } }));
+    await openDraft(page, draftJson({ ...srpTurn(), reads: { BB: { vpip: 40, agg: 3 }, SB: { agg: 1 } } }));
     await step(page, S_SPOT);
     await expect(seatBtn(page, 'BB')).toContainText('VPIP 40');
     await step(page, /^3\s*Action$/);

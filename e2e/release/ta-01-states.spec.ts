@@ -53,6 +53,13 @@ for (const v of VARIANTS) {
       await expect(page.getByRole('button', { name: 'Google でログイン' })).toBeEnabled();
     });
 
+    test(`F-027 #error= （ハッシュ）でも失敗として扱い、URL から消す${v}`, async ({ page }) => {
+      await fakeBackend(page, null, { signedIn: false });
+      await page.goto('/#error=access_denied');
+      await expect(page.getByText('ログインできませんでした')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('');
+    });
+
     test(`?error= だけでも失敗として扱う。元のパス・ほかのクエリは残す${v}`, async ({ page }) => {
       await fakeBackend(page, null, { signedIn: false });
       await page.goto('/?tab=mine&error=access_denied');
@@ -145,6 +152,22 @@ for (const v of VARIANTS) {
       await page.route('**/api/auth/get-session', (r) => r.fulfill({ status: 500, contentType: 'application/json', body: '{}' }));
       await page.goto('/');
       await expect(page.getByRole('heading', { name: 'メンテナンス中' })).toBeVisible();
+    });
+
+    test(`F-015 get-session が 429（混み合っている）→ メンテナンス中（ログイン画面にしない）${v}`, async ({ page }) => {
+      await fakeBackend(page, null);
+      await page.route('**/api/auth/get-session', (r) => r.fulfill({ status: 429, contentType: 'application/json', body: '{}' }));
+      await page.goto('/');
+      await expect(page.getByRole('heading', { name: 'メンテナンス中' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Google でログイン' })).toHaveCount(0);
+    });
+
+    test(`F-016 get-session が応答しない → 打ち切ってメンテナンス中（起動画面のまま待ち続けない）${v}`, async ({ page }) => {
+      test.setTimeout(40_000);
+      await fakeBackend(page, null);
+      await page.route('**/api/auth/get-session', () => undefined);
+      await page.goto('/');
+      await expect(page.getByRole('heading', { name: 'メンテナンス中' })).toBeVisible({ timeout: 20_000 });
     });
 
     test(`404: 知らないパスは「ページが見つかりません」＋「一覧へ」${v}`, async ({ page }) => {

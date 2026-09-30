@@ -176,7 +176,7 @@ export function VillainSection(props: {
   );
 }
 
-/** 5 分割のボタン（Postflop Aggression・Hero Image・Sample）。押すと選び、もう一度押すと未入力。左右の端に名前 */
+/** 5 分割のボタン（Postflop Aggression・Hero Image）。押すと選び、もう一度押すと未入力。左右の端に名前 */
 function StepButtons(props: { def: StepDef; value: number | undefined; onPick: (v: number) => void }): JSX.Element {
   const { def, value } = props;
   const set = value !== undefined;

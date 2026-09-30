@@ -118,10 +118,11 @@ for (const v of ['', ' @sp'] as const) {
     await expect(page.getByRole('slider', { name: 'VPIP' })).toHaveAttribute('aria-valuenow', '30');
     await expect(page.getByRole('slider', { name: 'PFR' })).toHaveAttribute('aria-valuetext', '未入力');
     await expect(page.getByRole('textbox', { name: /Memo/ })).toHaveCount(0);
-    // 範囲外の agg（75）・image（80）・sample（9）は捨てる（未入力）
-    for (const g of ['Postflop Aggression', 'Hero Image', 'Sample']) {
+    // 範囲外の agg（75）・image（80）は捨てる（未入力）。廃止した Sample（V-007）は欄ごと無い
+    for (const g of ['Postflop Aggression', 'Hero Image']) {
       await expect(sec.getByRole('group', { name: g }).getByRole('button', { pressed: true })).toHaveCount(0);
     }
+    await expect(sec.getByRole('group', { name: 'Sample' })).toHaveCount(0);
     // 投稿すると、送る本文に旧仕様のキーも捨てた値も入らない
     await submit(page);
     await expect.poll(() => cp.calls.length).toBe(1);

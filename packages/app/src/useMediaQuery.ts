@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
+import { MOBILE_QUERY } from './layout.ts';
 
-/** スマホ用 UI に切り替える境界（06 章 §0.2。700px 未満はスマホ用の構成）。 */
-export const MOBILE_QUERY = '(max-width: 699.98px)';
+/** スマホ用 UI に切り替える境界（06 章 §0.2・17 章 §3.0。FitStage の倍率が下限を下回る画面。layout.ts） */
+export { MOBILE_QUERY };
 
 export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(

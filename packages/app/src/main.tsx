@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { ToastProvider } from './components/Toast.tsx';
 import { installScrollIndicator } from './scrollIndicator.ts';
 // 書体は自サイトから配信する（Google Fonts へ通信しない。2026-09-28 さつきの決定）
@@ -28,7 +29,10 @@ installScrollIndicator();
 createRoot(root).render(
   <StrictMode>
     <ToastProvider>
-      <App />
+      {/* ヘッダーを含めて落ちたときの最後の受け皿（F-004） */}
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </ToastProvider>
   </StrictMode>,
 );

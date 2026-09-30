@@ -6,7 +6,7 @@
 import { ANSWER_KEYS, playerCountOf, POSITIONS, STREETS, type AnswerKey, type Pos, type Street } from '../constants.ts';
 import { isCard, type Card } from '../cards.ts';
 import { fail } from '../errors.ts';
-import { bbToMbb, type Mbb } from '../money.ts';
+import { bbToMbb, MAX_STACK_MBB, type Mbb } from '../money.ts';
 import type { Derived } from '../poker/spot.ts';
 import type { Action, ActionType, HandSetup } from '../poker/state.ts';
 import { validateMtt, validateReads, type MttInfo, type VillainReads } from './reads.ts';
@@ -108,8 +108,8 @@ export function validateInput(raw: unknown): PostInput {
     rake = r;
   }
 
-  // BB は 1bb 固定（Q-4）。SB は 0 より大きく BB 以下。アンティは 0 以上。スタックは 0 より大きい
-  if (bb !== 1000 || sb <= 0 || sb > bb || ante < 0 || seats.some((p) => stacks[p] <= 0)) fail('invalid_settings');
+  // BB は 1bb 固定（Q-4）。SB は 0 より大きく BB 以下。アンティは 0 以上。スタックは 0 より大きく 1000bb 以下（F-037）
+  if (bb !== 1000 || sb <= 0 || sb > bb || ante < 0 || seats.some((p) => stacks[p] <= 0 || stacks[p] > MAX_STACK_MBB)) fail('invalid_settings');
   if (fmt === 'mtt' && rake !== null) fail('invalid_settings');
   if (rake !== null && (rake < 0 || rake > 100)) fail('invalid_settings');
 

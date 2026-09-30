@@ -101,11 +101,11 @@ describe('T3-11 利用規約・プライバシーポリシー', () => {
     const s1 = /## 1\. 禁止事項([\s\S]*?)## 2\./.exec(terms)?.[1] ?? '';
     expect(s1).not.toMatch(/Memo/);
     expect(s1).not.toMatch(/Villain の情報（/);
-    expect(s1).toContain('スポットのタイトルに、実在の人物を特定できる情報');
+    expect(s1).toContain('Spot のタイトルに、実在の人物を特定できる情報');
     expect(s1).toContain('他人を誹謗中傷すること');
   });
   it('規約 §2: 禁止事項に反する投稿の削除・非表示の文', () => {
-    expect(terms).toContain('禁止事項に反する投稿や不適切な投稿は、予告なく削除または非表示にすることがあります。');
+    expect(terms).toContain('禁止事項に反する投稿や不適切な投稿は、予告なく削除することがあります。');
   });
   it('規約 §3: 免責に Villain の情報は主観的な評価（Memo の語なし）', () => {
     const s3 = /## 3\. 免責([\s\S]*?)## 4\./.exec(terms)?.[1] ?? '';

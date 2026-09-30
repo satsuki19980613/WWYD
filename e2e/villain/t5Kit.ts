@@ -227,7 +227,7 @@ const BAD_VR: unknown[] = [
   { BB: { vpip: 10, pfr: 99 } },
   { BTN: { reads: [{ scope: 'spot', street: 'river', action: 'cbet', texture: null, runout: null, size: null, lean: 'over', strong: false }] } },
   { CO: { reads: [{ scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'zz' }, runout: null, size: 'huge', lean: 'value', strong: 'yes' }] } },
-  { BTN: { vpip: 1e9, pfr: -3, agg: 99, image: 2.5, sample: 4 } },
+  { BTN: { vpip: 1e9, pfr: -3, agg: 99, image: 2.5, sample: 4 } }, // sample は廃止した項目（V-007）
   Object.fromEntries(['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'].map((p) => [p, { memo: 'x'.repeat(2000) }])),
 ];
 const BAD_MTT: unknown[] = [
@@ -311,7 +311,7 @@ function hostileDraft(rng: Rng, built: Built, i: number): unknown {
         pfr: 90,
         agg: 9,
         image: -1,
-        sample: 1.5,
+        sample: 1.5, // 廃止した項目（V-007）
         general: [{ street: 'flop', action: 'turn_only', lean: 'x' }, null, 5, { street: 'pf', action: '3bet', texture: { high: 'a' }, runout: ['brick'], size: 'overbet', lean: 'value', strong: 'true' }],
       },
     };
@@ -538,7 +538,7 @@ export const SNAPSHOT_JS = `(async () => {
   const problems = [];
   if (location.href === 'about:blank') return { path: 'about:blank', search: '', w: 0, h: 0, mobile: false, dialogs: 0, menus: 0, els: [], problems: [{ kind: 'about-blank', detail: '' }] };
   const w = window.innerWidth, h = window.innerHeight;
-  const mobile = window.matchMedia('(max-width: 699.98px)').matches;
+  const mobile = window.matchMedia('(max-width: 926.98px), (max-height: 604.98px)').matches; // layout.ts の MOBILE_QUERY（F-033）
   const path = location.pathname;
   const root = document.getElementById('root');
   const text = document.body.innerText || '';

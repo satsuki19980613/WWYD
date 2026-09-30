@@ -114,16 +114,43 @@ export function setNavigationBlocker(b: Blocker | null): void {
   blocker = b;
 }
 
+// 履歴の位置（history.state の i）。戻る・進むのどちらかを見分ける
+let index = 0;
+/** ブラウザの「戻る」を止めたときの行き先。確認のあとは積み直さずに本当に戻る（F-027: 戻る →「保存しない」→ もう一度戻ると元の画面が出ていた） */
+let poppedBackTo: string | null = null;
+/** 自分で起こした history.back() の popstate は止めない */
+let bypassPop = false;
+
+function stateIndex(state: unknown): number | null {
+  const i = (state as { i?: unknown } | null)?.i;
+  return typeof i === 'number' ? i : null;
+}
+
 // ブラウザの「戻る」: URL は既に変わっているので、止めるなら元の URL を積み直して確認を出す。
 // 画面の購読より先に登録して、離れた画面を一瞬でも出さないようにする
 if (typeof window !== 'undefined') {
-  window.addEventListener('popstate', () => {
+  const initial = stateIndex(window.history.state);
+  if (initial === null) window.history.replaceState({ i: 0 }, '');
+  else index = initial;
+  window.addEventListener('popstate', (e) => {
     const to = snapshot();
-    if (blocker && to !== lastHref && blocker(to)) {
-      window.history.pushState(null, '', lastHref);
+    const i = stateIndex(e.state);
+    if (bypassPop) {
+      bypassPop = false;
+      lastHref = to;
+      if (i !== null) index = i;
       return;
     }
+    if (blocker && to !== lastHref && blocker(to)) {
+      const back = i !== null && i < index;
+      index = (i ?? index - 1) + 1;
+      window.history.pushState({ i: index }, '', lastHref);
+      poppedBackTo = back ? to : null;
+      return;
+    }
+    poppedBackTo = null;
     lastHref = to;
+    if (i !== null) index = i;
   });
 }
 
@@ -131,8 +158,16 @@ if (typeof window !== 'undefined') {
 export function navigate(to: string, opts: { replace?: boolean; force?: boolean } = {}): void {
   if (to === snapshot()) return;
   if (!opts.force && blocker?.(to)) return;
-  if (opts.replace) window.history.replaceState(null, '', to);
-  else window.history.pushState(null, '', to);
+  if (opts.force && !opts.replace && poppedBackTo === to) {
+    // 止めた「戻る」の続き: 積み直した分から 1 つ戻る（新しく積むと、次の「戻る」で元の画面に戻ってしまう）
+    poppedBackTo = null;
+    bypassPop = true;
+    window.history.back();
+    return;
+  }
+  poppedBackTo = null;
+  if (opts.replace) window.history.replaceState({ i: index }, '', to);
+  else window.history.pushState({ i: ++index }, '', to);
   lastHref = snapshot();
   notify();
 }

@@ -72,17 +72,17 @@ test('T2-08 MTT の値: 数の欄は数で、空白は削り、先頭のゼロ�
   expect(body.rake).toBeNull();
 });
 
-for (const [mtt, label] of [
-  [{ rank: '60', left: '58' }, 'rank>left'],
-  [{ left: '400', entries: '320' }, 'left>entries'],
-  [{ rank: '400', entries: '320' }, 'rank>entries'],
-  [{ paid: '400', entries: '320' }, 'paid>entries'],
+for (const [mtt, label, msg] of [
+  [{ rank: '60', left: '58' }, 'rank>left', 'MTT の スポットの順位 は 残りの人数 以下にしてください'],
+  [{ left: '400', entries: '320' }, 'left>entries', 'MTT の 残りの人数 は エントリー数 以下にしてください'],
+  [{ rank: '400', entries: '320' }, 'rank>entries', 'MTT の スポットの順位 は エントリー数 以下にしてください'],
+  [{ paid: '400', entries: '320' }, 'paid>entries', 'MTT の ITM は エントリー数 以下にしてください'],
 ] as const) {
-  test(`T2-08 MTT の人数の大小（${label}）は画面でもエラー（サーバーと同じ文言）で、本文は送らない`, async ({ page }) => {
+  test(`T2-08 MTT の人数の大小（${label}）は画面でどの欄かを示すエラー（V-018）で、本文は送らない`, async ({ page }) => {
     const { cp } = await openDraft(page, draftJson({ ...srpTurn(), fmt: 'mtt', mtt: { ...{ speed: null, prize: null, rank: '', left: '', paid: '', entries: '', avg: '' }, ...mtt } }));
     await step(page, S_SPOT);
     await submitBtn(page).click();
-    await expect(page.locator('.pf-errors')).toContainText('MTT の情報を確認してください');
+    await expect(page.locator('.pf-errors')).toContainText(msg);
     expect(cp.calls.length).toBe(0);
   });
 }
@@ -143,7 +143,7 @@ test('T2-08 席の入力の組み合わせ（全部入り・複数の席・中�
     pfr: 12,
     agg: 4,
     image: 0,
-    sample: 2,
+    sample: 2, // 廃止した Sample（V-007）が前の版の下書きに残っていても送らない
     spot: { street: 'flop', action: 'cbet', lean: 'bluff', strong: true },
     general: [
       { street: 'turn', action: 'delayed_cbet', texture: { high: 'k', suit: 'two', paired: 'unpaired', connect: 'none' }, runout: ['over', 'pair'], size: 'overbet', lean: 'value', strong: false },
@@ -161,7 +161,8 @@ test('T2-08 席の入力の組み合わせ（全部入り・複数の席・中�
   expect(Object.keys(body.villain_reads).sort()).toEqual(['BTN', 'CO']);
   expect(body.villain_reads.CO).toEqual({ agg: 2 });
   const btn = body.villain_reads.BTN as { reads: { scope: string }[] } & Record<string, unknown>;
-  expect(btn).toMatchObject({ vpip: 38, pfr: 12, agg: 4, image: 0, sample: 2 });
+  expect(btn).toMatchObject({ vpip: 38, pfr: 12, agg: 4, image: 0 });
+  expect(btn).not.toHaveProperty('sample');
   // Spot Read が先、General Read はそのあと
   expect(btn.reads.map((r) => r.scope)).toEqual(['spot', 'general', 'general']);
   expect(btn.reads[0]).toMatchObject({ street: 'flop', action: 'cbet', size: 'small', lean: 'bluff', strong: true });
@@ -248,7 +249,7 @@ test('T2-08 乱数: 画面の操作で作った Read・傾向・Spot Read は、
       let seat: SeatDraft = {};
       if (r() < 0.6) seat = setRead(seat, 'vpip', Math.floor(r() * 101));
       if (r() < 0.6) seat = setRead(seat, 'pfr', Math.floor(r() * 101));
-      for (const k of ['agg', 'image', 'sample'] as const) if (r() < 0.4) seat = toggleStep(seat, k, Math.floor(r() * 5));
+      for (const k of ['agg', 'image'] as const) if (r() < 0.4) seat = toggleStep(seat, k, Math.floor(r() * 5));
       const cs = vc.cands.filter((c) => c.pos === p);
       if (cs.length > 0 && r() < 0.6) {
         // 画面と同じ作り方: 候補の Street・Action、その Action で選べる Lean

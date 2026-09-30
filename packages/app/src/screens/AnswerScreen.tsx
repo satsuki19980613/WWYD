@@ -24,6 +24,7 @@ import { POS_VAR } from '../components/posColor.ts';
 import { ACTION_NAME, STREET_NAME } from '../post/draft.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
+import { navigate, setNavigationBlocker } from '../router.ts';
 import { FitStage } from '../components/FitStage.tsx';
 import { Tabs } from '../components/Tabs.tsx';
 import { useToast } from '../components/Toast.tsx';
@@ -202,6 +203,19 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [dirty]);
+  // アプリ内で移るとき（一覧・Post・ブラウザの戻る）も、塗りを捨てる確認を出す（F-028。投稿画面と同じ。2026-09-30 さつき）。
+  // 送信した直後の集計への移動は止めないよう、ref で今の状態を見る
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const [leaveTo, setLeaveTo] = useState<string | null>(null);
+  useEffect(() => {
+    setNavigationBlocker((to) => {
+      if (!dirtyRef.current) return false;
+      setLeaveTo(to);
+      return true;
+    });
+    return () => setNavigationBlocker(null);
+  }, []);
 
   const send = async (): Promise<void> => {
     setBusy(true);
@@ -209,6 +223,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
     const r = await insertAnswer(post.id, editor.paint, size);
     setBusy(false);
     if (r.ok || r.code === 'already_answered') {
+      dirtyRef.current = false;
       setSent(true);
       setConfirming(false);
       props.onDone();
@@ -302,6 +317,21 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
       onCancel={() => setConfirming(false)}
     />
   );
+  const leaveDialog = leaveTo !== null && (
+    <ConfirmDialog
+      title="塗った Range を捨てますか"
+      body="回答はまだ送っていません。"
+      confirmLabel="捨てて移動"
+      destructive
+      onConfirm={() => {
+        const t = leaveTo;
+        setLeaveTo(null);
+        dirtyRef.current = false;
+        navigate(t, { force: true });
+      }}
+      onCancel={() => setLeaveTo(null)}
+    />
+  );
 
   if (!mobile) {
     // PC（17 章）: 左にリプレイ、上にスポットの見出し、中央にレンジ表、右に道具と送信。
@@ -328,6 +358,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
           </div>
         </div>
         {dialog}
+        {leaveDialog}
       </FitStage>
     );
   }
@@ -360,6 +391,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
         )}
       </div>
       {dialog}
+      {leaveDialog}
     </section>
   );
 }

@@ -285,7 +285,6 @@ async function fillAll(page: Page): Promise<void> {
   await page.keyboard.press('Enter');
   await villains(page).getByRole('group', { name: 'Postflop Aggression' }).getByRole('button').nth(4).click();
   await villains(page).getByRole('group', { name: 'Hero Image' }).getByRole('button').nth(4).click();
-  await villains(page).getByRole('group', { name: 'Sample' }).getByRole('button').nth(0).click();
   // Spot Read の Lean（強い）
   const lean = villains(page).locator('.vr-read').first().getByRole('group', { name: 'Lean' }).getByRole('button');
   await lean.nth(2).click();
@@ -350,8 +349,8 @@ function inspectLayout(): Problem[] {
         if (ox > 1.5 && oy > 1.5) out.push({ what: 'overlap', detail: `${g.className}: "${(kids[i] as HTMLElement).textContent?.slice(0, 20)}" × "${(kids[j] as HTMLElement).textContent?.slice(0, 20)}"` });
       }
   }
-  // タップできる大きさ（モバイル: 幅 < 700 のとき 24px 未満の操作要素）
-  if (vw < 700) {
+  // タップできる大きさ（スマホの構成: 幅 927px 未満か高さ 605px 未満のとき 24px 未満の操作要素。F-033）
+  if (vw < 927 || window.innerHeight < 605) {
     for (const el of Array.from(sec.querySelectorAll<HTMLElement>('button, [role="slider"]'))) {
       const r = el.getBoundingClientRect();
       if (r.width === 0) continue;

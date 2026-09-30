@@ -3,6 +3,10 @@ dist/
 .env
 .env.local
 .env.*.local
+# Cloudflare の手元の秘密情報と作業場所、鍵（F-014）
+.dev.vars
+.wrangler/
+*.pem
 !.env.example
 .supabase/
 supabase/.temp/

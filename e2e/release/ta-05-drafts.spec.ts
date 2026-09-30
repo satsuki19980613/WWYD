@@ -90,6 +90,9 @@ for (const v of VARIANTS) {
       await expect(page).toHaveURL('/');
       // 保存されている
       expect(await stored(page)).toHaveLength(1);
+      // 確認のあとは本当に戻っている（F-027）: 進むで Post に行ける（新しく積んでいたら進む先が無い）
+      await page.goForward();
+      await expect(page).toHaveURL('/new');
     });
 
     test(`保存する → 保存内容（設定・Hand・Action・Board・Spot・タイトル）が localStorage に入り、開くと全部戻る。続きから投稿できる${v}`, async ({ page }) => {
@@ -272,7 +275,7 @@ for (const v of VARIANTS) {
       expect(errors).toEqual([]);
     });
 
-    test(`40 文字を超えるタイトルの下書き（古い形・改ざん）を開くと、欄は 60 / 40 と出て、投稿は「入力内容を確認してください」で止まる${v}`, async ({ page }) => {
+    test(`40 文字を超えるタイトルの下書き（古い形・改ざん）を開くと、40 文字に切られる（F-027）${v}`, async ({ page }) => {
       await page.goto('/new');
       await playSrpTurn(page);
       await pickSpot(page, 'Turn / BTN Bet 3');
@@ -287,9 +290,7 @@ for (const v of VARIANTS) {
       await page.goto('/drafts');
       await page.locator('.spot-link').click();
       await toSpot(page);
-      await expect(page.getByText('60 / 40')).toBeVisible();
-      await submit(page);
-      await expect(errorsBox(page)).toContainText('入力内容を確認してください');
+      await expect(page.getByText('40 / 40')).toBeVisible();
     });
 
     test(`保存できないブラウザ（localStorage の書き込みが失敗）→ トースト「下書きを保存できませんでした」で留まる${v}`, async ({ page }) => {

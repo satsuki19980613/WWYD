@@ -54,8 +54,14 @@ export function ActionSection(props: {
   onClear: () => void;
   onBoardAdd: (card: Card) => void;
   onBoardRemoveFrom: (i: number) => void;
+  /** 投稿を押したことがある（エラーを出す） */
+  attempted: boolean;
 }): JSX.Element {
   const { draft: d, phase } = props;
+  // 人数を選ぶ前の「Player の人数を選択してください」は、開いた直後には出さず、先に進もうとしたときだけ出す（F-036 Q-2。2026-09-30 さつき）。
+  // PC は Action の節を押したとき・投稿を押したとき。スマホは Action の段に進んだとき（節が見えるのは進んだときだけ）
+  const [tried, setTried] = useState(false);
+  const askPlayers = props.mobile || props.attempted || tried;
 
   // ボードのカードピッカー（ストリートが終わったら自動で開き、揃うまで続けて開く。閉じたら「＋」で開き直す）
   const needKey = phase.kind === 'board' ? `${d.actions.length}:${phase.need}` : null;
@@ -102,9 +108,9 @@ export function ActionSection(props: {
       <BoardDock draft={d} tools={tools} onOpen={openPicker} domRef={dockRef} />
     ) : null;
 
-  const invalid = phase.kind === 'invalid' && (
-    <p className="form-err">{d.players === null ? PLAYERS_REQUIRED : '基本設定の値が正しくありません'}</p>
-  );
+  const invalid =
+    phase.kind === 'invalid' &&
+    (d.players !== null ? <p className="form-err">基本設定の値が正しくありません</p> : askPlayers && <p className="form-err">{PLAYERS_REQUIRED}</p>);
   // 手番が無い（終わった）ときは台が無いので、ここに 1つ戻す・すべて消す
   const undo = !dock && phase.kind !== 'invalid' && <div className="pf-undo">{tools}</div>;
   const log = props.setup && d.actions.length > 0 && (
@@ -123,7 +129,7 @@ export function ActionSection(props: {
   );
 
   return (
-    <section className="pf-sec pf-actsec" aria-labelledby="pf-actions">
+    <section className="pf-sec pf-actsec" aria-labelledby="pf-actions" onPointerDown={d.players === null ? () => setTried(true) : undefined}>
       <h2 id="pf-actions" className="sec-h">
         Action 入力
       </h2>

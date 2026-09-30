@@ -89,7 +89,7 @@ describe('T1-05 検証の表の全組', () => {
       { connect: 'straight' },
       { high: 'low', suit: 'rainbow', paired: 'unpaired', connect: 'none' },
     ];
-    const runoutSets: string[][] = [[], ['brick'], ['over', 'flush'], ['brick', 'over', 'flush', 'straight', 'pair']];
+    const runoutSets: string[][] = [[], ['brick'], ['over', 'flush'], ['over', 'flush', 'straight', 'pair'], ['brick', 'over', 'flush', 'straight', 'pair']];
     for (const street of STREETS) {
       const action = EXPECT_STREET_ACTIONS[street][0] as string; // 各 Street で有効な Action
       for (const scope of ['general', 'spot']) {
@@ -101,6 +101,8 @@ describe('T1-05 検証の表の全組', () => {
             if (nonEmptyTexture && street === 'pf') ok = false;
             if (nonEmptyRunout && street !== 'turn' && street !== 'river') ok = false;
             if (scope === 'spot' && (nonEmptyTexture || nonEmptyRunout)) ok = false;
+            // Brick とほかの Runout は同時に選べない（V-039）
+            if (runout !== null && runout.includes('brick') && runout.length > 1) ok = false;
             const e = entry({ scope, street, action, texture, runout });
             expect(codeOf(() => v(e)), JSON.stringify({ scope, street, texture, runout })).toBe(ok ? null : 'invalid_reads');
           }
@@ -126,8 +128,8 @@ describe('T1-05 検証の表の全組', () => {
   it('Preflop で Runout・texture が空（{}・[]）なら通り、null に正規化される。Runout は決まった順に並ぶ', () => {
     const r = validateReads({ SB: { reads: [entry({ street: 'pf', action: '3bet', texture: {}, runout: [] })] } }, SEATS, 'BTN');
     expect(r.SB?.reads?.[0]).toMatchObject({ texture: null, runout: null });
-    const r2 = validateReads({ SB: { reads: [entry({ runout: ['pair', 'brick', 'flush'] })] } }, SEATS, 'BTN');
-    expect(r2.SB?.reads?.[0]?.runout).toEqual(['brick', 'flush', 'pair']);
+    const r2 = validateReads({ SB: { reads: [entry({ runout: ['pair', 'over', 'flush'] })] } }, SEATS, 'BTN');
+    expect(r2.SB?.reads?.[0]?.runout).toEqual(['over', 'flush', 'pair']);
   });
 
   it('形の崩れ（知らないキー・型・重複・空・null・配列）は malformed', () => {
@@ -177,15 +179,16 @@ describe('T1-05 検証の表の全組', () => {
     for (const [name, raw] of bad) expect(codeOf(() => validateReads(raw, SEATS, 'BTN')), name).toBe('malformed');
   });
 
-  it('全体の傾向の境界: VPIP・PFR は 0〜100、Postflop Aggression・Hero Image・Sample は 0〜4', () => {
+  it('全体の傾向の境界: VPIP・PFR は 0〜100、Postflop Aggression・Hero Image は 0〜4。廃止した Sample は値によらず malformed', () => {
     for (const k of ['vpip', 'pfr'] as const) {
       for (const x of [0, 1, 50, 99, 100]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBeNull();
       for (const x of [-1, 101, 1000, 1e21]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBe('invalid_reads');
     }
-    for (const k of ['agg', 'image', 'sample'] as const) {
+    for (const k of ['agg', 'image'] as const) {
       for (const x of [0, 1, 2, 3, 4]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBeNull();
       for (const x of [-1, 5, 50, 100]) expect(codeOf(() => validateReads({ SB: { [k]: x } }, SEATS, 'BTN')), `${k}=${x}`).toBe('invalid_reads');
     }
+    for (const x of [0, 2, 4, 5, -1]) expect(codeOf(() => validateReads({ SB: { sample: x } }, SEATS, 'BTN')), `sample=${x}`).toBe('malformed');
     // -0 は 0 として通る（JSON にすると 0）
     expect(validateReads({ SB: { vpip: -0 } }, SEATS, 'BTN')).toEqual({ SB: { vpip: -0 } });
   });
@@ -244,13 +247,13 @@ describe('T1-05 検証の表の全組', () => {
         street: 'river',
         action: 'fold_raise',
         texture: scope === 'spot' ? null : { high: 'mid', suit: 'rainbow', paired: 'unpaired', connect: 'straight' },
-        runout: scope === 'spot' ? null : ['brick', 'over', 'flush', 'straight', 'pair'],
+        runout: scope === 'spot' ? null : ['over', 'flush', 'straight', 'pair'], // Brick はほかと同時に選べない（V-039）
         size: null,
         lean: 'under',
         strong: false,
       });
     const richest = { street: 'river', action: 'bet_vs_check', lean: 'bluff', size: 'overbet', strong: false };
-    const seat = { vpip: 100, pfr: 100, agg: 4, image: 4, sample: 4, reads: [entry({ scope: 'spot', ...richest }), longest('general'), entry({ ...longest('general'), ...richest })] };
+    const seat = { vpip: 100, pfr: 100, agg: 4, image: 4, reads: [entry({ scope: 'spot', ...richest }), longest('general'), entry({ ...longest('general'), ...richest })] };
     const raw = { UTG: seat, HJ: seat, CO: seat, SB: seat, BB: seat };
     const r = validateReads(raw, SEATS, 'BTN');
     const bytes = JSON.stringify(r).length // ASCII だけなのでバイト数と同じ;

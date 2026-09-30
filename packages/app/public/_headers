@@ -6,7 +6,15 @@
 # - worker-src 'self': OCR の Worker は自サイトの /ocr/worker.min.js（Blob URL は使わない）
 # - font-src data:: ビルドが小さな書体（fontsource の一部）を CSS に data: で埋め込むため
 # - Google ログインは画面の遷移（Neon Auth → Google → 戻り）なので connect-src に Google は要らない
+# - HSTS・Permissions-Policy（使わない機能を止める）・COOP（ほかのサイトの窓から触らせない。ログインはポップアップでなく画面の遷移なので影響しない）（F-014）
+# - /assets/* はファイル名にハッシュが付くので 1 年キャッシュする（F-020）
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' https://ep-aged-wave-b3j6dpzy.neonauth.c-4.ap-southeast-1.aws.neon.tech https://ep-aged-wave-b3j6dpzy.apirest.c-4.ap-southeast-1.aws.neon.tech https://br-old-meadow-b3h9xgbz-createpost.compute.c-4.ap-southeast-1.aws.neon.tech; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  Permissions-Policy: geolocation=(), microphone=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

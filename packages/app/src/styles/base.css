@@ -122,6 +122,13 @@ a { color: var(--cyan); }
 .hdr-nav-item.post[aria-current='page'] { background: var(--yellow); color: var(--yellow-ink); border-color: var(--yellow); }
 .hdr-nav-item.post[aria-current='page']::after { display: none; }
 .hdr-nav-item:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/*
+ * 面取り（clip-path）の要素は、外側のリングが面取りごと削られて見えない（F-031）。リングを面の内側に出す。
+ * 内に寄せる量は「面取りの半分＋線の太さ」以上（リングの角が面取りの斜めの線の内側に入る）: -xs 4px → 4px、-sm 6px → 5px。
+ * 黄の実面の上は .btn と同じく黄上の文字色のリング
+ */
+.hdr-nav-item.post:focus-visible { outline-offset: -4px; }
+.hdr-nav-item.post[aria-current='page']:focus-visible { outline-color: var(--yellow-ink); }
 
 /* ---- アプリ面 ---- */
 /* 画面の中身を画面の高さちょうどにするときの高さ（ヘッダーとその下線 1px、.app-main の上下の余白を除く。卓で残りを埋める画面が使う） */
@@ -131,8 +138,8 @@ a { color: var(--cyan); }
   margin: 0 auto;
   padding: var(--s4) max(var(--s4), var(--safe-r)) calc(var(--s6) + var(--sab)) max(var(--s4), var(--safe-l));
 }
-/* 広い PC は左右の余白を 32px に（17 章） */
-@media (min-width: 1200px) {
+/* 広い PC は左右の余白を 32px に（17 章）。低い画面（スマホの構成）には当てない */
+@media (min-width: 1200px) and (min-height: 605px) {
   .app-main { padding-left: var(--s6); padding-right: var(--s6); }
   .hdr-inner { padding-left: var(--s6); padding-right: var(--s6); }
 }

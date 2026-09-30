@@ -27,7 +27,7 @@ export default function DevUiScreen(): JSX.Element {
   return (
     <section className="screen dev">
       <h1 className="sec-h">部品一覧（開発用）</h1>
-      <p className="mono-lbl">layout: {mobile ? 'mobile (<700px)' : 'pc (>=700px)'}</p>
+      <p className="mono-lbl">layout: {mobile ? 'mobile (<927×605)' : 'pc (>=927×605)'}</p>
 
       <h2 className="sec-h">ボタン</h2>
       <div className="dev-grid">

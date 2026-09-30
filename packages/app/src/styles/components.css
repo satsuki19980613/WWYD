@@ -104,7 +104,7 @@
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--dim2);
+  color: var(--dim);
 }
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
@@ -267,7 +267,7 @@
 .modal.tone-info { --tone: var(--cyan); }
 .modal.tone-danger { --tone: var(--red); }
 @keyframes modal-in { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
-@media (min-width: 700px) {
+@media (min-width: 927px) and (min-height: 605px) {
   .modal-backdrop { align-items: center; }
   .modal { max-width: 520px; padding-bottom: 0; clip-path: var(--chamfer); }
   .modal.wide { max-width: 720px; }

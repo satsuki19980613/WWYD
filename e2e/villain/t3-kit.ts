@@ -102,7 +102,11 @@ export async function openResult(page: Page, raw: Raw, o: { motion?: 'reduce' | 
 /** 横にはみ出していないか（ページ全体） */
 export const noHScroll = (page: Page): Promise<boolean> => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 
-export const isSp = (page: Page): boolean => (page.viewportSize()?.width ?? 1280) < 700;
+/** スマホの構成か（アプリの layout.ts と同じ境目: 幅 927px 未満か高さ 605px 未満。F-033） */
+export const isSp = (page: Page): boolean => {
+  const v = page.viewportSize() ?? { width: 1280, height: 900 };
+  return v.width < 927 || v.height < 605;
+};
 
 /** 2 つの箱が重なっているか */
 export async function overlaps(a: Locator, b: Locator): Promise<boolean> {

@@ -10,6 +10,7 @@ import {
   READ_ACTIONS,
   READ_SIZES,
   RUNOUTS,
+  runoutConflicts,
   SPEED_MAX,
   STEP_MAX,
   STREET_ACTIONS,
@@ -59,13 +60,13 @@ export type SliderDef = {
 type Five = readonly [string, string, string, string, string];
 
 export type PercentKey = 'vpip' | 'pfr';
-export type StepKey = 'agg' | 'image' | 'sample';
+export type StepKey = 'agg' | 'image';
 export type ReadDef = SliderDef & { key: PercentKey; labels: Five };
 
-/** VPIP・PFR の 5 段階の境目（2026-09-30 さつき: Claude の案。6-max の一般的な目安。18 章 §2.1） */
+/** VPIP・PFR の 5 段階の境目（2026-09-30 さつき: Claude の案。6-max の一般的な目安。18 章 §2.1）。PFR はレギュラーの 18〜22 が 1 つの段階に入るよう 10/16/23/30（V-006） */
 export const READ_DEFS: readonly ReadDef[] = [
   { key: 'vpip', name: 'VPIP', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], cuts: [15, 22, 30, 40], max: PERCENT_MAX },
-  { key: 'pfr', name: 'PFR', labels: ['Very Low', 'Low', 'Standard', 'High', 'Very High'], cuts: [8, 14, 20, 26], max: PERCENT_MAX },
+  { key: 'pfr', name: 'PFR', labels: ['Very Low', 'Low', 'Standard', 'High', 'Very High'], cuts: [10, 16, 23, 30], max: PERCENT_MAX },
 ];
 export const READ_DEF: Record<PercentKey, ReadDef> = { vpip: READ_DEFS[0] as ReadDef, pfr: READ_DEFS[1] as ReadDef };
 
@@ -80,13 +81,7 @@ export const STEP_DEFS: readonly StepDef[] = [
     hideMiddle: true,
   },
   { key: 'image', name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], ends: ['Tight', 'Loose'], hideMiddle: true },
-  {
-    key: 'sample',
-    name: 'Sample',
-    labels: ['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats'],
-    ends: ['First Impression', 'HUD Stats'],
-    hideMiddle: false,
-  },
+  // Sample は 2026-09-30 に廃止（V-007）。前の版の下書き・Preset の sample は読み直すときに捨てる
 ];
 export const STEP_DEF: Record<StepKey, StepDef> = Object.fromEntries(STEP_DEFS.map((d) => [d.key, d])) as Record<StepKey, StepDef>;
 
@@ -184,8 +179,8 @@ export function entryCheckRaise(e: ReadEntry, villain: Pos, hero: Pos, actions: 
 }
 
 /**
- * 全体の傾向のチップ（§2.1.6）: `VPIP 38` `PFR 12` `Passive` `Hero Image: Loose` `Sample: Long`。
- * Postflop Aggression・Hero Image の中央（Balanced・Standard）は出さない。Sample は中央も出す（§10 C-2）
+ * 全体の傾向のチップ（§2.1.6）: `VPIP 38` `PFR 12` `Passive` `Hero Image: Loose`。
+ * Postflop Aggression・Hero Image の中央（Balanced・Standard）は出さない（§10 C-2）
  */
 export function tendencyChips(t: Tendency): string[] {
   const out: string[] = [];
@@ -295,10 +290,11 @@ export function toggleTexture(g: GeneralDraft, axis: TextureAxis, value: string)
   return { ...g, texture: texture as Texture };
 }
 
-/** Runout のタグ（複数選べる） */
+/** Runout のタグ（複数選べる。Brick を選ぶとほかを外し、ほかを選ぶと Brick を外す。V-039） */
 export function toggleRunout(g: GeneralDraft, r: Runout): GeneralDraft {
-  const has = g.runout.includes(r);
-  return { ...g, runout: RUNOUTS.filter((x) => (x === r ? !has : g.runout.includes(x))) };
+  if (g.runout.includes(r)) return { ...g, runout: g.runout.filter((x) => x !== r) };
+  const next: Runout[] = r === 'brick' ? ['brick'] : [...g.runout.filter((x) => x !== 'brick'), r];
+  return { ...g, runout: RUNOUTS.filter((x) => next.includes(x)) };
 }
 
 export function toggleSize(g: GeneralDraft, s: ReadSize): GeneralDraft {
@@ -333,7 +329,7 @@ export function spotMatches(spot: SpotDraft, c: ReadCandidate): boolean {
   return c.street === spot.street && c.action === spot.action && (spot.size === undefined || c.size === spot.size);
 }
 
-const TENDENCY_OF: readonly (PercentKey | StepKey)[] = ['vpip', 'pfr', 'agg', 'image', 'sample'];
+const TENDENCY_OF: readonly (PercentKey | StepKey)[] = ['vpip', 'pfr', 'agg', 'image'];
 
 export function isEmptySeat(s: SeatDraft | undefined): boolean {
   return !s || (TENDENCY_OF.every((k) => s[k] === undefined) && !s.spot && (s.general ?? []).length === 0);
@@ -404,7 +400,11 @@ export function sanitizeGeneral(raw: unknown): GeneralDraft | null {
       if (v) g = toggleTexture(g, k, v);
     }
   }
-  if (Array.isArray(raw.runout) && (street === 'turn' || street === 'river')) g = { ...g, runout: RUNOUTS.filter((r) => (raw.runout as unknown[]).includes(r)) };
+  if (Array.isArray(raw.runout) && (street === 'turn' || street === 'river')) {
+    const runout = RUNOUTS.filter((r) => (raw.runout as unknown[]).includes(r));
+    // 前の版の下書き・Preset に残った Brick とほかの組み合わせは Brick を外す（V-039）
+    g = { ...g, runout: runoutConflicts(runout) ? runout.filter((r) => r !== 'brick') : runout };
+  }
   const size = oneOf(raw.size, sizesOf(street));
   if (size && g.action && isAggressive(g.action)) g = { ...g, size };
   const lean = oneOf(raw.lean, ['over', 'under', 'value', 'bluff'] as const);
@@ -550,6 +550,23 @@ export function parseMtt(m: MttDraft): { info: MttInfo | null; invalid: MttField
     else if (v !== undefined) info[f] = v;
   }
   return { info: Object.keys(info).length > 0 ? info : null, invalid };
+}
+
+/**
+ * MTT の人数の大小の誤り（core の validateMtt と同じ規則: 順位 ≦ 残りの人数 ≦ エントリー数、ITM ≦ エントリー数）を、どの欄かが分かる文にする（V-018）。
+ * 順位とエントリー数の比べは、残りの人数が無いときだけ（あれば 2 つの比べで足りる）
+ */
+export function mttOrderErrors(m: MttInfo | null): string[] {
+  if (!m) return [];
+  const pairs: [MttField, MttField][] = [['rank', 'left'], ['left', 'entries'], ['paid', 'entries']];
+  if (m.left === undefined) pairs.push(['rank', 'entries']);
+  const out: string[] = [];
+  for (const [a, b] of pairs) {
+    const x = m[a];
+    const y = m[b];
+    if (x !== undefined && y !== undefined && x > y) out.push(`MTT の ${MTT_FIELD_LABEL[a]} は ${MTT_FIELD_LABEL[b]} 以下にしてください`);
+  }
+  return out;
 }
 
 /** 「12/58 ・ ITM 50 ・ 320 entries」（無い項目は出さない。18 章 §2.4） */

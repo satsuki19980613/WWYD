@@ -59,7 +59,6 @@ export function randomSeat(rng: Rng, cands: readonly ReadCandidate[], density = 
   } else if (rng.chance(0.2)) s.pfr = rng.int(0, 100);
   if (rng.chance(density * 0.6)) s.agg = rng.int(0, 4);
   if (rng.chance(density * 0.6)) s.image = rng.int(0, 4);
-  if (rng.chance(density * 0.6)) s.sample = rng.int(0, 4);
   if (cands.length > 0 && rng.chance(density)) {
     const c = rng.pick(cands);
     const leans = leansOf(c.action);

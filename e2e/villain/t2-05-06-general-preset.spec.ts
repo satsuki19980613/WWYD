@@ -120,21 +120,26 @@ for (const v of ['', ' @sp'] as const) {
     const action = (n: string): Locator => choice(g, 'Action').filter({ hasText: new RegExp(`^${n}$`) });
     const cond = g.getByRole('button', { name: 'Board · Size' });
 
-    // Turn・Barrel・条件（Suit: Monotone・Runout: Flush + Brick・Size: Overbet）・Lean（Value-heavy 強い）
+    // Turn・Barrel・条件（Suit: Monotone・Runout: Flush + Overcard・Size: Overbet）・Lean（Value-heavy 強い）
     await street('Turn').click();
     await action('Barrel').click();
     await cond.click();
     await choice(g, 'Suit').filter({ hasText: 'Monotone' }).click();
     await choice(g, 'Runout').filter({ hasText: 'Flush Complete' }).click();
-    await choice(g, 'Runout').filter({ hasText: 'Brick' }).click();
+    await choice(g, 'Runout').filter({ hasText: 'Overcard' }).click();
     await choice(g, 'Size').filter({ hasText: 'Overbet' }).click();
     await choice(g, 'Lean').nth(2).click();
     await choice(g, 'Lean').nth(2).click();
-    await expect(g.locator('.vr-line')).toHaveText('Turn · Monotone · Brick · Flush Complete · Barrel (Overbet) → Value-heavy++');
+    await expect(g.locator('.vr-line')).toHaveText('Turn · Monotone · Overcard · Flush Complete · Barrel (Overbet) → Value-heavy++');
 
     // River に変える: Barrel は River にもある。Runout・Size・Lean・Texture は残る
     await street('River').click();
-    await expect(g.locator('.vr-line')).toHaveText('River · Monotone · Brick · Flush Complete · Barrel (Overbet) → Value-heavy++');
+    await expect(g.locator('.vr-line')).toHaveText('River · Monotone · Overcard · Flush Complete · Barrel (Overbet) → Value-heavy++');
+    // V-039: Brick を選ぶとほかの Runout が外れ、ほかを選ぶと Brick が外れる
+    await choice(g, 'Runout').filter({ hasText: 'Brick' }).click();
+    await expect(g.locator('.vr-line')).toHaveText('River · Monotone · Brick · Barrel (Overbet) → Value-heavy++');
+    await choice(g, 'Runout').filter({ hasText: 'Board Pair' }).click();
+    await expect(g.locator('.vr-line')).toHaveText('River · Monotone · Board Pair · Barrel (Overbet) → Value-heavy++');
 
     // Turn に戻して Flop に: Barrel は Flop に無い → Action・Size・Lean が外れ、Runout も外れ、texture（Monotone）は残る
     await street('Flop').click();
@@ -566,8 +571,8 @@ for (const v of ['', ' @sp'] as const) {
     const items = presetDlg(page).getByRole('listitem');
     await expect(items).toHaveCount(2);
     await expect(items.nth(0).locator('.pr-name')).toHaveText('mix');
-    // 範囲外の vpip・agg・不正な image は捨て、pfr 20・sample 2・完全な General Read 1 件だけ
-    await expect(items.nth(0).locator('.pr-sum')).toHaveText('PFR 20 · Sample: Some History · 1 Read');
+    // 範囲外の vpip・agg・不正な image・廃止した sample（V-007）は捨て、pfr 20・完全な General Read 1 件だけ
+    await expect(items.nth(0).locator('.pr-sum')).toHaveText('PFR 20 · 1 Read');
     await expect(items.nth(1).locator('.pr-sum')).toHaveText('VPIP 10');
   });
 }

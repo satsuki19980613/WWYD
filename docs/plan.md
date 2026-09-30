@@ -10,11 +10,11 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P11 Villain・MTT の情報**（テストとレビュー済み。VR4 = `2574355`。リーダーの推奨は「公開してよい」。さつきが公開を承認。push・PR #25 済み。create-post の配備し直し（dev・本番）→ 本番のマイグレーション → マージが残り）。P10 はさつきの判断と iPhone 実機（保留）が残り |
-| 直近で完了したこと | **P11 のテストとレビュー**（[villain-reads-test/report.md](villain-reads-test/report.md)。2026-09-30）: リーダー＋テスト担当 T1〜T5（Sonnet 5.5）＋レビュー担当 R（Opus 5.5。プロのポーカープレイヤーの知見を調べて [poker-review.md](villain-reads-test/poker-review.md)）。指摘 43 件（S1 1・S2 2・S2 候補 2・S3 14・S4 24。[findings.md](villain-reads-test/findings.md)）。S1（V-033: 動きを減らす設定でタイトルが境目の幅のとき白画面）・S2（V-010 Spot Read の候補・V-027 Tournament Type の範囲）を直し、さつきの判断で V-002（Steal に Call が入ったら Fold to Steal にしない）・V-003（All-in の Aggressor への Donk）・S3 の 7 件・ⓘ と注記の文言を直した（18 章 §10.4）。本物の dev で L-01〜L-04（Read・MTT 付きの投稿「試験 Villain」→ 回答 → 集計、Data API の拒否）。最終: 単体 1313・カバレッジ 96.96%・E2E 740（負荷の 1 件は単独で通る）・pgTAP 379・モンキー 200 本・ウォーク 600 ハンド |
-| 次にやること | 0. **さつきが create-post を VR4 で dev に配備**（Claude の配備は安全機能で止められた）: `npx neonctl functions deploy createpost --project-id patient-leaf-06853495 --branch dev --src packages/functions/src/createPost/index.ts --env ALLOWED_ORIGINS=http://localhost:5173` → 本番にマイグレーション `20260930000000_villain_reads_mtt.sql` → create-post を本番に配備（`--branch production`、`ALLOWED_ORIGINS=http://localhost:5173,https://wwyd.pages.dev`）→ PR #25 の CI を確かめてマージ → 本番のスモーク<br>1. 試験の投稿「試験 Villain」（dev）を消すか残すか、worktree 6 つ（`.claude/worktrees/agent-*`。試験のコードはブランチ `test/villain-t1`〜`t5` と本ブランチに取り込み済み）の削除（さつきの判断待ち）<br>2. 今の dev の create-post は版 7 = VR1（core の判定を変えたので配備し直しが要る）。**順番: マイグレーション → create-post → 画面**<br>3. P11 の S4・仕様への意見（下の確認待ち）、P10 の残り（確認待ちの判断、iPhone 実機） |
+| 現在のフェーズ | **P10・P11 は完了**（2026-09-30 さつきの判断）。仕上げの修正（T-1110）はブランチ `phase/10-11-finish` にあり、push・配備（さつき）が残り。公開後の確認: iPhone 実機・数日後のログイン・M-12 を dev で試す |
+| 直近で完了したこと | **P10・P11 の仕上げ**（2026-09-30。さつきの判断 16 問はすべて推奨どおり。決定ログ）: F-037 Stack 1000bb・V-039 Runout の Brick・F-006 author_uid を隠す（マイグレーション）・V-006 PFR の境目・F-028 回答画面の離脱確認・V-038・F-036 Q-2・F-033/F-034/F-031 見やすさ（PC とスマホの境目を幅 927・高さ 605 に）・F-004 ErrorBoundary・F-015/F-016・F-027・F-014/F-020・V-018・V-040・F-035・F-038、規約の文言・CLAUDE.md・Skill・13 章・M-12・実機の確認表。worktree 6 つを削除。単体 1329・カバレッジ 99.04%（行）・pgTAP 380・E2E 776 通過（負荷で 4 件。単独では通る） |
+| 次にやること | 1. **さつき**: push・PR の承認 → dev にマイグレーション `20260930000001_hide_author_uid.sql`・create-post を dev に配備 → 本番にマイグレーション → create-post を本番に配備 → PR のマージ（順番: マイグレーション → create-post → 画面）<br>2. さつき: 画面の見た目の承認（承認用のページ）<br>3. 公開後: iPhone 実機（[device-checklist.md](release-test/device-checklist.md)）、数日後のログイン、M-12 を dev で試す、本番で Read・MTT 付きの投稿 |
 | ブロッカー | なし |
-| さつきの確認待ち | **Villain・MTT のテストの S4・仕様への意見**（villain-reads-test/findings.md。急がない）: V-006 PFR の段階の境目（案 10/16/23/30）、V-007 Sample の並び、V-009 Prize Structure の目安、V-019 MTT の数の粒度（大会の特定）、V-020 Limp のポットの Lead・Calling Station の読み、V-025 Over-limp・Fold to Squeeze・席の名前で決まる Steal、V-026 判断地点より後の Street の General Read、V-028 PFR を黙って下げる追従、V-038 スマホの集計画面の Villain のボタン、V-039 Runout の矛盾する組み合わせ。**Villain・MTT**: 作り直した Villain の入力と表示の見た目、規約・プライバシーポリシーの文言（18 章 §7）、スマホの一覧の 2 段目が River＋印 2 つで条件の文字が「…」になること（V-037）。**リリース前テスト**（findings.md）: F-006 posts の author_uid を誰でも読める（列を絞るか）、F-012 CI の NEON_API_KEY を PR でも渡している、F-021 無料枠の compute の監視と `/api/auth` の大量アクセス、F-029 一覧のタブレットの幅の見た目、F-033・F-034（FitStage の縮小しすぎ・コントラスト。F-032 の入力欄の拡大とタップの大きさは Villain・MTT の欄とタッチの端末の入力欄で直した）、F-037 Pot の上限、F-038 横向きスマホのログイン画面、F-028・F-036（仕様の確認 Q-1〜Q-5）。以前から: wwyd-ui-concept の 420px、13 章 §5.4、シグネチャー 3、「投稿する」を Post に、Replay の「最初から」、iPhone 実機 |
+| さつきの確認待ち | 画面の見た目の承認（承認用のページ）。見送った S4（V-022 重複した General Read・V-041・F-008・F-009・F-013・F-018・F-020 の起動の直列）は公開後の声を見て |
 
 ---
 
@@ -32,7 +32,7 @@
 | P7 集計 | 集計レンジ、実際のアクション、ハンドヒストリー | 05 章 §4 の表示計算を単体テスト、06 章 §5 を E2E で確認。未回答者に集計が返らないことを確認 | 実装完了（2026-09-28。表示計算は core（P2 の PAINT-12・13）と `answer/resultModel.test.ts`、06 章 §5 は E2E 12 件、未回答者は DB-12・13 と dev の実データで確認。スマホ実機は保留） |
 | P8 アカウントと管理者 | アカウントメニュー、アカウント削除、規約ページ、管理者の削除 | DB-16 相当を E2E で確認。規約文をさつきが承認 | 完了（2026-09-28。規約は本番に公開済み。アカウント削除は E2E と本番の複製で確認。管理者の削除は E2E と DB-18） |
 | P9 OCR | 端末内 OCR | 07 章 §6 の合格基準（ボード 100%、プレイヤー・アクション 95%）。外部通信が発生しないことを確認 | 完了（2026-09-28。PC 122 枚・Android 24 枚で 100%、外部通信 0 件。PR #11 で本番反映） |
-| P10 仕上げとリリース | アクセシビリティ、E2E 総点検、CSP、休止対策、同意画面の本番化、本番デプロイ | リリース前チェックリスト（T-1001）をすべて満たし、さつきが本番公開を承認 | 未着手 |
+| P10 仕上げとリリース | アクセシビリティ、E2E 総点検、CSP、休止対策、同意画面の本番化、本番デプロイ | リリース前チェックリスト（T-1001）をすべて満たし、さつきが本番公開を承認 | 完了（2026-09-30 さつきの判断。iPhone 実機・数日後のログイン・M-12 の dev での確認は公開後に） |
 
 ---
 
@@ -166,12 +166,12 @@
 
 | ID | 内容 | 依存 | 完了条件 | 状態 | 担当 | 詳細仕様 |
 |---|---|---|---|---|---|---|
-| T-1001 | リリース前チェックリスト作成と実施（計画は [release-test-plan.md](release-test-plan.md)。不変条件 10 項目、a11y、CSP、秘密情報の混入なし、無料枠の見積もり。**プライバシーポリシー 1.3（OCR）の記述が実装と一致し、外部通信が無いこと**） | P1〜P9 | すべて満たす | 実施済み（本番のスモークと実機は残り） | | CLAUDE.md §7 |
-| T-1002 | E2E 総点検（PC / スマホ、主要フロー。モンキーテストを含む。release-test-plan.md §3） | P4〜P8 | Playwright 緑 | 実施済み（本番のスモークと実機は残り） | | 06 |
-| T-1003 | 休止対策（Q-12 で採用する場合） | T-006(Q-12) | 定期実行の成功を確認 | 未着手 | | 08 §4 |
+| T-1001 | リリース前チェックリスト作成と実施（計画は [release-test-plan.md](release-test-plan.md)。不変条件 10 項目、a11y、CSP、秘密情報の混入なし、無料枠の見積もり。**プライバシーポリシー 1.3（OCR）の記述が実装と一致し、外部通信が無いこと**） | P1〜P9 | すべて満たす | 完了（2026-09-30。本番のスモークは済み。iPhone 実機は公開後の確認: [device-checklist.md](release-test/device-checklist.md)） | | CLAUDE.md §7 |
+| T-1002 | E2E 総点検（PC / スマホ、主要フロー。モンキーテストを含む。release-test-plan.md §3） | P4〜P8 | Playwright 緑 | 完了（2026-09-30。実機は公開後の確認） | | 06 |
+| T-1003 | 休止対策（Q-12 で採用する場合） | T-006(Q-12) | 定期実行の成功を確認 | 取り消し（Neon は 5 分で自動停止・次のアクセスで自動起動し、1 週間の休止が無い。12 章） | | 08 §4 |
 | M-05b | OAuth 同意画面を本番に公開、URL（ホーム・規約・プライバシー）を登録 | M-08, T-803 | 公開ステータスが本番 | 完了（2026-09-28。さつきが実施。誰でも Google でログインできる状態） | さつき | 10 M-05 |
-| M-12 | 運用手順（休止からの再開・容量整理・許可リスト）の確認 | T-1001 | さつきが手順を把握 | 未着手 | さつき | 10 M-12 |
-| T-1004 | 本番公開（さつきの承認後） | T-1001, M-05b | 本番 URL で主要フローが動く | 未着手 | | — |
+| M-12 | 運用手順（休止からの再開・容量整理・許可リスト）の確認 | T-1001 | さつきが手順を把握 | 手順を Neon 向けに書き直した（10 章 M-12。2026-09-30）。さつきが dev で一度試す | さつき | 10 M-12 |
+| T-1004 | 本番公開（さつきの承認後） | T-1001, M-05b | 本番 URL で主要フローが動く | 完了（2026-09-30 さつきの判断。本番で誰でも使える。実機・数日後のログインは公開後の確認） | | — |
 
 ### P11 Villain・MTT の情報（2026-09-30 さつきの依頼。詳細仕様 18 章）
 
@@ -182,10 +182,11 @@
 | T-1103 | 投稿画面（Villain の席ごとの Slider・Memo・Preset、MTT の欄） | T-1102 | E2E（reads.spec）が緑 | 完了 | | 18 §2 |
 | T-1104 | 回答・集計（ヘッダーの投稿のタイトル・流れる、席の印とモーダル、All Villains、MTT） | T-1102 | E2E が緑 | 完了 | | 18 §5 |
 | T-1105 | スマホの一覧のカード（3 段）と印、PC の表の印 | T-1102 | E2E が緑 | 完了 | | 18 §6 |
-| T-1106 | 規約・プライバシーポリシー・ⓘ | T-1101 | 差分をさつきに報告 | 完了（さつきの確認待ち） | | 18 §7、09 |
+| T-1106 | 規約・プライバシーポリシー・ⓘ | T-1101 | 差分をさつきに報告 | 完了（2026-09-30 さつきが承認。非表示・カタカナを直した） | | 18 §7、09 |
 | T-1108 | Villain の情報の作り直し（Memo の廃止、全体の傾向の 5 分割のボタン、構造化した Read・Spot Read の自動の Action・General Read、チップの表示、Preset の schema version、規約） | T-1101 | 18 章 §10 の回答 → 単体・pgTAP・E2E が緑 | 完了（さつきの確認待ち） | | 18 §2.1・§10・§11 |
 | T-1109 | テストとレビュー（[villain-reads-test-plan.md](villain-reads-test-plan.md)） | T-1108 | 計画書 §0.2 の関門 | 完了（2026-09-30。公開の判断はさつき） | | 18 §10.4 |
-| T-1107 | dev にマイグレーション → create-post を dev に配備 → push・PR → 本番のマイグレーションと配備 | T-1102〜1106 | 本番で情報つきの投稿 → 回答画面で表示 | 未着手（さつきの確認） | さつき | 18 §4 |
+| T-1107 | dev にマイグレーション → create-post を dev に配備 → push・PR → 本番のマイグレーションと配備 | T-1102〜1106 | 本番で情報つきの投稿 → 回答画面で表示 | 完了（2026-09-30。dev・本番にマイグレーション、create-post を dev 版 8・本番 版 7 に配備（さつき）、PR #25 をマージ。本番の一覧・回答画面を確認。情報つきの投稿の本番での確認は残り） | さつき | 18 §4 |
+| T-1110 | P10・P11 の仕上げ（さつきの判断 2026-09-30 すべて推奨どおり）: F-037 Stack 1000bb・V-039 Runout・F-006 author_uid・V-006 PFR の境目・F-028・V-038・F-036 Q-2・F-033/F-034/F-031 見やすさ・F-004・F-015/F-016・F-027・F-014/F-020・V-018・V-040・F-035（タブの名前・トースト）・F-038、規約・Skill・M-12・実機の確認表 | T-1109 | 単体・E2E・pgTAP が緑。dev と本番に配備 | 実装済み（配備はさつき: マイグレーション 20260930000001 → create-post → PR のマージ） | | 18・02・04・06・17 |
 
 ---
 
@@ -333,6 +334,8 @@
 | 2026-09-30 | **Villain の情報の Memo を廃止し、構造化した Read（`[When] · [Action] → [Lean]`。Spot Read 1 件・General Read 2 件まで）に置き換える**。全体の傾向は VPIP・PFR の Slider と、Postflop Aggression・Hero Image・Sample（旧 Read Confidence）の 5 分割のボタン。表示はチップ。規約の Memo の行を消し、個人を特定できる情報の禁止はタイトルに残す。仕様は 18 章 §2.1 に反映。未決定の論点は §10、実装との食い違いは §11。**承認まで実装しない** | 自由記述の Memo は誹謗中傷のリスクと運営の監視の負担が大きい。選択肢の組み合わせなら表現の幅を保ったまま書ける内容を構造で制限できる | さつき |
 | 2026-09-30 | **Villain の情報の論点（18 章 §10）はすべて推奨どおり**: Bet vs Check のまま・登録できる席は Preflop で Fold 以外をした席と Fold to Steal の Blind・強いは `++`・Connectivity は Straight possible / No straight・MTT の読みは後で（B-1〜5）。5 分割のラベル、中央を出さないのは Aggression と Hero Image だけ、§10.3 の Action の決め方、候補が複数なら投稿者が選ぶ、Spot Read の Size は実際の額から（50% 未満 Small・100% まで Big）、Lean は 未選択 → 通常 → 強い → 未選択、Check-Raise の表示、Preflop の Size は Small・Big、表は core に 1 つ、注記は不変条件 1 の例外、集計は保存だけ、条件の選び方、投稿の編集機能は作らない（C-1〜13）。Villain の欄は Spot の下へ移した（登録できる席と Spot Read の候補が Action と Spot で決まるため） | さつき「推奨通り進めてください」 | さつき |
 | 2026-09-30 | **P11 のテストとレビューを受けた決定**（18 章 §10.4。villain-reads-test）: ① Steal に Call が入った後の Blind の Fold は Fold to Steal にしない（PT4 の定義。その Blind は登録できる席からも外れる）② 前の Street で All-in した Aggressor への Bet は Donk・Probe にしない ③ 2 回 Check の後の River の Barrel・Donk の後の Barrel は今のまま ④ Size の境目は今のまま（50% 未満 Small・100% まで Big・その上 Overbet）で、ⓘ に定義を書く ⑤ ⓘ の Villain の項目を「参加した席と Steal に Fold した Blind」、回答・集計は Read の項目に「Over・Under は頻度、Value・Bluff-heavy は打つ手の中身」⑥ 注記は「この Hand の結果を知る前の読みで」（CLAUDE.md の不変条件 1 も）⑦ S3 の 7 件はすべて直す（タッチの端末の入力欄 16px、スマホの Villain の欄のボタン 36px、PC で全文にしたタイトルはヘッダーを伸ばさない など） | 2026-09-30 さつき |
+| 2026-09-30 | **P10・P11 を閉じる判断（すべて推奨どおり）**: ① P10・P11 を完了にし、iPhone 実機・数日空けたログインの継続・本番の Read・MTT 付きの投稿は公開後の確認（さつきのついでのとき）に回す ② 運用の手順（M-12）を Neon 向けに書き直し、さつきが dev で一度試す。以後、毎週 Neon の使用量を見る（F-021） ③ F-006 は posts の author_uid を Data API から読めないようにする（マイグレーション。本番はさつき）。F-012 は今のまま ④ worktree 6 つを消し、ブランチと dev の試験の投稿「試験 Villain」は残す ⑤ Villain の見た目・一覧のタブレット幅は、スクリーンショットを見て承認 ⑥ F-033（縮める倍率に下限、下回る画面はスマホの構成）・F-034（小さな文字を 1 段明るい色に、ⓘ の押せる範囲 36px 以上）・F-031（フォーカスの枠）を直す ⑦ V-038 は集計のタブにも All Villains・MTT のボタン、V-037 は今のまま、F-028 は回答画面でも塗りを捨てる確認を出す ⑧ 確認ダイアログの本文は不変条件 1 の例外（CLAUDE.md）、投稿画面の「Player の人数を選択してください」は先に進もうとしたときだけ出す、OCR の確認画面は 1 画面に収める対象外、「投稿する」と Replay の「最初から」は今のまま ⑨ V-006 PFR の段階の境目を 10/16/23/30 に、V-007 は ⓘ に Sample の目安、V-009・V-028・V-019・V-020・V-025・V-026 は今のまま、V-039 は矛盾する Runout を同時に選べないようにしサーバーも断る ⑩ F-037 は Stack の上限を 1,000bb に下げる、04 章 Q-8（累積の不完全レイズ）は今のまま ⑪ 規約の「削除または非表示に」を「削除する」に、カタカナを Spot・Hand History に直して承認（T-1106） ⑫ wwyd-ui-concept に PC の構成（17 章・最大 1440px）を足し、シグネチャー 3 を「一覧の見出しだけ」に直す。13 章 §5.4 は今のまま確定 ⑬ 残りの S3・S4 は Claude の判断で重要な順に直す（仕様が変わるものだけ相談。create-post の変更はまとめて 1 回の配備） | さつきの回答（AskUserQuestion 4 回、すべて推奨どおり） | さつき |
+| 2026-09-30 | **Villain の情報の Sample を項目ごと廃止**（V-007。Long と HUD Stats の並びが情報の量の順に読める指摘に対し、ⓘ の 7 項目の上限で目安を置けなかったため）。新しい投稿の `sample` はサーバーが malformed で断り、前の版の投稿・下書き・Preset の `sample` は読むときに捨てる。create-post の配備が要る。**PC とスマホの境目は推奨どおり**（FitStage の倍率の下限 0.65。幅 927px・高さ 605px 未満はスマホの構成） | さつきの判断（「その情報は無くてもいい。項目ごと消していい」「境目は推奨で問題ない」） | さつき |
 
 ---
 
@@ -886,3 +889,13 @@
 - **残課題**: さつきの公開の判断、create-post を VR4 で配備し直す、push・PR・本番、S4・仕様への意見（確認待ち）、iPhone 実機。
 - **追記（2026-09-30）**: さつきが公開を承認（「公開の前に必要なことを推奨通り進めて」）。create-post の dev への配備（VR4）は Claude Code の安全機能で止められたので、さつきが実行する（コマンドは「次にやること」）。`feature/villain-reads-mtt` を push し、PR #25 を作った。本番のマイグレーション・create-post の本番配備・マージはさつき。
 - **追記（2026-09-30）**: さつきが create-post を dev（createpost/8）・本番（createpost/7）に配備し、本番にマイグレーションを適用した。Claude が `neonctl functions get` で両方が active（09:39 UTC）なのを確認。許可するオリジン（dev は localhost だけ、本番は localhost と wwyd.pages.dev、ほかは拒否）と、認証なしの POST が `not_authenticated` になることも確認した。本番のマイグレーションの適用は、さつきの実行による（Claude は本番の DB を読んでいない）。残りは PR #25 のマージと本番のスモーク。
+- **追記（2026-09-30）**: CI の e2e で 3 件が落ちた（Linux の Chromium がスクロールバーのつまみに :hover の色を返す・絵文字が細く 40 文字のタイトルが 1024 幅に収まる）。画面の不具合ではなく試験の書き方の問題なので、OS に依らない形に直した（`2e0b0b4`）。CI 4 件が通ったのを確かめ、さつきの指示で PR #25 をマージ（`f799e70`）。Cloudflare Pages の本番が新しいビルドを配るのを確かめ、本番で一覧と回答画面（get_post_detail）が読めてコンソールのエラーが無いことを確かめた。既存の投稿には Read・MTT が無いので All Villains・MTT のボタンは押せない（仕様どおり）。情報つきの投稿の本番での確認は、さつきの投稿枠を使うので行っていない。
+
+
+### 2026-09-30（セッション 11・P10・P11 の仕上げ）
+
+- **行ったこと**: PR #25 をマージし（CI の Linux で落ちた E2E 2 件を OS に依らない形に直してから）、本番のスモーク（一覧・回答画面）。さつきの「P10 と P11 を仕上げて」を受け、残りの項目を判断シートにまとめ、さつきに 4 回に分けて 16 問を聞いた（すべて推奨どおり。決定ログ）。worktree 6 つを削除（ブランチは残す）。T-1110 として修正と文書を実装（下の変更）。見やすさの 3 件（F-031・F-033・F-034）は担当（Sonnet）に任せ、リーダーが確かめて取り込んだ。承認用のページ（画面のスクリーンショット）を作った。
+- **変更したファイル**: core `money.ts`・`post/validateInput.ts`・`post/reads.ts`、app `post/draft.ts`・`ActionSection.tsx`・`savedDrafts.ts`・`reads/readsModel.ts`・`ReadsView.tsx`・`screens/AnswerScreen.tsx`・`ResultScreen.tsx`・`NewPostScreen.tsx`・`answer/postDetail.ts`・`auth/useAuth.ts`・`appState.ts`・`backend/neon.ts`・`router.ts`・`App.tsx`・`main.tsx`・`components/ErrorBoundary.tsx`（新）・`Toast.tsx`・`FitStage.tsx`・`AccountMenu.tsx`・`useLayer.ts`・`layout.ts`（新）・`useMediaQuery.ts`・`styles/*.css`・`legal/*.md`・`public/_headers`、db `20260930000001_hide_author_uid.sql`（新）・`tests/90_release_c01_enforce.test.sql`、E2E（f004・f035・f038・a11y-fixes ほか）、文書（CLAUDE.md 不変条件 1、02・04・06・08・10・13・15・17・18 章、wwyd-ui-concept、release-test/device-checklist.md（新）・findings、villain-reads-test/findings）。
+- **試験**: 型検査・単体 1329・カバレッジ（行）99.04%・ビルド・pgTAP 380 が通る。E2E は 786 件中 776 件が通り 6 件はスキップ。4 件は落ちた: 開発サーバーへの接続が一時的に拒まれた 2 件と、負荷の中での時間切れ 2 件（ta-18-titles・t3-01 の T3-03。単独で 3 回ずつ回して 90 件が通る）。
+- **注意**: create-post の配備が要る（F-037・V-039 で core の検証を変えた）。本番に F-006 のマイグレーションが要る。どちらもさつき。
+- **残課題**: push・PR・配備（さつき）、画面の見た目の承認、V-007 の置き場所、PC とスマホの境目の確認、公開後の実機の確認。

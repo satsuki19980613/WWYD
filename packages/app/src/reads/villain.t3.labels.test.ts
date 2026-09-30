@@ -122,22 +122,22 @@ describe('T3-09 表示の名前は英語と記号だけ', () => {
     expect(Object.values(TEXTURE_AXIS_NAME)).toEqual(['High Card', 'Suit', 'Pairing', 'Connectivity']);
   });
 
-  it('5 分割のボタンのラベル（C-1）と中央を出すか（C-2）', () => {
+  it('5 分割のボタンのラベル（C-1）と中央を出すか（C-2）。Sample は廃止（V-007）', () => {
     const by = Object.fromEntries(STEP_DEFS.map((d) => [d.key, d]));
+    expect(Object.keys(by)).toEqual(['agg', 'image']);
     expect(by.agg?.labels).toEqual(['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive']);
     expect(by.image?.labels).toEqual(['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose']);
-    expect(by.sample?.labels).toEqual(['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats']);
     expect(by.agg?.hideMiddle).toBe(true);
     expect(by.image?.hideMiddle).toBe(true);
-    expect(by.sample?.hideMiddle).toBe(false);
     // 見出しの下の左右の端の名前
-    expect(by.sample?.ends).toEqual(['First Impression', 'HUD Stats']);
+    expect(by.image?.ends).toEqual(['Tight', 'Loose']);
   });
 
   it('全体の傾向のチップ（VPIP 0・PFR 0 も出す）', () => {
     expect(tendencyChips({ vpip: 0, pfr: 0 })).toEqual(['VPIP 0', 'PFR 0']);
     expect(tendencyChips({ agg: 2, image: 2 })).toEqual([]);
-    expect(tendencyChips({ sample: 2 })).toEqual(['Sample: Some History']);
+    // 廃止した Sample は、値が残っていてもチップにしない
+    expect(tendencyChips({ sample: 2 } as Parameters<typeof tendencyChips>[0])).toEqual([]);
     expect(tendencyChips({ agg: 4, image: 0 })).toEqual(['Very Aggressive', 'Hero Image: Very Tight']);
   });
 });
@@ -156,16 +156,17 @@ describe('T3-01 VPIP・PFR の段階の境目（その値以上で次の段階�
     [100, 'Very Loose'],
   ];
   for (const [v, l] of cases) it(`VPIP ${v} は ${l}`, () => expect(labelOf('vpip', v)).toBe(l));
+  // V-006（2026-09-30 さつき）: 10/16/23/30
   const pfr: [number, string][] = [
     [0, 'Very Low'],
-    [7, 'Very Low'],
-    [8, 'Low'],
-    [13, 'Low'],
-    [14, 'Standard'],
-    [19, 'Standard'],
-    [20, 'High'],
-    [25, 'High'],
-    [26, 'Very High'],
+    [9, 'Very Low'],
+    [10, 'Low'],
+    [15, 'Low'],
+    [16, 'Standard'],
+    [22, 'Standard'],
+    [23, 'High'],
+    [29, 'High'],
+    [30, 'Very High'],
     [100, 'Very High'],
   ];
   for (const [v, l] of pfr) it(`PFR ${v} は ${l}`, () => expect(labelOf('pfr', v)).toBe(l));

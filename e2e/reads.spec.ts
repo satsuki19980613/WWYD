@@ -22,7 +22,7 @@ const READS = {
     pfr: 25,
     agg: 4,
     image: 3,
-    sample: 4,
+    sample: 4, // 廃止した Sample（V-007）。前の版の投稿に残っていても出さず、ほかの情報は出す
     reads: [
       { scope: 'spot', street: 'turn', action: 'barrel', texture: null, runout: null, size: 'big', lean: 'value', strong: true },
       { scope: 'general', street: 'flop', action: 'cbet', texture: { high: 'a' }, runout: null, size: null, lean: 'over', strong: false },
@@ -67,7 +67,8 @@ for (const v of ['', ' @sp'] as const) {
     await page.getByRole('button', { name: 'BTN の Villain の情報' }).click();
     const seat = page.getByRole('dialog', { name: 'Villain · BTN' });
     // 全体の傾向はチップ（VPIP・PFR は数）、Read は 1 行ずつ（Spot Read が先、強いは ++）
-    await expect(seat.locator('.rv-chip')).toHaveText(['VPIP 32', 'PFR 25', 'Very Aggressive', 'Hero Image: Loose', 'Sample: HUD Stats']);
+    await expect(seat.locator('.rv-chip')).toHaveText(['VPIP 32', 'PFR 25', 'Very Aggressive', 'Hero Image: Loose']);
+    await expect(seat).not.toContainText('Sample');
     await expect(seat.locator('.rv-read')).toHaveText(['Turn · Barrel (Big) → Value-heavy++', 'Flop · A-high · C-Bet → Over']);
     await expect(seat.locator('.rv-read').first()).toHaveAccessibleName('Turn · Barrel (Big) → Value-heavy（強い）');
     await page.keyboard.press('Escape');
@@ -365,7 +366,7 @@ test('投稿: 送る本文に Villain（登録できる席）と MTT の情報�
   await page.getByRole('button', { name: 'VPIP を数で入力' }).click();
   await page.getByRole('textbox', { name: 'VPIP（%）' }).fill('40');
   await page.keyboard.press('Enter');
-  await sec.getByRole('group', { name: 'Sample' }).getByRole('button', { name: 'Long', exact: true }).click();
+  await sec.getByRole('group', { name: 'Postflop Aggression' }).getByRole('button', { name: 'Aggressive', exact: true }).click();
   await sec.getByRole('button', { name: '＋ General Read' }).click();
   const g = sec.locator('.vr-read').filter({ hasText: 'General Read 1' });
   await g.getByRole('group', { name: 'Street' }).getByRole('button', { name: 'Flop', exact: true }).click();
@@ -387,7 +388,7 @@ test('投稿: 送る本文に Villain（登録できる席）と MTT の情報�
     SB: { reads: [{ scope: 'spot', street: 'pf', action: 'fold_steal', texture: null, runout: null, size: null, lean: 'under', strong: false }] },
     BB: {
       vpip: 40,
-      sample: 3,
+      agg: 3,
       reads: [
         { scope: 'general', street: 'flop', action: 'raise', texture: { high: 'a', connect: 'straight' }, runout: null, size: null, lean: 'bluff', strong: true },
       ],

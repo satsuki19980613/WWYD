@@ -89,7 +89,7 @@ function randomSeat(rng: Rng, cands: ReturnType<typeof villainContext>['cands'],
   if (rng.chance(0.03) && s.vpip !== undefined && s.vpip < 100) {
     s = { ...s, pfr: Math.min(100, s.vpip + rng.int(1, 5)) }; // 画面では作れない（PFR > VPIP。サーバーだけが断る）
   }
-  for (const k of ['agg', 'image', 'sample'] as const) if (rng.chance(0.3)) s = toggleStep(s, k, rng.int(0, 4));
+  for (const k of ['agg', 'image'] as const) if (rng.chance(0.3)) s = toggleStep(s, k, rng.int(0, 4));
   const mine = cands.filter((c) => c.pos === pos);
   if (rng.chance(0.55)) {
     // 実際の候補（多い）か、でたらめな Street・Action（実際に無い Spot Read は画面が送らない）
@@ -303,11 +303,15 @@ ${JSON.stringify(body)}`).toBe(422);
               e.lean = 'value';
             }, ['invalid_reads']);
           }
-          mk('Spot Read の Street を変える', (r) => {
-            const e = (vr(r)[s]?.reads as Record<string, unknown>[]).find((x) => x.scope === 'spot') as Record<string, unknown>;
-            // 実際の Action と合わず、組み合わせとしても不正になりうる（どちらも invalid_reads）
-            e.street = e.street === 'river' ? 'pf' : 'river';
-          }, ['invalid_reads']);
+          // 変えた先の Street に同じ Action の実際の候補があると、壊したことにならない（例: Flop と River の Bet vs Check）ので、そのときは当てない
+          const otherStreet = sp.street === 'river' ? 'pf' : 'river';
+          if (!villainContext(d).cands.some((c) => c.pos === s && c.street === otherStreet && c.action === sp.action)) {
+            mk('Spot Read の Street を変える', (r) => {
+              const e = (vr(r)[s]?.reads as Record<string, unknown>[]).find((x) => x.scope === 'spot') as Record<string, unknown>;
+              // 実際の Action と合わず、組み合わせとしても不正になりうる（どちらも invalid_reads）
+              e.street = otherStreet;
+            }, ['invalid_reads']);
+          }
           if (sp.size !== null) {
             mk('Spot Read の Size を変える', (r) => {
               const e = (vr(r)[s]?.reads as Record<string, unknown>[]).find((x) => x.scope === 'spot') as Record<string, unknown>;

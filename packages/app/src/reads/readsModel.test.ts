@@ -1,7 +1,7 @@
 /**
  * Villain・MTT の情報の画面での扱い（詳細仕様 18 章）。
  */
-import { bbToMbb, validateInput, verifyPost, type Action, type Pos, type ReadEntry } from '@wwyd/core';
+import { bbToMbb, validateInput, validateMtt, ValidationError, verifyPost, type Action, type MttInfo, type Pos, type ReadEntry } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
 import { hs1bb, type Raw } from '../../../core/src/post/postFixtures.ts';
 import { buildSubmission, emptyDraft, submissionBody, villainContext, type Draft } from '../post/draft.ts';
@@ -20,6 +20,7 @@ import {
   MTT_FIELD_LABEL,
   MTT_FIELDS,
   mttCountsLine,
+  mttOrderErrors,
   parseMtt,
   readLine,
   readSpeech,
@@ -32,6 +33,7 @@ import {
   SPEED_DEF,
   spotCandidateOf,
   STEP_DEF,
+  STEP_DEFS,
   tendencyChips,
   toggleRunout,
   toggleSize,
@@ -58,13 +60,15 @@ describe('VPIP・PFR の段階のラベル（18 章 §2.1）', () => {
   });
 
   it('PFR の境目', () => {
-    expect([7, 8, 13, 14, 19, 20, 25, 26].map((v) => labelOf('pfr', v))).toEqual(['Very Low', 'Low', 'Low', 'Standard', 'Standard', 'High', 'High', 'Very High']);
+    // V-006: レギュラーの PFR 18〜22 は Standard にまとまる
+    expect([9, 10, 15, 16, 22, 23, 29, 30].map((v) => labelOf('pfr', v))).toEqual(['Very Low', 'Low', 'Low', 'Standard', 'Standard', 'High', 'High', 'Very High']);
+    expect([18, 20, 22].map((v) => labelOf('pfr', v))).toEqual(['Standard', 'Standard', 'Standard']);
   });
 
-  it('5 分割のボタンのラベル（§10 C-1）', () => {
+  it('5 分割のボタンのラベル（§10 C-1）。Sample は廃止（V-007）', () => {
     expect(STEP_DEF.agg.labels).toEqual(['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive']);
     expect(STEP_DEF.image.labels).toEqual(['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose']);
-    expect(STEP_DEF.sample.labels).toEqual(['First Impression', 'Few Orbits', 'Some History', 'Long', 'HUD Stats']);
+    expect(STEP_DEFS.map((d) => d.key)).toEqual(['agg', 'image']);
   });
 });
 
@@ -121,6 +125,16 @@ describe('入力の操作（18 章 §2.1・§2.2）', () => {
     expect(setGeneralStreet(g, 'turn')).toEqual(emptyGeneral());
     expect(setGeneralAction(g, 'barrel').action).toBeNull();
   });
+  it('V-039: Runout の Brick はほかと同時に選べない（Brick を選ぶとほかを外し、ほかを選ぶと Brick を外す）', () => {
+    let g: GeneralDraft = setGeneralStreet(emptyGeneral(), 'river');
+    g = toggleRunout(toggleRunout(g, 'flush'), 'over');
+    expect(g.runout).toEqual(['over', 'flush']);
+    g = toggleRunout(g, 'brick');
+    expect(g.runout).toEqual(['brick']);
+    g = toggleRunout(g, 'pair');
+    expect(g.runout).toEqual(['pair']);
+    expect(toggleRunout(g, 'pair').runout).toEqual([]);
+  });
 });
 
 const entry = (over: Partial<ReadEntry> = {}): ReadEntry => ({
@@ -145,9 +159,9 @@ describe('表示（18 章 §2.1.2・§2.1.6）', () => {
     expect(readLine(entry({ street: 'flop', action: 'cbet', size: null, texture: { connect: 'straight' } }))).toBe('Flop · Straight possible · C-Bet → Value-heavy');
     expect(readSpeech(entry({ strong: true }))).toBe('River · Barrel (Big) → Value-heavy（強い）');
   });
-  it('全体の傾向のチップ: VPIP・PFR は数、Aggression・Hero Image の中央は出さない、Sample は中央も出す（§10 C-2）', () => {
-    expect(tendencyChips({ vpip: 38, pfr: 12, agg: 1, sample: 3 })).toEqual(['VPIP 38', 'PFR 12', 'Passive', 'Sample: Long']);
-    expect(tendencyChips({ agg: 2, image: 2, sample: 2 })).toEqual(['Sample: Some History']);
+  it('全体の傾向のチップ: VPIP・PFR は数、Aggression・Hero Image の中央は出さない（§10 C-2）', () => {
+    expect(tendencyChips({ vpip: 38, pfr: 12, agg: 1 })).toEqual(['VPIP 38', 'PFR 12', 'Passive']);
+    expect(tendencyChips({ agg: 2, image: 2 })).toEqual([]);
     expect(tendencyChips({ image: 3 })).toEqual(['Hero Image: Loose']);
   });
   it('折りたたんだ席の 1 行', () => {
@@ -185,6 +199,27 @@ describe('MTT の欄（18 章 §2.4）', () => {
     expect(mttCountsLine({ paid: 50 })).toBe('ITM 50');
     expect(mttCountsLine({ rank: 3 })).toBe('#3');
     expect(mttCountsLine({})).toBe('');
+  });
+  it('V-018: 人数の大小の誤りはどの欄かを示す。規則は core の validateMtt と同じ（全組）', () => {
+    expect(mttOrderErrors({ rank: 60, left: 58 })).toEqual(['MTT の スポットの順位 は 残りの人数 以下にしてください']);
+    expect(mttOrderErrors({ paid: 400, entries: 320 })).toEqual(['MTT の ITM は エントリー数 以下にしてください']);
+    expect(mttOrderErrors({ paid: 100, left: 50 })).toEqual([]); // ITM は残りの人数を超えてよい
+    const vals = [undefined, 1, 5, 10];
+    for (const rank of vals) for (const left of vals) for (const entries of vals) for (const paid of vals) {
+      const m: MttInfo = {};
+      if (rank !== undefined) m.rank = rank;
+      if (left !== undefined) m.left = left;
+      if (entries !== undefined) m.entries = entries;
+      if (paid !== undefined) m.paid = paid;
+      let serverOk = true;
+      try {
+        validateMtt(m, 'mtt');
+      } catch (e) {
+        if (!(e instanceof ValidationError)) throw e;
+        serverOk = false;
+      }
+      expect(mttOrderErrors(m).length === 0, JSON.stringify(m)).toBe(serverOk);
+    }
   });
 });
 
@@ -306,9 +341,19 @@ describe('下書きの読み直し（前の版の下書き・壊れた値）', (
       reads: { SB: { vpip: 20, pfr: 30, agg: 101, conf: 2, memo: 'x', sample: 2 }, XX: { vpip: 1 }, BB: 'x', CO: { memo: 'only' } },
       mtt: { stage: 'bubble', type: 'pko', speed: 150, prize: 'flat', rank: 3 },
     });
-    expect(d.reads).toEqual({ SB: { vpip: 20, sample: 2 } });
+    expect(d.reads).toEqual({ SB: { vpip: 20 } });
     expect(d.mtt).toEqual({ ...emptyMtt(), prize: 'flat' });
     expect(sanitizeDraft({ mtt: { speed: 1 } }).mtt.speed).toBe(1);
+  });
+  it('V-007: 前の版の下書きに残った Sample は捨てる（Sample だけの席は情報なし）', () => {
+    expect(sanitizeSeat({ vpip: 30, agg: 1, sample: 3 })).toEqual({ vpip: 30, agg: 1 });
+    expect(sanitizeSeat({ sample: 4 })).toEqual({});
+    const d = sanitizeDraft({ reads: { SB: { vpip: 30, sample: 3 }, BB: { sample: 2 }, CO: { image: 4, sample: 0, general: [{ street: 'flop', action: 'cbet', lean: 'over', strong: false }] } } });
+    expect(d.reads).toEqual({
+      SB: { vpip: 30 },
+      CO: { image: 4, general: [{ street: 'flop', action: 'cbet', texture: {}, runout: [], size: null, lean: 'over', strong: false }] },
+    });
+    expect(JSON.stringify(d.reads)).not.toContain('sample');
   });
   it('Read は合わない値を外して読み直す', () => {
     const s = sanitizeSeat({
@@ -320,6 +365,8 @@ describe('下書きの読み直し（前の版の下書き・壊れた値）', (
     expect(sanitizeSeat({ spot: { street: 'pf', action: '3bet', size: null, lean: 'over', strong: false } }).spot?.size).toBeNull();
     expect(sanitizeSeat({ spot: { street: 'flop', action: 'raise', size: 'huge', lean: 'over', strong: false } }).spot).toEqual({ street: 'flop', action: 'raise', lean: 'over', strong: false });
     expect(s.general).toEqual([{ street: 'pf', action: '3bet', texture: {}, runout: [], size: null, lean: 'bluff', strong: true }]);
+    // 前の版の Brick とほかの組み合わせは Brick を外す（V-039）
+    expect(sanitizeSeat({ general: [{ street: 'turn', action: 'barrel', runout: ['brick', 'flush'] }] }).general?.[0]?.runout).toEqual(['flush']);
   });
 });
 
@@ -376,5 +423,15 @@ describe('Preset（18 章 §2.1.7。端末だけに保存。schema version つ�
     s.setItem('wwyd.readPresets.v1.u', '[]');
     savePreset('u', 'n', { vpip: 3 }, s);
     expect(s.getItem('wwyd.readPresets.v1.u')).toBeNull();
+  });
+
+  it('V-007: 前の版の Preset に残った Sample は捨てる（Sample だけの Preset は中身なし）', () => {
+    const s = memoryStore();
+    s.setItem('wwyd.readPresets.u', JSON.stringify({ schema: 2, presets: [{ id: 'a', name: 'Reg', read: { vpip: 22, pfr: 18, sample: 4 } }, { id: 'b', name: 'only', read: { sample: 1 } }] }));
+    expect(readPresets('u', s)).toEqual([
+      { id: 'a', name: 'Reg', read: { vpip: 22, pfr: 18 } },
+      { id: 'b', name: 'only', read: {} },
+    ]);
+    expect(presetOf({ vpip: 22, sample: 3 } as Parameters<typeof presetOf>[0])).toEqual({ vpip: 22 });
   });
 });

@@ -175,9 +175,16 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
       {head}
       <div className="ans-top">
         <Tabs label="表示" items={MOBILE_TABS} value={tab} onChange={setTab} />
-        {tab === 'agg' && <div className="res-agg">{viewTabs}</div>}
+        {tab === 'agg' && (
+          <div className="res-agg">
+            {viewTabs}
+            {/* 集計のタブからも Villain の情報・MTT を開ける（V-038。2026-09-30 さつき）。情報が無い投稿は出さない */}
+            {readsUi.any && <div className="rp-info">{readsUi.buttons}</div>}
+          </div>
+        )}
       </div>
       {tab === 'agg' ? aggregate : hand}
+      {tab === 'agg' && readsUi.modal}
       {nextLink && <div className="ans-bottom">{nextLink}</div>}
     </section>
   );

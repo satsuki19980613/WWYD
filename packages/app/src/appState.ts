@@ -33,7 +33,8 @@ export type Reachability =
  */
 export function classifyReachability(result: Reachability, online: boolean): 'offline' | 'maintenance' | null {
   if (result.kind === 'ok') return null;
-  if (result.kind === 'http' && result.status < 500) return null;
+  // 429（混み合っている）は一時的なのでメンテナンス中と同じ扱い（未ログインにしない。F-015）
+  if (result.kind === 'http' && result.status < 500 && result.status !== 429) return null;
   if (!online) return 'offline';
   return 'maintenance';
 }

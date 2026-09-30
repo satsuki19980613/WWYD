@@ -385,7 +385,7 @@ river: 12 BB x  13 BTN b15  14 BB c   → showdown
 | VAL-12 | spot_index が候補でない（Hero のアクションでない、fold、後続なし） | `invalid_spot` |
 | VAL-13 | Villain が候補の席でない | `invalid_villain` |
 | VAL-14 | クライアントの派生メタが再計算と一致しない | `derived_mismatch` |
-| VAL-15 | スタック ≤ 0、SB ≤ 0、SB > BB、アンティ < 0、MTT でレーキあり、レーキが 0〜100 の外 | `invalid_settings` |
+| VAL-15 | スタック ≤ 0 または **1000bb 超**（F-037。6 人が全員 All-in しても Pot が金額の上限 9999.999bb に届かないように。2026-09-30 さつき）、SB ≤ 0、SB > BB、アンティ < 0、MTT でレーキあり、レーキが 0〜100 の外 | `invalid_settings` |
 | VAL-16 | 金額の小数が 4 桁以上、上限（9999.999bb）超 | `malformed` |
 | VAL-17 | タイトルが空（前後の空白を除く）・40 文字超 | `invalid_title` |
 | VAL-18 | その日（UTC）の投稿が上限に達している | `daily_limit`（DB 側で判定） |

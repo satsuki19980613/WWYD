@@ -24,6 +24,8 @@ const TITLES = [
 
 for (const v of ['', ' @sp'] as const) {
   test(`タイトルの表示（一覧・回答・集計・下書き）: はみ出さない・HTML として解釈しない・落ちない${v}`, async ({ page }) => {
+    // 画面を何度も開き直すので、全体の試験の負荷の中では既定の 30 秒を超えることがある
+    test.setTimeout(120_000);
     const errors = watchErrors(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const raw = hs1bb();
@@ -35,7 +37,7 @@ for (const v of ['', ' @sp'] as const) {
       }
       // 回答画面
       await page.goto(`/s/${ID}/answer`);
-      await expect(page.locator('.hdr-post')).toBeAttached();
+      await expect(page.locator('.hdr-post')).toBeAttached({ timeout: 15_000 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `回答 ${JSON.stringify(title)}`).toBe(true);
       await page.unrouteAll({ behavior: 'ignoreErrors' });
     }
@@ -45,7 +47,7 @@ for (const v of ['', ' @sp'] as const) {
     for (const title of TITLES.slice(0, 4)) {
       await fakeBackend(page, detailJson({ ...raw, title }, { viewer: 'answered', id: ID, answerCount: 1, aggregate: agg, myAnswer: { paint: paintHexOf({ AA: { call: 20 } }), size: null } }));
       await page.goto(`/s/${ID}/result`);
-      await expect(page.getByRole('button', { name: 'AA', exact: true })).toBeAttached();
+      await expect(page.getByRole('button', { name: 'AA', exact: true })).toBeAttached({ timeout: 15_000 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `集計 ${JSON.stringify(title)}`).toBe(true);
       await page.unrouteAll({ behavior: 'ignoreErrors' });
     }
@@ -53,7 +55,7 @@ for (const v of ['', ' @sp'] as const) {
     await fakeBackend(page, null);
     await fakeList(page, TITLES.map((t, n) => row(n + 1, { title: t })));
     await page.goto('/');
-    await expect(page.locator('.spot-link').first()).toBeAttached();
+    await expect(page.locator('.spot-link').first()).toBeAttached({ timeout: 15_000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), '一覧').toBe(true);
     // HTML として解釈していない: 注入した要素も実行もない
     expect(await page.locator('img[src="x"]').count()).toBe(0);

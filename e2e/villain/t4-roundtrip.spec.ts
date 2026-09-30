@@ -82,7 +82,6 @@ async function fillTendencies(page: Page): Promise<void> {
   await setNumber(page, 'PFR', '22');
   await sec.getByRole('group', { name: 'Postflop Aggression' }).getByRole('button', { name: 'Aggressive', exact: true }).click();
   await sec.getByRole('group', { name: 'Hero Image' }).getByRole('button', { name: 'Loose', exact: true }).click();
-  await sec.getByRole('group', { name: 'Sample' }).getByRole('button', { name: 'Long', exact: true }).click();
 }
 
 type Case = { name: string; n: number; fmt: 'cash' | 'mtt'; hero: 'BTN' | 'BB' };
@@ -188,7 +187,7 @@ for (const v of ['', ' @sp'] as const) {
       // ---- 本文 → handler → insert_post に渡る値 ----
       const body = cp.calls[0]?.body as Record<string, unknown>;
       const payload = await throughHandler(body);
-      const vilExpect = { vpip: 40, pfr: 22, agg: 3, image: 3, sample: 3, reads: [...(expectSpot ? [expectSpot] : []), expectGeneral] };
+      const vilExpect = { vpip: 40, pfr: 22, agg: 3, image: 3, reads: [...(expectSpot ? [expectSpot] : []), expectGeneral] };
       expect(payload.villain_reads[vil as 'BB' | 'BTN']).toEqual(vilExpect);
       if (expectSb) expect(payload.villain_reads.SB).toEqual({ reads: [expectSb] });
       expect(Object.keys(payload.villain_reads).sort()).toEqual([vil, ...(expectSb ? ['SB'] : [])].sort());
@@ -205,7 +204,7 @@ for (const v of ['', ' @sp'] as const) {
       const check = async (): Promise<void> => {
         await page.getByRole('button', { name: `${vil} の Villain の情報` }).click();
         const dlg = page.getByRole('dialog', { name: `Villain · ${vil}` });
-        await expect(dlg.locator('.rv-chip')).toHaveText(['VPIP 40', 'PFR 22', 'Aggressive', 'Hero Image: Loose', 'Sample: Long']);
+        await expect(dlg.locator('.rv-chip')).toHaveText(['VPIP 40', 'PFR 22', 'Aggressive', 'Hero Image: Loose']);
         await expect(dlg.locator('.rv-read')).toHaveText([...(expectSpotLine ? [expectSpotLine] : []), expectGeneralLine]);
         await page.keyboard.press('Escape');
         if (expectSb) {
