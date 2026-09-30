@@ -123,7 +123,6 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`T2-09 Tournament Type: 端（0・100）で更に矢印・PageUp/Down を押しても範囲の外に出ない${v}`, async ({ page }) => {
-    test.fail(true, '既知: MTT の Tournament Type は端でキーを押すと -1 / 101 などの範囲外になる（setRead と違い onChange が丸めない）（S2）。直ったらこの行を消す');
     await openMtt(page);
     await speed(page).focus();
     await page.keyboard.press('Home');
@@ -139,7 +138,6 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`T2-09 Tournament Type: 端で矢印を押したあとの値を送ると、画面はエラー（MTT の情報を確認してください）になる${v}`, async ({ page }) => {
-    test.fail(true, '既知: 上と同じ原因で -1 を保持し、投稿が「MTT の情報を確認してください」で止まる（S2）。直ったらこの行を消す');
     const { cp } = await openDraft(page, draftJson({ ...srpTurn(), fmt: 'mtt', title: 'mtt -1' }));
     await step(page, S_SETTINGS);
     await speed(page).focus();

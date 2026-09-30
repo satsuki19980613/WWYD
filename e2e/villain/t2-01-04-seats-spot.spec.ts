@@ -178,7 +178,6 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`T2-04 Spot Read: Spot を変えると候補が変わり、合わなくなった Spot Read は画面の要約から外れる${v}`, async ({ page }) => {
-    test.fail(true, '既知: 合わなくなった Spot Read が seatSummary の件数（N Read）に残る（S3）。直ったらこの行を消す');
     const { cp } = await openDraft(page, draftJson(threeBetPot()));
     await step(page, S_SPOT);
     await openSeat(page, 'BTN');
@@ -203,7 +202,6 @@ for (const v of ['', ' @sp'] as const) {
 }
 
 test('T2-04 Spot Read: 同じ Street・Action の候補が複数（Raise の Small と Big）で、選んだ方の Size を送る', async ({ page }) => {
-  test.fail(true, '既知: spotCandidateOf が Street・Action だけで最後の候補を引くため、先の候補（Small）を選んでも後の候補の Size（Big）になる（S2）。直ったらこの行を消す');
   const { cp } = await openDraft(page, draftJson(doubleRaise()));
   await openSeat(page, 'CO');
   const spot = villains(page).locator('.vr-read').first();

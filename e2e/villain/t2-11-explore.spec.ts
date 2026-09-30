@@ -47,7 +47,6 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`T2-04b Spot Read: 席を開いたまま Spot を変えて候補が増えたとき、最初の選択は判断地点にいちばん近い候補になる${v}`, async ({ page }) => {
-    test.fail(true, '既知: SpotRead の useState(cands.length - 1) は開いた時の 1 回だけ。Spot を変えて候補が増えても「いちばん近い候補」に選び直さない（S3）。直ったらこの行を消す');
     await openDraft(page, draftJson({ ...threeBetPot(), spotIndex: 7 }));
     await step(page, S_SPOT);
     await openSeat(page, 'BTN'); // 候補は 3-Bet の 1 つだけ

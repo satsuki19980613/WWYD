@@ -30,6 +30,7 @@ import {
   setGeneralStreet,
   setRead,
   SPEED_DEF,
+  spotCandidateOf,
   STEP_DEF,
   tendencyChips,
   toggleRunout,
@@ -154,6 +155,13 @@ describe('表示（18 章 §2.1.2・§2.1.6）', () => {
     expect(seatSummary({ vpip: 45, spot: { street: 'flop', action: 'cbet', lean: 'over', strong: false } })).toBe('VPIP 45 · 1 Read');
     expect(seatSummary(undefined)).toBe('');
   });
+  it('V-012: 候補を渡すと、候補に当たらない（送らない）Spot Read は数えない', () => {
+    const spot = { street: 'flop', action: 'cbet', size: 'small', lean: 'over', strong: false } as const;
+    const cand = { index: 7, pos: 'BTN', street: 'flop', action: 'cbet', size: 'small', checkRaise: false } as const;
+    expect(seatSummary({ vpip: 45, spot }, [cand])).toBe('VPIP 45 · 1 Read');
+    expect(seatSummary({ vpip: 45, spot }, [])).toBe('VPIP 45');
+    expect(seatSummary({ vpip: 45, spot }, [{ ...cand, size: 'big' }])).toBe('VPIP 45');
+  });
 });
 
 describe('MTT の欄（18 章 §2.4）', () => {
@@ -267,6 +275,20 @@ describe('投稿の本文（画面とサーバーの一致）', () => {
     expect(buildSubmission({ ...d, reads: { BTN: { general: [emptyGeneral()] } } }).ok).toBe(true);
   });
 
+  it('V-010: 同じ Street・Action の候補が 2 つある Raise は、選んだ候補の Size で送る（最後の候補にしない）', () => {
+    const cands = [
+      { index: 8, pos: 'BB', street: 'flop', action: 'raise', size: 'small', checkRaise: true },
+      { index: 10, pos: 'BB', street: 'flop', action: 'raise', size: 'big', checkRaise: true },
+    ] as const;
+    const pick = (size: 'small' | 'big' | undefined) =>
+      readsForSubmit({ BB: { spot: { street: 'flop', action: 'raise', size, lean: 'over', strong: false } } }, ['BB'], cands).BB?.reads?.[0]?.size;
+    expect(pick('small')).toBe('small');
+    expect(pick('big')).toBe('big');
+    // 前の版の下書き（Size なし）は判断地点にいちばん近い候補
+    expect(pick(undefined)).toBe('big');
+    expect(spotCandidateOf({ street: 'flop', action: 'raise', size: 'small', lean: 'over', strong: false }, 'BB', cands)?.index).toBe(8);
+  });
+
   it('readsForSubmit: Spot Read の Size は実際の額から', () => {
     const v = villainContext(base());
     expect(readsForSubmit({ BTN: { spot: { street: 'flop', action: 'cbet', lean: 'under', strong: false } } }, v.seats, v.cands).BTN?.reads?.[0]?.size).toBe('small');
@@ -294,6 +316,9 @@ describe('下書きの読み直し（前の版の下書き・壊れた値）', (
       general: [{ street: 'pf', action: '3bet', texture: { high: 'a' }, size: 'overbet', lean: 'bluff', strong: true }, { street: 'x' }, 5],
     });
     expect(s.spot).toBeUndefined();
+    expect(sanitizeSeat({ spot: { street: 'flop', action: 'raise', size: 'big', lean: 'over', strong: false } }).spot?.size).toBe('big');
+    expect(sanitizeSeat({ spot: { street: 'pf', action: '3bet', size: null, lean: 'over', strong: false } }).spot?.size).toBeNull();
+    expect(sanitizeSeat({ spot: { street: 'flop', action: 'raise', size: 'huge', lean: 'over', strong: false } }).spot).toEqual({ street: 'flop', action: 'raise', lean: 'over', strong: false });
     expect(s.general).toEqual([{ street: 'pf', action: '3bet', texture: {}, runout: [], size: null, lean: 'bluff', strong: true }]);
   });
 });

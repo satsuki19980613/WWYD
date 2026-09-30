@@ -86,8 +86,8 @@ export function VillainSection(props: {
           const read = props.reads[p] ?? {};
           const isOpen = open === p;
           const bodyId = `${baseId}-${p}`;
-          const summary = seatSummary(read);
           const cands = props.cands.filter((c) => c.pos === p);
+          const summary = seatSummary(read, cands);
           return (
             <li key={p} className={`vr-row${isOpen ? ' open' : ''}${summary ? ' filled' : ''}`}>
               <button
@@ -252,16 +252,16 @@ const candText = (c: ReadCandidate): string => `${STREET_NAME[c.street]} · ${ac
  */
 function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]; spot: SpotDraft | undefined; onChange: (s: SpotDraft | undefined) => void }): JSX.Element {
   const { cands, spot } = props;
-  const [pick, setPick] = useState<number>(cands.length - 1);
+  // 投稿者が押して選んだ候補（Action の列の添字）。選んでいなければ判断地点にいちばん近い候補（§10 C-4。Spot を変えて候補が増えても追従する。V-011）
+  const [pick, setPick] = useState<number | null>(null);
   const chosen = spot ? spotCandidateOf(spot, props.seat, cands) : undefined;
-  const cur = chosen ?? cands[Math.min(pick, cands.length - 1)] ?? (cands[cands.length - 1] as ReadCandidate);
-  const choose = (i: number): void => {
-    setPick(i);
-    const c = cands[i] as ReadCandidate;
+  const cur = chosen ?? cands.find((c) => c.index === pick) ?? (cands[cands.length - 1] as ReadCandidate);
+  const choose = (c: ReadCandidate): void => {
+    setPick(c.index);
     if (!spot) return;
     // 選んでいる Lean がこの Action に選べなければ Spot Read を外す
     if (!leansOf(c.action).includes(spot.lean)) props.onChange(undefined);
-    else props.onChange({ ...spot, street: c.street, action: c.action });
+    else props.onChange({ ...spot, street: c.street, action: c.action, size: c.size });
   };
   return (
     <div className="vr-read">
@@ -271,8 +271,8 @@ function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]
       </div>
       {cands.length > 1 ? (
         <ChoiceRow label="Action">
-          {cands.map((c, i) => (
-            <Choice key={c.index} on={c === cur} label={candText(c)} onClick={() => choose(i)} />
+          {cands.map((c) => (
+            <Choice key={c.index} on={c === cur} label={candText(c)} onClick={() => choose(c)} />
           ))}
         </ChoiceRow>
       ) : (
@@ -284,7 +284,7 @@ function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]
         strong={!!spot?.strong}
         onPick={(l) => {
           const next = cycleLean({ lean: spot && chosen ? spot.lean : null, strong: !!spot?.strong }, l);
-          props.onChange(next.lean ? { street: cur.street, action: cur.action, lean: next.lean, strong: next.strong } : undefined);
+          props.onChange(next.lean ? { street: cur.street, action: cur.action, size: cur.size, lean: next.lean, strong: next.strong } : undefined);
         }}
       />
     </div>

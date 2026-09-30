@@ -8,6 +8,7 @@ import {
   POSITIONS,
   PRIZE_STRUCTURES,
   READ_ACTIONS,
+  READ_SIZES,
   RUNOUTS,
   SPEED_MAX,
   STEP_MAX,
@@ -206,8 +207,11 @@ export function hasVisibleRead(r: VillainRead | undefined): boolean {
 
 // ---- 入力の途中の形（下書き） ----
 
-/** Spot Read（When と Action は Action の列から。投稿者は候補と Lean を選ぶ。§2.1.4） */
-export type SpotDraft = { street: Street; action: ReadAction; lean: Lean; strong: boolean };
+/**
+ * Spot Read（When と Action は Action の列から。投稿者は候補と Lean を選ぶ。§2.1.4）。
+ * `size` は選んだ候補の Size（同じ Street・Action の候補が 2 つある Raise を見分ける。V-010）。前の版の下書きには無い（undefined）
+ */
+export type SpotDraft = { street: Street; action: ReadAction; size?: ReadSize | null; lean: Lean; strong: boolean };
 /** General Read（Street → Action → Lean の順。途中は null） */
 export type GeneralDraft = {
   street: Street | null;
@@ -321,7 +325,12 @@ export function generalEntry(g: GeneralDraft): ReadEntry | null {
 
 /** Spot Read の候補から、この Spot Read の Action（同じ Street・Action の最後のもの） */
 export function spotCandidateOf(spot: SpotDraft, seat: Pos, cands: readonly ReadCandidate[]): ReadCandidate | undefined {
-  return [...cands].reverse().find((c) => c.pos === seat && c.street === spot.street && c.action === spot.action);
+  return [...cands].reverse().find((c) => c.pos === seat && spotMatches(spot, c));
+}
+
+/** Spot Read がその候補に当たるか（Size を持っていれば Size も合わせる。V-010） */
+export function spotMatches(spot: SpotDraft, c: ReadCandidate): boolean {
+  return c.street === spot.street && c.action === spot.action && (spot.size === undefined || c.size === spot.size);
 }
 
 const TENDENCY_OF: readonly (PercentKey | StepKey)[] = ['vpip', 'pfr', 'agg', 'image', 'sample'];
@@ -414,6 +423,8 @@ export function sanitizeSeat(raw: unknown): SeatDraft {
     const lean = oneOf(sp.lean, ['over', 'under', 'value', 'bluff'] as const);
     if (street && action && lean && STREET_ACTIONS[street].includes(action) && leansOf(action).includes(lean)) {
       out.spot = { street, action, lean, strong: sp.strong === true };
+      const size = sp.size === null ? null : oneOf(sp.size, READ_SIZES);
+      if (size !== null || sp.size === null) out.spot.size = size;
     }
   }
   if (Array.isArray(raw.general)) {
@@ -434,15 +445,20 @@ export function sanitizeReads(raw: unknown): ReadsDraft {
   return out;
 }
 
-/** 折りたたんだ席の 1 行（例「38/12 · Passive · 2 Reads」） */
-export function seatSummary(s: SeatDraft | undefined): string {
+/**
+ * 折りたたんだ席の 1 行（例「38/12 · Passive · 2 Reads」）。`cands` はその席の Spot Read の候補で、
+ * 渡したときは候補に当たる Spot Read だけを数える（送らない Spot Read を数えない。V-012）
+ */
+export function seatSummary(s: SeatDraft | undefined, cands?: readonly ReadCandidate[]): string {
   if (!s) return '';
   const parts: string[] = [];
   if (s.vpip !== undefined && s.pfr !== undefined) parts.push(`${s.vpip}/${s.pfr}`);
   else if (s.vpip !== undefined) parts.push(`VPIP ${s.vpip}`);
   else if (s.pfr !== undefined) parts.push(`PFR ${s.pfr}`);
   parts.push(...tendencyChips({ agg: s.agg, image: s.image, sample: s.sample }).map((c) => c));
-  const n = (s.spot ? 1 : 0) + (s.general ?? []).filter(isCompleteGeneral).length;
+  const spot = s.spot;
+  const spotOk = spot !== undefined && (cands === undefined || cands.some((c) => spotMatches(spot, c)));
+  const n = (spotOk ? 1 : 0) + (s.general ?? []).filter(isCompleteGeneral).length;
   if (n > 0) parts.push(`${n} Read${n > 1 ? 's' : ''}`);
   return parts.join(' · ');
 }

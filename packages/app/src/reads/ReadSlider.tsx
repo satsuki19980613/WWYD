@@ -62,8 +62,8 @@ export function ReadSlider(props: {
     const v = moves[e.key];
     if (v === undefined) return;
     e.preventDefault();
-    // 未入力のときの最初の矢印は真ん中に置く
-    props.onChange(set || e.key === 'Home' || e.key === 'End' ? v : defMiddle(def));
+    // 未入力のときの最初の矢印は真ん中に置く。端で押しても 0〜max の外に出さない（V-027）
+    props.onChange(set || e.key === 'Home' || e.key === 'End' ? Math.min(max, Math.max(0, v)) : defMiddle(def));
   };
 
   // 段階の境目の目盛り（% の項目は境目の値、段階だけの項目は 5 つの点）
