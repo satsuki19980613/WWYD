@@ -147,6 +147,22 @@ for (const v of VARIANTS) {
       await expect(page.getByRole('heading', { name: 'メンテナンス中' })).toBeVisible();
     });
 
+    test(`F-015 get-session が 429（混み合っている）→ メンテナンス中（ログイン画面にしない）${v}`, async ({ page }) => {
+      await fakeBackend(page, null);
+      await page.route('**/api/auth/get-session', (r) => r.fulfill({ status: 429, contentType: 'application/json', body: '{}' }));
+      await page.goto('/');
+      await expect(page.getByRole('heading', { name: 'メンテナンス中' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Google でログイン' })).toHaveCount(0);
+    });
+
+    test(`F-016 get-session が応答しない → 打ち切ってメンテナンス中（起動画面のまま待ち続けない）${v}`, async ({ page }) => {
+      test.setTimeout(40_000);
+      await fakeBackend(page, null);
+      await page.route('**/api/auth/get-session', () => undefined);
+      await page.goto('/');
+      await expect(page.getByRole('heading', { name: 'メンテナンス中' })).toBeVisible({ timeout: 20_000 });
+    });
+
     test(`404: 知らないパスは「ページが見つかりません」＋「一覧へ」${v}`, async ({ page }) => {
       const errors = watchErrors(page);
       await fakeBackend(page, null);
