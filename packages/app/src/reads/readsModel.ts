@@ -10,6 +10,7 @@ import {
   READ_ACTIONS,
   READ_SIZES,
   RUNOUTS,
+  runoutConflicts,
   SPEED_MAX,
   STEP_MAX,
   STREET_ACTIONS,
@@ -295,10 +296,11 @@ export function toggleTexture(g: GeneralDraft, axis: TextureAxis, value: string)
   return { ...g, texture: texture as Texture };
 }
 
-/** Runout のタグ（複数選べる） */
+/** Runout のタグ（複数選べる。Brick を選ぶとほかを外し、ほかを選ぶと Brick を外す。V-039） */
 export function toggleRunout(g: GeneralDraft, r: Runout): GeneralDraft {
-  const has = g.runout.includes(r);
-  return { ...g, runout: RUNOUTS.filter((x) => (x === r ? !has : g.runout.includes(x))) };
+  if (g.runout.includes(r)) return { ...g, runout: g.runout.filter((x) => x !== r) };
+  const next: Runout[] = r === 'brick' ? ['brick'] : [...g.runout.filter((x) => x !== 'brick'), r];
+  return { ...g, runout: RUNOUTS.filter((x) => next.includes(x)) };
 }
 
 export function toggleSize(g: GeneralDraft, s: ReadSize): GeneralDraft {
@@ -404,7 +406,11 @@ export function sanitizeGeneral(raw: unknown): GeneralDraft | null {
       if (v) g = toggleTexture(g, k, v);
     }
   }
-  if (Array.isArray(raw.runout) && (street === 'turn' || street === 'river')) g = { ...g, runout: RUNOUTS.filter((r) => (raw.runout as unknown[]).includes(r)) };
+  if (Array.isArray(raw.runout) && (street === 'turn' || street === 'river')) {
+    const runout = RUNOUTS.filter((r) => (raw.runout as unknown[]).includes(r));
+    // 前の版の下書き・Preset に残った Brick とほかの組み合わせは Brick を外す（V-039）
+    g = { ...g, runout: runoutConflicts(runout) ? runout.filter((r) => r !== 'brick') : runout };
+  }
   const size = oneOf(raw.size, sizesOf(street));
   if (size && g.action && isAggressive(g.action)) g = { ...g, size };
   const lean = oneOf(raw.lean, ['over', 'under', 'value', 'bluff'] as const);

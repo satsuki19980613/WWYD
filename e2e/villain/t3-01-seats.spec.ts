@@ -53,7 +53,7 @@ for (const v of ['', ' @sp'] as const) {
       villain_reads: {
         BB: {
           reads: [
-            general({ street: 'turn', action: 'barrel', texture: { connect: 'none', high: 'k', paired: 'paired', suit: 'mono' }, runout: ['pair', 'brick', 'flush'], size: 'overbet', lean: 'bluff', strong: true }),
+            general({ street: 'turn', action: 'barrel', texture: { connect: 'none', high: 'k', paired: 'paired', suit: 'mono' }, runout: ['pair', 'over', 'flush'], size: 'overbet', lean: 'bluff', strong: true }),
             spot({ street: 'flop', action: 'raise', size: 'big', lean: 'value', strong: true }),
             general({ street: 'river', action: 'raise', lean: 'under', strong: false }),
           ],
@@ -68,7 +68,7 @@ for (const v of ['', ' @sp'] as const) {
     // Spot Read が先（保存の順に関わらず）。条件は High Card → Suit → Pairing → Connectivity → Runout（定義の順）→ Action（Size）
     await expect(m.locator('.rv-read')).toHaveText([
       'Flop · Check-Raise (Big) → Value-heavy++',
-      'Turn · K-high · Monotone · Paired · No straight · Brick · Flush Complete · Board Pair · Barrel (Overbet) → Bluff-heavy++',
+      'Turn · K-high · Monotone · Paired · No straight · Overcard · Flush Complete · Board Pair · Barrel (Overbet) → Bluff-heavy++',
       // General Read の Raise も、BB は Hero（BTN）より先に動くので Check-Raise
       'River · Check-Raise → Under',
     ]);

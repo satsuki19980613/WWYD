@@ -46,9 +46,14 @@ export type TextureAxis = keyof typeof TEXTURE_AXES;
 export const TEXTURE_KEYS = Object.keys(TEXTURE_AXES) as TextureAxis[];
 export type Texture = { [K in TextureAxis]?: (typeof TEXTURE_AXES)[K][number] };
 
-/** Runout（Turn・River だけ。その Street で落ちたカードについて。複数選べる） */
+/** Runout（Turn・River だけ。その Street で落ちたカードについて。複数選べる。Brick はほかと同時に選べない（V-039）） */
 export const RUNOUTS = ['brick', 'over', 'flush', 'straight', 'pair'] as const;
 export type Runout = (typeof RUNOUTS)[number];
+
+/** Brick（何も変えないカード）とほかの Runout を同時に選んでいるか（意味が矛盾する。V-039） */
+export function runoutConflicts(r: readonly Runout[]): boolean {
+  return r.includes('brick') && r.length > 1;
+}
 
 export const READ_SCOPES = ['spot', 'general'] as const;
 export type ReadScope = (typeof READ_SCOPES)[number];
@@ -152,6 +157,7 @@ function validateEntry(v: unknown, at: string): ReadEntry {
   if (!leansOf(action).includes(lean)) fail('invalid_reads', undefined, `${at}: ${action} に ${lean} は選べない`);
   if (texture && street === 'pf') fail('invalid_reads', undefined, `${at}: Preflop に texture`);
   if (runout && street !== 'turn' && street !== 'river') fail('invalid_reads', undefined, `${at}: runout は Turn・River だけ`);
+  if (runout && runoutConflicts(runout)) fail('invalid_reads', undefined, `${at}: Brick とほかの Runout`);
   if (size && (!AGGRESSIVE_ACTIONS.includes(action) || !sizesOf(street).includes(size))) fail('invalid_reads', undefined, `${at}: size`);
   // Spot Read は Board を入れない（実際の Board が画面にある）
   if (scope === 'spot' && (texture || runout)) fail('invalid_reads', undefined, `${at}: Spot Read に条件`);

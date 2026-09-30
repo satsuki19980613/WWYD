@@ -108,6 +108,9 @@ describe('RD Reads の検証', () => {
     ]) {
       expect(codeOf(() => validateReads({ SB: { reads: [general(bad)] } }, SEATS, 'BTN')), JSON.stringify(bad)).toBe('invalid_reads');
     }
+    // Brick とほかの Runout を同時に選ぶ（V-039）
+    expect(codeOf(() => validateReads({ SB: { reads: [general({ street: 'river', action: 'barrel', runout: ['brick', 'flush'] })] } }, SEATS, 'BTN'))).toBe('invalid_reads');
+    expect(validateReads({ SB: { reads: [general({ street: 'river', action: 'barrel', runout: ['brick'] })] } }, SEATS, 'BTN').SB?.reads).toHaveLength(1);
     // Spot Read は 1 件、General Read は 2 件まで
     const spot = general({ scope: 'spot' });
     expect(codeOf(() => validateReads({ SB: { reads: [spot, spot] } }, SEATS, 'BTN'))).toBe('invalid_reads');

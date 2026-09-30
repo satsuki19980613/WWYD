@@ -121,6 +121,16 @@ describe('入力の操作（18 章 §2.1・§2.2）', () => {
     expect(setGeneralStreet(g, 'turn')).toEqual(emptyGeneral());
     expect(setGeneralAction(g, 'barrel').action).toBeNull();
   });
+  it('V-039: Runout の Brick はほかと同時に選べない（Brick を選ぶとほかを外し、ほかを選ぶと Brick を外す）', () => {
+    let g: GeneralDraft = setGeneralStreet(emptyGeneral(), 'river');
+    g = toggleRunout(toggleRunout(g, 'flush'), 'over');
+    expect(g.runout).toEqual(['over', 'flush']);
+    g = toggleRunout(g, 'brick');
+    expect(g.runout).toEqual(['brick']);
+    g = toggleRunout(g, 'pair');
+    expect(g.runout).toEqual(['pair']);
+    expect(toggleRunout(g, 'pair').runout).toEqual([]);
+  });
 });
 
 const entry = (over: Partial<ReadEntry> = {}): ReadEntry => ({
@@ -320,6 +330,8 @@ describe('下書きの読み直し（前の版の下書き・壊れた値）', (
     expect(sanitizeSeat({ spot: { street: 'pf', action: '3bet', size: null, lean: 'over', strong: false } }).spot?.size).toBeNull();
     expect(sanitizeSeat({ spot: { street: 'flop', action: 'raise', size: 'huge', lean: 'over', strong: false } }).spot).toEqual({ street: 'flop', action: 'raise', lean: 'over', strong: false });
     expect(s.general).toEqual([{ street: 'pf', action: '3bet', texture: {}, runout: [], size: null, lean: 'bluff', strong: true }]);
+    // 前の版の Brick とほかの組み合わせは Brick を外す（V-039）
+    expect(sanitizeSeat({ general: [{ street: 'turn', action: 'barrel', runout: ['brick', 'flush'] }] }).general?.[0]?.runout).toEqual(['flush']);
   });
 });
 

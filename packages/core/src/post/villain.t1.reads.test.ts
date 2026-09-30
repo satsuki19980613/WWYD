@@ -89,7 +89,7 @@ describe('T1-05 検証の表の全組', () => {
       { connect: 'straight' },
       { high: 'low', suit: 'rainbow', paired: 'unpaired', connect: 'none' },
     ];
-    const runoutSets: string[][] = [[], ['brick'], ['over', 'flush'], ['brick', 'over', 'flush', 'straight', 'pair']];
+    const runoutSets: string[][] = [[], ['brick'], ['over', 'flush'], ['over', 'flush', 'straight', 'pair'], ['brick', 'over', 'flush', 'straight', 'pair']];
     for (const street of STREETS) {
       const action = EXPECT_STREET_ACTIONS[street][0] as string; // 各 Street で有効な Action
       for (const scope of ['general', 'spot']) {
@@ -101,6 +101,8 @@ describe('T1-05 検証の表の全組', () => {
             if (nonEmptyTexture && street === 'pf') ok = false;
             if (nonEmptyRunout && street !== 'turn' && street !== 'river') ok = false;
             if (scope === 'spot' && (nonEmptyTexture || nonEmptyRunout)) ok = false;
+            // Brick とほかの Runout は同時に選べない（V-039）
+            if (runout !== null && runout.includes('brick') && runout.length > 1) ok = false;
             const e = entry({ scope, street, action, texture, runout });
             expect(codeOf(() => v(e)), JSON.stringify({ scope, street, texture, runout })).toBe(ok ? null : 'invalid_reads');
           }
@@ -126,8 +128,8 @@ describe('T1-05 検証の表の全組', () => {
   it('Preflop で Runout・texture が空（{}・[]）なら通り、null に正規化される。Runout は決まった順に並ぶ', () => {
     const r = validateReads({ SB: { reads: [entry({ street: 'pf', action: '3bet', texture: {}, runout: [] })] } }, SEATS, 'BTN');
     expect(r.SB?.reads?.[0]).toMatchObject({ texture: null, runout: null });
-    const r2 = validateReads({ SB: { reads: [entry({ runout: ['pair', 'brick', 'flush'] })] } }, SEATS, 'BTN');
-    expect(r2.SB?.reads?.[0]?.runout).toEqual(['brick', 'flush', 'pair']);
+    const r2 = validateReads({ SB: { reads: [entry({ runout: ['pair', 'over', 'flush'] })] } }, SEATS, 'BTN');
+    expect(r2.SB?.reads?.[0]?.runout).toEqual(['over', 'flush', 'pair']);
   });
 
   it('形の崩れ（知らないキー・型・重複・空・null・配列）は malformed', () => {
@@ -244,7 +246,7 @@ describe('T1-05 検証の表の全組', () => {
         street: 'river',
         action: 'fold_raise',
         texture: scope === 'spot' ? null : { high: 'mid', suit: 'rainbow', paired: 'unpaired', connect: 'straight' },
-        runout: scope === 'spot' ? null : ['brick', 'over', 'flush', 'straight', 'pair'],
+        runout: scope === 'spot' ? null : ['over', 'flush', 'straight', 'pair'], // Brick はほかと同時に選べない（V-039）
         size: null,
         lean: 'under',
         strong: false,
