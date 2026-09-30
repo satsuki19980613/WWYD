@@ -8,13 +8,17 @@
 }
 #root > .boot { min-height: 100vh; min-height: 100dvh; }
 .boot-mark {
-  width: 56px;
-  height: 56px;
-  background: var(--yellow);
-  clip-path: var(--chamfer);
-  box-shadow: 0 0 32px rgba(252, 238, 10, 0.32);
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(0 0 16px rgba(252, 238, 10, 0.32));
   animation: boot-pulse 1.2s var(--ease) infinite alternate;
 }
+/* アプリのマーク（BootScreen の AppMark。public/icon.svg と同じ絵） */
+.am-plate { fill: var(--surface); stroke: var(--yellow); }
+.am-y { fill: var(--yellow); }
+.am-c { fill: var(--cyan); }
+.am-r { fill: var(--red); }
+.am-o { fill: var(--cell-off); }
 @keyframes boot-pulse { from { opacity: 0.55; } to { opacity: 1; } }
 
 /* ---- ログイン ---- */

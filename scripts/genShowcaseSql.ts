@@ -82,153 +82,150 @@ const jitter = (user: number, salt: number): number => (((user * 37 + salt * 11)
 
 const clamp20 = (v: number): number => Math.max(0, Math.min(20, v));
 
-// ---- 6 件 ----
+// ---- 6 件（2026-10-01 さつき: 公開されているプロのハンドから抜粋） ----
+// 額は bb に直した値。チップの額が bb で割り切れないものは小数第 1〜3 位に丸めた。
+// Big Blind Ante は全員のアンティに直した（場の額が同じになるよう、Stack は BB Ante を払った後の額に合わせた）。
+// 実際より人数の多い卓は、Preflop で降りた人を除いて席を詰めた。出典に無い Stack は、結果が変わらない額を置いた（「推定」）。
+// Hero のハンドが分かる言葉はタイトルに入れない。人の名前は DB に入れない（不変条件 6）ので、出典はこのコメントだけに書く。
 const SHOWCASES: Showcase[] = [
   {
-    title: 'BTN vs BB、A 高の Flop で C-Bet するか',
-    fmt: 'cash',
-    players: 6,
-    rake: '5',
-    hero: 'BTN',
-    hands: { BTN: 'AdJc', BB: '8h7h' },
-    actions: { pf: 'UTG f, HJ f, CO f, BTN r2.5, SB f, BB c', flop: 'BB x, BTN b1.8, BB c', turn: 'BB x, BTN x', river: 'BB b4, BTN c' },
-    board: ['As', '8d', '3c', 'Th', '2s'],
-    spot: 7,
-    reads: {
-      BB: {
-        vpip: 35,
-        pfr: 10,
-        agg: 1,
-        general: [
-          { street: 'flop', action: 'fold_cbet', lean: 'under', strong: true },
-          { street: 'river', action: 'probe', runout: ['brick'], size: 'small', lean: 'value' },
-        ],
-      },
-    },
+    // 2003 WSOP Main Event の Heads-up。Moneymaker（BTN）の River の All-in に Farha（BB、Hero）が Top Pair で Fold。
+    // 20,000/40,000・アンティ 5,000。Stack 4,620,000 / 3,770,000。
+    // https://upswingpoker.com/chris-moneymaker-vs-sammy-farha/
+    // https://www.pokernews.com/strategy/analyzing-moneymaker-bluff-of-the-century-against-farha-35218.htm
+    title: 'WSOP Main Event 2003、River の All-in',
+    fmt: 'mtt',
+    players: 2,
+    ante: '0.125',
+    stacks: { BTN: '115.5', BB: '94.25' },
+    hero: 'BB',
+    hands: { BB: 'Qs9h', BTN: 'Ks7h' },
+    actions: { pf: 'BTN r2.5, BB c', flop: 'BB x, BTN x', turn: 'BB b7.5, BTN r20, BB c', river: 'BB x, BTN b92.875, BB f' },
+    board: ['9s', '2d', '6s', '8s', '3h'],
+    spot: 9,
+    reads: { BTN: { image: 3 } },
+    mtt: { speed: 20, prize: 'top', rank: 2, left: 2, entries: 839, paid: 63, avg: 104.9 },
     author: 1,
     hoursAgo: 3,
-    answer: (s, u) => (s < 0.3 ? null : s > 0.62 ? { s1: clamp20(15 + 2 * jitter(u, 1)), check: 20 - clamp20(15 + 2 * jitter(u, 1)) } : { s1: clamp20(9 + 4 * jitter(u, 2)), check: 20 - clamp20(9 + 4 * jitter(u, 2)) }),
-    size: (d, u) => Math.round(d.pot * (u % 3 === 0 ? 0.5 : 0.33) * 10) / 10,
+    answer: (s, u) => (s < 0.3 ? null : s > 0.78 ? { call: clamp20(17 + 3 * jitter(u, 1)), fold: 20 - clamp20(17 + 3 * jitter(u, 1)) } : { fold: clamp20(13 + 5 * jitter(u, 2)), call: 20 - clamp20(13 + 5 * jitter(u, 2)) }),
   },
   {
-    title: '3-Bet Pot、Turn の 2 発目を受ける',
+    // High Stakes Poker Season 2（2006）。Hansen（UTG）の Flop の Check-Raise を Negreanu（HJ、Hero）が Set of 6 で Call。Turn で Quads。
+    // $300/$600・アンティ $100・8 人（降りた 2 人を除いて 6 人に）。実効 Stack $287,100。$8,000 等の 600 で割り切れない額は小数第 1 位に丸めた。
+    // https://www.cardplayer.com/poker-news/1640563-daniel-negreanu-gus-hansen-break-down-iconic-high-stakes-poker-hand
+    title: '3-Bet Pot の Flop、Check-Raise を受ける',
     fmt: 'cash',
     players: 6,
-    rake: '5',
-    hero: 'CO',
-    hands: { CO: 'KsQh' },
+    ante: '0.167',
+    stacks: { UTG: '478.5', HJ: '478.5', CO: '300', BTN: '300', SB: '300', BB: '300' },
+    hero: 'HJ',
+    hands: { HJ: '6s6h', UTG: '5d5c' },
     actions: {
-      pf: 'UTG f, HJ f, CO r2.5, BTN r8, SB f, BB f, CO c',
-      flop: 'CO x, BTN b6, CO c',
-      turn: 'CO x, BTN b14, CO c',
-      river: 'CO x, BTN b30, CO f',
+      pf: 'UTG r3.5, HJ r8.3, CO f, BTN f, SB f, BB f, UTG c',
+      flop: 'UTG x, HJ b13.3, UTG r43.3, HJ c',
+      turn: 'UTG b40, HJ c',
+      river: 'UTG x, HJ b108.3, UTG r386.733, HJ c',
     },
-    board: ['Kc', '9s', '4d', '5h', '2c'],
-    spot: 12,
-    reads: {
-      BTN: {
-        vpip: 26,
-        pfr: 21,
-        agg: 3,
-        image: 3,
-        spot: { street: 'turn', action: 'barrel', lean: 'bluff', strong: false },
-        general: [{ street: 'flop', action: 'cbet', texture: { high: 'k', suit: 'rainbow' }, size: 'small', lean: 'over' }],
-      },
-    },
+    board: ['9c', '6d', '5h', '5s', '8s'],
+    spot: 10,
+    reads: { UTG: { vpip: 45, pfr: 30, agg: 4, image: 3 } },
     author: 2,
     hoursAgo: 9,
     answer: (s, u) =>
-      s < 0.55 ? null : s > 0.8 ? { s1: clamp20(6 + 3 * jitter(u, 3)), call: 20 - clamp20(6 + 3 * jitter(u, 3)) } : s > 0.6 ? { call: clamp20(16 + 3 * jitter(u, 4)), fold: 20 - clamp20(16 + 3 * jitter(u, 4)) } : { fold: clamp20(14 + 4 * jitter(u, 5)), call: 20 - clamp20(14 + 4 * jitter(u, 5)) },
-    size: (d, u) => Math.min(d.max, Math.round(d.min * (u % 2 === 0 ? 1.15 : 1.4) * 10) / 10),
+      s < 0.45 ? null : s > 0.8 ? { call: clamp20(11 + 4 * jitter(u, 3)), s1: 20 - clamp20(11 + 4 * jitter(u, 3)) } : s > 0.6 ? { call: clamp20(15 + 3 * jitter(u, 4)), fold: 20 - clamp20(15 + 3 * jitter(u, 4)) } : { fold: clamp20(14 + 4 * jitter(u, 5)), call: 20 - clamp20(14 + 4 * jitter(u, 5)) },
+    size: (d, u) => (u % 3 === 0 ? d.max : Math.min(d.max, Math.round(d.min * 1.1 * 10) / 10)),
   },
   {
-    title: 'MTT のバブル前、River の All-in に Call するか',
-    fmt: 'mtt',
-    players: 6,
-    ante: '0.125',
-    stacks: { UTG: '25', HJ: '40', CO: '18', BTN: '32', SB: '55', BB: '22' },
-    hero: 'BB',
-    hands: { BB: 'QdTs', HJ: 'JsJd' },
-    actions: { pf: 'UTG f, HJ r2.1, CO f, BTN f, SB f, BB c', flop: 'BB x, HJ b2.5, BB c', turn: 'BB x, HJ x', river: 'BB x, HJ b35.275, BB c' },
-    board: ['Qh', '7c', '2d', 'Jc', '4s'],
-    spot: 13,
-    reads: {
-      HJ: {
-        vpip: 21,
-        pfr: 18,
-        agg: 2,
-        general: [{ street: 'river', action: 'bet_vs_check', runout: ['brick'], size: 'overbet', lean: 'value', strong: true }],
-      },
+    // High Stakes Poker Season 9（2022 放送）。4 人で Flop、River で Antonius（HJ）の Check-Raise All-in に Negreanu（BTN、Hero）が 99 の Full House で Fold。
+    // $500/$1,000・BB Ante $1,000・8 人（降りた CO を除いて 5 人に。BB Ante は 5 人のアンティ 0.2 に）。Antonius の Stack $186,500。ほかの Stack は推定。
+    // https://www.pokernews.com/news/2022/05/phil-ivey-negreanu-high-stakes-poker-41207.htm
+    // https://www.cardplayer.com/poker-news/26915-watch-daniel-negreanu-phil-ivey-and-patrik-antonius-play-insane-pot-on-high-stakes-poker
+    title: '4 人の Pot、River の Check-Raise All-in',
+    fmt: 'cash',
+    players: 5,
+    ante: '0.2',
+    stacks: { HJ: '186.7', CO: '250', BTN: '400', SB: '250', BB: '400' },
+    hero: 'BTN',
+    hands: { BTN: '9s9h', HJ: '5s5d', CO: '6d4d', BB: 'KcTd' },
+    actions: {
+      pf: 'HJ r2.5, CO c, BTN c, SB f, BB c',
+      flop: 'BB x, HJ b5, CO f, BTN c, BB c',
+      turn: 'BB x, HJ x, BTN b26, BB c, HJ c',
+      river: 'BB x, HJ x, BTN b54, BB f, HJ r153, BTN f',
     },
-    mtt: { speed: 65, prize: 'standard', rank: 14, left: 42, entries: 380, paid: 54, avg: 28.5 },
+    board: ['Th', '9d', '5c', 'Tc', 'Qd'],
+    spot: 20,
+    reads: { HJ: { vpip: 30, pfr: 20, agg: 4, general: [{ street: 'river', action: 'raise', lean: 'bluff' }] } },
     author: 3,
     hoursAgo: 20,
-    answer: (s, u) => (s < 0.35 ? null : s > 0.75 ? { call: clamp20(17 + 3 * jitter(u, 6)), fold: 20 - clamp20(17 + 3 * jitter(u, 6)) } : { fold: clamp20(15 + 5 * jitter(u, 7)), call: 20 - clamp20(15 + 5 * jitter(u, 7)) }),
+    answer: (s, u) => (s < 0.55 ? null : s > 0.85 ? { call: clamp20(16 + 3 * jitter(u, 6)), fold: 20 - clamp20(16 + 3 * jitter(u, 6)) } : { fold: clamp20(13 + 5 * jitter(u, 7)), call: 20 - clamp20(13 + 5 * jitter(u, 7)) }),
   },
   {
-    title: 'ヘッズアップ、Flop の Check-Raise を受ける',
-    fmt: 'cash',
+    // 2019 WSOP Main Event の最後のハンド。Ensan（BTN）の Turn の Bet に Sammartino（BB、Hero）が Flush Draw＋Gutshot で Check-Raise All-in。
+    // 2M/4M・BB Ante 4M（2 人のアンティ 0.5 に）。Stack 345.5M / 169.5M（BB Ante を払った後の額が同じになるよう 0.5bb ずらした）。
+    // https://www.pokernewsdaily.com/hossein-ensan-wins-2019-wsop-main-event-33001/
+    // https://www.pokernews.com/tours/wsop/2019-wsop/main-event/chips.300675.htm
+    title: 'WSOP Main Event 2019、Turn の Bet を受ける',
+    fmt: 'mtt',
     players: 2,
-    rake: '5',
-    hero: 'BTN',
-    hands: { BTN: 'AhKc' },
-    actions: { pf: 'BTN r2.5, BB c', flop: 'BB x, BTN b1.5, BB r5, BTN c', turn: 'BB b8, BTN f' },
-    board: ['9h', '8h', '4c', '2d'],
-    spot: 5,
-    reads: {
-      BB: {
-        vpip: 62,
-        pfr: 28,
-        agg: 4,
-        spot: { street: 'flop', action: 'raise', lean: 'bluff', strong: true },
-      },
-    },
+    ante: '0.5',
+    stacks: { BTN: '86.875', BB: '41.875' },
+    hero: 'BB',
+    hands: { BB: '8s4s', BTN: 'KhKc' },
+    actions: { pf: 'BTN r2.75, BB c', flop: 'BB x, BTN b3.75, BB c', turn: 'BB x, BTN b8.25, BB r34.875, BTN c' },
+    board: ['Ts', '6s', '2d', '9c', 'Qc'],
+    spot: 7,
+    mtt: { speed: 10, prize: 'top', rank: 2, left: 2, entries: 8569, paid: 1286, avg: 64.4 },
     author: 4,
     hoursAgo: 30,
     answer: (s, u) =>
-      s < 0.2 ? null : s > 0.7 ? { call: clamp20(12 + 4 * jitter(u, 8)), s1: 20 - clamp20(12 + 4 * jitter(u, 8)) } : s > 0.45 ? { call: clamp20(13 + 4 * jitter(u, 9)), fold: 20 - clamp20(13 + 4 * jitter(u, 9)) } : { fold: clamp20(15 + 4 * jitter(u, 10)), call: 20 - clamp20(15 + 4 * jitter(u, 10)) },
-    size: (d, u) => Math.min(d.max, Math.round(d.min * (u % 2 === 0 ? 1.0 : 1.3) * 10) / 10),
+      s < 0.25 ? null : s > 0.75 ? { call: clamp20(12 + 4 * jitter(u, 8)), s1: 20 - clamp20(12 + 4 * jitter(u, 8)) } : s > 0.45 ? { call: clamp20(12 + 4 * jitter(u, 9)), s1: clamp20(4 + 2 * jitter(u, 10)) } : { fold: clamp20(14 + 4 * jitter(u, 11)), s1: 20 - clamp20(14 + 4 * jitter(u, 11)) },
+    size: (d) => d.max,
   },
   {
-    title: '4 人の Limp Pot、Turn で先に動く',
-    fmt: 'cash',
+    // Triton Cyprus 2022 $30K 6-max の残り 8 人。Holz（SB）の River の Bet に Kudinov（BB、Hero）が T 高で Call（Holz は 6 高の Bluff）。
+    // 50,000/100,000・BB Ante 100,000・4 人の卓（4 人のアンティ 0.25 に）。Stack 約 5.2M / 2.2M。降りた 2 人の Stack は推定。
+    // https://www.pokernews.com/strategy/an-insane-ten-high-hero-call-with-eight-players-remaining-in-50302.htm
+    // https://highstakesdb.com/news/live-poker-news/fedor-holz-gut-punched-by-hero-call-of-viktor-kudinov-at-triton-final-table
+    title: 'High Roller の残り 8 人、River の Bet を受ける',
+    fmt: 'mtt',
     players: 4,
+    ante: '0.25',
+    stacks: { CO: '35', BTN: '40', SB: '52', BB: '22' },
     hero: 'BB',
-    hands: { BB: '7h6h' },
-    actions: { pf: 'CO c, BTN c, SB c, BB x', flop: 'SB x, BB x, CO x, BTN b2, SB f, BB c, CO f', turn: 'BB x, BTN b4, BB f' },
-    board: ['Td', '6s', '3h', 'Qs'],
-    spot: 11,
-    reads: {
-      CO: { vpip: 48, pfr: 6, agg: 0, spot: { street: 'pf', action: 'limp', lean: 'over' } },
-      BTN: { vpip: 38, agg: 3, general: [{ street: 'flop', action: 'bet_vs_check', size: 'small', lean: 'bluff' }] },
-    },
+    hands: { BB: 'Tc9s', SB: '6d4c' },
+    actions: { pf: 'CO f, BTN f, SB r2.4, BB c', flop: 'SB x, BB x', turn: 'SB b1.75, BB c', river: 'SB b3.9, BB c' },
+    board: ['Kh', 'Qh', '2c', 'Ks', 'Ac'],
+    spot: 9,
+    reads: { SB: { vpip: 40, pfr: 32, agg: 4, spot: { street: 'river', action: 'barrel', lean: 'bluff' } } },
+    mtt: { speed: 40, prize: 'top', left: 8, entries: 123 },
     author: 5,
     hoursAgo: 44,
-    answer: (s, u) => (s < 0.15 ? null : s > 0.6 ? { s1: clamp20(10 + 5 * jitter(u, 11)), check: 20 - clamp20(10 + 5 * jitter(u, 11)) } : { check: clamp20(16 + 3 * jitter(u, 12)), s1: 20 - clamp20(16 + 3 * jitter(u, 12)) }),
-    size: (d, u) => Math.round(d.pot * (u % 2 === 0 ? 0.5 : 0.75) * 10) / 10,
+    answer: (s, u) =>
+      s < 0.2 ? null : s > 0.7 ? { call: clamp20(15 + 3 * jitter(u, 12)), s1: 20 - clamp20(15 + 3 * jitter(u, 12)) } : s > 0.45 ? { call: clamp20(12 + 5 * jitter(u, 13)), fold: 20 - clamp20(12 + 5 * jitter(u, 13)) } : { fold: clamp20(16 + 3 * jitter(u, 14)), call: 20 - clamp20(16 + 3 * jitter(u, 14)) },
+    size: (d, u) => (u % 2 === 0 ? d.max : Math.min(d.max, Math.round(d.min * 1.2 * 10) / 10)),
   },
   {
-    title: 'River で Flush 完成、Overbet の All-in を打つか',
+    // Polk vs Negreanu の Heads-up（2020〜21、$200/$400 のオンライン Cash）。4-Bet Pot の River で Polk（BTN、Hero）が Q 高で All-in の Bluff。
+    // 実効 Stack 約 $64,555。3-Bet の額（約 $4,300）は公表されていないので目安。セント単位の額は小数第 2〜3 位に丸めた。
+    // https://upswingpoker.com/biggest-pots-polk-vs-negreanu/
+    title: 'Heads-up の 4-Bet Pot、River で Check される',
     fmt: 'cash',
-    players: 5,
-    rake: '5',
+    players: 2,
+    stacks: { BTN: '161.389', BB: '161.389' },
     hero: 'BTN',
-    hands: { BTN: 'KhQh', CO: 'AdJd' },
-    actions: { pf: 'HJ f, CO r2.5, BTN c, SB f, BB f', flop: 'CO b3, BTN c', turn: 'CO b8, BTN c', river: 'CO x, BTN b86.5, CO c' },
-    board: ['Jh', 'Ts', '4h', '9c', '2h'],
-    spot: 10,
-    reads: {
-      CO: {
-        vpip: 30,
-        pfr: 22,
-        agg: 3,
-        spot: { street: 'turn', action: 'barrel', lean: 'value' },
-        general: [{ street: 'river', action: 'fold_bet', lean: 'under', strong: true }],
-      },
+    hands: { BTN: 'QhJs', BB: 'AdQd' },
+    actions: {
+      pf: 'BTN r2.37, BB r10.75, BTN r32.19, BB c',
+      flop: 'BB x, BTN b12.875, BB c',
+      turn: 'BB x, BTN b29.74, BB c',
+      river: 'BB x, BTN b86.584, BB c',
     },
+    board: ['As', '8s', '4c', 'Ah', '4s'],
+    spot: 11,
     author: 6,
     hoursAgo: 60,
-    answer: (s, u) => (s < 0.5 ? null : s > 0.7 ? { s1: clamp20(17 + 2 * jitter(u, 13)), check: 20 - clamp20(17 + 2 * jitter(u, 13)) } : { check: clamp20(12 + 5 * jitter(u, 14)), s1: 20 - clamp20(12 + 5 * jitter(u, 14)) }),
+    answer: (s, u) => (s < 0.35 ? null : s > 0.7 ? { s1: clamp20(15 + 3 * jitter(u, 15)), check: 20 - clamp20(15 + 3 * jitter(u, 15)) } : { check: clamp20(13 + 5 * jitter(u, 16)), s1: 20 - clamp20(13 + 5 * jitter(u, 16)) }),
     size: (d, u) => (u % 3 === 0 ? Math.round(d.pot * 0.75 * 10) / 10 : d.max),
   },
 ];
