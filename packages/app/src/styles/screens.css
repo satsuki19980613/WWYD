@@ -39,6 +39,12 @@
   margin-bottom: var(--s1);
 }
 .login-tagline { margin: 0 0 var(--s5); font-size: 13px; line-height: 1.7; color: var(--dim); word-break: auto-phrase; text-wrap: balance; }
+/* 低い画面（横向きのスマホ）では上の余白とロゴを詰め、ページごとスクロールしないようにする（F-038） */
+@media (max-height: 520px) {
+  .login { padding-top: var(--s4); gap: var(--s3); }
+  .login-name { font-size: 44px; }
+  .login-tagline { margin-bottom: var(--s3); }
+}
 .login-links { display: flex; justify-content: center; gap: var(--s4); }
 .login-links a {
   display: inline-flex;

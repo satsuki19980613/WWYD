@@ -18,7 +18,8 @@
 .ans-col { display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
 .ans-col .sec-h { margin: 0; }
 .ans-skel { display: flex; flex-direction: column; gap: var(--s3); }
-.ans-sk-block { height: 360px; width: 100%; }
+/* 低い画面（横向きのスマホ）でもページごとスクロールしないよう、画面の高さに合わせて縮める（F-038） */
+.ans-sk-block { height: max(40px, min(360px, calc(var(--screen-fill-h) - 60px))); width: 100%; }
 
 /* ---- テーブル（ICMCLEC のガラス卓を参照） ---- */
 /*
