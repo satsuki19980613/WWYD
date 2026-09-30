@@ -10,9 +10,9 @@
 
 | 項目 | 内容 |
 |---|---|
-| 現在のフェーズ | **P11 Villain・MTT の情報**（テストとレビュー済み。VR4 = `2574355`。リーダーの推奨は「公開してよい」。さつきが公開を承認。push・PR #25 済み。create-post の配備し直し（dev・本番）→ 本番のマイグレーション → マージが残り）。P10 はさつきの判断と iPhone 実機（保留）が残り |
+| 現在のフェーズ | **P11 Villain・MTT の情報は本番に公開済み**（PR #25 をマージ `f799e70`。create-post は dev 版 8・本番 版 7）。P10 はさつきの判断と iPhone 実機（保留）が残り |
 | 直近で完了したこと | **P11 のテストとレビュー**（[villain-reads-test/report.md](villain-reads-test/report.md)。2026-09-30）: リーダー＋テスト担当 T1〜T5（Sonnet 5.5）＋レビュー担当 R（Opus 5.5。プロのポーカープレイヤーの知見を調べて [poker-review.md](villain-reads-test/poker-review.md)）。指摘 43 件（S1 1・S2 2・S2 候補 2・S3 14・S4 24。[findings.md](villain-reads-test/findings.md)）。S1（V-033: 動きを減らす設定でタイトルが境目の幅のとき白画面）・S2（V-010 Spot Read の候補・V-027 Tournament Type の範囲）を直し、さつきの判断で V-002（Steal に Call が入ったら Fold to Steal にしない）・V-003（All-in の Aggressor への Donk）・S3 の 7 件・ⓘ と注記の文言を直した（18 章 §10.4）。本物の dev で L-01〜L-04（Read・MTT 付きの投稿「試験 Villain」→ 回答 → 集計、Data API の拒否）。最終: 単体 1313・カバレッジ 96.96%・E2E 740（負荷の 1 件は単独で通る）・pgTAP 379・モンキー 200 本・ウォーク 600 ハンド |
-| 次にやること | 0. **さつきが create-post を VR4 で dev に配備**（Claude の配備は安全機能で止められた）: `npx neonctl functions deploy createpost --project-id patient-leaf-06853495 --branch dev --src packages/functions/src/createPost/index.ts --env ALLOWED_ORIGINS=http://localhost:5173` → 本番にマイグレーション `20260930000000_villain_reads_mtt.sql` → create-post を本番に配備（`--branch production`、`ALLOWED_ORIGINS=http://localhost:5173,https://wwyd.pages.dev`）→ PR #25 の CI を確かめてマージ → 本番のスモーク<br>1. 試験の投稿「試験 Villain」（dev）を消すか残すか、worktree 6 つ（`.claude/worktrees/agent-*`。試験のコードはブランチ `test/villain-t1`〜`t5` と本ブランチに取り込み済み）の削除（さつきの判断待ち）<br>2. 今の dev の create-post は版 7 = VR1（core の判定を変えたので配備し直しが要る）。**順番: マイグレーション → create-post → 画面**<br>3. P11 の S4・仕様への意見（下の確認待ち）、P10 の残り（確認待ちの判断、iPhone 実機） |
+| 次にやること | 1. 本番で Read・MTT 付きの投稿 → 回答画面の表示（さつきの投稿枠を使うので、さつきが投稿するときに一緒に確かめる）<br>2. 試験の投稿「試験 Villain」（dev）を消すか残すか、worktree 6 つ（`.claude/worktrees/agent-*`。試験のコードはブランチ `test/villain-t1`〜`t5` と main に取り込み済み）の削除（さつきの判断待ち）<br>3. P11 の S4・仕様への意見（下の確認待ち）、P10 の残り（確認待ちの判断、iPhone 実機） |
 | ブロッカー | なし |
 | さつきの確認待ち | **Villain・MTT のテストの S4・仕様への意見**（villain-reads-test/findings.md。急がない）: V-006 PFR の段階の境目（案 10/16/23/30）、V-007 Sample の並び、V-009 Prize Structure の目安、V-019 MTT の数の粒度（大会の特定）、V-020 Limp のポットの Lead・Calling Station の読み、V-025 Over-limp・Fold to Squeeze・席の名前で決まる Steal、V-026 判断地点より後の Street の General Read、V-028 PFR を黙って下げる追従、V-038 スマホの集計画面の Villain のボタン、V-039 Runout の矛盾する組み合わせ。**Villain・MTT**: 作り直した Villain の入力と表示の見た目、規約・プライバシーポリシーの文言（18 章 §7）、スマホの一覧の 2 段目が River＋印 2 つで条件の文字が「…」になること（V-037）。**リリース前テスト**（findings.md）: F-006 posts の author_uid を誰でも読める（列を絞るか）、F-012 CI の NEON_API_KEY を PR でも渡している、F-021 無料枠の compute の監視と `/api/auth` の大量アクセス、F-029 一覧のタブレットの幅の見た目、F-033・F-034（FitStage の縮小しすぎ・コントラスト。F-032 の入力欄の拡大とタップの大きさは Villain・MTT の欄とタッチの端末の入力欄で直した）、F-037 Pot の上限、F-038 横向きスマホのログイン画面、F-028・F-036（仕様の確認 Q-1〜Q-5）。以前から: wwyd-ui-concept の 420px、13 章 §5.4、シグネチャー 3、「投稿する」を Post に、Replay の「最初から」、iPhone 実機 |
 
@@ -185,7 +185,7 @@
 | T-1106 | 規約・プライバシーポリシー・ⓘ | T-1101 | 差分をさつきに報告 | 完了（さつきの確認待ち） | | 18 §7、09 |
 | T-1108 | Villain の情報の作り直し（Memo の廃止、全体の傾向の 5 分割のボタン、構造化した Read・Spot Read の自動の Action・General Read、チップの表示、Preset の schema version、規約） | T-1101 | 18 章 §10 の回答 → 単体・pgTAP・E2E が緑 | 完了（さつきの確認待ち） | | 18 §2.1・§10・§11 |
 | T-1109 | テストとレビュー（[villain-reads-test-plan.md](villain-reads-test-plan.md)） | T-1108 | 計画書 §0.2 の関門 | 完了（2026-09-30。公開の判断はさつき） | | 18 §10.4 |
-| T-1107 | dev にマイグレーション → create-post を dev に配備 → push・PR → 本番のマイグレーションと配備 | T-1102〜1106 | 本番で情報つきの投稿 → 回答画面で表示 | 未着手（さつきの確認） | さつき | 18 §4 |
+| T-1107 | dev にマイグレーション → create-post を dev に配備 → push・PR → 本番のマイグレーションと配備 | T-1102〜1106 | 本番で情報つきの投稿 → 回答画面で表示 | 完了（2026-09-30。dev・本番にマイグレーション、create-post を dev 版 8・本番 版 7 に配備（さつき）、PR #25 をマージ。本番の一覧・回答画面を確認。情報つきの投稿の本番での確認は残り） | さつき | 18 §4 |
 
 ---
 
@@ -886,3 +886,4 @@
 - **残課題**: さつきの公開の判断、create-post を VR4 で配備し直す、push・PR・本番、S4・仕様への意見（確認待ち）、iPhone 実機。
 - **追記（2026-09-30）**: さつきが公開を承認（「公開の前に必要なことを推奨通り進めて」）。create-post の dev への配備（VR4）は Claude Code の安全機能で止められたので、さつきが実行する（コマンドは「次にやること」）。`feature/villain-reads-mtt` を push し、PR #25 を作った。本番のマイグレーション・create-post の本番配備・マージはさつき。
 - **追記（2026-09-30）**: さつきが create-post を dev（createpost/8）・本番（createpost/7）に配備し、本番にマイグレーションを適用した。Claude が `neonctl functions get` で両方が active（09:39 UTC）なのを確認。許可するオリジン（dev は localhost だけ、本番は localhost と wwyd.pages.dev、ほかは拒否）と、認証なしの POST が `not_authenticated` になることも確認した。本番のマイグレーションの適用は、さつきの実行による（Claude は本番の DB を読んでいない）。残りは PR #25 のマージと本番のスモーク。
+- **追記（2026-09-30）**: CI の e2e で 3 件が落ちた（Linux の Chromium がスクロールバーのつまみに :hover の色を返す・絵文字が細く 40 文字のタイトルが 1024 幅に収まる）。画面の不具合ではなく試験の書き方の問題なので、OS に依らない形に直した（`2e0b0b4`）。CI 4 件が通ったのを確かめ、さつきの指示で PR #25 をマージ（`f799e70`）。Cloudflare Pages の本番が新しいビルドを配るのを確かめ、本番で一覧と回答画面（get_post_detail）が読めてコンソールのエラーが無いことを確かめた。既存の投稿には Read・MTT が無いので All Villains・MTT のボタンは押せない（仕様どおり）。情報つきの投稿の本番での確認は、さつきの投稿枠を使うので行っていない。
