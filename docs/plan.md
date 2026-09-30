@@ -885,3 +885,4 @@
 - **注意**: worktree の同時作成が衝突し、壊れた worktree `agent-afcd1f37853aa3093` が 1 つ残った（T5 は起動し直した）。テスト担当の worktree は `.claude/worktrees/` に 6 つ（node_modules 込み）。削除はさつきの承認後。各担当の試験のコミットはブランチ `test/villain-t1`〜`t5` にも残した。dev に試験の投稿「試験 Villain」（さつきの回答 1 件付き）がある。
 - **残課題**: さつきの公開の判断、create-post を VR4 で配備し直す、push・PR・本番、S4・仕様への意見（確認待ち）、iPhone 実機。
 - **追記（2026-09-30）**: さつきが公開を承認（「公開の前に必要なことを推奨通り進めて」）。create-post の dev への配備（VR4）は Claude Code の安全機能で止められたので、さつきが実行する（コマンドは「次にやること」）。`feature/villain-reads-mtt` を push し、PR #25 を作った。本番のマイグレーション・create-post の本番配備・マージはさつき。
+- **追記（2026-09-30）**: さつきが create-post を dev（createpost/8）・本番（createpost/7）に配備し、本番にマイグレーションを適用した。Claude が `neonctl functions get` で両方が active（09:39 UTC）なのを確認。許可するオリジン（dev は localhost だけ、本番は localhost と wwyd.pages.dev、ほかは拒否）と、認証なしの POST が `not_authenticated` になることも確認した。本番のマイグレーションの適用は、さつきの実行による（Claude は本番の DB を読んでいない）。残りは PR #25 のマージと本番のスモーク。
