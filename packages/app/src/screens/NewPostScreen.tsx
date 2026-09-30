@@ -196,6 +196,7 @@ export function NewPostScreen(): JSX.Element {
       setup={setup}
       phase={phase}
       mobile={mobile}
+      attempted={attempted}
       onAction={(a: Action) => {
         if (refused([a])) return;
         advanceFuture([a]);

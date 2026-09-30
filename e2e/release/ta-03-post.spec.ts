@@ -89,6 +89,16 @@ for (const v of VARIANTS) {
       expect(cp.calls).toHaveLength(0);
     });
 
+    test(`F-036 Q-2: 開いた直後は「Player の人数を選択してください」を出さず、Action の節を押すと出す${v}`, async ({ page }) => {
+      test.skip(isMobile(page), 'スマホは Action の段に進んだときに出す（上の試験）');
+      await openNew(page);
+      const sec = page.locator('.pf-actsec');
+      await expect(sec).toBeVisible();
+      await expect(sec).not.toContainText('Player の人数を選択してください');
+      await sec.click({ position: { x: 20, y: 20 } });
+      await expect(sec).toContainText('Player の人数を選択してください');
+    });
+
     test(`エラー一覧の各文言（06 章 §3.8）: 途中の Hand・不正な設定値・最後まで入力していない${v}`, async ({ page }) => {
       const { cp } = await openNew(page);
       await setPlayers(page, 3);
