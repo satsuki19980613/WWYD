@@ -148,7 +148,7 @@
   border: 0;
   background: none;
   font-size: 12px;
-  color: var(--dim2);
+  color: var(--dim);
 }
 .chip-row.toggle .chip + .chip::before {
   content: '';
@@ -374,7 +374,7 @@ a.btn { text-decoration: none; }
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--dim2);
+  color: var(--dim);
 }
 .st-num { text-align: right; justify-self: end; }
 .st-sort {
@@ -384,7 +384,7 @@ a.btn { text-decoration: none; }
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
-  color: var(--dim2);
+  color: var(--dim);
   cursor: pointer;
 }
 .st-sort:hover { color: var(--fg); }

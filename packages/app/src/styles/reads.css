@@ -5,7 +5,7 @@
 .rs { display: flex; flex-direction: column; gap: 2px; }
 .rs-head { display: flex; align-items: center; gap: var(--s2); min-height: 32px; }
 .rs-name { flex: none; }
-.rs-label { flex: 1 1 auto; min-width: 0; font-family: var(--disp); font-size: 15px; font-weight: 700; color: var(--dim2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-label { flex: 1 1 auto; min-width: 0; font-family: var(--disp); font-size: 15px; font-weight: 700; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rs.set .rs-label { color: var(--yellow); }
 .rs-num {
   flex: none;
@@ -18,8 +18,8 @@
   font-size: 14px;
   cursor: pointer;
 }
-.rs-num small { margin-left: 1px; font-size: 10px; color: var(--dim2); }
-.rs:not(.set) .rs-num { color: var(--dim2); }
+.rs-num small { margin-left: 1px; font-size: 10px; color: var(--dim); }
+.rs:not(.set) .rs-num { color: var(--dim); }
 .rs-num:hover { border-color: var(--cyan); }
 .rs-num:focus-visible, .rs-clear:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 /* iPhone の Safari は 16px 未満の入力欄で画面を拡大するので 16px（リリース前テスト F-032） */
@@ -73,7 +73,7 @@
 .vr-head:hover { background: var(--surface-2); }
 .vr-head:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
 .vr-pos { flex: none; width: 36px; font-family: var(--disp); font-size: 15px; font-weight: 700; }
-.vr-sum { flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--dim2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vr-sum { flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vr-row.filled .vr-sum { color: var(--fg); }
 .vr-chev { flex: none; color: var(--dim); transition: transform 150ms var(--ease); }
 .vr-row.open .vr-chev { transform: rotate(180deg); }
@@ -89,7 +89,7 @@
 .seg5-b[aria-pressed='true'] { background: var(--yellow); border-color: var(--yellow); }
 .seg5-b:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 /* スマホのタップは 36px 以上（5 分割のボタン・数のボタン・×。villain-reads-test V-034） */
-@media (max-width: 699.98px) {
+@media (max-width: 926.98px), (max-height: 604.98px) {
   .seg5 { height: 36px; }
   .rs-num,
   .rs-input { min-height: 36px; }
@@ -143,7 +143,7 @@
 .mtt-fields { grid-template-columns: 1fr 1fr; }
 /* Prize Structure の選択肢は 2 行（名前と目安） */
 .chip-row.segment .chip.chip-2l { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 2px; }
-.chip-2l small { font-size: 10px; color: var(--dim2); }
+.chip-2l small { font-size: 10px; color: var(--dim); }
 .chip-2l[aria-pressed='true'] small { color: inherit; opacity: 0.8; }
 
 /* ---- 回答・集計の画面: 卓の上のボタンの行と、席の印 ---- */
@@ -152,7 +152,8 @@
 /* 情報のある席は押せる。右上に小さなシアンの印 */
 .pseat-btn { position: relative; font: inherit; color: inherit; text-align: inherit; cursor: pointer; }
 .pseat-btn:hover { border-color: var(--cyan); }
-.pseat-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* 席のプレートは面取り（-sm）で外側のリングが削られるので内側に出す（F-031） */
+.pseat-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: -5px; }
 .pseat-read {
   position: absolute;
   top: -4px;
@@ -178,20 +179,20 @@
 .rv-read { font-size: 14px; line-height: 1.45; color: var(--dim); overflow-wrap: anywhere; }
 .rv-lean { color: var(--cyan); font-weight: 700; }
 .rv-read.strong .rv-lean { padding: 0 4px; background: rgba(58, 230, 255, 0.16); }
-.rv-hint { color: var(--dim2); font-size: 11px; }
+.rv-hint { color: var(--dim); font-size: 11px; }
 .rv-seats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .rv-seat { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3) 0; border-top: 1px solid var(--line); }
 .rv-seat:first-child { border-top: 0; padding-top: 0; }
 .rv-seat.none { flex-direction: row; align-items: center; gap: var(--s3); }
 .rv-pos { font-family: var(--disp); font-size: 16px; font-weight: 700; }
-.rv-none { color: var(--dim2); }
+.rv-none { color: var(--dim); }
 .rv-folded { margin-top: var(--s2); border-top: 1px solid var(--line); }
 .rv-folded > summary { display: flex; align-items: center; gap: var(--s2); min-height: 44px; cursor: pointer; list-style: none; }
 .rv-folded > summary::-webkit-details-marker { display: none; }
 .rv-folded > summary::after { content: '+'; margin-left: auto; color: var(--cyan); font-size: 16px; }
 .rv-folded[open] > summary::after { content: '−'; }
 .rv-fcount { font-size: 12px; color: var(--dim); }
-@media (max-width: 699.98px) {
+@media (max-width: 926.98px), (max-height: 604.98px) {
   .rv-row { grid-template-columns: 1fr; gap: 2px; }
 }
 
@@ -217,7 +218,7 @@
 .hdr:has(.mq-clip.open) .hdr-inner { height: auto; min-height: var(--hdr-h); padding-top: 6px; padding-bottom: 6px; }
 /* PC はヘッダーを伸ばさない（伸ばすと 1 画面に収める FitStage の下がはみ出し、ページがスクロールする。villain-reads-test V-043）。
    全文は小さくしてヘッダーの中に収め、入りきらなければタイトルの枠の中でスクロールする */
-@media (min-width: 700px) {
+@media (min-width: 927px) and (min-height: 605px) {
   .hdr:has(.mq-clip.open) .hdr-inner { height: var(--hdr-h); padding-top: 0; padding-bottom: 0; }
   .mq-clip.open .mq-inner { max-height: calc(var(--hdr-h) - 8px); overflow-y: auto; font-size: 13px; line-height: 1.25; }
 }

@@ -31,7 +31,8 @@ for (const v of ['', ' @sp'] as const) {
   });
 }
 
-for (const [w, h] of [[1024, 640], [800, 600]] as const) {
+// 800x600 は F-033 でスマホの構成になった（ページはスクロールする）ので、PC のいちばん小さい画面（927x605）で確かめる
+for (const [w, h] of [[1024, 640], [927, 605]] as const) {
   test(`V-T5-02 長いタイトルを開いても、PC（${w}x${h}）でページがスクロールしない`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await page.emulateMedia({ reducedMotion: 'reduce' });

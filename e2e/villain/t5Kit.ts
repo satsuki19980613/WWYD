@@ -538,7 +538,7 @@ export const SNAPSHOT_JS = `(async () => {
   const problems = [];
   if (location.href === 'about:blank') return { path: 'about:blank', search: '', w: 0, h: 0, mobile: false, dialogs: 0, menus: 0, els: [], problems: [{ kind: 'about-blank', detail: '' }] };
   const w = window.innerWidth, h = window.innerHeight;
-  const mobile = window.matchMedia('(max-width: 699.98px)').matches;
+  const mobile = window.matchMedia('(max-width: 926.98px), (max-height: 604.98px)').matches; // layout.ts の MOBILE_QUERY（F-033）
   const path = location.pathname;
   const root = document.getElementById('root');
   const text = document.body.innerText || '';

@@ -6,7 +6,11 @@ import { fakeBackend, fakeCreatePost, type Backend, type CreatePostCall } from '
 
 /** スマホには「Bet の額（bb）」のボタンもあるので、額つきの Bet ボタン（「Bet 1.8」）だけに当てる */
 export const BET_BTN = /^Bet\s*\d/;
-export const isMobile =(page: Page): boolean => (page.viewportSize()?.width ?? 1280) < 700;
+/** スマホの構成か（アプリの layout.ts の MOBILE_QUERY と同じ境目: 幅 927px 未満か高さ 605px 未満。F-033） */
+export const isMobile = (page: Page): boolean => {
+  const v = page.viewportSize() ?? { width: 1280, height: 900 };
+  return v.width < 927 || v.height < 605;
+};
 
 export const dock = (page: Page): Locator => page.getByRole('group', { name: 'Action' });
 export const table = (page: Page): Locator => page.getByRole('group', { name: 'Table' });
