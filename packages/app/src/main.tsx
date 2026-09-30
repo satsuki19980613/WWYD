@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
 import { ToastProvider } from './components/Toast.tsx';
+import { installScrollIndicator } from './scrollIndicator.ts';
 // 書体は自サイトから配信する（Google Fonts へ通信しない。2026-09-28 さつきの決定）
 import '@fontsource/rajdhani/500.css';
 import '@fontsource/rajdhani/600.css';
@@ -17,9 +18,12 @@ import './styles/screens.css';
 import './styles/post.css';
 import './styles/answer.css';
 import './styles/reads.css';
+import './styles/scrollbar.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root がありません');
+
+installScrollIndicator();
 
 createRoot(root).render(
   <StrictMode>

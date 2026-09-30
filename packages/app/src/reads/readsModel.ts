@@ -2,18 +2,15 @@ import {
   MEMO_MAX,
   MTT_AVG_MAX,
   MTT_COUNT_MAX,
-  MTT_STAGES,
-  MTT_TYPES,
   POSITIONS,
   PRIZE_STRUCTURES,
   PERCENT_MAX,
   PERCENT_READS,
   READ_KEYS,
+  SPEED_MAX,
   STEP_MAX,
   type Action,
   type MttInfo,
-  type MttStage,
-  type MttType,
   type Pos,
   type PrizeStructure,
   type ReadKey,
@@ -26,27 +23,51 @@ import {
  * 値の検証は packages/core（validateReads・validateMtt）。ここは段階のラベル・制約の追従・表示の文字列。
  */
 
-/** Slider の定義。`cuts` は段階の境目（% の値。値がこれ以上なら次の段階）。段階だけの項目は null */
-export type ReadDef = { key: ReadKey; name: string; labels: readonly [string, string, string, string, string]; cuts: readonly number[] | null };
+/**
+ * Slider の定義（Villain の情報と MTT の Tournament Type で共通）。`cuts` は段階の境目（% の値。値がこれ以上なら次の段階）。
+ * 段階だけの項目は null（値がそのまま段階 0〜`max`）。% の項目は 0〜100 で、数を直接入れられる
+ */
+export type SliderDef = { name: string; labels: readonly [string, string, string, string, string]; cuts: readonly number[] | null; max: number };
+export type ReadDef = SliderDef & { key: ReadKey };
 
 /** 5 段階の境目（2026-09-30 さつき: Claude の案。6-max の一般的な目安。18 章 §2.1） */
 export const READ_DEFS: readonly ReadDef[] = [
-  { key: 'vpip', name: 'VPIP', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], cuts: [15, 22, 30, 40] },
-  { key: 'pfr', name: 'PFR', labels: ['Very Low', 'Low', 'Standard', 'High', 'Very High'], cuts: [8, 14, 20, 26] },
+  { key: 'vpip', name: 'VPIP', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], cuts: [15, 22, 30, 40], max: PERCENT_MAX },
+  { key: 'pfr', name: 'PFR', labels: ['Very Low', 'Low', 'Standard', 'High', 'Very High'], cuts: [8, 14, 20, 26], max: PERCENT_MAX },
   {
     key: 'agg',
     name: 'Postflop Aggression',
     labels: ['Very Passive', 'Passive', 'Balanced', 'Aggressive', 'Very Aggressive'],
     cuts: [25, 40, 55, 70],
+    max: PERCENT_MAX,
   },
   {
     key: 'conf',
     name: 'Read Confidence',
     labels: ['First Impression', 'Few Orbits', 'Some History', 'Long Session', 'HUD Stats'],
     cuts: null,
+    max: STEP_MAX,
   },
-  { key: 'image', name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], cuts: null },
+  { key: 'image', name: 'Hero Image', labels: ['Very Tight', 'Tight', 'Standard', 'Loose', 'Very Loose'], cuts: null, max: STEP_MAX },
 ];
+
+/** MTT の Tournament Type（ストラクチャーの速さ。Deep〜Turbo の 5 段階。2026-09-30 さつき） */
+export const SPEED_DEF: SliderDef = {
+  name: 'Tournament Type',
+  labels: ['Deep', 'Semi-Deep', 'Regular', 'Semi-Turbo', 'Turbo'],
+  cuts: null,
+  max: SPEED_MAX,
+};
+
+/** Slider の値の段階（0〜4）とラベル */
+export function defLevel(def: SliderDef, value: number): number {
+  if (!def.cuts) return Math.min(def.max, Math.max(0, Math.round(value)));
+  return def.cuts.filter((c) => value >= c).length;
+}
+export const defLabel = (def: SliderDef, value: number): string => def.labels[defLevel(def, value)] as string;
+export const defPercent = (def: SliderDef): boolean => def.cuts !== null;
+/** 未入力の Slider をキーボードで最初に動かしたときの値（真ん中） */
+export const defMiddle = (def: SliderDef): number => Math.round(def.max / 2);
 
 export const READ_DEF: Record<ReadKey, ReadDef> = Object.fromEntries(READ_DEFS.map((d) => [d.key, d])) as Record<ReadKey, ReadDef>;
 
@@ -55,13 +76,11 @@ export const maxOf = (key: ReadKey): number => (isPercent(key) ? PERCENT_MAX : S
 
 /** 値の段階（0〜4） */
 export function levelOf(key: ReadKey, value: number): number {
-  const cuts = READ_DEF[key].cuts;
-  if (!cuts) return Math.min(STEP_MAX, Math.max(0, Math.round(value)));
-  return cuts.filter((c) => value >= c).length;
+  return defLevel(READ_DEF[key], value);
 }
 
 export function labelOf(key: ReadKey, value: number): string {
-  return READ_DEF[key].labels[levelOf(key, value)] as string;
+  return defLabel(READ_DEF[key], value);
 }
 
 /** 表示のバーの割合（0〜1）。段階だけの項目は段階の位置 */
@@ -71,7 +90,7 @@ export function ratioOf(key: ReadKey, value: number): number {
 
 /** 未入力の Slider を触ったときの値（真ん中）。キーボードで最初に動かしたとき */
 export function middleOf(key: ReadKey): number {
-  return isPercent(key) ? 50 : 2;
+  return defMiddle(READ_DEF[key]);
 }
 
 /**
@@ -146,9 +165,9 @@ export function sanitizeMtt(raw: unknown): MttDraft {
   if (!isRecord(raw)) return base;
   const pick = <T extends string>(v: unknown, all: readonly T[]): T | null => (all as readonly unknown[]).includes(v) ? (v as T) : null;
   const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+  const speed = raw.speed;
   return {
-    stage: pick(raw.stage, MTT_STAGES),
-    type: pick(raw.type, MTT_TYPES),
+    speed: typeof speed === 'number' && Number.isInteger(speed) && speed >= 0 && speed <= SPEED_MAX ? speed : null,
     prize: pick(raw.prize, PRIZE_STRUCTURES),
     rank: str(raw.rank),
     left: str(raw.left),
@@ -177,16 +196,14 @@ export { MEMO_MAX };
 
 // ---- MTT ----
 
-export const STAGE_LABEL: Record<MttStage, string> = { early: 'Early', bubble: 'Bubble', itm: 'ITM', ft: 'Final Table' };
-export const TYPE_LABEL: Record<MttType, string> = { regular: 'Regular', pko: 'PKO', satellite: 'Satellite' };
 export const PRIZE_LABEL: Record<PrizeStructure, string> = { top: 'Top-heavy', standard: 'Standard', flat: 'Flat' };
 /** Prize Structure の目安（1st prize が賞金総額に占める割合。暫定値。18 章 §2.3。画面に出す例外。2026-09-30 さつき） */
 export const PRIZE_HINT: Record<PrizeStructure, string> = { top: '1st ≥ 25%', standard: '1st 15–25%', flat: '1st < 15%' };
 
 /** 投稿画面の MTT の欄（数の欄は入力のままの文字列） */
 export type MttDraft = {
-  stage: MttStage | null;
-  type: MttType | null;
+  /** Tournament Type（0 = Deep 〜 4 = Turbo。null は未入力） */
+  speed: number | null;
   prize: PrizeStructure | null;
   rank: string;
   left: string;
@@ -196,17 +213,18 @@ export type MttDraft = {
 };
 
 export type MttField = 'rank' | 'left' | 'paid' | 'entries' | 'avg';
-export const MTT_FIELDS: readonly MttField[] = ['rank', 'left', 'paid', 'entries', 'avg'];
+/** 入力欄の並び（2026-09-30 さつき: スポットの順位・残りの人数・エントリー数・ITM・Avg Stack だけ。名前は日本語） */
+export const MTT_FIELDS: readonly MttField[] = ['rank', 'left', 'entries', 'paid', 'avg'];
 export const MTT_FIELD_LABEL: Record<MttField, string> = {
-  rank: 'Rank',
-  left: 'Players Left',
-  paid: 'Paid Places',
-  entries: 'Entries',
+  rank: 'スポットの順位',
+  left: '残りの人数',
+  entries: 'エントリー数',
+  paid: 'ITM',
   avg: 'Avg Stack（bb）',
 };
 
 export function emptyMtt(): MttDraft {
-  return { stage: null, type: null, prize: null, rank: '', left: '', paid: '', entries: '', avg: '' };
+  return { speed: null, prize: null, rank: '', left: '', paid: '', entries: '', avg: '' };
 }
 
 /** 数の欄を読む（空は undefined、読めなければ null） */
@@ -226,22 +244,16 @@ function parseAvg(text: string): number | undefined | null {
   return n > 0 && n <= MTT_AVG_MAX ? n : null;
 }
 
-/** MTT の欄を送る形に。読めない欄は `invalid` に入れる。Final Table では Avg Stack を送らない（隠している） */
+/** MTT の欄を送る形に。読めない欄は `invalid` に入れる（入力欄の順） */
 export function parseMtt(m: MttDraft): { info: MttInfo | null; invalid: MttField[] } {
   const info: MttInfo = {};
   const invalid: MttField[] = [];
-  if (m.stage) info.stage = m.stage;
-  if (m.type) info.type = m.type;
+  if (m.speed !== null) info.speed = m.speed;
   if (m.prize) info.prize = m.prize;
-  for (const f of ['rank', 'left', 'paid', 'entries'] as const) {
-    const v = parseCount(m[f]);
+  for (const f of MTT_FIELDS) {
+    const v = f === 'avg' ? parseAvg(m.avg) : parseCount(m[f]);
     if (v === null) invalid.push(f);
     else if (v !== undefined) info[f] = v;
-  }
-  if (m.stage !== 'ft') {
-    const v = parseAvg(m.avg);
-    if (v === null) invalid.push('avg');
-    else if (v !== undefined) info.avg = v;
   }
   return { info: Object.keys(info).length > 0 ? info : null, invalid };
 }

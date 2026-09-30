@@ -81,17 +81,17 @@ describe('MT MTT の情報の検証', () => {
   });
 
   it('MT-02 全項目', () => {
-    const m = { stage: 'bubble', type: 'pko', rank: 12, left: 58, paid: 50, entries: 320, avg: 32.5, prize: 'standard' };
+    const m = { speed: 3, rank: 12, left: 58, paid: 50, entries: 320, avg: 32.5, prize: 'standard' };
     expect(validateMtt(m, 'mtt')).toEqual(m);
   });
 
   it('MT-03 Cash に MTT の情報は invalid_mtt', () => {
-    expect(codeOf(() => validateMtt({ stage: 'early' }, 'cash'))).toBe('invalid_mtt');
+    expect(codeOf(() => validateMtt({ speed: 0 }, 'cash'))).toBe('invalid_mtt');
   });
 
   it('MT-04 選択肢の外・知らない項目・型の違いは malformed', () => {
-    expect(codeOf(() => validateMtt({ stage: 'late' }, 'mtt'))).toBe('malformed');
-    expect(codeOf(() => validateMtt({ type: 'bounty' }, 'mtt'))).toBe('malformed');
+    expect(codeOf(() => validateMtt({ speed: 1.5 }, 'mtt'))).toBe('malformed');
+    expect(codeOf(() => validateMtt({ speed: '2' }, 'mtt'))).toBe('malformed');
     expect(codeOf(() => validateMtt({ prize: 'x' }, 'mtt'))).toBe('malformed');
     expect(codeOf(() => validateMtt({ foo: 1 }, 'mtt'))).toBe('malformed');
     expect(codeOf(() => validateMtt({ rank: 1.5 }, 'mtt'))).toBe('malformed');
@@ -99,8 +99,11 @@ describe('MT MTT の情報の検証', () => {
     expect(codeOf(() => validateMtt('bubble', 'mtt'))).toBe('malformed');
   });
 
-  it('MT-05 人数は 1 以上、Avg Stack は 0 より大きく小数第 1 位まで', () => {
+  it('MT-05 Tournament Type は 0〜4、人数は 1 以上、Avg Stack は 0 より大きく小数第 1 位まで', () => {
     expect(codeOf(() => validateMtt({ rank: 0 }, 'mtt'))).toBe('invalid_mtt');
+    expect(codeOf(() => validateMtt({ speed: 5 }, 'mtt'))).toBe('invalid_mtt');
+    expect(codeOf(() => validateMtt({ speed: -1 }, 'mtt'))).toBe('invalid_mtt');
+    expect(validateMtt({ speed: 0 }, 'mtt')).toEqual({ speed: 0 });
     expect(codeOf(() => validateMtt({ entries: 1_000_001 }, 'mtt'))).toBe('invalid_mtt');
     expect(codeOf(() => validateMtt({ avg: 0 }, 'mtt'))).toBe('invalid_mtt');
     expect(codeOf(() => validateMtt({ avg: 12.34 }, 'mtt'))).toBe('invalid_mtt');
@@ -132,7 +135,7 @@ describe('RD-10 投稿の本文に入れる', () => {
 
   it('Hero（BTN）に Reads は malformed、Cash に MTT は invalid_mtt', () => {
     expect(codeOf(() => validateInput({ ...hs1(), villain_reads: { BTN: { vpip: 25 } } }))).toBe('malformed');
-    expect(codeOf(() => validateInput({ ...hs1(), mtt: { stage: 'itm' } }))).toBe('invalid_mtt');
-    expect(validateInput({ ...hs1(), fmt: 'mtt', rake: null, mtt: { stage: 'itm' } }).mtt).toEqual({ stage: 'itm' });
+    expect(codeOf(() => validateInput({ ...hs1(), mtt: { speed: 3 } }))).toBe('invalid_mtt');
+    expect(validateInput({ ...hs1(), fmt: 'mtt', rake: null, mtt: { speed: 3 } }).mtt).toEqual({ speed: 3 });
   });
 });

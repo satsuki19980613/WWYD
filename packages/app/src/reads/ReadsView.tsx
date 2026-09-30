@@ -3,16 +3,15 @@ import { useState } from 'react';
 import { Modal } from '../components/Modal.tsx';
 import { POS_VAR } from '../components/posColor.ts';
 import {
+  defLabel,
   hasMttInfo,
-  labelOf,
   mttCountsLine,
   PRIZE_HINT,
   PRIZE_LABEL,
-  ratioOf,
   READ_DEF,
-  STAGE_LABEL,
-  TYPE_LABEL,
+  SPEED_DEF,
   villainOrder,
+  type SliderDef,
 } from './readsModel.ts';
 
 /**
@@ -21,25 +20,30 @@ import {
  * Slider は段階のラベルとバーだけ（数は出さない）。
  */
 
+/** Slider の値の表示（段階のラベルとバーだけ。数は出さない） */
+function SliderRow(props: { def: SliderDef; value: number }): JSX.Element {
+  const { def, value } = props;
+  return (
+    <div className="rv-row">
+      <dt className="mono-lbl">{def.name}</dt>
+      <dd>
+        <span className="rv-label">{defLabel(def, value)}</span>
+        <span className="rv-bar" aria-hidden="true">
+          <i style={{ width: `${Math.max(value / def.max, 0.02) * 100}%` }} />
+        </span>
+      </dd>
+    </div>
+  );
+}
+
 /** 1 席分（入力のある項目だけ） */
 export function ReadCard(props: { read: VillainRead }): JSX.Element {
   const { read } = props;
   return (
     <dl className="rv-list">
-      {READ_KEYS.filter((k) => read[k] !== undefined).map((k) => {
-        const v = read[k] as number;
-        return (
-          <div key={k} className="rv-row">
-            <dt className="mono-lbl">{READ_DEF[k].name}</dt>
-            <dd>
-              <span className="rv-label">{labelOf(k, v)}</span>
-              <span className="rv-bar" aria-hidden="true">
-                <i style={{ width: `${Math.max(ratioOf(k, v), 0.02) * 100}%` }} />
-              </span>
-            </dd>
-          </div>
-        );
-      })}
+      {READ_KEYS.filter((k) => read[k] !== undefined).map((k) => (
+        <SliderRow key={k} def={READ_DEF[k]} value={read[k] as number} />
+      ))}
       {read.memo && (
         <div className="rv-row memo">
           <dt className="mono-lbl">Memo</dt>
@@ -86,18 +90,16 @@ function AllVillains(props: { seats: readonly Pos[]; hero: Pos; actions: readonl
   );
 }
 
-/** MTT の情報。「12/58 ・ ITM 50 ・ 320 entries」の前に Rank / Players Left の見出しを付ける（18 章 §2.4） */
+/** MTT の情報。Tournament Type は Slider の表示、人数は「12/58 ・ ITM 50 ・ 320 entries」に「順位 / 残りの人数」の見出し（18 章 §5.2） */
 export function MttView(props: { mtt: MttInfo }): JSX.Element {
   const m = props.mtt;
   const counts = mttCountsLine(m);
   const rows: { k: string; v: JSX.Element | string }[] = [];
-  if (m.stage) rows.push({ k: 'Stage', v: STAGE_LABEL[m.stage] });
-  if (m.type) rows.push({ k: 'Tournament Type', v: TYPE_LABEL[m.type] });
   if (counts)
     rows.push({
-      k: 'Rank / Players Left',
+      k: '順位 / 残りの人数',
       v: (
-        <span className="num" title="Rank / Players Left ・ Paid Places ・ Entries">
+        <span className="num" title="スポットの順位 / 残りの人数 ・ ITM ・ エントリー数">
           {counts}
         </span>
       ),
@@ -114,6 +116,7 @@ export function MttView(props: { mtt: MttInfo }): JSX.Element {
     });
   return (
     <dl className="rv-list">
+      {m.speed !== undefined && <SliderRow def={SPEED_DEF} value={m.speed} />}
       {rows.map((r) => (
         <div key={r.k} className="rv-row">
           <dt className="mono-lbl">{r.k}</dt>

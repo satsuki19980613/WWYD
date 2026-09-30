@@ -1,26 +1,26 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
-import { isPercent, labelOf, maxOf, middleOf, type ReadDef } from './readsModel.ts';
+import { defLabel, defMiddle, defPercent, type SliderDef } from './readsModel.ts';
 
 /**
- * Villain の情報の Slider（詳細仕様 18 章 §2.2）。初めは未入力（つまみを出さない）。触ると入力になり、× で未入力に戻す。
+ * Villain の情報と MTT の Tournament Type の Slider（詳細仕様 18 章 §2.2）。初めは未入力（つまみを出さない）。触ると入力になり、× で未入力に戻す。
  * 表示は 5 段階のラベル。VPIP・PFR・Postflop Aggression は数（%）を押して直接入れられる（HUD の値）。
  * 横になぞって動かす（縦のスクロールは妨げない）。キーボードは ←→ で 1、PageUp/Down で 10、Delete で未入力。
  */
 export function ReadSlider(props: {
-  def: ReadDef;
+  def: SliderDef;
   value: number | undefined;
   onChange: (v: number) => void;
   onClear: () => void;
 }): JSX.Element {
   const { def, value } = props;
-  const percent = isPercent(def.key);
-  const max = maxOf(def.key);
+  const percent = defPercent(def);
+  const max = def.max;
   const track = useRef<HTMLDivElement>(null);
   const drag = useRef<number | null>(null);
   const [editing, setEditing] = useState(false);
   const set = value !== undefined;
   const ratio = set ? value / max : 0;
-  const label = set ? labelOf(def.key, value) : '—';
+  const label = set ? defLabel(def, value) : '—';
 
   const at = (clientX: number): void => {
     const r = track.current?.getBoundingClientRect();
@@ -45,7 +45,7 @@ export function ReadSlider(props: {
       props.onClear();
       return;
     }
-    const base = value ?? middleOf(def.key);
+    const base = value ?? defMiddle(def);
     const big = percent ? 10 : 1;
     const moves: Record<string, number> = {
       ArrowRight: base + 1,
@@ -61,11 +61,11 @@ export function ReadSlider(props: {
     if (v === undefined) return;
     e.preventDefault();
     // 未入力のときの最初の矢印は真ん中に置く
-    props.onChange(set || e.key === 'Home' || e.key === 'End' ? v : middleOf(def.key));
+    props.onChange(set || e.key === 'Home' || e.key === 'End' ? v : defMiddle(def));
   };
 
   // 段階の境目の目盛り（% の項目は境目の値、段階だけの項目は 5 つの点）
-  const ticks = def.cuts ? def.cuts.map((c) => c / max) : [0.25, 0.5, 0.75];
+  const ticks = def.cuts ? def.cuts.map((c) => c / max) : Array.from({ length: max - 1 }, (_, i) => (i + 1) / max);
 
   return (
     <div className={`rs${set ? ' set' : ''}`}>

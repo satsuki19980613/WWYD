@@ -25,24 +25,26 @@ export type VillainRead = Partial<Record<ReadKey, number>> & { memo?: string };
 /** 席ごとの情報（Hero と空席は持たない。情報の無い席はキーを持たない） */
 export type VillainReads = Partial<Record<Pos, VillainRead>>;
 
-export const MTT_STAGES = ['early', 'bubble', 'itm', 'ft'] as const;
-export type MttStage = (typeof MTT_STAGES)[number];
-export const MTT_TYPES = ['regular', 'pko', 'satellite'] as const;
-export type MttType = (typeof MTT_TYPES)[number];
+/** Tournament Type（ストラクチャーの速さ。Deep〜Turbo の 5 段階 0〜4。2026-09-30 さつき: Stage と Regular/PKO/Satellite の選択をやめた） */
+export const SPEED_MAX = 4;
 export const PRIZE_STRUCTURES = ['top', 'standard', 'flat'] as const;
 export type PrizeStructure = (typeof PRIZE_STRUCTURES)[number];
 
-/** 人数の欄（Rank・Players Left・Paid Places・Entries）の上限 */
+/** 人数の欄（スポットの順位・残りの人数・ITM・エントリー数）の上限 */
 export const MTT_COUNT_MAX = 1_000_000;
 /** Avg Stack（bb）の上限。小数第 1 位まで */
 export const MTT_AVG_MAX = 99_999;
 
 export type MttInfo = {
-  stage?: MttStage;
-  type?: MttType;
+  /** Tournament Type（0 = Deep 〜 4 = Turbo） */
+  speed?: number;
+  /** スポットの順位 */
   rank?: number;
+  /** 残りの人数 */
   left?: number;
+  /** ITM（入賞する人数） */
   paid?: number;
+  /** エントリー数 */
   entries?: number;
   /** 平均スタック（bb。小数第 1 位まで） */
   avg?: number;
@@ -100,7 +102,7 @@ export function validateReads(raw: unknown, seats: readonly Pos[], hero: Pos): V
   return out;
 }
 
-const MTT_KEYS = ['stage', 'type', 'rank', 'left', 'paid', 'entries', 'avg', 'prize'] as const;
+const MTT_KEYS = ['speed', 'rank', 'left', 'paid', 'entries', 'avg', 'prize'] as const;
 
 /**
  * MTT の情報の検証。Game Type が MTT のときだけ持てる（Cash で送られたら invalid_mtt）。
@@ -113,13 +115,10 @@ export function validateMtt(raw: unknown, fmt: Fmt): MttInfo | null {
   for (const [k, v] of Object.entries(raw)) {
     if (!(MTT_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `mtt.${k}`);
     switch (k) {
-      case 'stage':
-        if (!(MTT_STAGES as readonly unknown[]).includes(v)) fail('malformed', undefined, 'mtt.stage');
-        out.stage = v as MttStage;
-        break;
-      case 'type':
-        if (!(MTT_TYPES as readonly unknown[]).includes(v)) fail('malformed', undefined, 'mtt.type');
-        out.type = v as MttType;
+      case 'speed':
+        if (typeof v !== 'number' || !Number.isInteger(v)) fail('malformed', undefined, 'mtt.speed');
+        if (v < 0 || v > SPEED_MAX) fail('invalid_mtt', undefined, 'mtt.speed');
+        out.speed = v;
         break;
       case 'prize':
         if (!(PRIZE_STRUCTURES as readonly unknown[]).includes(v)) fail('malformed', undefined, 'mtt.prize');

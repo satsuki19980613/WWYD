@@ -17,9 +17,9 @@ select is((select mtt from public.post_hands where post_id = :'nul'), null::json
 -- 情報のある投稿
 select pg_temp.make_post(1, pg_temp.hs1('有') || '{"fmt":"mtt","rake":null,
   "villain_reads":{"BB":{"vpip":30,"pfr":20,"memo":"見本"}},
-  "mtt":{"stage":"bubble","rank":12,"left":58,"paid":50,"entries":320}}') as rich \gset
+  "mtt":{"speed":4,"rank":12,"left":58,"paid":50,"entries":320}}') as rich \gset
 select is((select villain_reads->'BB'->>'memo' from public.post_hands where post_id = :'rich'), '見本', 'DB-20 villain_reads を保存する');
-select is((select mtt->>'stage' from public.post_hands where post_id = :'rich'), 'bubble', 'DB-20 mtt を保存する');
+select is((select mtt->>'speed' from public.post_hands where post_id = :'rich'), '4', 'DB-20 mtt を保存する');
 
 -- 形の強制（最後の砦）
 select throws_ok($$ select pg_temp.make_post(1, pg_temp.hs1('配列') || '{"villain_reads":[]}') $$, '23514', null,

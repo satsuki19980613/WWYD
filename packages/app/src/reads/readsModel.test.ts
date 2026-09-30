@@ -10,8 +10,12 @@ import {
   clearRead,
   emptyMtt,
   isEmptyRead,
+  defLabel,
   labelOf,
   levelOf,
+  MTT_FIELD_LABEL,
+  MTT_FIELDS,
+  SPEED_DEF,
   mttCountsLine,
   parseMtt,
   readsForSubmit,
@@ -20,6 +24,8 @@ import {
   setRead,
   villainOrder,
 } from './readsModel.ts';
+
+const labelOfSpeed = (v: number): string => defLabel(SPEED_DEF, v);
 
 describe('段階のラベル（18 章 §2.1）', () => {
   it('VPIP の境目', () => {
@@ -89,12 +95,18 @@ describe('送る形と 1 行の要約', () => {
 describe('MTT の欄（18 章 §2.3・§2.4）', () => {
   it('空は null、数は整数、Avg Stack は小数第 1 位まで', () => {
     expect(parseMtt(emptyMtt())).toEqual({ info: null, invalid: [] });
-    const m = { ...emptyMtt(), stage: 'bubble' as const, rank: '12', left: '58', paid: '50', entries: '320', avg: '32.5' };
-    expect(parseMtt(m)).toEqual({ info: { stage: 'bubble', rank: 12, left: 58, paid: 50, entries: 320, avg: 32.5 }, invalid: [] });
+    const m = { ...emptyMtt(), speed: 4, rank: '12', left: '58', paid: '50', entries: '320', avg: '32.5' };
+    expect(parseMtt(m)).toEqual({ info: { speed: 4, rank: 12, left: 58, entries: 320, paid: 50, avg: 32.5 }, invalid: [] });
     expect(parseMtt({ ...emptyMtt(), rank: '1.5', avg: '3.25', entries: '0' }).invalid).toEqual(['rank', 'entries', 'avg']);
   });
-  it('Final Table では Avg Stack を送らない', () => {
-    expect(parseMtt({ ...emptyMtt(), stage: 'ft', avg: 'x' })).toEqual({ info: { stage: 'ft' }, invalid: [] });
+  it('Tournament Type は Deep〜Turbo の 5 段階。0（Deep）も入力として送る', () => {
+    expect(parseMtt({ ...emptyMtt(), speed: 0 })).toEqual({ info: { speed: 0 }, invalid: [] });
+    expect(labelOfSpeed(0)).toBe('Deep');
+    expect(labelOfSpeed(2)).toBe('Regular');
+    expect(labelOfSpeed(4)).toBe('Turbo');
+  });
+  it('数の欄の名前は日本語（スポットの順位・残りの人数・エントリー数・ITM・Avg Stack の順）', () => {
+    expect(MTT_FIELDS.map((f) => MTT_FIELD_LABEL[f])).toEqual(['スポットの順位', '残りの人数', 'エントリー数', 'ITM', 'Avg Stack（bb）']);
   });
   it('「12/58 ・ ITM 50 ・ 320 entries」', () => {
     expect(mttCountsLine({ rank: 12, left: 58, paid: 50, entries: 320 })).toBe('12/58 ・ ITM 50 ・ 320 entries');
@@ -127,8 +139,8 @@ describe('投稿の本文（画面とサーバーの一致）', () => {
     expect(submissionBody(d)).not.toHaveProperty('mtt');
     const body = submissionBody({ ...d, players: 6, reads: { BB: { vpip: 20 }, BTN: { vpip: 5 } } });
     expect(body.villain_reads).toEqual({ BB: { vpip: 20 } });
-    expect(submissionBody({ ...d, mtt: { ...emptyMtt(), stage: 'itm' } })).not.toHaveProperty('mtt');
-    expect(submissionBody({ ...d, fmt: 'mtt', mtt: { ...emptyMtt(), stage: 'itm' } }).mtt).toEqual({ stage: 'itm' });
+    expect(submissionBody({ ...d, mtt: { ...emptyMtt(), speed: 1 } })).not.toHaveProperty('mtt');
+    expect(submissionBody({ ...d, fmt: 'mtt', mtt: { ...emptyMtt(), speed: 1 } }).mtt).toEqual({ speed: 1 });
   });
 
   it('送る本文は core の検証（サーバーと同じ）を通る', async () => {
@@ -147,10 +159,11 @@ describe('下書きの読み直し（前の版の下書き・壊れた値）', (
   it('範囲の外・型の違う値は捨て、PFR が VPIP を超えていれば PFR を捨てる', () => {
     const d = sanitizeDraft({
       reads: { SB: { vpip: 20, pfr: 30, agg: 101, conf: 2 }, XX: { vpip: 1 }, BB: 'x' },
-      mtt: { stage: 'late', type: 'pko', rank: 3 },
+      mtt: { stage: 'bubble', type: 'pko', speed: 9, prize: 'flat', rank: 3 },
     });
     expect(d.reads).toEqual({ SB: { vpip: 20, conf: 2 } });
-    expect(d.mtt).toEqual({ ...emptyMtt(), type: 'pko' });
+    expect(d.mtt).toEqual({ ...emptyMtt(), prize: 'flat' });
+    expect(sanitizeDraft({ mtt: { speed: 1 } }).mtt.speed).toBe(1);
   });
   it('長すぎる Memo は切る', () => {
     expect(sanitizeRead({ memo: 'x'.repeat(40) }).memo).toHaveLength(30);

@@ -195,7 +195,7 @@ describe('保存（EF-02・EF-04）', () => {
     const { handler, insertPost } = setup();
     await handler(post(hs1()));
     expect(insertPost.mock.calls[0]?.[1]).toMatchObject({ villain_reads: {}, mtt: null });
-    const mtt = { stage: 'bubble', rank: 12, left: 58, paid: 50, entries: 320 };
+    const mtt = { speed: 1, rank: 12, left: 58, paid: 50, entries: 320 };
     const res = await handler(post({ ...hs3(), villain_reads: { HJ: { vpip: 40, pfr: 10, memo: ' 見本 ' }, SB: {} }, mtt }));
     expect(res.status).toBe(201);
     expect(insertPost.mock.calls[1]?.[1]).toMatchObject({ villain_reads: { HJ: { vpip: 40, pfr: 10, memo: '見本' } }, mtt });
@@ -205,7 +205,7 @@ describe('保存（EF-02・EF-04）', () => {
     const { handler, insertPost } = setup();
     expect(await json(await handler(post({ ...hs1(), villain_reads: { BB: { vpip: 10, pfr: 20 } } })))).toEqual({ error: 'invalid_reads' });
     expect(await json(await handler(post({ ...hs1(), villain_reads: { BB: { memo: 'x'.repeat(31) } } })))).toEqual({ error: 'invalid_reads' });
-    expect(await json(await handler(post({ ...hs1(), mtt: { stage: 'itm' } })))).toEqual({ error: 'invalid_mtt' });
+    expect(await json(await handler(post({ ...hs1(), mtt: { speed: 2 } })))).toEqual({ error: 'invalid_mtt' });
     expect(await json(await handler(post({ ...hs1(), villain_reads: { BTN: { vpip: 10 } } })))).toEqual({ error: 'malformed' });
     expect(insertPost).not.toHaveBeenCalled();
   });
