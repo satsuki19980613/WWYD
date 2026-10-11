@@ -1,0 +1,3 @@
+# gitleaks の誤検知（.github/workflows/secrets.yml）。形式は <コミット>:<ファイル>:<規則>:<行>
+# Supabase CLI が全員に同じ値を配るローカル専用のデモ用 anon キー（iss: supabase-demo）。秘密情報ではない
+c67c7c512a9d6970866bd46fae1cc0a6eb278230:.env.development:jwt:5

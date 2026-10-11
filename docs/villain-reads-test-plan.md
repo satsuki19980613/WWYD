@@ -81,7 +81,7 @@ npm run e2e
 npm run test:db
 ```
 
-- `npm run test:db` は Docker が要る。Git Bash では先に `export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"` を実行する。
+- `npm run test:db` は Docker が要る。Git Bash では先に `export PATH="$PATH:/c/Users/<ユーザー名>/AppData/Local/Programs/DockerDesktop/resources/bin"` を実行する。
 
 作成時点の基準（参考）:
 

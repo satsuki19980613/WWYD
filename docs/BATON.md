@@ -143,7 +143,7 @@
 
 | 事柄 | 内容 |
 |---|---|
-| Docker | Claude の Git Bash では PATH に `docker` が無い。`export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"` |
+| Docker | Claude の Git Bash では PATH に `docker` が無い。`export PATH="$PATH:/c/Users/<ユーザー名>/AppData/Local/Programs/DockerDesktop/resources/bin"` |
 | heredoc | Git Bash の heredoc で長い CSS を書くと途中で壊れたことがある。長いファイルは Write ツールで書く |
 | ブラウザ確認 | `.claude/launch.json` の `app`（dev につなぐ）/ `app-production`（本番につなぐ）。どちらも 5173。スクリーンショットはペインの大きさが変わると乱れるので、DOM（`javascript_tool`）で確かめるのが確実 |
 | CSP | `packages/app/public/_headers` は未作成。P9 で作る（§0 の 6.） |

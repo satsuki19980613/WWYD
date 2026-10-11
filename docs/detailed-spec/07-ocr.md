@@ -25,7 +25,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 候補 | `C:\Users\sa641.SATSUKIPC\OneDrive\ドキュメント\一時ツール\tenfour_watcher`（remote: `github.com/satsuki19980613/tenfour-hand-tools`） |
+| 候補 | 手元の `tenfour_watcher`（remote: `github.com/satsuki19980613/tenfour-hand-tools`） |
 | 中身 | tenfour-poker のハンドヒストリー画像（PNG）を監視・整理し、OCR で JSON にする Python ツール |
 | OCR 本体 | `src/ocr.py`（約 1,500 行。入口 `TenfourImageParser.parse()` / `parse_image()`）、`src/models.py`、`src/rank_templates.py` |
 | 精度（同リポジトリの README） | 実画像 114 ハンドでカード・ポジション・アクション金額など 100% |
