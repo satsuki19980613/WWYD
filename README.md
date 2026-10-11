@@ -35,9 +35,10 @@
 | Google の表示名・メールアドレス・プロフィール画像の URL | 保存する（ログインの仕組み Neon Auth が、アプリとは別の場所に置く） | 見られる | 見えない（アプリからは読めない） |
 | ログインの記録（日時・IP アドレス・ブラウザの種類） | 保存する（同じく Neon Auth。ログインを保つため） | 見られる | 見えない |
 | 利用者の ID（ランダムな番号） | 保存する（投稿・回答の持ち主を見分けるため） | 見られる | 見えない |
-| 投稿（Hand History・題名・Villain の Read・MTT の情報） | 保存する（ポジションだけ。プレイヤー名は保存しない） | 見られる | 見える（Hero のハンドは回答した人だけ） |
-| 回答（塗った Range） | 保存する | 見られる | 1 人分は見えない。全員分の集計だけが、回答した人に見える |
-| Hand History の画像 | **保存しない・送信しない**（端末の中で読み取って捨てる） | 見られない | 見えない |
+| 投稿（Hand History・題名・Villain の Read・MTT の情報） | 保存する（投稿者か運営者が消すまで残る。席はポジションだけで、プレイヤー名は入らない） | 見られる | ログインした人に見える（誰の投稿かは見えない） |
+| 投稿の Hero のハンド、Spot より後のアクションとボード | 保存する | 見られる | 回答した人にだけ見える |
+| 回答（塗った Range とサイズ） | 保存する（投稿が消えるか、アカウントを削除するまで残る） | 見られる（誰の回答かも分かる） | 1 人分は見えない。全員分の集計だけが、回答した人に見える |
+| Hand History の画像・画像に写ったプレイヤー名 | **保存しない・送信しない**（端末の中で読み取って捨てる） | 見られない | 見えない |
 | 投稿の下書き・Read の Preset | **保存しない**（自分の端末にだけ置く） | 見られない | 見えない |
 
 外部のサービスに届くもの：
@@ -51,20 +52,21 @@
 期待できること：
 
 - ほかの利用者に、どの投稿・回答があなたのものかを知られない。
-- 回答する前に、集計や Hero のハンドを見られない（投稿者も、自分で回答するまで集計は見えない）。
+- 回答する前に、集計・Hero のハンド・Spot より後の展開を見られない（投稿者も、自分で回答するまで集計は見えない）。
 - 集計をごまかされない。回答の形の検証と集計はサーバーが行い、回答は 1 人 1 回・送信後は変えられない。
 - Hand History の画像を、運営者を含め誰にも見られない。
 - ログインしていない人には、何も読めない・書けない。
 - アカウントメニューの「アカウントを削除」で、自分の投稿・回答・アカウント情報をすべて消せる。
-- 1 人が投稿を出し続けて一覧を埋めることを防ぐ（1 日に出せる投稿の数に上限がある）。
+- 1 人が投稿を出し続けて一覧を埋めることを防ぐ（1 人が 1 日に出せる投稿の数に上限がある。初期値は 5 件）。
 
 期待できないこと（限界）：
 
-- **運営者は、表示名・メールアドレス・ログインの記録と、誰がどの投稿・回答をしたかを見られる。** データベースの持ち主として読める。
-- **投稿した Hand の中身は、ログインした人なら誰でも見られる。** プレイヤー名は保存しないが、Hand の中身から場面を知っている人に推測されることはありうる。
+- **運営者は、表示名・メールアドレス・ログインの記録と、誰がどの投稿・回答をしたかを見られる。** データベースの持ち主として読める。どの投稿でも削除できる。
+- **Google アカウントがあれば誰でもログインでき、ログインした人は全員の投稿を読める。** プレイヤー名は保存しないが、Hand の中身から場面を知っている人に推測されることはありうる。題名は自由に書けるので、個人が分かることは書かないでください。
 - **1 人 1 回の制限は Google アカウントごと。** アカウントを大量に用意する相手には、集計を偏らせられる。
+- **回数の制限は投稿の数だけ。** 読む・回答する回数には、アプリとしての制限を設けていない。
 - **外部のサービス（Google・Cloudflare・Neon）がどう扱うかは、それぞれの規約による。**
-- **第三者による監査は受けていない。** 個人で運営していて、確かめているのは下の自動の確認だけ。
+- **第三者による監査は受けていない。** 個人で運営していて、確かめているのは下の自動の確認と、公開前に行った AI による点検（[docs/release-test/report.md](docs/release-test/report.md)）だけ。
 
 ### 仕組みと根拠
 
@@ -72,17 +74,17 @@
 
 | 守ること | 仕組み | 根拠 |
 |---|---|---|
-| ログインしていない人に何も見せない | すべての表で行ごとの権限（RLS）を有効にし、ログインした利用者にも必要な表・列・行だけを許す | [20260927000007_rls.sql](db/migrations/20260927000007_rls.sql) |
-| 投稿者を結び付けさせない | 投稿の表から投稿者の ID の列を読めなくし、「自分の投稿か」「消せるか」だけをサーバーが答える | [20260930000001_hide_author_uid.sql](db/migrations/20260930000001_hide_author_uid.sql) |
-| 回答するまで答えを見せない | 集計・Hero のハンドの表は「投稿者本人か回答済み」の行しか返さない。Spot の詳細を返す関数も、回答していなければ伏せる | [20260927000007_rls.sql](db/migrations/20260927000007_rls.sql)（`can_view_results`）・[20260930000000_villain_reads_mtt.sql](db/migrations/20260930000000_villain_reads_mtt.sql)（`get_post_detail`） |
-| 集計をごまかさせない | 回答の形の検証・集計の加算はデータベースのトリガーが行う。回答の書き換えは拒む | [20260927000008_triggers.sql](db/migrations/20260927000008_triggers.sql)・[20260927000004_answers.sql](db/migrations/20260927000004_answers.sql) |
-| ありえない Hand を投稿させない | 投稿はサーバーの関数が、ログインの署名と発行元を確かめたうえで、ルールどおりに最初から再生して確かめる（画面と同じ 1 つの実装） | [packages/functions/src/createPost/](packages/functions/src/createPost/index.ts)・[packages/core/](packages/core/) |
-| 投稿の出しすぎを止める | 1 人 1 日あたりの投稿の数をデータベースで数える | [20260930000000_villain_reads_mtt.sql](db/migrations/20260930000000_villain_reads_mtt.sql)（`insert_post`） |
-| 画像を端末から出さない | 読み取りはブラウザの中だけ。さらに、通信先をこのサイトと Neon だけに限る設定にしている | [packages/ocr/](packages/ocr/)・[packages/app/public/_headers](packages/app/public/_headers) |
-| 画面を乗っ取らせない | このサイト以外のスクリプトは動かない設定。ほかのサイトの枠の中にも表示させない | [packages/app/public/_headers](packages/app/public/_headers) |
-| ログインを保ち、ほかへ渡さない | ログインのクッキーはこのサイトのもの。中継するのはログインに要る API だけ。データを読むための鍵（15 分で切れる）はページを開いている間だけメモリに持つ | [packages/app/src/backend/authProxy.ts](packages/app/src/backend/authProxy.ts)・[packages/app/src/backend/neon.ts](packages/app/src/backend/neon.ts) |
-| 消したいときに全部消せる | 自分の回答（他人の投稿の集計からも引く）・投稿・アカウントの順に消す | [20260927000009_rpc.sql](db/migrations/20260927000009_rpc.sql)（`delete_my_account`） |
-| 鍵やパスワードを漏らさない | リポジトリには置かず、各サービスの設定と GitHub の Secrets に置く | [.env.example](.env.example) |
+| ログインしていない人に何も見せない | すべての表で行ごとの権限（RLS）を有効にし、ログインした利用者にも必要な表・列・行だけを許す。ログインの仕組みが保存する表（メールアドレスなど）は、ブラウザが使う役割から読めない | [20260927000007_rls.sql](db/migrations/20260927000007_rls.sql)。確かめる試験 [01_access.test.sql](db/tests/01_access.test.sql)・[90_release_c01_enforce.test.sql](db/tests/90_release_c01_enforce.test.sql) |
+| 投稿者を結び付けさせない | 投稿の表から投稿者の ID の列を読めなくし、「自分の投稿か」「消せるか」だけをサーバーが答える。回答の表は本人の行しか読めない | [20260930000001_hide_author_uid.sql](db/migrations/20260930000001_hide_author_uid.sql)・[20260927000007_rls.sql](db/migrations/20260927000007_rls.sql)（`answers_select`）。確かめる試験 [90_release_c01_enforce.test.sql](db/tests/90_release_c01_enforce.test.sql) |
+| 回答するまで答えを見せない | Hero のハンドの表は投稿者本人か回答した人に、集計の表は回答した人にだけ行を返す。Spot の詳細を返す関数も、回答していなければ Hero のハンドと Spot より後のアクション・ボードを伏せる | [20260927000007_rls.sql](db/migrations/20260927000007_rls.sql)（`post_secrets_select`）・[20260928000000_author_answers.sql](db/migrations/20260928000000_author_answers.sql)（`can_view_aggregate`）・[20260930000000_villain_reads_mtt.sql](db/migrations/20260930000000_villain_reads_mtt.sql)（`get_post_detail`）。確かめる試験 [05_detail.test.sql](db/tests/05_detail.test.sql) |
+| 集計をごまかさせない | 回答は 1 人 1 Spot 1 件。回答者の ID と時刻はサーバーが入れ直し、塗り方がルールに合うかもデータベースで確かめる。集計の加算もデータベースのトリガーが行い、回答の書き換えは拒む | [20260927000004_answers.sql](db/migrations/20260927000004_answers.sql)・[20260928000000_author_answers.sql](db/migrations/20260928000000_author_answers.sql)（`answers_before_insert`）・[20260927000006_helpers.sql](db/migrations/20260927000006_helpers.sql)（`validate_paint`）・[20260927000008_triggers.sql](db/migrations/20260927000008_triggers.sql)。確かめる試験 [04_answers.test.sql](db/tests/04_answers.test.sql) |
+| ありえない Hand を投稿させない | 投稿はブラウザから直接書き込めず、サーバーの関数（create-post）だけが入れられる。関数はログインの署名と発行元を確かめたうえで、ルールどおりに最初から再生して確かめる（画面と同じ 1 つの実装） | [packages/functions/src/createPost/index.ts](packages/functions/src/createPost/index.ts)（`verifyToken`）・[handler.ts](packages/functions/src/createPost/handler.ts)・[packages/core/src/post/verifyPost.ts](packages/core/src/post/verifyPost.ts) |
+| 投稿の出しすぎを止める | 1 人 1 日あたりの投稿の数をデータベースで数える | [20260930000000_villain_reads_mtt.sql](db/migrations/20260930000000_villain_reads_mtt.sql)（`insert_post`）。確かめる試験 [02_quota.test.sql](db/tests/02_quota.test.sql) |
+| 画像を端末から出さない | 読み取りはブラウザの中だけで、認識エンジンもこのサイトから読む。読み取った結果にプレイヤー名を入れない。さらに、通信先をこのサイトと Neon だけに限る設定にしている | [packages/app/src/ocr/runOcr.ts](packages/app/src/ocr/runOcr.ts)・[packages/ocr/src/readHandHistory.ts](packages/ocr/src/readHandHistory.ts)・[packages/app/public/_headers](packages/app/public/_headers)。外に通信しないことを確かめる試験 [e2e/ocr.spec.ts](e2e/ocr.spec.ts) |
+| 画面を乗っ取らせない | 利用者が書いた文字（題名など）は文字として表示し、HTML として扱わない。さらに、このサイト以外のスクリプトは動かない設定。ほかのサイトの枠の中にも表示させない | [packages/app/public/_headers](packages/app/public/_headers) |
+| ログインを保ち、ほかへ渡さない | ログインのクッキーはこのサイトのもので、ページのスクリプトからは読めない形（HttpOnly）。中継するのはログインに要る API だけ。データを読むための鍵（15 分で切れる）はページを開いている間だけメモリに持つ | [functions/api/auth/[[path]].ts](functions/api/auth/%5B%5Bpath%5D%5D.ts)・[packages/app/src/backend/authProxy.ts](packages/app/src/backend/authProxy.ts)（`firstPartyCookie`）・[packages/app/src/backend/neon.ts](packages/app/src/backend/neon.ts)（`getToken`） |
+| 消したいときに全部消せる | 自分の回答（他人の投稿の集計からも引く）・投稿・アカウントの順に消す | [20260927000009_rpc.sql](db/migrations/20260927000009_rpc.sql)（`delete_my_account`）。確かめる試験 [06_delete.test.sql](db/tests/06_delete.test.sql) |
+| 鍵やパスワードを漏らさない | リポジトリには置かず、各サービスの設定と GitHub の Secrets に置く。`.env` はコミットしない | [CLAUDE.md](CLAUDE.md)（10 章）・[.gitignore](.gitignore)・[.env.example](.env.example) |
 
 ### 自動の確認
 
