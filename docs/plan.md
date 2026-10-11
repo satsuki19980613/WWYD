@@ -12,7 +12,7 @@
 |---|---|
 | 現在のフェーズ | **P10・P11 は完了・本番に公開済み**（2026-09-30。PR #26 をマージ `1dfabe0`。create-post は dev 版 10・本番 版 8、本番に F-006 のマイグレーション）。公開後の確認: iPhone 実機・数日後のログイン・M-12 を dev で試す・本番で Read・MTT 付きの投稿 |
 | 直近で完了したこと | **SonarCloud の指摘の整理**（2026-10-11。セッション 13）: 未解決 758 件を、設定で外すもの（編集禁止の docs/source・生成物・PostgreSQL に当てはまらない PL/SQL の規則・順番どおりの await）と、コードで直すものに分けて直した（`.sonarcloud.properties`・CI の `npm ci --ignore-scripts`）。その前: **README とセキュリティの表示**（2026-10-11。PR #30・#32 をマージ `38060bc`。#31 は重複として閉じた）: README（安全とプライバシー）・SECURITY.md・CodeQL・Live（本番の保護ヘッダ・ログインの中継・トークン無しの拒否・Observatory）。main の Live で Observatory A+（130 点、12/12）。Private vulnerability reporting と Dependabot alerts を有効化（さつき）。その前: P10・P11 の仕上げ（2026-09-30） |
-| 次にやること | 1. さつき: 画面の見た目の承認（承認用のページ）<br>2. 公開後の確認（さつきのついでのとき）: iPhone 実機（[device-checklist.md](release-test/device-checklist.md)）、数日後のログイン、M-12 を dev で試す、本番で Read・MTT 付きの投稿<br>3. 見送った S4（確認待ち）は公開後の声を見て<br>4. 開発用の依存の残り（diff・@hono/node-server。neonctl の中）は neonctl の新しい版が出たら |
+| 次にやること | 1. さつき: 画面の見た目の承認（承認用のページ）<br>2. 公開後の確認（さつきのついでのとき）: iPhone 実機（[device-checklist.md](release-test/device-checklist.md)）、数日後のログイン、M-12 を dev で試す、本番で Read・MTT 付きの投稿<br>3. 見送った S4（確認待ち）は公開後の声を見て |
 | ブロッカー | なし |
 | さつきの確認待ち | SonarCloud の PR の解析で `.sonarcloud.properties` の規則の除外（multicriteria）が効くか（自動解析で効かなければ、SonarCloud の画面の Analysis Scope に同じ内容を入れる）。画面の見た目の承認（承認用のページ）。見送った S4（V-022 重複した General Read・V-041・F-008・F-009・F-013・F-018・F-020 の起動の直列）は公開後の声を見て |
 
@@ -339,6 +339,7 @@
 | 2026-09-30 | **公開前に本番の投稿を整理し、機能を一通り見せるサンプル 6 件にする**。さつき自身の投稿（T4・テスト・てすと）も消す。題名は普通の題名（「サンプル」を付けない）。サンプルは試験用ユーザーの投稿と回答（`db/seed/showcase.sql`、`npm run db:showcase`）: ①6 人 Cash の Flop の C-Bet ②3-Bet Pot の Turn の Barrel を受ける（Spot Read）③MTT・Ante・River の All-in に Call（MTT の情報、Fold／Call だけ）④ヘッズアップの Check-Raise を受ける ⑤4 人の Limp Pot ⑥5 人の River の Overbet の All-in（長い題名） | さつきの指示（AskUserQuestion 2 問、推奨どおり） | さつき |
 | 2026-10-01 | **サンプル 6 件を、公開されているプロのハンドから抜粋したものに差し替える**（初級者のプレイに見えたため）。①WSOP Main Event 2003 の Heads-up、River の All-in を受ける（MTT）②High Stakes Poker 2006、3-Bet Pot の Flop の Check-Raise を受ける ③High Stakes Poker 2022、4 人の Pot の River の Check-Raise All-in（5 人に詰めた）④WSOP Main Event 2019、Turn の Bet に Check-Raise All-in ⑤Triton 2022 の残り 8 人、River の Bet に T 高で Call（4 人）⑥Polk vs Negreanu の Heads-up Cash、4-Bet Pot の River の Bluff。額は bb に直して丸め、BB Ante は全員のアンティに、降りた人は除いて席を詰め、出典に無い Stack は推定。題名に人の名前と Hero のハンドが分かる言葉は入れない（出典は `scripts/genShowcaseSql.ts` のコメント） | さつきの指示 | さつき |
 | 2026-10-11 | **README・SECURITY.md と自動の確認（CodeQL・Live）を privatematch に倣って足す**。README は「安全とプライバシー」を要点 → 扱う情報の表 → 期待できること・できないこと → 仕組みと根拠 → 自動の確認の順に書き、バッジは CI・Live・CodeQL。privatematch と違い WWYD は Neon Auth が表示名・メールアドレスを保存する（Q-26 で許容）ので、運営者が見られることを限界として明記した。Live（`scripts/liveCheck.mjs`）は秘密情報を使わず、本番の保護ヘッダ・ログインの中継・Data API と create-post がトークン無しを拒むこと・Mozilla HTTP Observatory の評価が A+ かを毎週見る | さつきの指示（privatematch の README に倣う） | さつき |
+| 2026-10-11 | **開発用の依存の弱点の残り 2 件を npm の overrides で直す**: `diff` 5.2.0 → 5.2.2（GHSA-73rr-hh4g-fpgx）、`@hono/node-server` 2.0.4 → 2.0.12（同じ 2.0 系の修正版）。どちらも neonctl（最新の 8.3.5 も同じ版に固定）の中の neon が版を固定しているため、neonctl の更新では直らない。`npm audit fix --force` は neonctl を 2.37.1 に下げるので使わない。neonctl の版が上がって固定が外れたら overrides を消す | さつきの指示（「残りの依存の弱点も最適化して」） | さつき |
 | 2026-10-11 | **SonarCloud の指摘の扱い**: docs/source（編集禁止の参照資料）と生成物（rankTemplates.ts・showcase.sql・03_paint_vectors）は解析から外し、E2E・pgTAP・*.test.ts・*.tb.*.ts はテストのコードとして分ける。規則で外すのは、順番どおりでないといけない await（E2E・スクリプト・OCR の Worker）、db/ の SQL への PL/SQL（Oracle）の文字列の繰り返しと改行の規則、Neon Auth の表の名前 `user` だけ。ほかはコードで直す。NOSONAR は使わない。残したもの（理由つき）は 2026-10-11 のセッションログ | さつきの指示（SonarCloud を見て最適化） | さつき |
 
 ---
@@ -920,6 +921,7 @@
 - **追記（2026-10-11）**: 別のセッションが同じ目的の README だけの PR #31 を作っていた（README.md がどちらも新規で衝突する）。さつきの判断（推奨どおり）で、#30 をマージしたあと #31 のよい点（根拠の欄の DB テスト・E2E へのリンク、題名は自由記述なので個人が分かることを書かない注意、運営者はどの投稿でも削除できる、読む・回答する回数には制限が無い、公開前の点検の報告書、Spot より後の展開も伏せる）を README に取り込み、#31 は重複として閉じる。あわせて、集計の表の権限を `can_view_aggregate`（20260928000000_author_answers.sql）に直した（前は置き換え前の `can_view_results` を挙げていた）。開発用の依存の弱点のうち `npm audit fix` で直る 2 件（source-map-js・diff）も推奨どおり別の PR で直す。
 - **追記（2026-10-11）**: `npm audit fix`（--force なし）で source-map-js 1.2.1 → 1.2.2（高）を直した。同じ範囲の中で neonctl・neon が 6.2.3 → 6.4.0、acorn が 8.18.0 → 8.19.0 に上がった（lockfile だけ）。diff は neon が 5.2.0 に固定しているため直らず、@hono/node-server は --force（版が大きく変わる）が要るので残した。どちらも開発用（neonctl の中）で、公開するアプリの依存の弱点は 0 件。ブランチは 1 本だけと決められているので、README の取り込みと同じ PR に入れた。
 - **追記（2026-10-11）**: PR #32 をマージ（`38060bc`）。さつきが main で Live を手動で起動（Claude の GitHub 連携には Actions を起動する権限が無く 403）。03:12 と 03:25 の 2 回とも全部通り、Observatory は A+（130 点、12/12 項目合格）。README の Live のバッジは main の結果を示す。
+- **追記（2026-10-11）**: さつきの指示で、開発用の依存の弱点の残り 2 件（diff・@hono/node-server）を package.json の `overrides` で修正版に上げた（決定ログ）。`npm audit` は 0 件。neonctl の functions・branches のコマンドが動くこと、上げた 2 つが読み込めること、型検査・単体 1333 が通ることを確かめた。
 
 ### 2026-10-11（セッション 13・SonarCloud の指摘の整理）
 
