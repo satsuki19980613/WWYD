@@ -7,6 +7,7 @@
 //   node scripts/db.mjs sample --branch <b>    … 本番でも使える試験データ（db/seed/sample.sql。試験用ユーザーの分だけ）を入れ直す
 //   node scripts/db.mjs sample-large --branch <b> … 回答が 400〜2000 件の投稿 4 件（db/seed/sample-large.sql）
 //   node scripts/db.mjs sample-clean --branch <b> … 上の試験データを消す（db/seed/sample-clean.sql）
+//   node scripts/db.mjs auth-audit --branch <b>   … ログインで届く個人の情報が残っていないかを数える（読み取りだけ。値は出さない）
 //
 // DB テスト: 空のブランチ test-base から一時ブランチを作り（1 時間で自動削除）、全マイグレーションを適用して
 // pgTAP（db/tests/*.test.sql）と同時回答のテスト（DB-19）を実行し、最後に一時ブランチを消す。
@@ -15,7 +16,7 @@
 // 必要なもの: Neon CLI のログイン（npx neonctl auth、CI では環境変数 NEON_API_KEY）と Docker（psql を動かす）。
 // DB の接続文字列（パスワードを含む）は画面やログに出さない。
 import { spawn } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { appendFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const PROJECT = process.env.NEON_PROJECT_ID ?? 'patient-leaf-06853495';
@@ -135,6 +136,43 @@ async function concurrency(url) {
   }
 }
 
+/**
+ * ログインで届く個人の情報（メールアドレス・表示名・画像・Google のトークン・IP アドレス・ブラウザの種類）が
+ * DB に残っていないか、置き換えのトリガー（20261011000000_auth_scrub.sql）が外れていないかを数える。読み取りだけで、値は出さない。
+ * neon_auth の表と列の名前も出す（Neon Auth が列を足したときに気づけるように）。GitHub Actions ではまとめ（GITHUB_STEP_SUMMARY）にも書く。
+ */
+async function authAudit(url, branch) {
+  const counts = (await psql(url, '-At -F "|" -f -', `select
+    (select count(*) from neon_auth."user"),
+    (select count(*) from neon_auth."user" where email not like '%@wwyd.invalid'),
+    (select count(*) from neon_auth."user" where name <> 'Player' or image is not null),
+    (select count(*) from neon_auth.account where "idToken" is not null or "accessToken" is not null or "refreshToken" is not null),
+    (select count(*) from neon_auth.session where "ipAddress" is not null or "userAgent" is not null),
+    (select count(*) from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+      where not t.tgisinternal and t.tgenabled <> 'D' and p.pronamespace = 'public'::regnamespace
+        and (t.tgrelid::regclass::text, p.proname) in (('neon_auth."user"', 'auth_user_scrub'), ('neon_auth.account', 'auth_account_scrub'), ('neon_auth.session', 'auth_session_scrub')));`))
+    .trim().split('|').map(Number);
+  const [users, email, profile, tokens, sessions, triggers] = counts;
+  const checks = [
+    ['メールアドレスが残っている利用者', email === 0, `${email} / ${users}`],
+    ['表示名・画像が残っている利用者', profile === 0, `${profile} / ${users}`],
+    ['Google のトークンが残っている連携', tokens === 0, String(tokens)],
+    ['IP アドレス・ブラウザの種類が残っているログインの記録', sessions === 0, String(sessions)],
+    ['置き換えのトリガーが 3 つとも有効', triggers === 3, String(triggers)],
+  ];
+  const cols = (await psql(url, '-At -F "|" -f -', `select table_name, string_agg(column_name, ', ' order by ordinal_position)
+    from information_schema.columns where table_schema = 'neon_auth' group by 1 order by 1;`)).trim().split('\n').filter(Boolean).map((l) => l.split('|'));
+  for (const [name, ok, n] of checks) console.log(`${ok ? 'ok  ' : 'NG  '} ${name} — ${n}`);
+  for (const [t, c] of cols) console.log(`neon_auth.${t}: ${c}`);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const lines = [`### ログインの個人の情報（${branch}）`, '', '| 確認 | 結果 | 件数 |', '|---|---|---|',
+      ...checks.map(([name, ok, n]) => `| ${name} | ${ok ? 'OK' : '**NG**'} | ${n} |`),
+      '', '| neon_auth の表 | 列 |', '|---|---|', ...cols.map(([t, c]) => `| ${t} | ${c} |`), ''];
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+  }
+  if (checks.some(([, ok]) => !ok)) process.exitCode = 1;
+}
+
 async function test(keep) {
   const name = `test-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}`;
   const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -175,8 +213,11 @@ try {
     // 本番でも使える試験データ（db/seed/sample.sql・公開用のサンプル showcase.sql）と、その削除。試験用ユーザーの分だけを作る・消す（実在するユーザーには触れない）
     if (!branchArg) throw new Error('--branch を指定してください（例: --branch production）');
     process.stdout.write(await psql(await connectionString(branchArg), `-f /db/seed/${cmd}.sql`));
+  } else if (cmd === 'auth-audit') {
+    if (!branchArg) throw new Error('--branch を指定してください（例: --branch production）');
+    await authAudit(await connectionString(branchArg), branchArg);
   } else {
-    console.log('使い方: node scripts/db.mjs migrate --branch <ブランチ> | test [--keep] | seed --branch dev | sample --branch <ブランチ> | sample-large --branch <ブランチ> | sample-clean --branch <ブランチ> | showcase --branch <ブランチ>');
+    console.log('使い方: node scripts/db.mjs migrate --branch <ブランチ> | test [--keep] | seed --branch dev | sample --branch <ブランチ> | sample-large --branch <ブランチ> | sample-clean --branch <ブランチ> | showcase --branch <ブランチ> | auth-audit --branch <ブランチ>');
     process.exitCode = 1;
   }
 } catch (e) {
