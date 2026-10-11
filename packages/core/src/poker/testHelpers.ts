@@ -33,21 +33,24 @@ function expand(from: Pos, to: Pos, street: Street): Pos[] {
   return order.slice(i, j + 1) as Pos[];
 }
 
+/** 記法の 1 区切り（`BTN r2.5`・`UTG..CO f` など）をアクションに展開する。 */
+function tokenActions(tok: string, street: Street): Action[] {
+  const m = /^([A-Z]+)(?:\.\.([A-Z]+))? ([fxcbr])([\d.]+)?$/.exec(tok);
+  if (!m) throw new Error(`記法が不正: ${tok}`);
+  const seats = m[2] ? expand(m[1] as Pos, m[2] as Pos, street) : [m[1] as Pos];
+  return seats.map((pos) => {
+    const a: Action = { street, pos, type: TYPE[m[3] as string] as ActionType };
+    if (m[4] !== undefined) a.to = mbb(Number(m[4]));
+    return a;
+  });
+}
+
 export function acts(spec: Partial<Record<Street, string>>): Action[] {
   const out: Action[] = [];
   for (const street of ['pf', 'flop', 'turn', 'river'] as const) {
     const line = spec[street];
     if (!line) continue;
-    for (const tok of line.split(',').map((t) => t.trim()).filter(Boolean)) {
-      const m = /^([A-Z]+)(?:\.\.([A-Z]+))? ([fxcbr])([\d.]+)?$/.exec(tok);
-      if (!m) throw new Error(`記法が不正: ${tok}`);
-      const seats = m[2] ? expand(m[1] as Pos, m[2] as Pos, street) : [m[1] as Pos];
-      for (const pos of seats) {
-        const a: Action = { street, pos, type: TYPE[m[3] as string] as ActionType };
-        if (m[4] !== undefined) a.to = mbb(Number(m[4]));
-        out.push(a);
-      }
-    }
+    for (const tok of line.split(',').map((t) => t.trim()).filter(Boolean)) out.push(...tokenActions(tok, street));
   }
   return out;
 }

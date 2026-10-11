@@ -8,9 +8,9 @@ import { acts } from '../../packages/core/src/poker/testHelpers.ts';
 import type { Action } from '../../packages/core/src/poker/state.ts';
 import { UID } from '../fakeBackend.ts';
 import { fakeCreatePost, fakeBackend, watchErrors, type CreatePostCall } from '../release/taKit.ts';
-import { isMobile, S_SETTINGS, S_SPOT, step } from '../release/taPost.ts';
 
-export { expect, isMobile, step, S_SPOT, S_SETTINGS };
+export { expect };
+export { isMobile, step, S_SPOT, S_SETTINGS } from '../release/taPost.ts';
 export { acts };
 
 export const DRAFT_KEY = `wwyd.drafts.v1.${UID}`;
@@ -96,7 +96,7 @@ export async function openDraft(page: Page, draft: Record<string, unknown>): Pro
   const cp = await fakeCreatePost(page);
   await seedDraftStore(page, [draft]);
   await page.goto('/drafts');
-  await page.getByRole('link', { name: String(draft.title ?? 'T2 seed') }).click();
+  await page.getByRole('link', { name: typeof draft.title === 'string' ? draft.title : 'T2 seed' }).click();
   await expect(page).toHaveURL('/new');
   return { cp };
 }

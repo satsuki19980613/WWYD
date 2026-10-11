@@ -35,7 +35,7 @@ export function useLayer(
     }
 
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (stack[stack.length - 1] !== id) return;
+      if (stack.at(-1) !== id) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onCloseRef.current();
@@ -44,7 +44,7 @@ export function useLayer(
       if (trapFocus && e.key === 'Tab' && ref.current) {
         const items = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE));
         const first = items[0];
-        const last = items[items.length - 1];
+        const last = items.at(-1);
         if (!first || !last) return;
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault();

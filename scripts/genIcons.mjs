@@ -10,13 +10,18 @@ const PUBLIC = resolve(import.meta.dirname, '../packages/app/public');
 const svg = readFileSync(resolve(PUBLIC, 'icon.svg'), 'utf8');
 const browser = await chromium.launch();
 try {
-  for (const [file, size] of [['apple-touch-icon.png', 180]]) {
-    const page = await browser.newPage({ viewport: { width: size, height: size } });
-    await page.setContent(`<html><body style="margin:0;background:#000">${svg.replace('<svg ', `<svg width="${size}" height="${size}" `)}</body></html>`);
-    await page.screenshot({ path: resolve(PUBLIC, file), omitBackground: false });
-    await page.close();
-    console.log(`${file}（${size}×${size}）`);
-  }
+  // アイコンごとに別のページで描く（互いに依存しないので並べて進める）
+  const icons = [['apple-touch-icon.png', 180]];
+  await Promise.all(
+    icons.map(async ([file, size]) => {
+      const page = await browser.newPage({ viewport: { width: size, height: size } });
+      const sized = svg.replace('<svg ', `<svg width="${size}" height="${size}" `);
+      await page.setContent(`<html><body style="margin:0;background:#000">${sized}</body></html>`);
+      await page.screenshot({ path: resolve(PUBLIC, file), omitBackground: false });
+      await page.close();
+      console.log(`${file}（${size}×${size}）`);
+    }),
+  );
 } finally {
   await browser.close();
 }

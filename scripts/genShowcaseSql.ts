@@ -107,7 +107,11 @@ const SHOWCASES: Showcase[] = [
     mtt: { speed: 20, prize: 'top', rank: 2, left: 2, entries: 839, paid: 63, avg: 104.9 },
     author: 1,
     hoursAgo: 3,
-    answer: (s, u) => (s < 0.3 ? null : s > 0.78 ? { call: clamp20(17 + 3 * jitter(u, 1)), fold: 20 - clamp20(17 + 3 * jitter(u, 1)) } : { fold: clamp20(13 + 5 * jitter(u, 2)), call: 20 - clamp20(13 + 5 * jitter(u, 2)) }),
+    answer: (s, u) => {
+      if (s < 0.3) return null;
+      if (s > 0.78) return { call: clamp20(17 + 3 * jitter(u, 1)), fold: 20 - clamp20(17 + 3 * jitter(u, 1)) };
+      return { fold: clamp20(13 + 5 * jitter(u, 2)), call: 20 - clamp20(13 + 5 * jitter(u, 2)) };
+    },
   },
   {
     // High Stakes Poker Season 2（2006）。Hansen（UTG）の Flop の Check-Raise を Negreanu（HJ、Hero）が Set of 6 で Call。Turn で Quads。
@@ -131,8 +135,12 @@ const SHOWCASES: Showcase[] = [
     reads: { UTG: { vpip: 45, pfr: 30, agg: 4, image: 3 } },
     author: 2,
     hoursAgo: 9,
-    answer: (s, u) =>
-      s < 0.45 ? null : s > 0.8 ? { call: clamp20(11 + 4 * jitter(u, 3)), s1: 20 - clamp20(11 + 4 * jitter(u, 3)) } : s > 0.6 ? { call: clamp20(15 + 3 * jitter(u, 4)), fold: 20 - clamp20(15 + 3 * jitter(u, 4)) } : { fold: clamp20(14 + 4 * jitter(u, 5)), call: 20 - clamp20(14 + 4 * jitter(u, 5)) },
+    answer: (s, u) => {
+      if (s < 0.45) return null;
+      if (s > 0.8) return { call: clamp20(11 + 4 * jitter(u, 3)), s1: 20 - clamp20(11 + 4 * jitter(u, 3)) };
+      if (s > 0.6) return { call: clamp20(15 + 3 * jitter(u, 4)), fold: 20 - clamp20(15 + 3 * jitter(u, 4)) };
+      return { fold: clamp20(14 + 4 * jitter(u, 5)), call: 20 - clamp20(14 + 4 * jitter(u, 5)) };
+    },
     size: (d, u) => (u % 3 === 0 ? d.max : Math.min(d.max, Math.round(d.min * 1.1 * 10) / 10)),
   },
   {
@@ -158,7 +166,11 @@ const SHOWCASES: Showcase[] = [
     reads: { HJ: { vpip: 30, pfr: 20, agg: 4, general: [{ street: 'river', action: 'raise', lean: 'bluff' }] } },
     author: 3,
     hoursAgo: 20,
-    answer: (s, u) => (s < 0.55 ? null : s > 0.85 ? { call: clamp20(16 + 3 * jitter(u, 6)), fold: 20 - clamp20(16 + 3 * jitter(u, 6)) } : { fold: clamp20(13 + 5 * jitter(u, 7)), call: 20 - clamp20(13 + 5 * jitter(u, 7)) }),
+    answer: (s, u) => {
+      if (s < 0.55) return null;
+      if (s > 0.85) return { call: clamp20(16 + 3 * jitter(u, 6)), fold: 20 - clamp20(16 + 3 * jitter(u, 6)) };
+      return { fold: clamp20(13 + 5 * jitter(u, 7)), call: 20 - clamp20(13 + 5 * jitter(u, 7)) };
+    },
   },
   {
     // 2019 WSOP Main Event の最後のハンド。Ensan（BTN）の Turn の Bet に Sammartino（BB、Hero）が Flush Draw＋Gutshot で Check-Raise All-in。
@@ -178,8 +190,12 @@ const SHOWCASES: Showcase[] = [
     mtt: { speed: 10, prize: 'top', rank: 2, left: 2, entries: 8569, paid: 1286, avg: 64.4 },
     author: 4,
     hoursAgo: 30,
-    answer: (s, u) =>
-      s < 0.25 ? null : s > 0.75 ? { call: clamp20(12 + 4 * jitter(u, 8)), s1: 20 - clamp20(12 + 4 * jitter(u, 8)) } : s > 0.45 ? { call: clamp20(12 + 4 * jitter(u, 9)), s1: clamp20(4 + 2 * jitter(u, 10)) } : { fold: clamp20(14 + 4 * jitter(u, 11)), s1: 20 - clamp20(14 + 4 * jitter(u, 11)) },
+    answer: (s, u) => {
+      if (s < 0.25) return null;
+      if (s > 0.75) return { call: clamp20(12 + 4 * jitter(u, 8)), s1: 20 - clamp20(12 + 4 * jitter(u, 8)) };
+      if (s > 0.45) return { call: clamp20(12 + 4 * jitter(u, 9)), s1: clamp20(4 + 2 * jitter(u, 10)) };
+      return { fold: clamp20(14 + 4 * jitter(u, 11)), s1: 20 - clamp20(14 + 4 * jitter(u, 11)) };
+    },
     size: (d) => d.max,
   },
   {
@@ -201,8 +217,12 @@ const SHOWCASES: Showcase[] = [
     mtt: { speed: 40, prize: 'top', left: 8, entries: 123 },
     author: 5,
     hoursAgo: 44,
-    answer: (s, u) =>
-      s < 0.2 ? null : s > 0.7 ? { call: clamp20(15 + 3 * jitter(u, 12)), s1: 20 - clamp20(15 + 3 * jitter(u, 12)) } : s > 0.45 ? { call: clamp20(12 + 5 * jitter(u, 13)), fold: 20 - clamp20(12 + 5 * jitter(u, 13)) } : { fold: clamp20(16 + 3 * jitter(u, 14)), call: 20 - clamp20(16 + 3 * jitter(u, 14)) },
+    answer: (s, u) => {
+      if (s < 0.2) return null;
+      if (s > 0.7) return { call: clamp20(15 + 3 * jitter(u, 12)), s1: 20 - clamp20(15 + 3 * jitter(u, 12)) };
+      if (s > 0.45) return { call: clamp20(12 + 5 * jitter(u, 13)), fold: 20 - clamp20(12 + 5 * jitter(u, 13)) };
+      return { fold: clamp20(16 + 3 * jitter(u, 14)), call: 20 - clamp20(16 + 3 * jitter(u, 14)) };
+    },
     size: (d, u) => (u % 2 === 0 ? d.max : Math.min(d.max, Math.round(d.min * 1.2 * 10) / 10)),
   },
   {
@@ -225,13 +245,17 @@ const SHOWCASES: Showcase[] = [
     spot: 11,
     author: 6,
     hoursAgo: 60,
-    answer: (s, u) => (s < 0.35 ? null : s > 0.7 ? { s1: clamp20(15 + 3 * jitter(u, 15)), check: 20 - clamp20(15 + 3 * jitter(u, 15)) } : { check: clamp20(13 + 5 * jitter(u, 16)), s1: 20 - clamp20(13 + 5 * jitter(u, 16)) }),
+    answer: (s, u) => {
+      if (s < 0.35) return null;
+      if (s > 0.7) return { s1: clamp20(15 + 3 * jitter(u, 15)), check: 20 - clamp20(15 + 3 * jitter(u, 15)) };
+      return { check: clamp20(13 + 5 * jitter(u, 16)), s1: 20 - clamp20(13 + 5 * jitter(u, 16)) };
+    },
     size: (d, u) => (u % 3 === 0 ? Math.round(d.pot * 0.75 * 10) / 10 : d.max),
   },
 ];
 
 // ---- 本文を作って検証する ----
-const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
+const q = (s: string): string => `'${s.replaceAll("'", "''")}'`;
 const lines: string[] = [];
 lines.push(
   '-- 公開用のサンプル投稿 6 件（`npm run db:showcase -- --branch <ブランチ>`。消すときは `npm run db:sample-clean -- --branch <ブランチ>`）',
@@ -252,29 +276,53 @@ lines.push(
   '',
 );
 
-SHOWCASES.forEach((sc, k) => {
+/** サンプルの下書き（画面の入力と同じ形）。 */
+function draftOf(sc: Showcase): Draft {
   const d: Draft = { ...emptyDraft(), fmt: sc.fmt, players: sc.players, hero: sc.hero, title: sc.title, spotIndex: sc.spot };
   if (sc.sb) d.sb = sc.sb;
   if (sc.ante) d.ante = sc.ante;
   d.rake = sc.rake ?? '';
-  d.stacks = { ...d.stacks, ...(sc.stacks ?? {}) } as Draft['stacks'];
+  d.stacks = { ...d.stacks, ...sc.stacks } as Draft['stacks'];
   d.hands = { ...d.hands, ...sc.hands } as Draft['hands'];
   d.actions = acts(sc.actions);
   d.board = sc.board as Draft['board'];
-  const sub = buildSubmission(d);
-  if (!sub.ok) {
-    // どの検証で落ちたかを出す（画面の文言ではなくコード）
-    let why = '';
-    try {
-      verifyPost(validateInput(submissionBody(d)));
-    } catch (e) {
-      why = `${(e as Error).message} ${JSON.stringify(e)} ${String((e as { detail?: unknown }).detail)}`;
-    }
-    throw new Error(`${sc.title}: ${sub.errors.join(' / ')} ${why}`);
-  }
-  const body = sub.body as Record<string, unknown>;
+  return d;
+}
 
-  // Villain の情報（Spot Read は core の候補から Size を取る）と MTT の情報
+/** どの検証で落ちたか（画面の文言ではなくコード）。 */
+function failureReason(d: Draft): string {
+  try {
+    verifyPost(validateInput(submissionBody(d)));
+  } catch (e) {
+    return `${(e as Error).message} ${JSON.stringify(e)} ${String((e as { detail?: unknown }).detail)}`;
+  }
+  return '';
+}
+
+/** 1 席分の Read（Spot Read は core の候補から Size を取る）。 */
+function readEntries(
+  sc: Showcase,
+  pos: string,
+  { spot, general }: Pick<SeatSpec, 'spot' | 'general'>,
+  cands: ReturnType<typeof readCandidates>,
+): Record<string, unknown>[] {
+  const entries: Record<string, unknown>[] = [];
+  if (spot) {
+    const c = [...cands].reverse().find((x) => x.pos === pos && x.street === spot.street && x.action === spot.action);
+    if (!c) {
+      const list = cands.map((x) => `${x.pos}:${x.street}:${x.action}`).join(', ');
+      throw new Error(`${sc.title}: ${pos} の Spot Read の候補が無い（${list}）`);
+    }
+    entries.push({ scope: 'spot', street: c.street, action: c.action, texture: null, runout: null, size: c.size, lean: spot.lean, strong: spot.strong ?? false });
+  }
+  for (const g of general ?? []) {
+    entries.push({ scope: 'general', street: g.street, action: g.action, texture: g.texture ?? null, runout: g.runout ?? null, size: g.size ?? null, lean: g.lean, strong: g.strong ?? false });
+  }
+  return entries;
+}
+
+/** Villain の情報（席ごと）。 */
+function villainReadsOf(sc: Showcase, d: Draft): Record<string, unknown> {
   const setup = parseSettings(d).setup;
   if (!setup) throw new Error(`${sc.title}: 設定`);
   const seats = villainSeats(setup, d.actions, sc.hero);
@@ -283,18 +331,35 @@ SHOWCASES.forEach((sc, k) => {
   for (const [pos, spec] of Object.entries(sc.reads ?? {})) {
     if (!seats.includes(pos as Pos)) throw new Error(`${sc.title}: ${pos} は登録できない席（${seats.join(',')}）`);
     const { spot, general, ...tendency } = spec as SeatSpec;
-    const entries: Record<string, unknown>[] = [];
-    if (spot) {
-      const c = [...cands].reverse().find((x) => x.pos === pos && x.street === spot.street && x.action === spot.action);
-      if (!c) throw new Error(`${sc.title}: ${pos} の Spot Read の候補が無い（${cands.map((x) => `${x.pos}:${x.street}:${x.action}`).join(', ')}）`);
-      entries.push({ scope: 'spot', street: c.street, action: c.action, texture: null, runout: null, size: c.size, lean: spot.lean, strong: spot.strong ?? false });
-    }
-    for (const g of general ?? []) {
-      entries.push({ scope: 'general', street: g.street, action: g.action, texture: g.texture ?? null, runout: g.runout ?? null, size: g.size ?? null, lean: g.lean, strong: g.strong ?? false });
-    }
+    const entries = readEntries(sc, pos, { spot, general }, cands);
     reads[pos] = { ...tendency, ...(entries.length > 0 ? { reads: entries } : {}) };
   }
-  body.villain_reads = reads;
+  return reads;
+}
+
+/** 回答者 `u` の塗り（強さに応じた混合。合法でないキーは落とす）。 */
+function paintOf(sc: Showcase, keys: readonly AnswerKey[], u: number): ReturnType<typeof emptyPaint> {
+  const paint = emptyPaint();
+  for (let idx = 0; idx < CELL_COUNT; idx++) {
+    const s = strengthOf(labelOf(idx)) + jitter(u, idx) * 0.03;
+    const m = sc.answer(s, u);
+    if (!m) continue;
+    const allowed: Partial<Record<AnswerKey, number>> = {};
+    for (const [key, val] of Object.entries(m)) if (keys.includes(key as AnswerKey)) allowed[key as AnswerKey] = val;
+    if (Object.keys(allowed).length === 0) continue;
+    paint[idx] = mix(allowed);
+  }
+  return paint;
+}
+
+SHOWCASES.forEach((sc, k) => {
+  const d = draftOf(sc);
+  const sub = buildSubmission(d);
+  if (!sub.ok) throw new Error(`${sc.title}: ${sub.errors.join(' / ')} ${failureReason(d)}`);
+  const body = sub.body as Record<string, unknown>;
+
+  // Villain の情報と MTT の情報
+  body.villain_reads = villainReadsOf(sc, d);
   if (sc.mtt) body.mtt = sc.mtt;
 
   const v = verifyPost(validateInput(body));
@@ -304,29 +369,22 @@ SHOWCASES.forEach((sc, k) => {
   const min = payload.min_to ?? 0;
   const max = payload.max_to ?? 0;
 
-  lines.push(`-- ${k + 1}. ${sc.title}（${sc.fmt}・${sc.players} 人・Hero ${sc.hero}・${der.street}・${payload.keys.join('/')}）`);
-  lines.push(`insert into showcase_posts select ${k}, public.insert_post('${USER(sc.author)}'::uuid, ${q(JSON.stringify(payload))}::jsonb);`);
+  lines.push(
+    `-- ${k + 1}. ${sc.title}（${sc.fmt}・${sc.players} 人・Hero ${sc.hero}・${der.street}・${payload.keys.join('/')}）`,
+    `insert into showcase_posts select ${k}, public.insert_post('${USER(sc.author)}'::uuid, ${q(JSON.stringify(payload))}::jsonb);`,
+  );
 
   // 回答（投稿者以外の試験用ユーザー 6〜7 人と、投稿者本人）
   const keys = payload.keys as AnswerKey[];
   for (let u = 1; u <= 8; u++) {
     if ((u + k) % 5 === 0) continue; // 回答数をばらつかせる
-    const paint = emptyPaint();
-    for (let idx = 0; idx < CELL_COUNT; idx++) {
-      const s = strengthOf(labelOf(idx)) + jitter(u, idx) * 0.03;
-      const m = sc.answer(s, u);
-      if (!m) continue;
-      const allowed: Partial<Record<AnswerKey, number>> = {};
-      for (const [key, val] of Object.entries(m)) if (keys.includes(key as AnswerKey)) allowed[key as AnswerKey] = val;
-      if (Object.keys(allowed).length === 0) continue;
-      paint[idx] = mix(allowed);
-    }
+    const paint = paintOf(sc, keys, u);
     const usesS1 = paint.some((m) => m !== null && m.s1 > 0);
     const size = usesS1 && sc.size ? Math.max(min, Math.min(max, sc.size({ pot, min, max }, u))) : null;
     const hex = Buffer.from(encodePaint(paint)).toString('hex');
     lines.push(
       `select set_config('request.jwt.claims', json_build_object('sub', '${USER(u)}', 'role', 'authenticated')::text, true);`,
-      `insert into public.answers (post_id, paint, size) select id, decode('${hex}', 'hex'), ${size === null ? 'null' : size} from showcase_posts where k = ${k};`,
+      `insert into public.answers (post_id, paint, size) select id, decode('${hex}', 'hex'), ${size ?? 'null'} from showcase_posts where k = ${k};`,
     );
   }
   lines.push('');

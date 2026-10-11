@@ -1,6 +1,7 @@
 import { isCard, POSITIONS, PLAYER_COUNTS, TITLE_MAX, type Pos } from '@wwyd/core';
 import { useSyncExternalStore } from 'react';
 import { cardText } from '../components/PlayingCard.tsx';
+import { localId } from '../randomId.ts';
 import { handCards } from './cardInput.ts';
 import { sanitizeMtt, sanitizeReads } from '../reads/readsModel.ts';
 import { emptyDraft, normalizeSpot, parseSettings, phaseOf, settleActions, STREET_NAME, type Draft } from './draft.ts';
@@ -94,7 +95,8 @@ export function readDrafts(uid: string, store: KeyValue | null = browserStorage(
     if (!isRecord(e) || typeof e.id !== 'string' || typeof e.savedAt !== 'string') continue;
     out.push({ id: e.id, savedAt: e.savedAt, draft: sanitizeDraft(e.draft) });
   }
-  return out.sort((a, b) => b.savedAt.localeCompare(a.savedAt)).slice(0, MAX_DRAFTS);
+  out.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  return out.slice(0, MAX_DRAFTS);
 }
 
 function write(uid: string, list: readonly SavedDraft[], store: KeyValue | null): boolean {
@@ -145,7 +147,7 @@ export function clearDrafts(uid: string, store: KeyValue | null = browserStorage
 }
 
 function newDraftId(now: Date): string {
-  return `${now.getTime().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  return localId(now.getTime());
 }
 
 // ---- 表示 ----
@@ -155,7 +157,8 @@ export function draftSummary(d: Draft): { title: string; meta: string } {
   const parts: string[] = [];
   if (d.players !== null) parts.push(`${d.players} 人`);
   const cards = handCards(d.hands[d.hero]);
-  parts.push(`Hero ${d.hero}${cards.length === 2 ? ` ${cards.map(cardText).join('')}` : ''}`);
+  const hand = cards.length === 2 ? ' ' + cards.map(cardText).join('') : '';
+  parts.push(`Hero ${d.hero}${hand}`);
   const street = reachedStreet(d);
   if (street) parts.push(street);
   if (d.actions.length > 0) parts.push(`${d.actions.length} Action`);
@@ -214,7 +217,7 @@ export function useSavedDrafts(): SavedDraft[] {
     const uid = activeUid;
     if (!uid) return EMPTY;
     const c = cache.get(uid);
-    if (c && c.version === version) return c.list;
+    if (c?.version === version) return c.list;
     const list = readDrafts(uid);
     cache.set(uid, { version, list });
     return list;

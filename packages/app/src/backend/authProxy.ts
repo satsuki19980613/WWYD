@@ -20,9 +20,16 @@ export const NEON_AUTH_COOKIE = /^(__Secure-|__Host-)?neon-?auth\./;
 /** 自サイトの中継の入口 */
 export const AUTH_PROXY_PREFIX = '/api/auth';
 
+/** 末尾の `/` をすべて除く（正規表現の後戻りで遅くならないよう、文字を後ろから見る） */
+export function trimTrailingSlashes(s: string): string {
+  let end = s.length;
+  while (end > 0 && s[end - 1] === '/') end--;
+  return s.slice(0, end);
+}
+
 /** 中継してよい API か（`get-session` など。前後の `/` は無視） */
 export function isProxiedPath(path: string): boolean {
-  return PROXIED_PATHS.includes(path.replace(/^\/+|\/+$/g, ''));
+  return PROXIED_PATHS.includes(trimTrailingSlashes(path.replace(/^\/+/, '')));
 }
 
 /**
@@ -56,7 +63,7 @@ const DROP_REQUEST = new Set(['host', 'cookie', 'content-length', 'connection', 
 /** 自サイトへの要求を、Neon Auth（`upstream` は VITE_NEON_AUTH_URL と同じ形）への要求に作り直す */
 export async function toUpstream(req: Request, upstream: string, path: string): Promise<Request> {
   const url = new URL(req.url);
-  const target = `${upstream.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}${url.search}`;
+  const target = `${trimTrailingSlashes(upstream)}/${path.replace(/^\/+/, '')}${url.search}`;
   const headers = new Headers();
   req.headers.forEach((v, k) => {
     if (!DROP_REQUEST.has(k.toLowerCase())) headers.set(k, v);

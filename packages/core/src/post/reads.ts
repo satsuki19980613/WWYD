@@ -118,6 +118,47 @@ const oneOf = <T extends string>(v: unknown, all: readonly T[]): v is T => typeo
 
 const ENTRY_KEYS = ['scope', 'street', 'action', 'texture', 'runout', 'size', 'lean', 'strong'] as const;
 
+/** Flop texture の形の検証（軸ごとに 0〜1 つ。全軸が未入力なら null） */
+function parseTexture(t: unknown, at: string): Texture | null {
+  if (t === undefined || t === null) return null;
+  if (!isObj(t)) fail('malformed', undefined, `${at}.texture`);
+  const out: Record<string, string> = {};
+  for (const k of TEXTURE_KEYS) {
+    const x = t[k];
+    if (x === undefined) continue;
+    if (!oneOf(x, TEXTURE_AXES[k])) fail('malformed', undefined, `${at}.texture.${k}`);
+    out[k] = x;
+  }
+  if (Object.keys(t).some((k) => !(TEXTURE_KEYS as string[]).includes(k))) fail('malformed', undefined, `${at}.texture`);
+  return Object.keys(out).length > 0 ? (out as Texture) : null;
+}
+
+/** Runout の形の検証（重複なし。並びは RUNOUTS の順に揃える。空なら null） */
+function parseRunout(r: unknown, at: string): Runout[] | null {
+  if (r === undefined || r === null) return null;
+  if (!Array.isArray(r) || !r.every((x) => oneOf(x, RUNOUTS)) || new Set(r).size !== r.length) fail('malformed', undefined, `${at}.runout`);
+  return r.length > 0 ? RUNOUTS.filter((x) => r.includes(x)) : null;
+}
+
+function parseSize(v: unknown, at: string): ReadSize | null {
+  if (v === undefined || v === null) return null;
+  if (!oneOf(v, READ_SIZES)) fail('malformed', undefined, `${at}.size`);
+  return v;
+}
+
+/** Read 1 件の組み合わせ（表 2 枚と条件の決まり）の検証 */
+function checkEntryCombination(e: ReadEntry, at: string): void {
+  const { scope, street, action, texture, runout, size, lean } = e;
+  if (!STREET_ACTIONS[street].includes(action)) fail('invalid_reads', undefined, `${at}: ${street} に ${action} は無い`);
+  if (!leansOf(action).includes(lean)) fail('invalid_reads', undefined, `${at}: ${action} に ${lean} は選べない`);
+  if (texture && street === 'pf') fail('invalid_reads', undefined, `${at}: Preflop に texture`);
+  if (runout && street !== 'turn' && street !== 'river') fail('invalid_reads', undefined, `${at}: runout は Turn・River だけ`);
+  if (runout && runoutConflicts(runout)) fail('invalid_reads', undefined, `${at}: Brick とほかの Runout`);
+  if (size && (!AGGRESSIVE_ACTIONS.includes(action) || !sizesOf(street).includes(size))) fail('invalid_reads', undefined, `${at}: size`);
+  // Spot Read は Board を入れない（実際の Board が画面にある）
+  if (scope === 'spot' && (texture || runout)) fail('invalid_reads', undefined, `${at}: Spot Read に条件`);
+}
+
 /** Read 1 件の検証（形は malformed、Street・Action・Lean・条件の組み合わせは invalid_reads） */
 function validateEntry(v: unknown, at: string): ReadEntry {
   if (!isObj(v)) fail('malformed', undefined, at);
@@ -128,43 +169,51 @@ function validateEntry(v: unknown, at: string): ReadEntry {
   if (!oneOf(action, READ_ACTIONS)) fail('malformed', undefined, `${at}.action`);
   if (!oneOf(lean, LEANS)) fail('malformed', undefined, `${at}.lean`);
   if (typeof strong !== 'boolean') fail('malformed', undefined, `${at}.strong`);
+  const texture = parseTexture(v.texture, at);
+  const runout = parseRunout(v.runout, at);
+  const size = parseSize(v.size, at);
+  const entry: ReadEntry = { scope, street, action, texture, runout, size, lean, strong };
+  checkEntryCombination(entry, at);
+  return entry;
+}
 
-  let texture: Texture | null = null;
-  if (v.texture !== undefined && v.texture !== null) {
-    const t = v.texture;
-    if (!isObj(t)) fail('malformed', undefined, `${at}.texture`);
-    const out: Record<string, string> = {};
-    for (const k of TEXTURE_KEYS) {
-      const x = t[k];
-      if (x === undefined) continue;
-      if (!oneOf(x, TEXTURE_AXES[k])) fail('malformed', undefined, `${at}.texture.${k}`);
-      out[k] = x;
+/** 1 席分の Read の一覧の検証（件数の上限。Spot Read を先に並べる。空なら undefined） */
+function parseReadEntries(x: unknown, at: string): ReadEntry[] | undefined {
+  if (!Array.isArray(x)) fail('malformed', undefined, `${at}.reads`);
+  const entries = x.map((e, i) => validateEntry(e, `${at}.reads[${i}]`));
+  const spot = entries.filter((e) => e.scope === 'spot');
+  const general = entries.filter((e) => e.scope === 'general');
+  if (spot.length > SPOT_READ_MAX) fail('invalid_reads', undefined, `${at}: Spot Read が多い`);
+  if (general.length > GENERAL_READ_MAX) fail('invalid_reads', undefined, `${at}: General Read が多い`);
+  return entries.length > 0 ? [...spot, ...general] : undefined;
+}
+
+/** 全体の傾向の 1 項目の検証 */
+function parseTendency(k: string, x: unknown, at: string): number {
+  if (!(TENDENCY_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `${at}.${k}`);
+  if (typeof x !== 'number' || !Number.isInteger(x)) fail('malformed', undefined, `${at}.${k}`);
+  const max = PERCENT_READS.includes(k as TendencyKey) ? PERCENT_MAX : STEP_MAX;
+  if (x < 0 || x > max) fail('invalid_reads', undefined, `${at}.${k}`);
+  return x;
+}
+
+/** 1 席分の情報の検証 */
+function validateSeatRead(v: unknown, at: string): VillainRead {
+  if (!isObj(v)) fail('malformed', undefined, at);
+  const read: VillainRead = {};
+  for (const [k, x] of Object.entries(v)) {
+    if (k === 'reads') {
+      const entries = parseReadEntries(x, at);
+      if (entries) read.reads = entries;
+    } else {
+      read[k as TendencyKey] = parseTendency(k, x, at);
     }
-    if (Object.keys(t).some((k) => !(TEXTURE_KEYS as string[]).includes(k))) fail('malformed', undefined, `${at}.texture`);
-    if (Object.keys(out).length > 0) texture = out as Texture;
   }
-  let runout: Runout[] | null = null;
-  if (v.runout !== undefined && v.runout !== null) {
-    const r = v.runout;
-    if (!Array.isArray(r) || !r.every((x) => oneOf(x, RUNOUTS)) || new Set(r).size !== r.length) fail('malformed', undefined, `${at}.runout`);
-    if (r.length > 0) runout = RUNOUTS.filter((x) => r.includes(x));
+  // PFR は VPIP を超えない（両方あるときだけ）
+  if (read.vpip !== undefined && read.pfr !== undefined && read.pfr > read.vpip) {
+    fail('invalid_reads', undefined, `${at} の PFR が VPIP を超える`);
   }
-  let size: ReadSize | null = null;
-  if (v.size !== undefined && v.size !== null) {
-    if (!oneOf(v.size, READ_SIZES)) fail('malformed', undefined, `${at}.size`);
-    size = v.size;
-  }
-
-  // 組み合わせ（表 2 枚と条件の決まり）
-  if (!STREET_ACTIONS[street].includes(action)) fail('invalid_reads', undefined, `${at}: ${street} に ${action} は無い`);
-  if (!leansOf(action).includes(lean)) fail('invalid_reads', undefined, `${at}: ${action} に ${lean} は選べない`);
-  if (texture && street === 'pf') fail('invalid_reads', undefined, `${at}: Preflop に texture`);
-  if (runout && street !== 'turn' && street !== 'river') fail('invalid_reads', undefined, `${at}: runout は Turn・River だけ`);
-  if (runout && runoutConflicts(runout)) fail('invalid_reads', undefined, `${at}: Brick とほかの Runout`);
-  if (size && (!AGGRESSIVE_ACTIONS.includes(action) || !sizesOf(street).includes(size))) fail('invalid_reads', undefined, `${at}: size`);
-  // Spot Read は Board を入れない（実際の Board が画面にある）
-  if (scope === 'spot' && (texture || runout)) fail('invalid_reads', undefined, `${at}: Spot Read に条件`);
-  return { scope, street, action, texture, runout, size, lean, strong };
+  return read;
 }
 
 /**
@@ -179,29 +228,7 @@ export function validateReads(raw: unknown, seats: readonly Pos[], hero: Pos): V
   for (const [seat, v] of Object.entries(raw)) {
     const at = `villain_reads.${seat}`;
     if (!isPos(seat) || !seats.includes(seat) || seat === hero) fail('malformed', undefined, at);
-    if (!isObj(v)) fail('malformed', undefined, at);
-    const read: VillainRead = {};
-    for (const [k, x] of Object.entries(v)) {
-      if (k === 'reads') {
-        if (!Array.isArray(x)) fail('malformed', undefined, `${at}.reads`);
-        const entries = x.map((e, i) => validateEntry(e, `${at}.reads[${i}]`));
-        if (entries.filter((e) => e.scope === 'spot').length > SPOT_READ_MAX) fail('invalid_reads', undefined, `${at}: Spot Read が多い`);
-        if (entries.filter((e) => e.scope === 'general').length > GENERAL_READ_MAX) fail('invalid_reads', undefined, `${at}: General Read が多い`);
-        // Spot Read を先に
-        if (entries.length > 0) read.reads = [...entries.filter((e) => e.scope === 'spot'), ...entries.filter((e) => e.scope === 'general')];
-        continue;
-      }
-      if (!(TENDENCY_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `${at}.${k}`);
-      const key = k as TendencyKey;
-      if (typeof x !== 'number' || !Number.isInteger(x)) fail('malformed', undefined, `${at}.${k}`);
-      const max = PERCENT_READS.includes(key) ? PERCENT_MAX : STEP_MAX;
-      if (x < 0 || x > max) fail('invalid_reads', undefined, `${at}.${k}`);
-      read[key] = x;
-    }
-    // PFR は VPIP を超えない（両方あるときだけ）
-    if (read.vpip !== undefined && read.pfr !== undefined && read.pfr > read.vpip) {
-      fail('invalid_reads', undefined, `${at} の PFR が VPIP を超える`);
-    }
+    const read = validateSeatRead(v, at);
     if (Object.keys(read).length > 0) out[seat] = read;
   }
   return out;
@@ -226,6 +253,41 @@ export function verifyReads(reads: VillainReads, setup: HandSetup, actions: read
 
 const MTT_KEYS = ['speed', 'rank', 'left', 'paid', 'entries', 'avg', 'prize'] as const;
 
+/** 整数の項目（範囲外は invalid_mtt） */
+function mttInt(v: unknown, k: string, min: number, max: number): number {
+  if (typeof v !== 'number' || !Number.isInteger(v)) fail('malformed', undefined, `mtt.${k}`);
+  if (v < min || v > max) fail('invalid_mtt', undefined, `mtt.${k}`);
+  return v;
+}
+
+/** 平均スタック（bb） */
+function mttAvg(v: unknown): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) fail('malformed', undefined, 'mtt.avg');
+  // 0.1 以上、小数第 1 位まで。浮動小数の誤差（0.1 + 0.2）は許すが、許容は値の大きさに比例させる
+  // （絶対の許容 1e-9 だと 1e-10・12.3 + 1e-11 が通っていた。villain-reads-test V-021）
+  if (v < 0.1 || v > MTT_AVG_MAX || Math.abs(v * 10 - Math.round(v * 10)) > 16 * Number.EPSILON * v * 10) fail('invalid_mtt', undefined, 'mtt.avg');
+  return v;
+}
+
+/** MTT の情報の 1 項目を検証して `out` に入れる */
+function setMttField(out: MttInfo, k: string, v: unknown): void {
+  if (!(MTT_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `mtt.${k}`);
+  switch (k) {
+    case 'speed':
+      out.speed = mttInt(v, k, 0, SPEED_MAX);
+      break;
+    case 'prize':
+      if (!(PRIZE_STRUCTURES as readonly unknown[]).includes(v)) fail('malformed', undefined, 'mtt.prize');
+      out.prize = v as PrizeStructure;
+      break;
+    case 'avg':
+      out.avg = mttAvg(v);
+      break;
+    default:
+      out[k as 'rank' | 'left' | 'paid' | 'entries'] = mttInt(v, k, 1, MTT_COUNT_MAX);
+  }
+}
+
 /**
  * MTT の情報の検証。Game Type が MTT のときだけ持てる（Cash で送られたら invalid_mtt）。
  * 省略（undefined・null）・中身の無いオブジェクトは null。
@@ -234,33 +296,7 @@ export function validateMtt(raw: unknown, fmt: Fmt): MttInfo | null {
   if (raw === undefined || raw === null) return null;
   if (!isObj(raw)) fail('malformed', undefined, 'mtt');
   const out: MttInfo = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if (!(MTT_KEYS as readonly string[]).includes(k)) fail('malformed', undefined, `mtt.${k}`);
-    switch (k) {
-      case 'speed':
-        if (typeof v !== 'number' || !Number.isInteger(v)) fail('malformed', undefined, 'mtt.speed');
-        if (v < 0 || v > SPEED_MAX) fail('invalid_mtt', undefined, 'mtt.speed');
-        out.speed = v;
-        break;
-      case 'prize':
-        if (!(PRIZE_STRUCTURES as readonly unknown[]).includes(v)) fail('malformed', undefined, 'mtt.prize');
-        out.prize = v as PrizeStructure;
-        break;
-      case 'avg':
-        if (typeof v !== 'number' || !Number.isFinite(v)) fail('malformed', undefined, 'mtt.avg');
-        // 0.1 以上、小数第 1 位まで。浮動小数の誤差（0.1 + 0.2）は許すが、許容は値の大きさに比例させる
-        // （絶対の許容 1e-9 だと 1e-10・12.3 + 1e-11 が通っていた。villain-reads-test V-021）
-        if (v < 0.1 || v > MTT_AVG_MAX || Math.abs(v * 10 - Math.round(v * 10)) > 16 * Number.EPSILON * v * 10) fail('invalid_mtt', undefined, 'mtt.avg');
-        out.avg = v;
-        break;
-      default: {
-        const key = k as 'rank' | 'left' | 'paid' | 'entries';
-        if (typeof v !== 'number' || !Number.isInteger(v)) fail('malformed', undefined, `mtt.${k}`);
-        if (v < 1 || v > MTT_COUNT_MAX) fail('invalid_mtt', undefined, `mtt.${k}`);
-        out[key] = v;
-      }
-    }
-  }
+  for (const [k, v] of Object.entries(raw)) setMttField(out, k, v);
   if (Object.keys(out).length === 0) return null;
   if (fmt !== 'mtt') fail('invalid_mtt', undefined, 'Cash に MTT の情報');
   // 順位 ≦ 残り人数 ≦ エントリー数、入賞枠 ≦ エントリー数

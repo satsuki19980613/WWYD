@@ -50,16 +50,16 @@ export function decodePaint(bytes: Uint8Array): Paint {
 
 /** PostgREST の bytea 形式（`\x` ＋ 小文字 hex）。 */
 export function toHex(bytes: Uint8Array): string {
-  let s = '\\x';
+  let s = String.raw`\x`;
   for (const b of bytes) s += b.toString(16).padStart(2, '0');
   return s;
 }
 
 export function fromHex(s: string): Uint8Array {
-  if (!s.startsWith('\\x') || (s.length - 2) % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(s.slice(2))) {
+  if (!s.startsWith(String.raw`\x`) || (s.length - 2) % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(s.slice(2))) {
     throw new Error('bytea の 16 進文字列でない');
   }
   const out = new Uint8Array((s.length - 2) / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.slice(2 + i * 2, 4 + i * 2), 16);
+  for (let i = 0; i < out.length; i++) out[i] = Number.parseInt(s.slice(2 + i * 2, 4 + i * 2), 16);
   return out;
 }

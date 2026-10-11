@@ -22,29 +22,38 @@ export type RouteName = Route['name'];
 /** スポット ID に使える文字（UUID 等）。それ以外は 404 にする。 */
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
+/** ID を持たない画面のパス */
+type FixedName = 'list' | 'new' | 'drafts' | 'terms' | 'privacy';
+const FIXED_ROUTES: ReadonlyMap<string, FixedName> = new Map<string, FixedName>([
+  ['', 'list'],
+  ['/', 'list'],
+  ['/new', 'new'],
+  ['/drafts', 'drafts'],
+  ['/terms', 'terms'],
+  ['/privacy', 'privacy'],
+]);
+
 /**
  * パスを画面に対応づける。末尾のスラッシュは 1 つだけ許す（`/new/` → 投稿）。
  * `devUi` は開発時だけ（本番ビルドでは `allowDev = false` で 404）。
  */
 export function parseRoute(pathname: string, allowDev = false): Route {
   const path = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-  if (path === '' || path === '/') return { name: 'list' };
-  if (path === '/new') return { name: 'new' };
-  if (path === '/drafts') return { name: 'drafts' };
-  if (path === '/terms') return { name: 'terms' };
-  if (path === '/privacy') return { name: 'privacy' };
+  const fixed = FIXED_ROUTES.get(path);
+  if (fixed) return { name: fixed };
   if (allowDev && path === '/_dev/ui') return { name: 'devUi' };
+  return spotRoute(path) ?? { name: 'notFound' };
+}
 
+/** スポットの画面（`/s/:id`・`/s/:id/answer`・`/s/:id/result`）。当たらなければ null */
+function spotRoute(path: string): Route | null {
   const m = /^\/s\/([^/]+)(?:\/(answer|result))?$/.exec(path);
-  if (m) {
-    const id = safeDecode(m[1] ?? '');
-    if (id !== null && ID_PATTERN.test(id)) {
-      if (m[2] === 'answer') return { name: 'answer', id };
-      if (m[2] === 'result') return { name: 'result', id };
-      return { name: 'spot', id };
-    }
-  }
-  return { name: 'notFound' };
+  if (!m) return null;
+  const id = safeDecode(m[1] ?? '');
+  if (id === null || !ID_PATTERN.test(id)) return null;
+  if (m[2] === 'answer') return { name: 'answer', id };
+  if (m[2] === 'result') return { name: 'result', id };
+  return { name: 'spot', id };
 }
 
 function safeDecode(s: string): string | null {

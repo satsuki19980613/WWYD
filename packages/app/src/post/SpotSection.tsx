@@ -8,11 +8,11 @@ function clampTitle(v: string): string {
 }
 
 /** スポット（06 章 §3.7）: 出題する Hero の手番（Flop 以降の Hero のアクションの候補）・タイトル。 */
-export function SpotSection(props: {
+export function SpotSection(props: Readonly<{
   draft: Draft;
   onSelectSpot: (index: number) => void;
   onTitle: (title: string) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { draft: d } = props;
   const list = candidates(d);
 
@@ -68,7 +68,7 @@ export function SpotSection(props: {
 }
 
 /** 投稿時のエラーの一覧（PC は右列、スマホは下部バー）。 */
-export function ErrorList(props: { errors: readonly string[] }): JSX.Element | null {
+export function ErrorList(props: Readonly<{ errors: readonly string[] }>): JSX.Element | null {
   if (props.errors.length === 0) return null;
   return (
     <ul className="pf-errors" role="alert">

@@ -8,7 +8,7 @@ import { Select } from '../components/Select.tsx';
 import { Tabs } from '../components/Tabs.tsx';
 import { useLayer } from '../components/useLayer.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
-import { applyCardKey, handCards, type CardKey } from './cardInput.ts';
+import { applyCardKey, handCards } from './cardInput.ts';
 import { CardKeyboard } from './CardKeyboard.tsx';
 import { CardPicker } from './CardPicker.tsx';
 import { HandPicker } from './HandPicker.tsx';
@@ -39,13 +39,13 @@ const WITH_AMOUNT: ReadonlySet<OcrVerb> = new Set(['bet', 'raise', 'allin']);
 
 const parseAmount = (t: string): number | null => (/^\d+(\.\d{1,3})?$/.test(t.trim()) ? Number(t.trim()) : null);
 
-export function OcrReview(props: {
+export function OcrReview(props: Readonly<{
   initial: Review;
   imageUrl: string;
   base: Draft;
   onApply: (draft: Draft) => void;
   onCancel: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const mobile = useIsMobile();
@@ -73,7 +73,7 @@ export function OcrReview(props: {
   };
 
   // 続けて速く押されても取りこぼさないよう、最新の状態に対して適用する
-  const onKey = (key: CardKey): void => {
+  const onKey = (key: string): void => {
     if (!seat) return;
     setHands((cur) => {
       const s = new Set<Card>(board);

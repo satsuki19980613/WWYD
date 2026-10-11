@@ -17,7 +17,7 @@ export function useToast(): ShowToast {
   return useContext(ToastContext);
 }
 
-export function ToastProvider(props: { children: ReactNode }): JSX.Element {
+export function ToastProvider(props: Readonly<{ children: ReactNode }>): JSX.Element {
   const [toast, setToast] = useState<ToastItem | null>(null);
   const seq = useRef(0);
 
@@ -36,13 +36,14 @@ export function ToastProvider(props: { children: ReactNode }): JSX.Element {
     <ToastContext.Provider value={show}>
       {props.children}
       {/* 読み上げの領域は常に置いておき、中身だけ差し替える（出現と同時に読み上げさせるため） */}
-      <div className="toast-wrap" role={toast?.kind === 'error' ? 'alert' : 'status'} aria-live="polite">
+      {/* output は既定で status。エラーのときだけ alert にする。トーストは押すと消える */}
+      <output className="toast-wrap" role={toast?.kind === 'error' ? 'alert' : undefined} aria-live="polite">
         {toast && (
-          <div key={toast.id} className={`toast ${toast.kind === 'error' ? 'err' : ''}`} onClick={() => setToast(null)}>
+          <button key={toast.id} type="button" className={`toast ${toast.kind === 'error' ? 'err' : ''}`} onClick={() => setToast(null)}>
             {toast.message}
-          </div>
+          </button>
         )}
-      </div>
+      </output>
     </ToastContext.Provider>
   );
 }

@@ -11,7 +11,7 @@ import { applyCardKey, handCards, keyFromKeyboard, pickCard } from './cardInput.
  * 2 枚そろうと次の空の席へ進む（`onFilled`）。パソコンのキーでも打てる（`A` `s` の順。Backspace で 1 文字、Delete で全部消す）。
  * ← → で前後の席、Enter で閉じる。
  */
-export function HandPicker(props: {
+export function HandPicker(props: Readonly<{
   seat: string;
   hand: string;
   /** ほかの席のハンドとボードの札 */
@@ -24,7 +24,7 @@ export function HandPicker(props: {
   onPrev: () => void;
   onNext: () => void;
   onClose: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   const selected = handCards(props.hand);
   const live = useRef(props);
   live.current = props;

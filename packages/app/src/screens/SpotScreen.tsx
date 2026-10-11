@@ -13,7 +13,7 @@ export type SpotView = 'spot' | 'answer' | 'result';
  * 投稿者も自分の投稿に回答する回答者の 1 人なので、同じ振り分け（2026-09-28）。
  * 画面を切り替えても同じ部品のまま（読み込み直さない）。
  */
-export function SpotScreen(props: { id: string; view: SpotView }): JSX.Element {
+export function SpotScreen(props: Readonly<{ id: string; view: SpotView }>): JSX.Element {
   const { id, view } = props;
   const { state, reload } = usePostDetail(id);
   const target = state.status === 'ready' ? targetView(state.detail.viewer === 'answered' || state.detail.myAnswer !== null) : null;

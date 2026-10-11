@@ -6,7 +6,7 @@ import { Link } from '../components/Link.tsx';
  * 画面に説明文を出さない規則（CLAUDE.md 不変条件 1）の例外として決めたもの。
  * ログイン処理（`signInWithOAuth`）は P3（T-304）で渡す。渡されていない間は押せない。
  */
-export function LoginScreen(props: { onLogin?: () => void; busy?: boolean; failed?: boolean; expired?: boolean }): JSX.Element {
+export function LoginScreen(props: Readonly<{ onLogin?: () => void; busy?: boolean; failed?: boolean; expired?: boolean }>): JSX.Element {
   return (
     <section className="login">
       <h1 className="login-name">WWYD</h1>

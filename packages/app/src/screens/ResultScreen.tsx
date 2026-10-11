@@ -48,7 +48,7 @@ const MOBILE_TABS: readonly { value: MobileTab; label: string }[] = [
  * 集計は答え合わせ（Hero の実際のアクションとハンド）を先頭に置き、全体と自分のレンジを並べて比べる（14 章）。
  * 最後に「次のスポット」（未回答の新着）へ進める。
  */
-export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
+export function ResultScreen(props: Readonly<{ detail: PostDetail }>): JSX.Element {
   const { detail: d } = props;
   const { post } = d;
   const mobile = useIsMobile();
@@ -191,7 +191,7 @@ export function ResultScreen(props: { detail: PostDetail }): JSX.Element {
 }
 
 /** 選んだマスの内訳（06 章 §5.2）。 */
-function BreakdownPanel(props: { detail: PostDetail; view: ResultView; idx: number }): JSX.Element {
+function BreakdownPanel(props: Readonly<{ detail: PostDetail; view: ResultView; idx: number }>): JSX.Element {
   const b = breakdown(props.detail, props.view, props.idx);
   const keys = props.detail.post.keys;
   const shares = cellShares(props.detail, props.idx);
@@ -233,7 +233,7 @@ function BreakdownPanel(props: { detail: PostDetail; view: ResultView; idx: numb
 }
 
 /** マスの割合の細いバー（全体 / 自分。空きはレンジに入れなかった割合） */
-function MiniBar(props: { label: string; keys: readonly AnswerKey[]; shares: Shares }): JSX.Element {
+function MiniBar(props: Readonly<{ label: string; keys: readonly AnswerKey[]; shares: Shares }>): JSX.Element {
   return (
     <div className="res-bar">
       <span className="res-bar-lbl">{props.label}</span>
@@ -247,7 +247,7 @@ function MiniBar(props: { label: string; keys: readonly AnswerKey[]; shares: Sha
 }
 
 /** Hero の実際のアクションとハンド（答え合わせ。06 章 §5.3） */
-function ActualBox(props: { detail: PostDetail }): JSX.Element {
+function ActualBox(props: Readonly<{ detail: PostDetail }>): JSX.Element {
   const { detail: d } = props;
   const a = actualAction(d);
   const h = heroHand(d);
@@ -260,7 +260,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
         <b className="res-actual-name">{a ? actionText(a) : '—'}</b>
       </div>
       <div className="res-actual-hand">
-        {h && h.length === 2 ? (
+        {h?.length === 2 ? (
           <>
             {h.map((c) => (
               <PlayingCard key={c} card={c} size="sm" />
@@ -276,7 +276,7 @@ function ActualBox(props: { detail: PostDetail }): JSX.Element {
 }
 
 /** 操作（06 章 §5.5）: 自分の投稿は「削除」、他人の投稿は管理者だけ「削除」。 */
-function Operations(props: { detail: PostDetail }): JSX.Element | null {
+function Operations(props: Readonly<{ detail: PostDetail }>): JSX.Element | null {
   const { post } = props.detail;
   const toast = useToast();
   const [deleting, setDeleting] = useState<{ busy: boolean } | null>(null);
@@ -317,16 +317,16 @@ function Operations(props: { detail: PostDetail }): JSX.Element | null {
 }
 
 /** ハンドヒストリーの再生（06 章 §5.4）: 最初から最後まで。初期表示は最後の状態。スマホのログはモーダル（14 章） */
-function ResultReplay(props: {
+function ResultReplay(props: Readonly<{
   detail: PostDetail;
   frames: readonly ResultFrame[];
   c: ReplayControl;
   logInModal: boolean;
   reads: ReturnType<typeof useReadsUi>;
-}): JSX.Element {
+}>): JSX.Element {
   const { detail: d, frames, c } = props;
   const { hand, post } = d;
-  const f = frames[c.step] ?? frames[frames.length - 1];
+  const f = frames[c.step] ?? frames.at(-1);
   if (!f) return <></>;
   const log = (
     <HandLog

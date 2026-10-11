@@ -4,6 +4,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { watchErrors } from '../release/taKit.ts';
+import { animationsDone } from '../settle.ts';
 import { baseHs1bb, noHScroll, openAnswer, openResult, overlaps } from './t3-kit.ts';
 
 const SIZES: [number, number][] = [
@@ -73,7 +74,7 @@ async function checkScreen(page: Page, label: string): Promise<void> {
 async function checkModal(page: Page, label: string): Promise<void> {
   const dlg = page.getByRole('dialog');
   await expect(dlg).toBeVisible();
-  await page.waitForTimeout(450); // 下からせり上がるアニメーションが終わるまで
+  await animationsDone(dlg); // 下からせり上がるアニメーションが終わるまで
   const vp = page.viewportSize() ?? { width: 0, height: 0 };
   const bb = await dlg.boundingBox();
   expect(bb, `${label}: モーダルが見えない`).not.toBeNull();

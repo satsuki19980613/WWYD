@@ -41,6 +41,13 @@ describe('formatBb', () => {
   ])('%s mbb → %s', (mbb, text) => {
     expect(formatBb(mbb)).toBe(text);
   });
+
+  // 末尾の 0 の削り方を、bb の数値の最短の 10 進表記と照合する（-20bb〜20bb の全 mbb と上限付近）
+  it('末尾の 0 を削った表記は bb の数値の 10 進表記と一致する', () => {
+    const values = [9_999_999, -9_999_999, 9_999_990, 9_999_900, 1_000_001];
+    for (let m = -20_000; m <= 20_000; m++) values.push(m);
+    for (const m of values) expect(formatBb(m), `m=${m}`).toBe(String(m / 1000));
+  });
 });
 
 describe('cards', () => {

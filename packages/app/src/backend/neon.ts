@@ -105,7 +105,7 @@ let cachedToken: { token: string; exp: number } | null = null;
 
 function expOf(jwt: string): number {
   try {
-    const payload = JSON.parse(atob((jwt.split('.')[1] ?? '').replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: number };
+    const payload = JSON.parse(atob((jwt.split('.')[1] ?? '').replaceAll('-', '+').replaceAll('_', '/'))) as { exp?: number };
     return (payload.exp ?? 0) * 1000;
   } catch {
     return 0;

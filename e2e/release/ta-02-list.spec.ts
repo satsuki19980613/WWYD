@@ -3,6 +3,7 @@
  * ↑↓ j k Enter、行を押す、削除（確認・やめる）、追加読み込み、空・エラー、経過時間。PC は表、スマホ（@sp）はカード。
  */
 import { expect, test, type Page } from '@playwright/test';
+import { nextFrames } from '../settle.ts';
 import { fakeBackend, fakeList, fulfillJson, DATA, row, watchErrors } from './taKit.ts';
 
 const SP = ' @sp';
@@ -269,7 +270,9 @@ test.describe('A-02 一覧 PC', () => {
     await expect(page.locator('.spot-row')).toHaveCount(40);
     await page.locator('.spot-row').last().scrollIntoViewIfNeeded();
     await expect(page.locator('.spot-row')).toHaveCount(45);
-    await page.waitForTimeout(400);
+    // 最後まで読むと、続きを読む目印（.list-sentinel）と読み込み中の表示が消える（これ以上は読み込まない）
+    await expect(page.locator('.list-sentinel')).toHaveCount(0);
+    await expect(page.locator('.list-more')).toHaveCount(0);
     // 最初の読み込みは開発サーバーの StrictMode で 2 回走ることがある。続きの読み込み（after あり）は 2 回
     const next = l.calls.filter((c) => c.after);
     expect(next).toHaveLength(2);
@@ -313,9 +316,14 @@ test.describe('A-02 一覧 PC', () => {
       return fulfillJson(route, 200, a.p_tab === 'mine' ? mine : all);
     });
     await page.goto('/?tab=mine');
+    // 遅らせた「すべて」の応答（古い応答）が届くところを見る
+    const stale = page.waitForResponse((r) => r.url().endsWith('/rpc/list_posts') && r.request().method() === 'POST' && (r.request().postDataJSON() as { p_tab?: string }).p_tab === 'all');
     await page.getByRole('group', { name: '範囲' }).getByRole('button', { name: 'すべて' }).click();
     await page.getByRole('group', { name: '範囲' }).getByRole('button', { name: '自分の投稿' }).click();
-    await page.waitForTimeout(2000);
+    await expect(page.locator('.spot-link')).toHaveText(['自分の方']);
+    // 古い応答が届いて読み終わり、描画が進んだあとも「自分の投稿」のまま
+    await (await stale).finished();
+    await nextFrames(page);
     await expect(page.locator('.spot-link')).toHaveText(['自分の方']);
   });
 

@@ -6,12 +6,12 @@ import { useLayer, useOutsidePress } from './useLayer.ts';
  * アカウントメニュー（06 章 §0.2）。「利用規約」「プライバシーポリシー」「ログアウト」「アカウントを削除」。
  * ログアウトとアカウント削除は認証（P3）・削除（P8）で処理を渡す。渡されていない間は押せない。
  */
-export function AccountMenu(props: {
+export function AccountMenu(props: Readonly<{
   anchorRef: RefObject<HTMLElement | null>;
   onClose: () => void;
-  onLogout?: (() => void) | undefined;
-  onDeleteAccount?: (() => void) | undefined;
-}): JSX.Element {
+  onLogout?: () => void;
+  onDeleteAccount?: () => void;
+}>): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const close = (): void => {
     props.onClose();
@@ -29,7 +29,8 @@ export function AccountMenu(props: {
     navigate(path);
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+  // 矢印キーは各項目で受ける（メニューを開いている間、フォーカスは常に項目にある）
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>): void => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? []);
     const i = items.indexOf(document.activeElement as HTMLElement);
@@ -39,19 +40,20 @@ export function AccountMenu(props: {
   };
 
   return (
-    <div ref={ref} className="menu" role="menu" aria-label="アカウント" onKeyDown={onKeyDown}>
-      <button type="button" role="menuitem" className="menu-item" onClick={() => go('/terms')}>
+    <div ref={ref} className="menu" role="menu" aria-label="アカウント">
+      <button type="button" role="menuitem" className="menu-item" onKeyDown={onKeyDown} onClick={() => go('/terms')}>
         利用規約
       </button>
-      <button type="button" role="menuitem" className="menu-item" onClick={() => go('/privacy')}>
+      <button type="button" role="menuitem" className="menu-item" onKeyDown={onKeyDown} onClick={() => go('/privacy')}>
         プライバシーポリシー
       </button>
-      <div className="menu-sep" role="separator" />
+      <hr className="menu-sep" />
       <button
         type="button"
         role="menuitem"
         className="menu-item"
         disabled={!props.onLogout}
+        onKeyDown={onKeyDown}
         onClick={() => {
           props.onClose();
           props.onLogout?.();
@@ -64,6 +66,7 @@ export function AccountMenu(props: {
         role="menuitem"
         className="menu-item danger"
         disabled={!props.onDeleteAccount}
+        onKeyDown={onKeyDown}
         onClick={() => {
           // 先にフォーカスをアカウントのボタンへ戻してから確認を開く。確認（Modal）は開いたときのフォーカスを覚えて閉じたときに戻すので、
           // メニューの項目（閉じると消える）のままだと body に落ちる（リリース前テスト F-031）

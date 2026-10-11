@@ -188,8 +188,8 @@
 .rp-btns .btn { font-size: 14px; padding: 8px 4px; }
 .rp-btns .rp-icon svg { width: 22px; height: 22px; }
 .rp-prog { display: flex; align-items: center; gap: var(--s3); }
-.rp-bar { flex: 1; height: 4px; background: var(--surface-3); overflow: hidden; }
-.rp-bar i { display: block; height: 100%; background: var(--cyan); transition: width 200ms var(--ease); }
+.rp-bar { position: relative; flex: 1; height: 4px; background: var(--surface-3); overflow: visible; }
+.rp-bar i { display: block; height: 100%; background: var(--cyan); overflow: hidden; transition: width 200ms var(--ease); }
 .rp-count { flex: none; font-size: 12px; color: var(--dim); }
 
 /* ---- ハンドヒストリー ---- */
@@ -545,14 +545,14 @@
   border-bottom: 1px solid var(--line);
 }
 .ans-panel { display: flex; flex-direction: column; gap: var(--s2); }
-/* スポットの要約（レンジタブの上。押すとリプレイへ） */
+/* スポットの要約（レンジタブの上。押すとリプレイへ）。出題の局面だと分かるよう黄の枠（PC の見出しと同じ。17 章） */
 .spot-strip {
   display: flex;
   align-items: center;
   gap: var(--s3);
   min-height: 40px;
   padding: 4px var(--s2);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(252, 238, 10, 0.4);
   background: var(--surface);
   color: var(--dim);
   font-size: 13px;
@@ -619,14 +619,11 @@
 }
 .ans-bottom > * { width: 100%; max-width: calc(var(--app-w) - 2 * var(--s4)); margin: 0 auto; }
 /* 下部固定のバーは低く保つ（レンジ表の見える範囲を広げる）。凡例は 1 行、「1326 combos」は PC だけ */
-.ans-bottom .cbar { gap: 6px; }
-.ans-bottom .cbar-track { height: 8px; }
-.ans-bottom .cbar-legend { flex-wrap: nowrap; justify-content: space-between; gap: var(--s1); font-size: 10.5px; white-space: nowrap; }
-.ans-bottom .cbar-legend li { gap: 4px; }
 .ans-bottom .cbar { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'size legend' 'track track'; align-items: center; gap: 6px var(--s3); }
 .ans-bottom .cbar-top { grid-area: size; }
-.ans-bottom .cbar-track { grid-area: track; }
-.ans-bottom .cbar-legend { grid-area: legend; justify-content: flex-end; gap: var(--s3); }
+.ans-bottom .cbar-track { grid-area: track; height: 8px; }
+.ans-bottom .cbar-legend { grid-area: legend; flex-wrap: nowrap; justify-content: flex-end; gap: var(--s3); font-size: 10.5px; white-space: nowrap; }
+.ans-bottom .cbar-legend li { gap: 4px; }
 .ans-bottom .cbar-size b { font-size: 12px; }
 .ans-bottom .cdot { width: 8px; height: 8px; }
 
@@ -816,10 +813,7 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.rp-bar { position: relative; overflow: visible; }
-.rp-bar i { overflow: hidden; }
 .rp-spot { position: absolute; top: -3px; width: 2px; height: 10px; margin-left: -1px; background: var(--yellow); opacity: 0.8; }
 
-/* スマホのスポットの要約も、出題の局面だと分かるよう黄の枠（PC の見出しと同じ。17 章） */
-.spot-strip { border-color: rgba(252, 238, 10, 0.4); }
+/* スマホのスポットの要約の向き合う Action */
 .spot-strip .sp-facing { color: var(--dim); }

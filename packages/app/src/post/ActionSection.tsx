@@ -1,4 +1,4 @@
-import { BOARD_COUNT, formatBb, totalPot, type Action, type Card, type HandSetup, type Mbb, type Pos, type Street } from '@wwyd/core';
+import { BOARD_COUNT, formatBb, totalPot, type Action, type Card, type HandSetup, type Mbb, type Pos } from '@wwyd/core';
 import { useState, type ReactNode } from 'react';
 import { HandLog, PokerTable } from '../answer/Replay.tsx';
 import { seatViews } from '../answer/replayModel.ts';
@@ -26,10 +26,23 @@ import {
   usedCards,
   type Draft,
   type Phase,
+  boardCardStreet,
 } from './draft.ts';
 import { SizeSlider } from './SizeSlider.tsx';
 
 type ActPhase = Extract<Phase, { kind: 'act' }>;
+
+/** 設定が正しくないときの知らせ（人数を選ぶ前は、先に進もうとしたときだけ出す） */
+function invalidNote(d: Draft, askPlayers: boolean): JSX.Element | false {
+  if (d.players !== null) return <p className="form-err">基本設定の値が正しくありません</p>;
+  return askPlayers && <p className="form-err">{PLAYERS_REQUIRED}</p>;
+}
+
+/** カードピッカーの題（Flop は何枚目か。「Flop 2/3」「Turn」） */
+function pickerTitle(boardCount: number): string {
+  const street = boardCardStreet(boardCount);
+  return street === 'flop' ? `${STREET_NAME[street]} ${boardCount + 1}/3` : STREET_NAME[street];
+}
 
 /**
  * アクション入力（06 章 §3.6、13 章、14 章 §3.1）。
@@ -39,7 +52,7 @@ type ActPhase = Extract<Phase, { kind: 'act' }>;
  * ログ（ハンドヒストリー）は PC は卓の下に出し、スマホは左上のボタンからモーダルで開く（量が増えると画面を圧迫するため）。
  * ログの 1 手を押すと、確かめてからその手以降を入れ直せる。
  */
-export function ActionSection(props: {
+export function ActionSection(props: Readonly<{
   draft: Draft;
   setup: HandSetup | null;
   phase: Phase;
@@ -56,7 +69,7 @@ export function ActionSection(props: {
   onBoardRemoveFrom: (i: number) => void;
   /** 投稿を押したことがある（エラーを出す） */
   attempted: boolean;
-}): JSX.Element {
+}>): JSX.Element {
   const { draft: d, phase } = props;
   // 人数を選ぶ前の「Player の人数を選択してください」は、開いた直後には出さず、先に進もうとしたときだけ出す（F-036 Q-2。2026-09-30 さつき）。
   // PC は Action の節を押したとき・投稿を押したとき。スマホは Action の段に進んだとき（節が見えるのは進んだときだけ）
@@ -92,8 +105,9 @@ export function ActionSection(props: {
   );
   // スマホの台（画面の下に固定）の高さ。卓で台のすぐ上までを埋める（14 章）
   const dockRef = useHeightVar('.pf', '--dock-h', { keepMax: true });
-  const dock =
-    phase.kind === 'act' ? (
+  let dock: JSX.Element | null = null;
+  if (phase.kind === 'act') {
+    dock = (
       <ActDock
         key={d.actions.length}
         domRef={dockRef}
@@ -104,13 +118,12 @@ export function ActionSection(props: {
         onAction={props.onAction}
         onActions={props.onActions}
       />
-    ) : phase.kind === 'board' ? (
-      <BoardDock draft={d} tools={tools} onOpen={openPicker} domRef={dockRef} />
-    ) : null;
+    );
+  } else if (phase.kind === 'board') {
+    dock = <BoardDock draft={d} tools={tools} onOpen={openPicker} domRef={dockRef} />;
+  }
 
-  const invalid =
-    phase.kind === 'invalid' &&
-    (d.players !== null ? <p className="form-err">基本設定の値が正しくありません</p> : askPlayers && <p className="form-err">{PLAYERS_REQUIRED}</p>);
+  const invalid = phase.kind === 'invalid' && invalidNote(d, askPlayers);
   // 手番が無い（終わった）ときは台が無いので、ここに 1つ戻す・すべて消す
   const undo = !dock && phase.kind !== 'invalid' && <div className="pf-undo">{tools}</div>;
   const log = props.setup && d.actions.length > 0 && (
@@ -188,7 +201,7 @@ export function ActionSection(props: {
       )}
       {pickerOpen && phase.kind === 'board' && (
         <CardPicker
-          title={`${STREET_NAME[cardStreet(d.board.length)]} ${cardStreet(d.board.length) === 'flop' ? `${d.board.length + 1}/3` : ''}`.trim()}
+          title={pickerTitle(d.board.length)}
           used={usedCards(d)}
           onPick={props.onBoardAdd}
           onClose={closePicker}
@@ -199,7 +212,7 @@ export function ActionSection(props: {
 }
 
 /** 道具: 1つ戻す・1つ進む・すべて消す（すべて消すは確認してから） */
-function Tools(props: { canUndo: boolean; onUndo: () => void; onRedo: (() => void) | null; canClear: boolean; onClear: () => void }): JSX.Element {
+function Tools(props: Readonly<{ canUndo: boolean; onUndo: () => void; onRedo: (() => void) | null; canClear: boolean; onClear: () => void }>): JSX.Element {
   return (
     <span className="ad-tools">
       <button type="button" className="icon-btn ad-tool" aria-label="1つ戻す" disabled={!props.canUndo} onClick={props.onUndo}>
@@ -216,7 +229,7 @@ function Tools(props: { canUndo: boolean; onUndo: () => void; onRedo: (() => voi
 }
 
 /** 道具の行: 左に手番（席・ストリート）と道具、右に額 */
-function ToolRow(props: { pos?: Pos; title: string; tools: JSX.Element; right?: ReactNode }): JSX.Element {
+function ToolRow(props: Readonly<{ pos?: Pos; title: string; tools: JSX.Element; right?: ReactNode }>): JSX.Element {
   return (
     <div className="ad-toolrow">
       <p className="ad-turn">
@@ -233,7 +246,7 @@ function ToolRow(props: { pos?: Pos; title: string; tools: JSX.Element; right?: 
   );
 }
 
-function ActDock(props: {
+function ActDock(props: Readonly<{
   domRef: (el: HTMLElement | null) => void;
   phase: ActPhase;
   actions: readonly Action[];
@@ -241,7 +254,7 @@ function ActDock(props: {
   tools: JSX.Element;
   onAction: (a: Action) => void;
   onActions: (a: readonly Action[]) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { state, pos, legal } = props.phase;
   const toast = useToast();
   const range = legal.bet ?? legal.raise;
@@ -306,9 +319,9 @@ function ActDock(props: {
   const showChips = presets.some((p) => !p.allin);
 
   return (
-    <div className="act-dock" role="group" aria-label="Action" ref={props.domRef}>
+    <fieldset className="act-dock" aria-label="Action" ref={props.domRef}>
       {showChips && (
-        <div className="ad-chips" role="group" aria-label={raiseLabel ? 'Raise の額' : 'Bet の額'}>
+        <fieldset className="ad-chips" aria-label={raiseLabel ? 'Raise の額' : 'Bet の額'}>
           {presets.map((p) => (
             <button
               key={p.label}
@@ -321,17 +334,17 @@ function ActDock(props: {
               {!p.allin && p.label !== p.sub && <span className="num">{p.sub}</span>}
             </button>
           ))}
-        </div>
+        </fieldset>
       )}
       {shortcuts.length > 0 && (
-        <div className="ad-skip" role="group" aria-label={skip.kind === 'fold' ? 'Fold to' : 'Check to'}>
+        <fieldset className="ad-skip" aria-label={skip.kind === 'fold' ? 'Fold to' : 'Check to'}>
           <span className="mono-lbl">{skip.kind === 'fold' ? 'Fold to' : 'Check to'}</span>
           {shortcuts.map((t) => (
             <button key={t.pos} type="button" className="ad-skip-btn" onClick={() => props.onActions(t.actions)}>
               <b style={{ color: POS_VAR[t.pos] }}>{t.pos}</b>
             </button>
           ))}
-        </div>
+        </fieldset>
       )}
       <ToolRow pos={pos} title={STREET_NAME[state.street]} tools={props.tools} right={sizeField} />
       <div className="ad-btns">
@@ -355,43 +368,32 @@ function ActDock(props: {
           {to !== null && range && to === range.max && <small>All-in</small>}
         </button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
 /** ボードを待つ間の台: 道具の行（「フロップのカード」）＋ピッカーを開き直すボタン */
-function BoardDock(props: {
+function BoardDock(props: Readonly<{
   draft: Draft;
   tools: JSX.Element;
   onOpen: () => void;
   domRef: (el: HTMLElement | null) => void;
-}): JSX.Element {
-  const street = cardStreet(props.draft.board.length);
+}>): JSX.Element {
+  const street = boardCardStreet(props.draft.board.length);
   return (
-    <div className="act-dock" role="group" aria-label="Board" ref={props.domRef}>
+    <fieldset className="act-dock" aria-label="Board" ref={props.domRef}>
       <ToolRow title={`${STREET_NAME[street]} の Card`} tools={props.tools} />
       <div className="ad-btns one">
         <button type="button" className="btn ghost" onClick={props.onOpen}>
           {STREET_NAME[street]} の Card を選ぶ
         </button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
-const cardStreet = (i: number): Street => (i < 3 ? 'flop' : i === 3 ? 'turn' : 'river');
-
-/**
- * 入力中のハンドの卓（14 章。回答画面の卓と同じ部品）。Hero を手前に置き、手番の席を光らせる。
- * ホールカードは入力した席だけ表向き。終わったら「{席} ポット獲得」または「ショーダウン」（カードの無い席は「マック」）。
- */
-function LiveTable(props: { draft: Draft; phase: Phase; onOpen: () => void; onRemoveFrom: (i: number) => void }): JSX.Element | null {
-  const { draft: d, phase } = props;
-  if (phase.kind === 'invalid') return null;
-  const done = phase.kind === 'done';
-  // 終わったらベットをポットに回収して出す（集計画面の終了時と同じ）
-  const s = done ? { ...phase.state, pot: totalPot(phase.state), bets: { UTG: 0, HJ: 0, CO: 0, BTN: 0, SB: 0, BB: 0 } } : phase.state;
-  const showdown = done && phase.result.kind === 'showdown' ? phase.result.seats : [];
+/** ホールカードは入力した席だけ表向き。カードの無い席はショーダウンならマック */
+function liveHoles(d: Draft, s: ActPhase['state'], showdown: readonly Pos[]): Partial<Record<Pos, Hole>> {
   const holes: Partial<Record<Pos, Hole>> = {};
   for (const p of s.seated) {
     if (s.folded.has(p)) continue;
@@ -399,8 +401,34 @@ function LiveTable(props: { draft: Draft; phase: Phase; onOpen: () => void; onRe
     if (cards.length === 2) holes[p] = cards;
     else if (showdown.includes(p)) holes[p] = 'muck';
   }
-  const note = done ? (phase.result.kind === 'over' ? `${phase.result.winner} Pot 獲得` : 'Showdown') : null;
-  const reached = phase.kind === 'act' ? BOARD_COUNT[phase.state.street] : phase.kind === 'board' ? phase.need : phase.boardCount;
+  return holes;
+}
+
+/** 終わったハンドの知らせ（「{席} Pot 獲得」または「Showdown」） */
+function resultNote(result: Extract<Phase, { kind: 'done' }>['result']): string {
+  return result.kind === 'over' ? `${result.winner} Pot 獲得` : 'Showdown';
+}
+
+/** 今のストリートまでに見えている Board の枚数 */
+function reachedCount(phase: Exclude<Phase, { kind: 'invalid' }>): number {
+  if (phase.kind === 'act') return BOARD_COUNT[phase.state.street];
+  return phase.kind === 'board' ? phase.need : phase.boardCount;
+}
+
+/**
+ * 入力中のハンドの卓（14 章。回答画面の卓と同じ部品）。Hero を手前に置き、手番の席を光らせる。
+ * ホールカードは入力した席だけ表向き。終わったら「{席} ポット獲得」または「ショーダウン」（カードの無い席は「マック」）。
+ */
+function LiveTable(props: Readonly<{ draft: Draft; phase: Phase; onOpen: () => void; onRemoveFrom: (i: number) => void }>): JSX.Element | null {
+  const { draft: d, phase } = props;
+  if (phase.kind === 'invalid') return null;
+  const done = phase.kind === 'done';
+  // 終わったらベットをポットに回収して出す（集計画面の終了時と同じ）
+  const s = done ? { ...phase.state, pot: totalPot(phase.state), bets: { UTG: 0, HJ: 0, CO: 0, BTN: 0, SB: 0, BB: 0 } } : phase.state;
+  const showdown = done && phase.result.kind === 'showdown' ? phase.result.seats : [];
+  const holes = liveHoles(d, s, showdown);
+  const note = done ? resultNote(phase.result) : null;
+  const reached = reachedCount(phase);
   return (
     <PokerTable
       seats={seatViews(s, { hero: d.hero, actor: phase.kind === 'act' ? phase.pos : null })}
@@ -416,17 +444,17 @@ function LiveTable(props: { draft: Draft; phase: Phase; onOpen: () => void; onRe
 }
 
 /** 卓のボード 5 枠。次に要る枠の「＋」でピッカーを開く。カードを押すとそのカード以降を消す。 */
-function BoardSlots(props: {
+function BoardSlots(props: Readonly<{
   draft: Draft;
   addable: boolean;
   /** 今のストリートまでに見えている枚数（それより後のカード＝1つ戻すで残ったものは薄く出す） */
   reached: number;
   onOpen: () => void;
   onRemoveFrom: (i: number) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { draft: d } = props;
   const next = d.board.length;
-  const street = cardStreet(next);
+  const street = boardCardStreet(next);
   return (
     <>
       {[0, 1, 2, 3, 4].map((i) => {

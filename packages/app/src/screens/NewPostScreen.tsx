@@ -1,12 +1,12 @@
 import { STREETS, type Action, type Card, type PlayerCount, type Pos } from '@wwyd/core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog.tsx';
 import { typingOrModal } from '../answer/Replay.tsx';
 import { FitStage } from '../components/FitStage.tsx';
 import { cardText } from '../components/PlayingCard.tsx';
 import { useToast } from '../components/Toast.tsx';
 import { ActionSection } from '../post/ActionSection.tsx';
-import { applyCardKey, isHandComplete, type CardKey } from '../post/cardInput.ts';
+import { applyCardKey, isHandComplete } from '../post/cardInput.ts';
 import { CardKeyboard } from '../post/CardKeyboard.tsx';
 import { HandPicker } from '../post/HandPicker.tsx';
 import {
@@ -33,10 +33,12 @@ import {
   usedCards,
   villainContext,
   type Draft,
+  boardCardStreet,
+  type Phase,
 } from '../post/draft.ts';
 import { draftSlot, getDraft, resetDraft, setDraft, useDraft } from '../post/draftStore.ts';
 import { activeUser, deleteDraft } from '../post/savedDrafts.ts';
-import { messageForCode } from '../post/errorMessages.ts';
+import { messageForCode, withServerError } from '../post/errorMessages.ts';
 import { OcrImport } from '../post/OcrImport.tsx';
 import { sendPost } from '../post/sendPost.ts';
 import { PlayersSection, SettingsSection } from '../post/SetupSections.tsx';
@@ -49,6 +51,33 @@ import { useIsMobile } from '../useMediaQuery.ts';
 
 const STEPS = ['基本設定', 'Player', 'Action', 'Spot'] as const;
 const ACTION_STEP = STEPS.indexOf('Action');
+
+/** Ctrl+Z（戻す）・Ctrl+Y / Ctrl+Shift+Z（進む）のどちらか。それ以外は null */
+function undoRedoKey(e: KeyboardEvent): 'undo' | 'redo' | null {
+  const k = e.key.toLowerCase();
+  if (k === 'z') return e.shiftKey ? 'redo' : 'undo';
+  return k === 'y' ? 'redo' : null;
+}
+
+/** PC の Action のキー（入力欄・モーダル・data-own-keys の欄の操作中は効かせない）。`actions` は毎回の最新を使う */
+function useActionKeys(enabled: boolean, actions: { undoLast: () => void; redo: () => void }): void {
+  const keys = useRef(actions);
+  keys.current = actions;
+  useEffect(() => {
+    if (!enabled) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || typingOrModal(e)) return;
+      if (e.target instanceof Element && e.target.closest('[data-own-keys]')) return;
+      const key = undoRedoKey(e);
+      if (key === null) return;
+      if (key === 'undo') keys.current.undoLast();
+      else keys.current.redo();
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [enabled]);
+}
 
 /**
  * スポット投稿（06 章 §3。仕様書 §5.2）。
@@ -120,24 +149,9 @@ export function NewPostScreen(): JSX.Element {
 
   // PC の Action のキー（17 章）: Ctrl+Z で 1 つ戻す、Ctrl+Y・Ctrl+Shift+Z で 1 つ進む（入力欄・モーダルの操作中は効かせない）。
   // Villain・MTT の欄（data-own-keys）の Slider・ボタンを操作中も効かせない（Action が戻って Villain の入力が消えていた。V-030）
-  const keys = useRef({ undoLast, redo });
-  keys.current = { undoLast, redo: canReplay(phase, future[0]) ? redo : () => undefined };
-  useEffect(() => {
-    if (mobile) return;
-    const onKeyDown = (e: KeyboardEvent): void => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey || typingOrModal(e)) return;
-      if (e.target instanceof Element && e.target.closest('[data-own-keys]')) return;
-      const k = e.key.toLowerCase();
-      if (k === 'z' && !e.shiftKey) keys.current.undoLast();
-      else if (k === 'y' || (k === 'z' && e.shiftKey)) keys.current.redo();
-      else return;
-      e.preventDefault();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mobile]);
+  useActionKeys(!mobile, { undoLast, redo: canReplay(phase, future[0]) ? redo : () => undefined });
 
-  const onKey = (key: CardKey): void => {
+  const onKey = (key: string): void => {
     if (!seat) return;
     const cur = getDraft();
     const r = applyCardKey(cur.hands[seat], key, usedCards(cur, seat));
@@ -145,7 +159,7 @@ export function NewPostScreen(): JSX.Element {
     if (r.hand !== cur.hands[seat]) setDraft({ ...cur, hands: { ...cur.hands, [seat]: r.hand } });
   };
 
-  const errors = [...(attempted ? submissionErrors(d) : []), ...(serverError ? [serverError] : [])];
+  const errors = withServerError(attempted ? submissionErrors(d) : [], serverError);
 
   const submit = (): void => {
     setAttempted(true);
@@ -219,7 +233,7 @@ export function NewPostScreen(): JSX.Element {
       }}
       onBoardAdd={(c: Card) => update((x) => addBoardCard(x, c))}
       onBoardRemoveFrom={(i) => {
-        const street = i < 3 ? 'flop' : i === 3 ? 'turn' : 'river';
+        const street = boardCardStreet(i);
         const cut = d.actions.findIndex((a) => STREETS.indexOf(a.street) >= STREETS.indexOf(street));
         if (cut >= 0) setFuture((f) => [...d.actions.slice(cut), ...f]);
         update((x) => removeBoardFrom(x, i));
@@ -321,58 +335,93 @@ export function NewPostScreen(): JSX.Element {
     );
   }
 
+  return (
+    <>
+      {ocrImport}
+      <MobileSteps
+        draft={d}
+        phase={phase}
+        step={step}
+        onStep={setStep}
+        seat={seat}
+        sections={{ settings, mttSection, players, actions, spot, villains }}
+        errors={errors}
+        submitButton={submitButton}
+        barRef={barRef}
+        ocrPlace={ocrPlace}
+        keyboard={mobileKeyboard}
+        dialog={recountDialog}
+      />
+    </>
+  );
+}
+
+/** スマホの 4 ステップの画面（ステップの切り替えと、戻る・次へのバー） */
+function MobileSteps(props: Readonly<{
+  draft: Draft;
+  phase: Phase;
+  step: number;
+  onStep: Dispatch<SetStateAction<number>>;
+  seat: Pos | null;
+  sections: { settings: ReactNode; mttSection: ReactNode; players: ReactNode; actions: ReactNode; spot: ReactNode; villains: ReactNode };
+  errors: readonly string[];
+  submitButton: ReactNode;
+  barRef: (el: HTMLElement | null) => void;
+  ocrPlace: ReactNode;
+  keyboard: ReactNode;
+  dialog: ReactNode;
+}>): JSX.Element {
+  const { draft: d, phase, step, seat, sections: x } = props;
+  const setStep = props.onStep;
   const done = stepDone(d, phase.kind === 'done');
   const last = step === STEPS.length - 1;
   // アクションのステップは卓で画面の残りを埋める。ハンドを入れている間は、下にアクションの台を出す（14 章）
   const docked = step === ACTION_STEP && (phase.kind === 'act' || phase.kind === 'board');
   const fill = !seat && step === ACTION_STEP && phase.kind !== 'invalid';
   return (
-    <>
-      {ocrImport}
-      <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
-        <nav className="pf-steps" aria-label="ステップ">
-          {STEPS.map((name, i) => (
-            <button
-              key={name}
-              type="button"
-              className={`pf-step ${done[i] ? 'done' : ''}`}
-              aria-current={i === step ? 'step' : undefined}
-              onClick={() => setStep(i)}
-            >
-              <span className="num">{i + 1}</span>
-              {name}
+    <section className={`screen pf sp ${seat ? 'kb-open' : ''}${fill ? ' fill' : ''}${fill && docked ? ' docked' : ''}`}>
+      <nav className="pf-steps" aria-label="ステップ">
+        {STEPS.map((name, i) => (
+          <button
+            key={name}
+            type="button"
+            className={`pf-step ${done[i] ? 'done' : ''}`}
+            aria-current={i === step ? 'step' : undefined}
+            onClick={() => setStep(i)}
+          >
+            <span className="num">{i + 1}</span>
+            {name}
+          </button>
+        ))}
+      </nav>
+      {props.ocrPlace}
+      {step === 0 && x.settings}
+      {step === 0 && x.mttSection}
+      {step === 1 && x.players}
+      {step === 2 && x.actions}
+      {step === 3 && x.spot}
+      {step === 3 && x.villains}
+      {/* 台を出している間は戻る・次へを隠す（13 章） */}
+      {!seat && !docked && (
+        <div className="pf-bar" ref={props.barRef}>
+          <ErrorList errors={props.errors} />
+          <div className="btn-row">
+            <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+              Back
             </button>
-          ))}
-        </nav>
-        {ocrPlace}
-        {step === 0 && settings}
-        {step === 0 && mttSection}
-        {step === 1 && players}
-        {step === 2 && actions}
-        {step === 3 && spot}
-        {step === 3 && villains}
-        {/* 台を出している間は戻る・次へを隠す（13 章） */}
-        {!seat && !docked && (
-          <div className="pf-bar" ref={barRef}>
-            <ErrorList errors={errors} />
-            <div className="btn-row">
-              <button type="button" className="btn ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
-                Back
+            {last ? (
+              props.submitButton
+            ) : (
+              <button type="button" className="btn" onClick={() => setStep((s) => s + 1)}>
+                次へ：{STEPS[step + 1]}
               </button>
-              {last ? (
-                submitButton
-              ) : (
-                <button type="button" className="btn" onClick={() => setStep((s) => s + 1)}>
-                  次へ：{STEPS[step + 1]}
-                </button>
-              )}
-            </div>
+            )}
           </div>
-        )}
-        {mobileKeyboard}
-        {recountDialog}
-      </section>
-    </>
+        </div>
+      )}
+      {props.keyboard}
+      {props.dialog}
+    </section>
   );
 }
 

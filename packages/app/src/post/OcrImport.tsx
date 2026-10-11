@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Modal } from '../components/Modal.tsx';
 import { isDirty, PREFLOP_ALLIN } from './draft.ts';
@@ -7,6 +7,12 @@ import { NO_SPOT_MESSAGE, ocrPostability, reviewFromOcr, type Review } from './o
 import { OcrReview } from './OcrReview.tsx';
 import { ErrorList } from './SpotSection.tsx';
 import { T4_GAME_ORDER, T4_GAMES, type T4Game } from './t4Games.ts';
+
+/** ボタンの行を置く: 置き場所の指定が無ければその場に、指定があればそこへ映す（置き場所がまだ無ければ出さない） */
+function placedButtons(row: JSX.Element | false, slot: HTMLElement | null | undefined): ReactNode {
+  if (slot === undefined) return row;
+  return slot && row ? createPortal(row, slot) : null;
+}
 
 /**
  * 「T4ハンドヒストリー画像を読み込む」（06 章 §3.9）。
@@ -17,7 +23,7 @@ import { T4_GAME_ORDER, T4_GAMES, type T4Game } from './t4Games.ts';
  * 読めなかった所はエラーとして並べ、読めたところまでフォームに入れる。
  * OCR の本体（tesseract.js）はここで初めて読み込む。画像はメモリの中だけで扱う（runOcr.ts）。
  */
-export function OcrImport(props: { button?: boolean; slot?: HTMLElement | null; onApplied?: () => void }): JSX.Element {
+export function OcrImport(props: Readonly<{ button?: boolean; slot?: HTMLElement | null; onApplied?: () => void }>): JSX.Element {
   const showButton = props.button ?? true;
   const input = useRef<HTMLInputElement>(null);
   const abort = useRef<AbortController | null>(null);
@@ -107,7 +113,7 @@ export function OcrImport(props: { button?: boolean; slot?: HTMLElement | null; 
   return (
     <>
       {/* ボタンは画面の中の置き場所（slot）へ映す。部品そのものは画面の外側に置き、PC とスマホの切り替えでも状態を保つ */}
-      {props.slot === undefined ? buttonRow : props.slot && buttonRow ? createPortal(buttonRow, props.slot) : null}
+      {placedButtons(buttonRow, props.slot)}
       <input
         ref={input}
         type="file"

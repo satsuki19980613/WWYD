@@ -61,7 +61,7 @@ describe('PAINT ラベルとコンボ', () => {
 describe('PAINT エンコードと検証', () => {
   it('PAINT-04 全マス null', () => {
     const bytes = encodePaint(emptyPaint());
-    expect(bytes.length).toBe(676);
+    expect(bytes).toHaveLength(676);
     expect(bytes.every((b) => b === 0)).toBe(true);
     expect(validatePaint(emptyPaint(), FCS, null, 13000, 95700)).toBe('paint_empty');
   });
@@ -70,7 +70,7 @@ describe('PAINT エンコードと検証', () => {
     const bytes = encodePaint(paintOf({ AA: { call: 20 } }));
     expect(Array.from(bytes.slice(0, 4))).toEqual([0, 0, 20, 0]);
     expect(toHex(bytes).startsWith('\\x0000140000')).toBe(true);
-    expect(toHex(bytes).length).toBe(2 + 1352);
+    expect(toHex(bytes)).toHaveLength(2 + 1352);
   });
 
   it('PAINT-06 encode → toHex → fromHex → decode の往復（ランダム 1000 件）', () => {
@@ -197,7 +197,7 @@ describe('PAINT 集計', () => {
     const a = emptyAggregate();
     a[0] = { n: 300, sum: mix({ call: 6000 }) };
     const bytes = encodeAggregate(a);
-    expect(bytes.length).toBe(1690);
+    expect(bytes).toHaveLength(1690);
     expect(Array.from(bytes.slice(0, 2))).toEqual([0x01, 0x2c]);
     expect(decodeAggregate(bytes)).toEqual(a);
     expect(decodeAggregate(encodeAggregate(agg))).toEqual(agg);

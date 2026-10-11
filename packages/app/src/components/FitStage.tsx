@@ -8,7 +8,7 @@ import { STAGE_H, STAGE_W } from '../layout.ts';
  * 長いもの（Hand History・席の表など）は、その枠の中だけでスクロールする。
  * 倍率が下限（layout.ts の FIT_MIN_ZOOM）を下回る画面では、この器は使わずスマホの構成になる（F-033）。
  */
-export function FitStage(props: { className: string; children: ReactNode }): JSX.Element {
+export function FitStage(props: Readonly<{ className: string; children: ReactNode }>): JSX.Element {
   const outer = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 

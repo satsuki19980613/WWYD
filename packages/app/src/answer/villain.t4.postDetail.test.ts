@@ -35,7 +35,7 @@ describe('T4-04 前の版の投稿・形の違う情報でも、読み込みは�
     expect(p.hand.mtt).toBeNull();
     // 投稿そのものは読める
     expect(p.post.title).toBe('K83r のターンのバレルを受ける');
-    expect(p.hand.actions.length).toBe(11);
+    expect(p.hand.actions).toHaveLength(11);
   });
 
   it('席が範囲外（Hero の席）・席でないキーの villain_reads は情報なし', () => {
@@ -132,7 +132,7 @@ describe('T4-01 一周（create-post の保存値 → 回答画面の読み込�
     expect(p.hand.reads.SB?.reads?.[0]?.action).toBe('fold_steal');
     expect(p.hand.mtt).toBeNull();
     expect(p.hand.truncated).toBe(true);
-    expect(p.hand.actions.length).toBe(p.hand.stopIndex); // 判断地点より前だけ
+    expect(p.hand.actions).toHaveLength(p.hand.stopIndex); // 判断地点より前だけ
     expect(p.secrets).toBeNull();
     // 情報の中の Spot Read は、見える Action の範囲の Action だけ
     const seen = p.hand.actions.map((a) => `${a.street}:${a.pos}`);

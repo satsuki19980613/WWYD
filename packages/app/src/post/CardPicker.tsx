@@ -6,12 +6,12 @@ import { cardText, PlayingCard } from '../components/PlayingCard.tsx';
  * ボードのカードピッカー（06 章 §3.6）。13 × 4、使用済みは非活性。
  * 見出しは入力中のストリートと枚数（例「フロップ 2/3」）。
  */
-export function CardPicker(props: {
+export function CardPicker(props: Readonly<{
   title: string;
   used: ReadonlySet<Card>;
   onPick: (card: Card) => void;
   onClose: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   return (
     <Modal title={props.title} tone="info" wide onClose={props.onClose}>
       <div className="picker" role="grid" aria-label="Card">

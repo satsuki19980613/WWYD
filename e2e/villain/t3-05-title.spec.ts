@@ -4,6 +4,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fakeBackend } from '../fakeBackend.ts';
 import { watchErrors } from '../release/taKit.ts';
+import { untilStable } from '../settle.ts';
 import { baseHs1bb, detail, ID, ID2, isSp, openAnswer } from './t3-kit.ts';
 
 const LONG = 'とても長いタイトルがヘッダーに収まらないときは横に流れて全文を見せる。さらに続く長い長い題名の例'.repeat(3);
@@ -223,7 +224,8 @@ for (const v of ['', ' @sp'] as const) {
     await tg.click();
     await page.mouse.move(200, 400);
     await page.mouse.wheel(0, 300);
-    await page.waitForTimeout(200);
+    // スクロールが止まる（ページとすべての要素のスクロールの位置が落ち着く）まで待つ
+    await untilStable(() => page.evaluate(() => [window.scrollY, ...Array.from(document.querySelectorAll('*'), (e) => e.scrollTop)].join(',')), 'スクロールが止まらない');
     const hb = await page.locator('header').boundingBox();
     expect(hb?.y ?? 99).toBeLessThanOrEqual(1);
     const hBottom = (hb?.y ?? 0) + (hb?.height ?? 0);
@@ -252,8 +254,8 @@ test('T3-05 掃引: タイトルの長さ × 幅 × 動きの設定で、例外�
       await expect(page.locator('header h1')).toHaveText(t);
       for (const w of widths) {
         await page.setViewportSize({ width: w, height: 800 });
-        await page.waitForTimeout(40);
-        const m = await metrics(page);
+        // 幅を変えたあとの測り直し（流す・止める・省略の切り替え）が落ち着いてから見る
+        const m = await untilStable(() => metrics(page), `${t} @${w} の表示が落ち着かない`);
         // 収まるのに流している／収まらないのに止めている、が無い
         const fits = m.over <= 1;
         const cls = m.cls;
@@ -282,7 +284,9 @@ for (const [w, title] of LOOP_HITS) {
     const errors = watchErrors(page);
     await page.setViewportSize({ width: w, height: 800 });
     await openAnswer(page, { ...baseHs1bb(), title }, { motion: 'reduce' });
-    await page.waitForTimeout(300);
+    await expect(page.locator('header h1')).toHaveText(title);
+    // Marquee の表示（static / clip）が落ち着くまで見る（行き来し続けると落ちる）
+    await untilStable(() => page.evaluate(() => document.querySelector('header .mq')?.className ?? null), 'Marquee の表示が落ち着かない');
     await expect(page.locator('header h1')).toHaveText(title);
     expect(errors).toEqual([]);
   });

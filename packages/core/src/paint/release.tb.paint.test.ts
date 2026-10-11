@@ -60,9 +60,9 @@ describe('B-05 paint コーデック', () => {
       const keys = rng.pick(KEYSETS);
       const p = randomPaint(rng, keys);
       const bytes = encodePaint(p);
-      expect(bytes.length).toBe(PAINT_BYTES);
+      expect(bytes).toHaveLength(PAINT_BYTES);
       const hex = toHex(bytes);
-      expect(hex.length).toBe(2 + PAINT_BYTES * 2);
+      expect(hex).toHaveLength(2 + PAINT_BYTES * 2);
       expect(hex).toBe(hex.toLowerCase().replace('\\X', '\\x'));
       const back = decodePaint(fromHex(hex));
       expect(back, `n=${n}`).toEqual(p);
@@ -93,7 +93,7 @@ describe('B-05 paint コーデック', () => {
     expect(() => decodePaint(fromHex(good + '00'))).toThrow();
     expect(() => decodePaint(fromHex(good.slice(0, -2)))).toThrow();
     // 空文字の 16 進は空配列（decode は断る）
-    expect(fromHex('\\x').length).toBe(0);
+    expect(fromHex(String.raw`\x`)).toHaveLength(0);
   });
 
   it('壊れたバイト列を decode が断る: 値 > 20・マスの合計が 0 でも 20 でもない（ランダムに 1 バイトだけ壊す）', () => {

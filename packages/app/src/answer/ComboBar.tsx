@@ -21,7 +21,7 @@ export function rangeSummary(keys: readonly AnswerKey[], ratios: BarRatios): { c
  * レンジの中のアクションの割合（積み上げバーと数値）。計算の元は core の paintBar / aggregateBar（05 章 §4）。
  * `label` は集計画面で「全体」「自分」を並べるときの見出し。
  */
-export function ComboBar(props: { keys: readonly AnswerKey[]; names: KeyNames; ratios: BarRatios; label?: string }): JSX.Element {
+export function ComboBar(props: Readonly<{ keys: readonly AnswerKey[]; names: KeyNames; ratios: BarRatios; label?: string }>): JSX.Element {
   const s = rangeSummary(props.keys, props.ratios);
   return (
     <div className="cbar">

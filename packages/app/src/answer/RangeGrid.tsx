@@ -17,7 +17,7 @@ export function cellText(idx: number, mix: Mix | null, names: KeyNames): string 
 }
 
 /** マスの中身: 左から fold → check → call → s1 の順に頻度の幅で色を並べる */
-export function CellFill(props: { mix: Mix | null }): JSX.Element | null {
+export function CellFill(props: Readonly<{ mix: Mix | null }>): JSX.Element | null {
   const { mix } = props;
   if (!mix) return null;
   return (
@@ -44,15 +44,15 @@ type Drag = { id: number; last: number; x: number; y: number; moved: boolean; pi
  * - `onPick(idx)` 480ms 動かさずに押し続けた（親はストロークを取り消してブラシに読み込む。onEnd は呼ばない）
  * キーボード: 矢印キーでマスを移動、Enter / Space で塗る（1 マスのストローク）。
  */
-export const RangeGrid = memo(function RangeGrid(props: {
+export const RangeGrid = memo(function RangeGrid(props: Readonly<{
   paint: Paint;
   names: KeyNames;
   onStart: (idx: number) => void;
   onEnter: (idx: number) => void;
   onEnd: () => void;
   onPick: (idx: number) => void;
-}): JSX.Element {
-  const grid = useRef<HTMLDivElement>(null);
+}>): JSX.Element {
+  const grid = useRef<HTMLFieldSetElement>(null);
   const drag = useRef<Drag | null>(null);
   const focusIdx = useRef(0);
   const cb = useRef(props);
@@ -65,13 +65,22 @@ export const RangeGrid = memo(function RangeGrid(props: {
     [],
   );
 
+  // 長押し（スポイト）・右クリックで端末のメニューを出さない（マスの間のすき間も含めて表の全体で止める）
+  useEffect(() => {
+    const el = grid.current;
+    if (!el) return;
+    const prevent = (e: Event): void => e.preventDefault();
+    el.addEventListener('contextmenu', prevent);
+    return () => el.removeEventListener('contextmenu', prevent);
+  }, []);
+
   const idxOfTarget = (el: Element | null): number | null => {
     const cell = el?.closest<HTMLElement>('[data-idx]');
     if (!cell || !grid.current?.contains(cell)) return null;
     return Number(cell.dataset.idx);
   };
 
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>): void => {
+  const onPointerDown = (e: PointerEvent<HTMLFieldSetElement>): void => {
     if (e.button !== 0 || drag.current) return;
     const idx = idxOfTarget(e.target as Element);
     if (idx === null) return;
@@ -88,7 +97,7 @@ export const RangeGrid = memo(function RangeGrid(props: {
     cb.current.onStart(idx);
   };
 
-  const onPointerMove = (e: PointerEvent<HTMLDivElement>): void => {
+  const onPointerMove = (e: PointerEvent<HTMLFieldSetElement>): void => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId || d.picked) return;
     if (Math.abs(e.clientX - d.x) > PICK_MOVE_PX || Math.abs(e.clientY - d.y) > PICK_MOVE_PX) d.moved = true;
@@ -99,7 +108,7 @@ export const RangeGrid = memo(function RangeGrid(props: {
     cb.current.onEnter(idx);
   };
 
-  const onPointerEnd = (e: PointerEvent<HTMLDivElement>): void => {
+  const onPointerEnd = (e: PointerEvent<HTMLFieldSetElement>): void => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
     window.clearTimeout(d.timer);
@@ -107,7 +116,8 @@ export const RangeGrid = memo(function RangeGrid(props: {
     if (!d.picked) cb.current.onEnd();
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+  // キー操作はマス（ボタン）で受ける（フォーカスは常にマスにある）
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>): void => {
     const idx = idxOfTarget(e.target as Element);
     if (idx === null) return;
     if (e.key === 'Enter' || e.key === ' ') {
@@ -136,17 +146,14 @@ export const RangeGrid = memo(function RangeGrid(props: {
   };
 
   return (
-    <div
+    <fieldset
       ref={grid}
       className="rgrid"
-      role="group"
       aria-label="Range 表"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
-      onKeyDown={onKeyDown}
-      onContextMenu={(e) => e.preventDefault()}
     >
       {Array.from({ length: CELL_COUNT }, (_, idx) => {
         const mix = props.paint[idx] ?? null;
@@ -158,12 +165,13 @@ export const RangeGrid = memo(function RangeGrid(props: {
             className={`rcell${mix ? ' on' : ''}${inkClass(mix)}`}
             tabIndex={idx === focusIdx.current ? 0 : -1}
             aria-label={cellText(idx, mix, props.names)}
+            onKeyDown={onKeyDown}
           >
             <CellFill mix={mix} />
             <span className="rcell-lbl">{labelOf(idx)}</span>
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 });

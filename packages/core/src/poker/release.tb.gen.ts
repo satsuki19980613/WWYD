@@ -78,9 +78,23 @@ export function randomSetup(rng: Rng, players?: PlayerCount): HandSetup {
   const stacks = { UTG: 0, HJ: 0, CO: 0, BTN: 0, SB: 0, BB: 0 } as Record<Pos, Mbb>;
   const common = rng.chance(0.25) ? randomStack(rng) : null;
   for (const p of seats) stacks[p] = common !== null && rng.chance(0.7) ? common : randomStack(rng);
-  const sb = rng.chance(0.6) ? 500 : rng.chance(0.5) ? rng.int(1, 1000) : rng.pick([1000, 250, 100, 1]);
-  const ante = rng.chance(0.5) ? 0 : rng.chance(0.5) ? rng.pick([125, 100, 1000, 500, 1]) : rng.int(0, 1500);
+  const sb = randomSb(rng);
+  const ante = randomAnte(rng);
   return { sb, bb: 1000, ante, stacks };
+}
+
+/** SB（mbb）。半分を超えて 0.5bb、残りは 0.001〜1bb のどれか・よくある額 */
+function randomSb(rng: Rng): Mbb {
+  if (rng.chance(0.6)) return 500;
+  if (rng.chance(0.5)) return rng.int(1, 1000);
+  return rng.pick([1000, 250, 100, 1]);
+}
+
+/** アンティ（mbb）。半分は無し、残りはよくある額か 0〜1.5bb */
+function randomAnte(rng: Rng): Mbb {
+  if (rng.chance(0.5)) return 0;
+  if (rng.chance(0.5)) return rng.pick([125, 100, 1000, 500, 1]);
+  return rng.int(0, 1500);
 }
 
 // ---- 参照実装（Oracle） ----
@@ -206,7 +220,7 @@ export class Oracle {
     const pl = this.p[pos];
     const toCall = this.cur - pl.bet;
     const maxTo = pl.bet + pl.stack;
-    const others = this.canActList().filter((q) => q !== pos).length > 0;
+    const others = this.canActList().some((q) => q !== pos);
     const mayRaise = !pl.acted || this.fullRaises > pl.seen;
     if (toCall > 0) {
       return {
@@ -309,17 +323,20 @@ export function diffState(s: State, o: Oracle): string | null {
   if (s.currentBet !== o.cur) return `currentBet ${s.currentBet} != ${o.cur}`;
   if (s.minRaise !== o.minRaise) return `minRaise ${s.minRaise} != ${o.minRaise}`;
   for (const pos of POSITIONS) {
-    const q = o.p[pos];
-    if (!q.seated) {
-      if (s.stacks[pos] !== 0 || s.bets[pos] !== 0) return `空席 ${pos} に額`;
-      continue;
-    }
-    if (s.stacks[pos] !== q.stack) return `${pos} stack ${s.stacks[pos]} != ${q.stack}`;
-    if (s.bets[pos] !== q.bet) return `${pos} bet ${s.bets[pos]} != ${q.bet}`;
-    if (s.folded.has(pos) !== q.folded) return `${pos} folded ${s.folded.has(pos)} != ${q.folded}`;
-    if (s.allin.has(pos) !== q.allin) return `${pos} allin ${s.allin.has(pos)} != ${q.allin}`;
-    if (q.stack < 0 || q.bet < 0) return `${pos} 負の額`;
+    const d = diffSeat(s, pos, o.p[pos]);
+    if (d) return d;
   }
+  return null;
+}
+
+/** 1 席分の状態の突き合わせ */
+function diffSeat(s: State, pos: Pos, q: OPlayer): string | null {
+  if (!q.seated) return s.stacks[pos] !== 0 || s.bets[pos] !== 0 ? `空席 ${pos} に額` : null;
+  if (s.stacks[pos] !== q.stack) return `${pos} stack ${s.stacks[pos]} != ${q.stack}`;
+  if (s.bets[pos] !== q.bet) return `${pos} bet ${s.bets[pos]} != ${q.bet}`;
+  if (s.folded.has(pos) !== q.folded) return `${pos} folded ${s.folded.has(pos)} != ${q.folded}`;
+  if (s.allin.has(pos) !== q.allin) return `${pos} allin ${s.allin.has(pos)} != ${q.allin}`;
+  if (q.stack < 0 || q.bet < 0) return `${pos} 負の額`;
   return null;
 }
 
@@ -361,6 +378,70 @@ export class MismatchError extends Error {
   }
 }
 
+type Stats = Played['stats'];
+
+/** 合法手から重み付きで Action の種類を選ぶ（乱数を 1 回使う） */
+function chooseType(rng: Rng, olg: OLegal, street: Street, pfFold: number): ActionType {
+  const options: ActionType[] = [];
+  const weights: number[] = [];
+  const add = (t: ActionType, w: number): void => {
+    options.push(t);
+    weights.push(w);
+  };
+  if (olg.fold) add('fold', street === 'pf' ? pfFold * 3 : 0.22);
+  if (olg.check) add('check', 0.5);
+  if (olg.call !== null) add('call', 0.5);
+  if (olg.bet) add('bet', 0.3);
+  if (olg.raise) add('raise', 0.25);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let x = rng.next() * total;
+  for (let i = 0; i < options.length; i++) {
+    x -= weights[i] as number;
+    if (x < 0) return options[i] as ActionType;
+  }
+  return options.at(-1) as ActionType;
+}
+
+/** 合法手から Action を選び、不完全レイズ・All-in の統計を数える */
+function chooseAction(rng: Rng, o: Oracle, street: Street, pos: Pos, olg: OLegal, pfFold: number, allinP: number, stats: Stats): Action {
+  const type = chooseType(rng, olg, street, pfFold);
+  const action: Action = { street, pos, type };
+  if (type === 'bet' || type === 'raise') {
+    const r = (type === 'bet' ? olg.bet : olg.raise) as { min: number; max: number };
+    action.to = chooseAmount(rng, r, allinP);
+    const size = action.to - o.cur;
+    if (size < o.minRaise) stats.incompleteRaise++;
+    if (action.to === r.max) stats.allinActions++;
+  } else if (type === 'call' && olg.call !== null && olg.call === o.p[pos].stack) stats.allinActions++;
+  return action;
+}
+
+/** 再オープンできない席か（不完全レイズの試験がどれだけ当たったかの統計） */
+function reopenBlocked(o: Oracle, pos: Pos, olg: OLegal): boolean {
+  return olg.call !== null && olg.raise === null && o.p[pos].stack > o.cur - o.p[pos].bet && o.canActList().some((q) => q !== pos);
+}
+
+/** 保存則: 残りスタック＋回収済み＋ベットの合計は開始時のスタックの合計から変わらない */
+function chipsDiff(s: State, setup: HandSetup): string | null {
+  const chips = POSITIONS.reduce((sum, q) => sum + s.stacks[q] + s.bets[q], 0) + s.pot;
+  const start = POSITIONS.reduce((sum, q) => sum + setup.stacks[q], 0);
+  return chips === start ? null : `チップの保存則 ${chips} != ${start}`;
+}
+
+/** core と Oracle の終了・手番の判定の突き合わせ */
+function statusDiff(s: State, o: Oracle): string | null {
+  const st = status(s);
+  const ost = o.status();
+  if (st.kind !== ost.kind) return `status ${st.kind} != ${ost.kind}`;
+  if (st.kind === 'over' && st.winner !== o.winner()) return `winner ${st.winner} != ${o.winner()}`;
+  if (st.kind === 'act' && ost.kind === 'act' && ost.pos !== st.pos) return `手番 ${st.pos} != ${ost.pos}`;
+  return null;
+}
+
+function errorText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 /**
  * ランダムなハンドを最後まで進める。各手番で core と Oracle の状態・合法手・判定が一致しているかを確かめ、
  * 違えば `MismatchError`（何手目・何が違うか）を投げる。
@@ -373,39 +454,32 @@ export function playRandomHand(rng: Rng, setup: HandSetup, opts: PlayOpts = {}):
   const o = new Oracle(setup);
   const actions: Action[] = [];
   const snapshots: Snapshot[] = [];
-  const stats = { incompleteRaise: 0, allinActions: 0, reopenBlocked: 0, streets: 0 };
+  const stats: Stats = { incompleteRaise: 0, allinActions: 0, reopenBlocked: 0, streets: 0 };
   const fail = (msg: string): never => {
     throw new MismatchError(`${msg} @手数${actions.length} core=${fmtState(s)}`);
   };
-  let d = diffState(s, o);
-  if (d) fail(`初期状態 ${d}`);
+  const check = (d: string | null, prefix: string): void => {
+    if (d) fail(`${prefix}${d}`);
+  };
+  check(diffState(s, o), '初期状態 ');
 
   for (;;) {
+    check(statusDiff(s, o), '');
     const st = status(s);
-    const ost = o.status();
-    if (st.kind !== ost.kind) fail(`status ${st.kind} != ${ost.kind}`);
-    if (st.kind === 'over') {
-      if (st.winner !== o.winner()) fail(`winner ${st.winner} != ${o.winner()}`);
-      break;
-    }
-    if (st.kind === 'runout' || st.kind === 'showdown') break;
     if (st.kind === 'streetEnd') {
       s = advance(s);
       o.advance();
       stats.streets++;
-      d = diffState(s, o);
-      if (d) fail(`advance 後 ${d}`);
+      check(diffState(s, o), 'advance 後 ');
       continue;
     }
-    // act
-    if (ost.kind !== 'act' || ost.pos !== st.pos) fail(`手番 ${st.pos} != ${ost.kind === 'act' ? ost.pos : ost.kind}`);
-    const pos = st.pos;
-    const lg = legal(s, pos);
-    const olg = o.legal(pos);
-    d = diffLegal(lg, olg);
-    if (d) fail(`legal(${pos}) ${d}`);
-    if (actions.length >= maxActions) fail('手数の上限');
+    if (st.kind !== 'act') break;
 
+    // act
+    const pos = st.pos;
+    const olg = o.legal(pos);
+    check(diffLegal(legal(s, pos), olg), `legal(${pos}) `);
+    if (actions.length >= maxActions) fail('手数の上限');
     snapshots.push({
       index: actions.length,
       pos,
@@ -414,74 +488,36 @@ export function playRandomHand(rng: Rng, setup: HandSetup, opts: PlayOpts = {}):
       potBase: o.potBase(pos),
       othersAlive: POSITIONS.filter((q) => q !== pos && o.p[q].seated && !o.p[q].folded),
     });
-
-    // 再オープンできない席の数（不完全レイズの試験がどれだけ当たったかの統計）
-    if (olg.call !== null && olg.raise === null && o.p[pos].stack > o.cur - o.p[pos].bet && o.canActList().some((q) => q !== pos)) stats.reopenBlocked++;
+    if (reopenBlocked(o, pos, olg)) stats.reopenBlocked++;
 
     // 選ぶ
-    const options: ActionType[] = [];
-    const weights: number[] = [];
-    const add = (t: ActionType, w: number): void => {
-      options.push(t);
-      weights.push(w);
-    };
-    if (olg.fold) add('fold', s.street === 'pf' ? pfFold * 3 : 0.22);
-    if (olg.check) add('check', 0.5);
-    if (olg.call !== null) add('call', 0.5);
-    if (olg.bet) add('bet', 0.3);
-    if (olg.raise) add('raise', 0.25);
-    const total = weights.reduce((a, b) => a + b, 0);
-    let x = rng.next() * total;
-    let type = options[options.length - 1] as ActionType;
-    for (let i = 0; i < options.length; i++) {
-      x -= weights[i] as number;
-      if (x < 0) {
-        type = options[i] as ActionType;
-        break;
-      }
-    }
-    const action: Action = { street: s.street, pos, type };
-    if (type === 'bet' || type === 'raise') {
-      const r = (type === 'bet' ? olg.bet : olg.raise) as { min: number; max: number };
-      action.to = chooseAmount(rng, r, allinP);
-      const size = action.to - o.cur;
-      if (size < o.minRaise) stats.incompleteRaise++;
-      if (action.to === r.max) stats.allinActions++;
-    } else if (type === 'call' && olg.call !== null && olg.call === o.p[pos].stack) stats.allinActions++;
-
+    const action = chooseAction(rng, o, s.street, pos, olg, pfFold, allinP, stats);
     if (opts.probeRejects) probeRejects(s, pos, olg, action);
 
     let next: State;
     try {
       next = apply(s, action, actions.length);
     } catch (e) {
-      return fail(`合法手 ${JSON.stringify(action)} を core が断った: ${e instanceof Error ? e.message : String(e)}`);
+      return fail(`合法手 ${JSON.stringify(action)} を core が断った: ${errorText(e)}`);
     }
     o.apply(action);
     actions.push(action);
     s = next;
-    d = diffState(s, o);
-    if (d) fail(`apply(${JSON.stringify(action)}) 後 ${d}`);
-    // 保存則: 残りスタック＋回収済み＋ベットの合計は開始時のスタックの合計から変わらない
-    const chips = POSITIONS.reduce((sum, q) => sum + s.stacks[q] + s.bets[q], 0) + s.pot;
-    const start = POSITIONS.reduce((sum, q) => sum + setup.stacks[q], 0);
-    if (chips !== start) fail(`チップの保存則 ${chips} != ${start}`);
+    check(diffState(s, o), `apply(${JSON.stringify(action)}) 後 `);
+    check(chipsDiff(s, setup), '');
   }
 
   const end = status(s).kind as 'over' | 'showdown' | 'runout';
   // 最後まで通した再生（replay）も、同じ結論になること
-  const fin = status(s);
-  let boardCount: number;
-  if (fin.kind === 'over') boardCount = { pf: 0, flop: 3, turn: 4, river: 5 }[s.street];
-  else boardCount = 5;
+  const boardCount = end === 'over' ? { pf: 0, flop: 3, turn: 4, river: 5 }[s.street] : 5;
   let r;
   try {
     r = replay(setup, actions, boardCount);
   } catch (e) {
-    return fail(`replay が失敗: ${e instanceof Error ? e.message : String(e)}`);
+    return fail(`replay が失敗: ${errorText(e)}`);
   }
   if (r.boardCount !== boardCount) fail(`boardCount ${r.boardCount} != ${boardCount}`);
-  if (r.result.kind === 'over' ? end !== 'over' : end === 'over') fail('replay の結果の種類が違う');
+  if ((r.result.kind === 'over') !== (end === 'over')) fail('replay の結果の種類が違う');
   return { setup, actions, snapshots, end, boardCount, stats };
 }
 
@@ -492,7 +528,7 @@ function probeRejects(s: State, pos: Pos, olg: OLegal, chosen: Action): void {
       apply(s, a, 7);
     } catch (e) {
       if (e instanceof ValidationError && e.code === code) return;
-      throw new MismatchError(`apply(${JSON.stringify(a)}) が ${code} でなく ${e instanceof Error ? e.message : String(e)}`);
+      throw new MismatchError(`apply(${JSON.stringify(a)}) が ${code} でなく ${errorText(e)}`);
     }
     throw new MismatchError(`apply(${JSON.stringify(a)}) が断られなかった（期待 ${code}）`);
   };

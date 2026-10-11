@@ -4,7 +4,7 @@ import { memo, useRef, type KeyboardEvent } from 'react';
 const SIDE = 13;
 
 /** マスの中身: 左から fold → check → call → s1 の順に割合の幅で色を並べ、濃さは不透明度（05 章 §4） */
-function RatioFill(props: { view: CellView }): JSX.Element | null {
+function RatioFill(props: Readonly<{ view: CellView }>): JSX.Element | null {
   const { ratio, opacity } = props.view;
   if (!ratio) return null;
   return (
@@ -23,11 +23,17 @@ function inkClass(view: CellView): string {
   return used.length === 1 && view.opacity === 1 ? ` ink-${used[0] as string}` : ' ink-mixed';
 }
 
+/** 「自分との差」のマスの文字色（差が半分以上は濃い色の上の文字、少しでも差があれば明るい文字＋影） */
+function heatInkClass(heat: number): string {
+  if (heat >= 0.5) return ' ink-heat';
+  return heat > 0 ? ' ink-mixed' : '';
+}
+
 /**
  * 集計のレンジ表（13×13。06 章 §5.2）。マスを選ぶと親が内訳を出す。塗りの操作はない。
  * `actual` は Hero の実際のハンドのマス（白枠）。キーボード: 矢印・Home・End で選ぶマスを移す。
  */
-export const ResultGrid = memo(function ResultGrid(props: {
+export const ResultGrid = memo(function ResultGrid(props: Readonly<{
   views: readonly CellView[];
   selected: number;
   actual: number | null;
@@ -36,10 +42,11 @@ export const ResultGrid = memo(function ResultGrid(props: {
   onHover?: (idx: number | null) => void;
   /** 「自分との差」のタブ: マスごとの差（0〜1）。あれば色の代わりに差の濃さで塗る（14 章） */
   heat?: readonly number[];
-}): JSX.Element {
-  const grid = useRef<HTMLDivElement>(null);
+}>): JSX.Element {
+  const grid = useRef<HTMLFieldSetElement>(null);
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+  // キー操作はマス（ボタン）で受ける（フォーカスは常にマスにある）
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>): void => {
     const i = Math.floor(props.selected / SIDE);
     const j = props.selected % SIDE;
     const move: Record<string, [number, number]> = {
@@ -61,12 +68,10 @@ export const ResultGrid = memo(function ResultGrid(props: {
   };
 
   return (
-    <div
+    <fieldset
       ref={grid}
       className="rgrid result"
-      role="group"
       aria-label="Range 表"
-      onKeyDown={onKeyDown}
       onPointerLeave={() => props.onHover?.(null)}
       onPointerOver={(e) => {
         if (!props.onHover || e.pointerType !== 'mouse') return;
@@ -78,7 +83,7 @@ export const ResultGrid = memo(function ResultGrid(props: {
         const view = props.views[idx] ?? { ratio: null, opacity: 0 };
         const selected = idx === props.selected;
         const heat = props.heat?.[idx];
-        const ink = heat === undefined ? inkClass(view) : heat >= 0.5 ? ' ink-heat' : heat > 0 ? ' ink-mixed' : '';
+        const ink = heat === undefined ? inkClass(view) : heatInkClass(heat);
         return (
           <button
             key={idx}
@@ -89,6 +94,7 @@ export const ResultGrid = memo(function ResultGrid(props: {
             aria-pressed={selected}
             aria-label={labelOf(idx)}
             onClick={() => props.onSelect(idx)}
+            onKeyDown={onKeyDown}
           >
             {heat === undefined ? (
               <RatioFill view={view} />
@@ -99,6 +105,6 @@ export const ResultGrid = memo(function ResultGrid(props: {
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 });

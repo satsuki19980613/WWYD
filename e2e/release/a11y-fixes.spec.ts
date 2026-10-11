@@ -149,11 +149,16 @@ test('F-034 Range 表の塗っていないマスの文字は 4.5:1 以上（--ce
   expect(contrast(color, bg), `${color} on ${bg}`).toBeGreaterThanOrEqual(4.5);
 });
 
+/** 画面ごとの、表示が出そろったときにある要素 */
+const READY: Record<string, string> = { '/': '.list-screen', '/new': '.pf', [ANSWER]: '.ans' };
+
 for (const path of ['/', '/new', ANSWER]) {
   test(`F-034 画面（${path}）に --dim2 の色の文字が無い`, async ({ page }) => {
     await openAnswer(page);
     await page.goto(path);
-    await page.waitForTimeout(300);
+    // 画面が出て、読み込み中の骨組みが消えるまで待つ
+    await expect(page.locator(READY[path] ?? 'main')).toBeVisible();
+    await expect(page.locator('.skeleton, .sk')).toHaveCount(0);
     const hits = await page.evaluate((dim2) => {
       const out: string[] = [];
       document.querySelectorAll<HTMLElement>('body *').forEach((el) => {

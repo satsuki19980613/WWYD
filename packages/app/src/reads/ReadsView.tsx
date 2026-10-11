@@ -26,7 +26,7 @@ import {
  */
 
 /** 段階を付けない Slider（Tournament Type）の表示: Slider そのもの（動かせない）と両端の名前 */
-function EndsRow(props: { def: SliderDef; value: number }): JSX.Element {
+function EndsRow(props: Readonly<{ def: SliderDef; value: number }>): JSX.Element {
   const { def, value } = props;
   const ratio = Math.min(1, Math.max(0, value / def.max));
   const ends = def.ends ?? ['', ''];
@@ -47,7 +47,7 @@ function EndsRow(props: { def: SliderDef; value: number }): JSX.Element {
 }
 
 /** 1 席分: 全体の傾向のチップ（中央は出さない）と Read の行（Spot Read が先。強いは ++） */
-export function ReadCard(props: { seat: Pos; hero: Pos; actions: readonly Action[]; read: VillainRead }): JSX.Element {
+export function ReadCard(props: Readonly<{ seat: Pos; hero: Pos; actions: readonly Action[]; read: VillainRead }>): JSX.Element {
   const chips = tendencyChips(props.read);
   const reads = props.read.reads ?? [];
   return (
@@ -82,7 +82,7 @@ export function ReadCard(props: { seat: Pos; hero: Pos; actions: readonly Action
   );
 }
 
-function SeatHead(props: { pos: Pos }): JSX.Element {
+function SeatHead(props: Readonly<{ pos: Pos }>): JSX.Element {
   return (
     <b className="rv-pos" style={{ color: POS_VAR[props.pos] }}>
       {props.pos}
@@ -91,7 +91,7 @@ function SeatHead(props: { pos: Pos }): JSX.Element {
 }
 
 /** All Villains: ポットに参加した席を上に、Preflop で Fold した席は折りたたむ。情報の無い席は 1 行 */
-function AllVillains(props: { seats: readonly Pos[]; hero: Pos; actions: readonly Action[]; reads: VillainReads }): JSX.Element {
+function AllVillains(props: Readonly<{ seats: readonly Pos[]; hero: Pos; actions: readonly Action[]; reads: VillainReads }>): JSX.Element {
   const { active, folded } = villainOrder(props.seats, props.hero, props.actions);
   const item = (p: Pos): JSX.Element => {
     const read = props.reads[p];
@@ -120,7 +120,7 @@ function AllVillains(props: { seats: readonly Pos[]; hero: Pos; actions: readonl
 }
 
 /** MTT の情報。Tournament Type は Slider そのもの（左端 Deep・右端 Turbo）、人数は「12/58 ・ ITM 50 ・ 320 entries」に「順位 / 残りの人数」の見出し（18 章 §5.2） */
-export function MttView(props: { mtt: MttInfo }): JSX.Element {
+export function MttView(props: Readonly<{ mtt: MttInfo }>): JSX.Element {
   const m = props.mtt;
   const counts = mttCountsLine(m);
   const rows: { k: string; v: JSX.Element | string }[] = [];

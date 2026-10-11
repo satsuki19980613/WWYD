@@ -38,7 +38,7 @@ export type Replay = {
  */
 export function replay(setup: HandSetup, actions: readonly Action[], boardLength: number): Replay {
   const states = runActions(setup, actions);
-  const final = states[states.length - 1] as State;
+  const final = states.at(-1) as State;
   const st = status(final);
   let result: HandResult;
   let boardCount: number;

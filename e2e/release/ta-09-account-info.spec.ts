@@ -161,9 +161,9 @@ for (const v of VARIANTS) {
       await page.getByRole('menuitem', { name: 'アカウントを削除' }).click();
       await page.getByRole('alertdialog').getByRole('button', { name: '削除する' }).click();
       await expect(page.getByRole('button', { name: 'Google でログイン' })).toBeVisible();
-      await page.waitForTimeout(500);
-      await expect(page.getByRole('alertdialog', { name: '下書きに保存しますか' })).toHaveCount(0);
+      // 「下書きに保存しますか」は投稿の画面から移るのを止めて出す。一覧（/）へ移り終えたら、もう出ない
       await expect(page).toHaveURL('/');
+      await expect(page.getByRole('alertdialog', { name: '下書きに保存しますか' })).toHaveCount(0);
     });
 
     test(`ログアウト: 入力中の投稿があっても、ログアウトするとログイン画面。ログインの開始で離脱確認（beforeunload）は出ない${v}`, async ({ page }) => {
@@ -180,8 +180,10 @@ for (const v of VARIANTS) {
         asked = d.type() === 'beforeunload';
         void d.dismiss();
       });
+      // ログインの開始で移る先（?after-login=1）へ進むか、離脱確認が出る（閉じると移らない）まで待つ
+      const settled = Promise.race([page.waitForURL(/after-login=1/).catch(() => undefined), page.waitForEvent('dialog').catch(() => undefined)]);
       await page.getByRole('button', { name: 'Google でログイン' }).click();
-      await page.waitForTimeout(800);
+      await settled;
       expect(asked, 'ログアウト後のログインで「変更が保存されない」確認が出る').toBe(false);
     });
 

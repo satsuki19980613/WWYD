@@ -113,7 +113,7 @@ export function useReplayKeys(c: ReplayControl, enabled: boolean): void {
 }
 
 /** 再生の操作。「最初から」は文字、1手戻る・再生 / 一時停止・1手進むはマーク（名前は読み上げに。2026-09-29 さつき） */
-export function ReplayControls(props: { c: ReplayControl; /** 出題の局面の手数（進み具合のバーに黄の目盛り。17 章） */ spot?: number }): JSX.Element {
+export function ReplayControls(props: Readonly<{ c: ReplayControl; /** 出題の局面の手数（進み具合のバーに黄の目盛り。17 章） */ spot?: number }>): JSX.Element {
   const { c } = props;
   return (
     <div className="rp-ctrl">
@@ -148,7 +148,7 @@ export function ReplayControls(props: { c: ReplayControl; /** 出題の局面の
  * スマホのハンドヒストリーのボタン（卓の左上。押すとモーダル。14 章）。ログを常に出すと画面を圧迫するため。
  * `children` はモーダルの中身（HandLog）。`compact` はアイコンだけの道具のボタン（Range のタブのブラシの道具の行）。
  */
-export function HistoryButton(props: { disabled?: boolean; compact?: boolean; children: ReactNode }): JSX.Element {
+export function HistoryButton(props: Readonly<{ disabled?: boolean; compact?: boolean; children: ReactNode }>): JSX.Element {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -193,11 +193,17 @@ const SLOTS_BY_COUNT: Record<number, readonly Slot[]> = {
   6: [BOTTOM, L_DOWN, L_UP, TOP, R_UP, R_DOWN],
 };
 
+/** 席の札の寄せ方（卓の左端は左、右端は右、それ以外は中央） */
+function anchorOf(x: number): 'l' | 'r' | 'c' {
+  if (x < 20) return 'l';
+  return x > 80 ? 'r' : 'c';
+}
+
 /**
  * テーブル（ICMCLEC の卓の見た目を参照。06 章 §8）。Hero の席を手前に置く（席の並びは replayModel の seatOrder）。
  * `holes` は席ごとに見せるホールカード（表向き・裏向き・マック）。`note` は終了時の「ショーダウン」など。
  */
-export function PokerTable(props: {
+export function PokerTable(props: Readonly<{
   seats: readonly SeatView[];
   pot: Mbb;
   board: readonly Card[];
@@ -212,7 +218,7 @@ export function PokerTable(props: {
   /** Villain の情報がある席（小さな印を付け、押せるようにする。18 章 §5） */
   marked?: ReadonlySet<Pos>;
   onSeat?: (pos: Pos) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const interactive = props.boardContent !== undefined;
   const seatButtons = !!props.onSeat && (props.marked?.size ?? 0) > 0;
   return (
@@ -239,7 +245,7 @@ export function PokerTable(props: {
       {props.seats.map((seat, i) => {
         const slot = SLOTS_BY_COUNT[props.seats.length]?.[i] ?? { seat: [50, 50] as const };
         const [x, y] = slot.seat;
-        const anchor = x < 20 ? 'l' : x > 80 ? 'r' : 'c';
+        const anchor = anchorOf(x);
         const chip = seat.bet > 0 && (
           <span
             className={`pchip num${anchor === 'c' ? '' : ' side'}`}
@@ -286,7 +292,7 @@ export function PokerTable(props: {
   );
 }
 
-function PlateBody(props: { seat: SeatView; heroLabel: string | undefined }): JSX.Element {
+function PlateBody(props: Readonly<{ seat: SeatView; heroLabel: string | undefined }>): JSX.Element {
   const { seat } = props;
   return (
     <>
@@ -301,7 +307,7 @@ function PlateBody(props: { seat: SeatView; heroLabel: string | undefined }): JS
   );
 }
 
-function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
+function HoleCards(props: Readonly<{ hole: Hole | undefined }>): JSX.Element | null {
   const { hole } = props;
   if (!hole) return null;
   if (hole === 'muck') return <span className="pseat-hole pseat-muck">Muck</span>;
@@ -324,7 +330,7 @@ function HoleCards(props: { hole: Hole | undefined }): JSX.Element | null {
  * `actual`（集計画面の Hero の実際のアクション）を黄で強調。`prompt` は停止時の「▶ BB to act」。
  * `strip` は横一列（ストリートの見出しと 1 手ずつのカードを横に並べ、横にスクロール。新しい手が入ったら右端へ）。PC の投稿（17 章 §3.4）。
  */
-export function HandLog(props: {
+export function HandLog(props: Readonly<{
   setup: HandSetup;
   actions: readonly Action[];
   board: readonly Card[];
@@ -335,7 +341,7 @@ export function HandLog(props: {
   /** 1 手を押したとき（投稿の入力の「ここから入れ直す」）。無ければ押せない */
   onPick?: (index: number) => void;
   strip?: boolean;
-}): JSX.Element {
+}>): JSX.Element {
   const items = actionLog(props.setup, props.actions);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {

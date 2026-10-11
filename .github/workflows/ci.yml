@@ -19,7 +19,8 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
-      - run: npm ci
+      # 依存のインストールスクリプトは動かさない（どの依存も不要。SonarCloud githubactions:S6505）
+      - run: npm ci --ignore-scripts
       - name: 型検査
         run: npm run typecheck
       - name: 単体テスト（core の行カバレッジ 90% 以上）
@@ -39,7 +40,8 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
-      - run: npm ci
+      # 依存のインストールスクリプトは動かさない（どの依存も不要。SonarCloud githubactions:S6505）
+      - run: npm ci --ignore-scripts
       - name: 共有テストベクタから生成した pgTAP が最新か
         run: npm run check:db-vectors
       - name: Neon の一時ブランチで DB テスト
@@ -58,9 +60,10 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
-      - run: npm ci
+      # 依存のインストールスクリプトは動かさない（どの依存も不要。SonarCloud githubactions:S6505）
+      - run: npm ci --ignore-scripts
       - name: Playwright のブラウザ
-        run: npx playwright install --with-deps chromium
+        run: npm run e2e:install
       - name: E2E
         run: npm run e2e
       - name: 失敗時の記録

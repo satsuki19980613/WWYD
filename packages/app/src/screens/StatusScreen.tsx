@@ -2,12 +2,12 @@
  * 全画面の状態表示（06 章 §0.3）: メンテナンス中・オフライン・利用不可。
  * 見出し＋ボタン 1 つだけ（06 章の文言以外は出さない）。`tone` はコーナーブラケットの意味の色。
  */
-export function StatusScreen(props: {
+export function StatusScreen(props: Readonly<{
   title: string;
   actionLabel: string;
   onAction: () => void;
   tone: 'warn' | 'error';
-}): JSX.Element {
+}>): JSX.Element {
   return (
     <section className="status-screen">
       <div className={`bracket-hero tone-${props.tone}`}>

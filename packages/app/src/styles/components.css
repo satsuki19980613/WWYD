@@ -248,6 +248,8 @@
   align-items: flex-end;
   justify-content: center;
 }
+/* 背景の押下を受ける下敷き（背景色の上・モーダルの下に敷く） */
+.modal-scrim { position: absolute; inset: 0; z-index: -1; }
 /* 上端の線は意味の色（情報 = シアン、確認 = 黄、破壊的 = 赤） */
 .modal {
   --tone: var(--yellow);
@@ -332,7 +334,7 @@
 .menu-item:disabled { color: var(--faint); cursor: default; }
 .menu-item.danger { color: var(--red); }
 .menu-item.danger:disabled { color: var(--faint); }
-.menu-sep { height: 1px; margin: var(--s1) 0; background: var(--line); }
+.menu-sep { height: 1px; margin: var(--s1) 0; border: 0; background: var(--line); }
 
 
 /* ---- トースト（エラーは赤の左線） ---- */
@@ -347,6 +349,10 @@
   pointer-events: none;
 }
 .toast {
+  display: block;
+  width: 100%;
+  margin: 0;
+  text-align: start;
   pointer-events: auto;
   padding: 12px 14px;
   background: rgba(21, 22, 15, 0.97);

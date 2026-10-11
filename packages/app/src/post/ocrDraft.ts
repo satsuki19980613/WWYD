@@ -100,11 +100,8 @@ export function reviewFromOcr(r: OcrResult, game: T4Game, fallbackHero: Pos): Re
   };
 }
 
-/** 確認画面の状態を検証し、反映する下書きと、行ごとの結果・問題の一覧を返す。 */
-export function evaluateReview(base: Draft, rv: Review): ReviewEval {
-  const issues: string[] = [];
-
-  // ハンドとボード（途中のハンド・同じカードの 2 度目は使わない）
+/** ハンドとボード（途中のハンド・同じカードの 2 度目は使わない）。問題は `issues` に足す */
+function reviewCards(rv: Review, issues: string[]): { hands: Draft['hands']; board: Card[] } {
   const used = new Set<Card>();
   const take = (cards: readonly Card[]): boolean => {
     if (cards.some((c) => used.has(c)) || new Set(cards).size !== cards.length) return false;
@@ -125,19 +122,14 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
   }
   if (board.length < rv.board.length || (board.length > 0 && board.length < 3)) issues.push('Board が正しくありません');
   if (board.length > 0 && board.length < 3) board.length = 0;
+  return { hands, board };
+}
 
-  let draft: Draft = applyT4Game({ ...base, hero: rv.hero, hands, board, actions: [], spotIndex: null }, rv.game);
-  const { setup } = parseSettings(draft);
-  const views: RowView[] = rv.rows.map(() => ({ pos: null, street: null, ok: false, mismatch: false }));
-  if (!setup) {
-    issues.push('基本設定を確認してください');
-    return { draft, rows: views, issues };
-  }
-
-  // アクション（先頭から再生。席とストリートは再生で決まる）
+/** アクションを先頭から再生する（席とストリートは再生で決まる）。行ごとの結果は `views` に書く。`stopped` は直せなかった行（無ければ -1） */
+function replayRows(setup: HandSetup, board: readonly Card[], rows: Review['rows'], views: RowView[]): { actions: Action[]; stopped: number } {
   const actions: Action[] = [];
   let stopped = -1;
-  rv.rows.forEach((row, i) => {
+  rows.forEach((row, i) => {
     if (stopped >= 0) return;
     const phase = phaseOf(setup, actions, board);
     const next = phase.kind === 'act' ? toAction(phase.state, phase.pos, phase.legal, row) : null;
@@ -153,6 +145,23 @@ export function evaluateReview(base: Draft, rv: Review): ReviewEval {
       mismatch: (row.readPos !== null && row.readPos !== phase.pos) || (row.readStreet !== null && row.readStreet !== phase.state.street),
     };
   });
+  return { actions, stopped };
+}
+
+/** 確認画面の状態を検証し、反映する下書きと、行ごとの結果・問題の一覧を返す。 */
+export function evaluateReview(base: Draft, rv: Review): ReviewEval {
+  const issues: string[] = [];
+  const { hands, board } = reviewCards(rv, issues);
+
+  let draft: Draft = applyT4Game({ ...base, hero: rv.hero, hands, board, actions: [], spotIndex: null }, rv.game);
+  const { setup } = parseSettings(draft);
+  const views: RowView[] = rv.rows.map(() => ({ pos: null, street: null, ok: false, mismatch: false }));
+  if (!setup) {
+    issues.push('基本設定を確認してください');
+    return { draft, rows: views, issues };
+  }
+
+  const { actions, stopped } = replayRows(setup, board, rv.rows, views);
   // 1 行の読み落としで以降がすべてずれるので、最初の 1 か所だけ知らせる（行は赤で示す）
   const firstMismatch = views.findIndex((v) => v.ok && v.mismatch);
   if (firstMismatch >= 0) issues.push(`${firstMismatch + 1}手目から席が画像の読み取りと合いません`);
@@ -184,19 +193,21 @@ export function toAction(state: State, pos: Pos, legal: Legal, a: { verb: OcrVer
       return legal.call !== null ? { ...base, type: 'call' } : null;
     case 'bet':
     case 'raise':
-      if (inRange(amount, legal.bet)) return { ...base, type: 'bet', to: amount };
-      if (inRange(amount, legal.raise)) return { ...base, type: 'raise', to: amount };
       // 額が今のベット以下の「レイズ」は、オールインのコールの書き方
-      if (amount !== null && legal.call !== null && amount <= state.currentBet) return { ...base, type: 'call' };
-      return null;
+      return sizedAction(base, amount, legal, amount !== null && amount <= state.currentBet);
     case 'allin': {
       const to = amount ?? allInTo;
       // スタックより大きい額は、利用者のスタックの入力が画像と合っていない（コールに化けさせない）
       if (to > allInTo) return null;
-      if (inRange(to, legal.bet)) return { ...base, type: 'bet', to };
-      if (inRange(to, legal.raise)) return { ...base, type: 'raise', to };
-      if (legal.call !== null) return { ...base, type: 'call' };
-      return null;
+      return sizedAction(base, to, legal, true);
     }
   }
+}
+
+/** 額のあるアクション: 合法なベット・レイズの額ならそれに、`callable` ならコールに直す。直せなければ null */
+function sizedAction(base: { street: Street; pos: Pos }, to: Mbb | null, legal: Legal, callable: boolean): Action | null {
+  if (inRange(to, legal.bet)) return { ...base, type: 'bet', to };
+  if (inRange(to, legal.raise)) return { ...base, type: 'raise', to };
+  if (callable && legal.call !== null) return { ...base, type: 'call' };
+  return null;
 }

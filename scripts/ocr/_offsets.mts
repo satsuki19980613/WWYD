@@ -13,6 +13,14 @@ function pos(img: RgbaImage): [number, number] {
   return [left, top];
 }
 const POS = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+// 符号付きの数（0 以上は + を付ける）
+const signed = (v: number): string => (v >= 0 ? `+${v}` : `${v}`);
+// キーの集合（無ければ作る）
+function setOf(m: Record<string, Set<string>>, key: string): Set<string> {
+  const s = m[key] ?? new Set<string>();
+  m[key] = s;
+  return s;
+}
 const by: Record<string, Set<string>> = {};
 const layout = new Set<string>();
 let n = 0;
@@ -21,17 +29,17 @@ for (const f of readdirSync('sample/sp').filter((x) => x.endsWith('.png') && !x.
   const ep = `sample/sp/${f.replace('.png', '.expected.json')}`; if (!existsSync(ep)) continue;
   const exp = JSON.parse(readFileSync(ep, 'utf8'));
   const sp = decodePng(readFileSync(`sample/sp/${f}`)); const pc = decodePng(readFileSync(`sample/pc/${base}`));
-  const add = (key: string, a: RgbaImage, b: RgbaImage) => { const [x1, y1] = pos(a), [x2, y2] = pos(b); (by[key] ??= new Set()).add(`${x1 - x2 >= 0 ? '+' : ''}${x1 - x2},${y1 - y2 >= 0 ? '+' : ''}${y1 - y2}`); n++; };
+  const add = (key: string, a: RgbaImage, b: RgbaImage) => { const [x1, y1] = pos(a), [x2, y2] = pos(b); setOf(by, key).add(`${signed(x1 - x2)},${signed(y1 - y2)}`); n++; };
   POS.forEach((p, i) => { const cs = playerCardChips(sp, PLAYER_ROWS_Y[i]!), cp = playerCardChips(pc, PLAYER_ROWS_Y[i]!); [0, 1].forEach((k) => add(`行:${exp.hands[p][k]}`, crop(sp, cs[k]!), crop(pc, cp[k]!))); });
   const bs = boardChips(sp).flat(), bp = boardChips(pc).flat();
   layout.add(`${f.slice(9, 29)} ボードのチップの y: sp ${bs.map((c) => c.box[1]).join('/')} pc ${bp.map((c) => c.box[1]).join('/')}`);
   bs.forEach((c, k) => { if (bp[k]) add(`盤:${exp.board[k]}`, crop(sp, c.box), crop(pc, bp[k]!.box)); });
 }
-const keys = Object.keys(by).sort();
+const keys = Object.keys(by).sort((a, b) => Number(a > b) - Number(a < b)); // 既定の sort と同じ UTF-16 の順
 const inconsistent = keys.filter((k) => by[k]!.size > 1);
 console.log('比べたカード', n, '種類', keys.length, 'ずれが画像ごとに違う種類', inconsistent.length);
 for (const k of inconsistent) console.log('  ', k, [...by[k]!].join(' | '));
 const byRank: Record<string, Set<string>> = {};
-for (const k of keys) for (const v of by[k]!) (byRank[k.split(':')[0] + ':' + k.split(':')[1]![0]] ??= new Set()).add(v);
+for (const k of keys) for (const v of by[k]!) setOf(byRank, k.split(':')[0] + ':' + k.split(':')[1]![0]).add(v);
 console.log(Object.entries(byRank).map(([k, v]) => `${k}=${[...v].join('|')}`).join('  '));
 for (const l of layout) if (!l.endsWith('sp  pc ')) console.log(l);

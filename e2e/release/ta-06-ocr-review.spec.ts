@@ -3,6 +3,7 @@
  * 壊れたファイル、画面の幅の切り替え（06 章 §3.9・07 章・16 章）。T4 の画像は sample/ から読むだけ（無ければ skip）。
  */
 import { expect, test, type Page } from '@playwright/test';
+import { nextFrames, ocrWorkerClosed } from '../settle.ts';
 import { fakeBackend, fakeCreatePost } from './taKit.ts';
 import { isMobile, S_PLAYER, S_SETTINGS, setTitle, step, submit } from './taPost.ts';
 import { diffReview, heroHasPostflop, importImage, loadSamples, NO_SPOT, PREFLOP_ALLIN, readReview, UNREADABLE, type Sample } from './taOcr.ts';
@@ -13,6 +14,7 @@ const postablePc = pc.filter((s) => heroHasPostflop(s.expected));
 const postableSp = sp.filter((s) => heroHasPostflop(s.expected));
 const noSpotPc = pc.filter((s) => !heroHasPostflop(s.expected));
 
+// T4 の画像は個人の対戦画像なのでリポジトリに置けない。手元の sample/ に無ければ、このファイルの試験は行わない
 test.skip(pc.length + sp.length === 0, '試験画像（sample/）が無いので skip');
 
 const reviewOf = (page: Page) => page.getByRole('dialog', { name: '読み取り結果' });
@@ -124,15 +126,15 @@ for (const v of VARIANTS) {
       await expect(rv.locator('.pf-errors')).toContainText('手目から席が画像の読み取りと合いません');
       // 足し直す: 1 手目の位置に Fold を足す（UTG の Fold）
       await rv.getByRole('button', { name: /^Action を足す$/ }).click();
-      expect((await readReview(rv)).actions.length).toBe(before.actions.length);
+      expect((await readReview(rv)).actions).toHaveLength(before.actions.length);
       // 最後の Action を消すと、以降が足りない（またはその手で終わる）
       const countBefore = (await readReview(rv)).actions.length;
       await rv.getByRole('button', { name: `${countBefore}手目を消す` }).click();
-      expect((await readReview(rv)).actions.length).toBe(countBefore - 1);
+      expect((await readReview(rv)).actions).toHaveLength(countBefore - 1);
       // Board の最後の 1 枚を消す → 問題の一覧が変わる（Board が 3 枚以上あればまだ有効）
       const b0 = (await readReview(rv)).board.length;
       await rv.getByRole('button', { name: '最後の Card を消す' }).click();
-      expect((await readReview(rv)).board.length).toBe(b0 - 1);
+      expect((await readReview(rv)).board).toHaveLength(b0 - 1);
       // 動詞を変える: 1 手目の Fold → Raise にすると額の欄が出る
       const first = rv.getByRole('combobox', { name: '1手目の Action' });
       await first.click();
@@ -220,7 +222,8 @@ test.describe('A-06 投稿できない画像・壊れたファイル', () => {
   });
 
   test('Hero に Flop 以降の Action が無い画像 →「Flop 以降の Hero の Action がない Hand です」。フォームは変わらない', async ({ page }) => {
-    test.skip(noSpotPc.length === 0);
+    // 手元の sample/ に、この試験に合う画像が無ければ行わない
+    test.skip(noSpotPc.length === 0, 'sample/pc に Flop 以降の Hero の Action が無い画像が無いので skip');
     await page.goto('/new');
     await setTitleBefore(page, '変わらない');
     const target = noSpotPc.find((s) => s.expected.actions.every((a) => !(a.street === 'pf' && a.verb === 'allin'))) ?? noSpotPc[0]!;
@@ -233,7 +236,8 @@ test.describe('A-06 投稿できない画像・壊れたファイル', () => {
   });
 
   test('Preflop でだれかが All-in になった画像 →「Preflop で All-in になった Hand は投稿できません」', async ({ page }) => {
-    test.skip(noSpotPc.length === 0);
+    // 手元の sample/ に、この試験に合う画像が無ければ行わない
+    test.skip(noSpotPc.length === 0, 'sample/pc に Flop 以降の Hero の Action が無い画像が無いので skip');
     await page.goto('/new');
     let found = false;
     for (const s of noSpotPc) {
@@ -263,7 +267,8 @@ test.describe('A-06 投稿できない画像・壊れたファイル', () => {
   });
 
   test('画面の幅が変わって PC / スマホのレイアウトが切り替わっても、確認画面の状態（直した Hero）を保つ', async ({ page }) => {
-    test.skip(postablePc.length === 0);
+    // 手元の sample/ に、この試験に合う画像が無ければ行わない
+    test.skip(postablePc.length === 0, 'sample/pc に投稿できる（Flop 以降に Hero の Action がある）画像が無いので skip');
     const s = postablePc[0]!;
     await page.goto('/new');
     await importImage(page, s.png);
@@ -281,7 +286,8 @@ test.describe('A-06 投稿できない画像・壊れたファイル', () => {
   });
 
   test('読み取り中に画面の幅が変わっても止まらず、結果が出る（06 章 §3.9）', async ({ page }) => {
-    test.skip(postablePc.length === 0);
+    // 手元の sample/ に、この試験に合う画像が無ければ行わない
+    test.skip(postablePc.length === 0, 'sample/pc に投稿できる（Flop 以降に Hero の Action がある）画像が無いので skip');
     await page.route('**/ocr/lang/**', async (route) => {
       await new Promise((r) => setTimeout(r, 2500));
       await route.continue().catch(() => undefined);
@@ -297,7 +303,8 @@ test.describe('A-06 投稿できない画像・壊れたファイル', () => {
   });
 
   test('読み取り中は「読み取り中…」と「キャンセル」。キャンセルするとフォームは変わらず、次の読み込みができる', async ({ page }) => {
-    test.skip(postablePc.length === 0);
+    // 手元の sample/ に、この試験に合う画像が無ければ行わない
+    test.skip(postablePc.length === 0, 'sample/pc に投稿できる（Flop 以降に Hero の Action がある）画像が無いので skip');
     await page.route('**/ocr/lang/**', async (route) => {
       await new Promise((r) => setTimeout(r, 1500));
       await route.continue().catch(() => undefined);
@@ -306,13 +313,16 @@ test.describe('A-06 投稿できない画像・壊れたファイル', () => {
     await page.getByRole('button', { name: 'T4 Hand History 画像を読み込む' }).click();
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('dialog', { name: 'T4 の Game' }).getByRole('button', { name: /^通常/ }).click();
+    const workerClosed = ocrWorkerClosed(page);
     await (await chooser).setFiles(postablePc[0]!.png);
     const busy = page.getByRole('dialog', { name: '読み取り中…' });
     await expect(busy).toBeVisible();
     await expect(page.getByRole('button', { name: 'T4 Hand History 画像を読み込む' })).toBeDisabled();
     await busy.getByRole('button', { name: 'キャンセル' }).click();
     await expect(busy).toHaveCount(0);
-    await page.waitForTimeout(3000); // 取り消した結果は出ない
+    // 取り消した結果は出ない。遅らせた学習データが届いて Worker が止まり、取り消した読み取りが終わるところまで進めてから確かめる
+    await workerClosed;
+    await nextFrames(page);
     await expect(reviewOf(page)).toHaveCount(0);
     await expect(page.getByRole('alert').filter({ hasText: UNREADABLE })).toHaveCount(0);
     await page.unroute('**/ocr/lang/**');

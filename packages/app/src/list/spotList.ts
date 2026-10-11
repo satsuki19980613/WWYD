@@ -128,7 +128,7 @@ export async function findNextSpot(rpc: RpcCaller, currentId: string): Promise<s
     const hit = pickNext(page.rows, currentId);
     if (hit) return hit.id;
     if (!page.hasMore) return null;
-    after = page.rows[page.rows.length - 1] ?? null;
+    after = page.rows.at(-1) ?? null;
   }
   return null;
 }

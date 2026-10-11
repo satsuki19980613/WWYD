@@ -30,7 +30,9 @@ for (const v of ['', ' @sp'] as const) {
       await page.route(`${DATA}/rpc/get_post_detail`, () => undefined);
       await page.goto(`/s/${ID}/${path}`);
       await expect(page.locator('.hdr')).toBeVisible();
-      await page.waitForTimeout(800);
+      // 読み込み中の骨組みが出て、フォントの読み込みが終わってから測る
+      await expect(page.locator('.ans-skel')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
       await noPageScroll(page, `${path} loading`);
     });
   }

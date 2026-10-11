@@ -10,7 +10,14 @@
 //   node scripts/liveCheck.mjs --no-observatory … Observatory を飛ばす
 import { appendFileSync, readFileSync } from 'node:fs';
 
-const SITE = (process.env.SITE ?? 'https://wwyd.pages.dev').replace(/\/+$/, '');
+/** 末尾の / をすべて外す */
+function trimTrailingSlashes(s) {
+  let end = s.length;
+  while (end > 0 && s[end - 1] === '/') end--;
+  return s.slice(0, end);
+}
+
+const SITE = trimTrailingSlashes(process.env.SITE ?? 'https://wwyd.pages.dev');
 const env = Object.fromEntries(
   readFileSync('.env.production', 'utf8')
     .split(/\r?\n/)
@@ -18,15 +25,29 @@ const env = Object.fromEntries(
     .filter(Boolean)
     .map((m) => [m[1], m[2]]),
 );
-const DATA_URL = env.VITE_NEON_DATA_API_URL.replace(/\/+$/, '');
+const DATA_URL = trimTrailingSlashes(env.VITE_NEON_DATA_API_URL);
 const CREATE_POST_URL = env.VITE_NEON_CREATE_POST_URL;
 const OBSERVATORY = 'https://observatory-api.mdn.mozilla.net/api/v2/scan';
 
 /** @type {{ name: string, ok: boolean }[]} */
 const results = [];
+/**
+ * ログに書く前に、改行などの制御文字（C0・DEL・C1・行区切り・段落区切り）を空白にする。
+ * 通信で受け取った値（応答の本文・ヘッダ）で偽の行を作らせない（ログの注入の対策）。
+ */
+function forLog(value) {
+  let out = '';
+  for (const c of String(value)) {
+    const n = c.codePointAt(0);
+    const control = n < 0x20 || (n >= 0x7f && n <= 0x9f) || n === 0x2028 || n === 0x2029;
+    out += control ? ' ' : c;
+  }
+  return out;
+}
+
 const record = (name, ok, detail) => {
   results.push({ name, ok });
-  console.log(`${ok ? 'OK  ' : 'FAIL'} ${name}: ${detail}`);
+  console.log(`${ok ? 'OK  ' : 'FAIL'} ${forLog(name)}: ${forLog(detail)}`);
 };
 
 /** 1 回の要求。ネットワークの失敗も結果として返す（ほかの確認は続ける） */

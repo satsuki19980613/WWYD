@@ -62,9 +62,9 @@ export function ListScreen(): JSX.Element {
     <>
       {list.hasMore && list.more === 'idle' && <MoreSentinel onVisible={list.loadMore} />}
       {list.more === 'loading' && (
-        <div className="list-more" role="status" aria-label="読み込み中">
+        <output className="list-more" aria-label="読み込み中">
           <span className="spinner" />
-        </div>
+        </output>
       )}
       {list.more === 'error' && <LoadError onRetry={list.retry} />}
     </>
@@ -171,22 +171,24 @@ export function ListScreen(): JSX.Element {
  * PC の一覧の表（17 章）。1 行 1 投稿で、行全体を押せる（タイトルのリンクを行いっぱいに広げる）。
  * 見出しの「回答」「投稿」を押すと並び替える。↑↓（j / k）で行を移り、Enter で開く。
  */
-function SpotTable(props: {
+function SpotTable(props: Readonly<{
   rows: readonly PostRow[];
   loading: boolean;
   now: number;
   sort: ListQuery['sort'];
   onSort: (sort: ListQuery['sort']) => void;
   onDelete: (id: string) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const ref = useRef<HTMLOListElement>(null);
-  const onKeyDown = (e: ReactKeyboardEvent<HTMLOListElement>): void => {
+  // キー操作は行の中の操作要素（タイトルのリンク・削除）で受ける（フォーカスは常にそのどちらかにある）
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLElement>): void => {
     const down = e.key === 'ArrowDown' || e.key === 'j';
     const up = e.key === 'ArrowUp' || e.key === 'k';
     if (!down && !up) return;
     const links = [...(ref.current?.querySelectorAll<HTMLAnchorElement>('.spot-link') ?? [])];
-    const i = links.findIndex((l) => l === document.activeElement);
-    const next = links[i < 0 ? 0 : Math.min(links.length - 1, Math.max(0, i + (down ? 1 : -1)))];
+    const i = links.indexOf(document.activeElement as HTMLAnchorElement);
+    const step = down ? 1 : -1;
+    const next = links[i < 0 ? 0 : Math.min(links.length - 1, Math.max(0, i + step))];
     if (!next) return;
     e.preventDefault();
     next.focus();
@@ -218,9 +220,9 @@ function SpotTable(props: {
         </div>
       )}
       {props.rows.length > 0 && (
-        <ol ref={ref} className="st-body" onKeyDown={onKeyDown}>
+        <ol ref={ref} className="st-body">
           {props.rows.map((row) => (
-            <SpotRow key={row.id} row={row} now={props.now} onDelete={() => props.onDelete(row.id)} />
+            <SpotRow key={row.id} row={row} now={props.now} onDelete={() => props.onDelete(row.id)} onKeyDown={onKeyDown} />
           ))}
         </ol>
       )}
@@ -229,7 +231,7 @@ function SpotTable(props: {
 }
 
 /** Street と、スポットの Street までの Board（17 章。サーバーが Board を返さないときは Street だけ） */
-function SpotBoard(props: { row: PostRow; size: 'sm' | 'big' }): JSX.Element {
+function SpotBoard(props: Readonly<{ row: PostRow; size: 'sm' | 'big' }>): JSX.Element {
   const board = props.row.board ?? [];
   return (
     <span className={`spot-board ${props.size}`}>
@@ -251,7 +253,7 @@ function metaText(row: PostRow): string {
 }
 
 /** Villain・MTT の情報が登録された投稿の印（18 章 §6） */
-function InfoBadges(props: { row: PostRow }): JSX.Element | null {
+function InfoBadges(props: Readonly<{ row: PostRow }>): JSX.Element | null {
   if (!props.row.has_reads && !props.row.has_mtt) return null;
   return (
     <span className="spot-badges">
@@ -261,7 +263,7 @@ function InfoBadges(props: { row: PostRow }): JSX.Element | null {
   );
 }
 
-function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JSX.Element {
+function SpotRow(props: Readonly<{ row: PostRow; now: number; onDelete: () => void; onKeyDown: (e: ReactKeyboardEvent<HTMLElement>) => void }>): JSX.Element {
   const { row } = props;
   const status = cardStatus(row);
   const action = cardAction(row);
@@ -269,7 +271,7 @@ function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JS
     <li className={`st-row spot-row${action.primary ? '' : ' done'}`}>
       <SpotBoard row={row} size="big" />
       <span className="st-title">
-        <Link to={action.to} className="spot-link">
+        <Link to={action.to} className="spot-link" onKeyDown={props.onKeyDown}>
           {row.title}
         </Link>
         <span className="st-meta num">
@@ -291,7 +293,7 @@ function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JS
       {/* 削除は専用の列（無い行も同じ幅を空けて、ほかの列を揃える。2026-09-29 さつき） */}
       <span className="st-del">
         {row.can_delete && (
-          <button type="button" className="spot-del" aria-label="削除" onClick={props.onDelete}>
+          <button type="button" className="spot-del" aria-label="削除" onClick={props.onDelete} onKeyDown={props.onKeyDown}>
             <TrashIcon />
           </button>
         )}
@@ -300,7 +302,7 @@ function SpotRow(props: { row: PostRow; now: number; onDelete: () => void }): JS
   );
 }
 
-function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): JSX.Element {
+function SpotCard(props: Readonly<{ row: PostRow; now: number; onDelete: () => void }>): JSX.Element {
   const { row } = props;
   const status = cardStatus(row);
   const action = cardAction(row);
@@ -346,7 +348,7 @@ function SpotCard(props: { row: PostRow; now: number; onDelete: () => void }): J
   );
 }
 
-function Empty(props: { query: ListQuery }): JSX.Element {
+function Empty(props: Readonly<{ query: ListQuery }>): JSX.Element {
   const e = emptyState(props.query);
   return (
     <div className="list-empty">
@@ -360,7 +362,7 @@ function Empty(props: { query: ListQuery }): JSX.Element {
   );
 }
 
-function LoadError(props: { onRetry: () => void }): JSX.Element {
+function LoadError(props: Readonly<{ onRetry: () => void }>): JSX.Element {
   return (
     <div className="list-empty" role="alert">
       <p className="form-err">読み込みに失敗しました</p>
@@ -372,7 +374,7 @@ function LoadError(props: { onRetry: () => void }): JSX.Element {
 }
 
 /** 最後のカードの下が見えたら次のページを読む（06 章 §2.3）。 */
-function MoreSentinel(props: { onVisible: () => void }): JSX.Element {
+function MoreSentinel(props: Readonly<{ onVisible: () => void }>): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const cb = useRef(props.onVisible);
   cb.current = props.onVisible;

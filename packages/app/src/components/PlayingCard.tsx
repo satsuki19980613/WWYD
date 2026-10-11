@@ -16,7 +16,7 @@ export function cardText(card: Card): string {
  * 札（ICMCLEC の `.card` と同じ見た目。4 色デッキ ♠黒 ♥赤 ♦青 ♣緑）。
  * `rank` だけのときはスート未確定の「K?」。
  */
-export function PlayingCard(props: { card?: Card; rank?: string; size?: 'sm' | 'md' | 'big' }): JSX.Element {
+export function PlayingCard(props: Readonly<{ card?: Card; rank?: string; size?: 'sm' | 'md' | 'big' }>): JSX.Element {
   const size = props.size && props.size !== 'md' ? ` ${props.size}` : '';
   if (!props.card) {
     return (

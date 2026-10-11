@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { defLabel, defMiddle, defPercent, type SliderDef } from './readsModel.ts';
 
 /**
@@ -7,18 +7,17 @@ import { defLabel, defMiddle, defPercent, type SliderDef } from './readsModel.ts
  * `def.ends` のある Slider（Tournament Type）は段階も目盛りも付けず、溝の下の左右に両端の名前（Deep・Turbo）を出す。
  * 横になぞって動かす（縦のスクロールは妨げない）。キーボードは ←→ で 1、PageUp/Down で 10（段階だけの項目は 1）、Delete で未入力。
  */
-export function ReadSlider(props: {
+export function ReadSlider(props: Readonly<{
   def: SliderDef;
   value: number | undefined;
   onChange: (v: number) => void;
   onClear: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { def, value } = props;
   const percent = defPercent(def);
   const max = def.max;
   const track = useRef<HTMLDivElement>(null);
   const drag = useRef<number | null>(null);
-  const [editing, setEditing] = useState(false);
   const set = value !== undefined;
   const ratio = set ? value / max : 0;
   const ends = def.ends;
@@ -47,46 +46,21 @@ export function ReadSlider(props: {
       props.onClear();
       return;
     }
-    const base = value ?? defMiddle(def);
-    const big = max >= 20 ? 10 : 1;
-    const moves: Record<string, number> = {
-      ArrowRight: base + 1,
-      ArrowUp: base + 1,
-      ArrowLeft: base - 1,
-      ArrowDown: base - 1,
-      PageUp: base + big,
-      PageDown: base - big,
-      Home: 0,
-      End: max,
-    };
-    const v = moves[e.key];
+    const v = keyValue(e.key, def, value);
     if (v === undefined) return;
     e.preventDefault();
-    // 未入力のときの最初の矢印は真ん中に置く。端で押しても 0〜max の外に出さない（V-027）
-    props.onChange(set || e.key === 'Home' || e.key === 'End' ? Math.min(max, Math.max(0, v)) : defMiddle(def));
+    props.onChange(v);
   };
 
-  // 段階の境目の目盛り（% の項目は境目の値、段階だけの項目は 5 つの点）
-  const ticks = ends ? [] : def.cuts ? def.cuts.map((c) => c / max) : Array.from({ length: max - 1 }, (_, i) => (i + 1) / max);
-  const valueText = !set ? '未入力' : ends ? `${value} / ${max}（${ends[0]} 0 〜 ${ends[1]} ${max}）` : percent ? `${label} ${value}%` : label;
+  const ticks = ticksOf(def);
+  const valueText = valueTextOf(def, value, label);
 
   return (
     <div className={`rs${set ? ' set' : ''}${ends ? ' ends' : ''}`}>
       <div className="rs-head">
         <span className="mono-lbl rs-name">{def.name}</span>
         <span className="rs-label">{ends ? '' : label}</span>
-        {percent &&
-          (editing ? (
-            <NumberEdit value={value} max={max} name={def.name} onDone={(v) => {
-              setEditing(false);
-              if (v !== null) props.onChange(v);
-            }} />
-          ) : (
-            <button type="button" className="rs-num num" aria-label={`${def.name} を数で入力`} onClick={() => setEditing(true)}>
-              {set ? value : '--'}
-              <small>%</small>
-            </button>
-          ))}
+        {percent && <PercentField name={def.name} value={value} max={max} onChange={props.onChange} />}
         {set && (
           <button type="button" className="rs-clear" aria-label={`${def.name} をリセット`} onClick={props.onClear}>
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
@@ -124,8 +98,66 @@ export function ReadSlider(props: {
   );
 }
 
+/** キーで動かした先（動かさないキーは undefined）。未入力のときの最初の矢印は真ん中に置く。端で押しても 0〜max の外に出さない（V-027） */
+function keyValue(key: string, def: SliderDef, value: number | undefined): number | undefined {
+  const max = def.max;
+  const base = value ?? defMiddle(def);
+  const big = max >= 20 ? 10 : 1;
+  const moves: Record<string, number> = {
+    ArrowRight: base + 1,
+    ArrowUp: base + 1,
+    ArrowLeft: base - 1,
+    ArrowDown: base - 1,
+    PageUp: base + big,
+    PageDown: base - big,
+    Home: 0,
+    End: max,
+  };
+  const v = moves[key];
+  if (v === undefined) return undefined;
+  return value !== undefined || key === 'Home' || key === 'End' ? Math.min(max, Math.max(0, v)) : defMiddle(def);
+}
+
+/** 段階の境目の目盛り（% の項目は境目の値、段階だけの項目は 5 つの点。両端の名前を出す Slider は付けない） */
+function ticksOf(def: SliderDef): number[] {
+  if (def.ends) return [];
+  if (def.cuts) return def.cuts.map((c) => c / def.max);
+  return Array.from({ length: def.max - 1 }, (_, i) => (i + 1) / def.max);
+}
+
+/** 読み上げの値（未入力・両端の名前つきの数・段階と %・段階） */
+function valueTextOf(def: SliderDef, value: number | undefined, label: string): string {
+  if (value === undefined) return '未入力';
+  if (def.ends) return `${value} / ${def.max}（${def.ends[0]} 0 〜 ${def.ends[1]} ${def.max}）`;
+  return defPercent(def) ? `${label} ${value}%` : label;
+}
+
+/** 数（%）のボタン。押すと直接入力の欄に替わる */
+function PercentField(props: Readonly<{ name: string; value: number | undefined; max: number; onChange: (v: number) => void }>): JSX.Element {
+  const [editing, setEditing] = useState(false);
+  if (editing) {
+    return (
+      <NumberEdit
+        value={props.value}
+        max={props.max}
+        name={props.name}
+        onDone={(v) => {
+          setEditing(false);
+          if (v !== null) props.onChange(v);
+        }}
+      />
+    );
+  }
+  return (
+    <button type="button" className="rs-num num" aria-label={`${props.name} を数で入力`} onClick={() => setEditing(true)}>
+      {props.value ?? '--'}
+      <small>%</small>
+    </button>
+  );
+}
+
 /** 段階を付けない Slider の両端の名前（左・右）。表示の画面でも使う */
-export function SliderEnds(props: { ends: readonly [string, string] }): JSX.Element {
+export function SliderEnds(props: Readonly<{ ends: readonly [string, string] }>): JSX.Element {
   return (
     <div className="rs-ends" aria-hidden="true">
       <span>{props.ends[0]}</span>
@@ -135,9 +167,12 @@ export function SliderEnds(props: { ends: readonly [string, string] }): JSX.Elem
 }
 
 /** 数（%）の直接入力。Enter・欄の外で確定、Esc で取り消す。0〜max の整数でなければ変えない */
-function NumberEdit(props: { value: number | undefined; max: number; name: string; onDone: (v: number | null) => void }): JSX.Element {
+function NumberEdit(props: Readonly<{ value: number | undefined; max: number; name: string; onDone: (v: number | null) => void }>): JSX.Element {
   const [text, setText] = useState(props.value === undefined ? '' : String(props.value));
   const done = useRef(false);
+  const input = useRef<HTMLInputElement>(null);
+  // 「数で入力」を押して出した欄なので、出したらすぐ打てるようにする
+  useEffect(() => input.current?.focus(), []);
   const finish = (commit: boolean): void => {
     if (done.current) return;
     done.current = true;
@@ -147,11 +182,11 @@ function NumberEdit(props: { value: number | undefined; max: number; name: strin
   };
   return (
     <input
+      ref={input}
       className="inp num rs-input"
       inputMode="numeric"
       autoComplete="off"
       aria-label={`${props.name}（%）`}
-      autoFocus
       value={text}
       onChange={(e) => setText(e.target.value)}
       onBlur={() => finish(true)}

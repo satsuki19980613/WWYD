@@ -252,7 +252,7 @@ for (const v of ['', ' @sp'] as const) {
     await choice(gen(page, 2), 'Street').filter({ hasText: /^Flop$/ }).first().click();
     await submitBtn(page).click();
     await expect(page.locator('.pf-errors')).toContainText('BB の General Read を最後まで選んでください');
-    expect(cp.calls.length).toBe(0);
+    expect(cp.calls).toHaveLength(0);
     // Street・Action まで（Lean 無し）でもエラー
     await choice(gen(page, 2), 'Action').filter({ hasText: /^C-Bet$/ }).click();
     await submitBtn(page).click();

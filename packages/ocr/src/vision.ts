@@ -100,6 +100,25 @@ export function bodyBox(img: RgbaImage): Box {
 export function extractGlyph(chip: RgbaImage): Uint8Array | null {
   const { width: w, height: h } = chip;
   if (w === 0 || h === 0) return null;
+  const ink = inkOf(chip);
+  const label = new Int32Array(w * h).fill(-1);
+  const best = leftmostBlob(ink, w, h, label);
+  if (!best) return null;
+  // ランクとスートがつながっている（Android の 4♦ は 4 の横棒が ♦ の左端に 1 画素触れる）。
+  // ランクの幅（実測 13〜21px）を超えていたら、インクがいちばん少ない列で切り、左だけをランクにする
+  const box = best.box[2] - best.box[0] + 1 > MAX_RANK_W ? cutRank(label, w, h, best.id, best.box) : best.box;
+  if (!box) return null;
+  return sampleGlyph(label, w, best.id, box);
+}
+
+/** 外接矩形 [x0, y0, x1, y1]（両端を含む）。 */
+type InclusiveBox = [number, number, number, number];
+
+type Blob = { id: number; minX: number; size: number; box: InclusiveBox };
+
+/** チップを 2 値にする（明るさの最小と最大の中間より 20 明るい画素がインク）。 */
+function inkOf(chip: RgbaImage): Uint8Array {
+  const { width: w, height: h } = chip;
   let min = Infinity;
   let max = -Infinity;
   const gray = new Float64Array(w * h);
@@ -114,79 +133,91 @@ export function extractGlyph(chip: RgbaImage): Uint8Array | null {
   const threshold = (min + max) / 2 + 20;
   const ink = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) ink[i] = (gray[i] as number) > threshold ? 1 : 0;
+  return ink;
+}
 
-  // 4 近傍の塊に分け、左端がいちばん左の塊（小さな点は除く）を選ぶ
-  const label = new Int32Array(w * h).fill(-1);
-  let best: { id: number; minX: number; size: number; box: [number, number, number, number] } | null = null;
+/** 画素 `i`（座標 x, y）の 4 近傍（画像の外は -1）。 */
+function neighbours(i: number, x: number, y: number, w: number, h: number): number[] {
+  return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1];
+}
+
+/** `start` から 4 近傍でつながったインクに番号 `id` を付け、画素数と外接矩形を返す。 */
+function fillBlob(ink: Uint8Array, label: Int32Array, w: number, h: number, start: number, id: number): { size: number; box: InclusiveBox } {
+  label[start] = id;
+  const stack = [start];
+  let size = 0;
+  let x0 = w;
+  let y0 = h;
+  let x1 = -1;
+  let y1 = -1;
+  while (stack.length > 0) {
+    const i = stack.pop() as number;
+    const x = i % w;
+    const y = (i - x) / w;
+    size++;
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+    for (const j of neighbours(i, x, y, w, h)) {
+      if (j >= 0 && ink[j] && label[j] === -1) {
+        label[j] = id;
+        stack.push(j);
+      }
+    }
+  }
+  return { size, box: [x0, y0, x1, y1] };
+}
+
+/** 4 近傍の塊に分け（`label` に塊の番号を書く）、左端がいちばん左の塊（同じなら大きい方。小さな点は除く）を返す。 */
+function leftmostBlob(ink: Uint8Array, w: number, h: number, label: Int32Array): Blob | null {
+  let best: Blob | null = null;
   let next = 0;
-  const stack: number[] = [];
   for (let start = 0; start < w * h; start++) {
     if (!ink[start] || label[start] !== -1) continue;
     const id = next++;
-    label[start] = id;
-    stack.push(start);
-    let size = 0;
-    let x0 = w;
-    let y0 = h;
-    let x1 = -1;
-    let y1 = -1;
-    while (stack.length > 0) {
-      const i = stack.pop() as number;
-      const x = i % w;
-      const y = (i - x) / w;
-      size++;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      if (y > y1) y1 = y;
-      const around = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1];
-      for (const j of around) {
-        if (j >= 0 && ink[j] && label[j] === -1) {
-          label[j] = id;
-          stack.push(j);
-        }
-      }
-    }
+    const { size, box } = fillBlob(ink, label, w, h, start, id);
     if (size < MIN_GLYPH_PIXELS) continue;
-    if (!best || x0 < best.minX || (x0 === best.minX && size > best.size)) {
-      best = { id, minX: x0, size, box: [x0, y0, x1, y1] };
-    }
+    const x0 = box[0];
+    if (!best || x0 < best.minX || (x0 === best.minX && size > best.size)) best = { id, minX: x0, size, box };
   }
-  if (!best) return null;
-  const id = best.id;
-  let [bx0, by0, bx1, by1] = best.box;
+  return best;
+}
 
-  // ランクとスートがつながっている（Android の 4♦ は 4 の横棒が ♦ の左端に 1 画素触れる）。
-  // ランクの幅（実測 13〜21px）を超えていたら、インクがいちばん少ない列で切り、左だけをランクにする
-  if (bx1 - bx0 + 1 > MAX_RANK_W) {
-    const count = (x: number): number => {
-      let n = 0;
-      for (let y = by0; y <= by1; y++) if (label[y * w + x] === id) n++;
-      return n;
-    };
-    let cut = -1;
-    let least = Infinity;
-    for (let x = bx0 + 12; x <= Math.min(bx1 - 3, bx0 + MAX_RANK_W - 1); x++) {
-      const n = count(x);
-      if (n < least) {
-        least = n;
-        cut = x;
-      }
+/** 塊 `id` を、ランクの幅の範囲でインクがいちばん少ない列で切り、左側の外接矩形を返す（切れなければ null）。 */
+function cutRank(label: Int32Array, w: number, h: number, id: number, box: InclusiveBox): InclusiveBox | null {
+  const [bx0, by0, bx1, by1] = box;
+  const count = (x: number): number => {
+    let n = 0;
+    for (let y = by0; y <= by1; y++) if (label[y * w + x] === id) n++;
+    return n;
+  };
+  let cut = -1;
+  let least = Infinity;
+  for (let x = bx0 + 12; x <= Math.min(bx1 - 3, bx0 + MAX_RANK_W - 1); x++) {
+    const n = count(x);
+    if (n < least) {
+      least = n;
+      cut = x;
     }
-    if (cut < 0) return null;
-    bx1 = cut - 1;
-    by0 = h;
-    by1 = -1;
-    for (let y = 0; y < h; y++) {
-      for (let x = bx0; x <= bx1; x++) {
-        if (label[y * w + x] === id) {
-          if (y < by0) by0 = y;
-          if (y > by1) by1 = y;
-        }
-      }
-    }
-    if (by1 < by0) return null;
   }
+  if (cut < 0) return null;
+  const right = cut - 1;
+  let top = h;
+  let bottom = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = bx0; x <= right; x++) {
+      if (label[y * w + x] !== id) continue;
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  return bottom < top ? null : [bx0, top, right, bottom];
+}
+
+/** 塊 `id` の矩形を GLYPH_W×GLYPH_H の 0/1 に縮める。 */
+function sampleGlyph(label: Int32Array, w: number, id: number, box: InclusiveBox): Uint8Array {
+  const [bx0, by0, bx1, by1] = box;
   const subW = bx1 - bx0 + 1;
   const subH = by1 - by0 + 1;
   // 出力の画素の中心を入力に写して切り捨てる（PIL の NEAREST と同じ標本点）
@@ -356,6 +387,19 @@ function boardChipBox(index: number, row: ChipRow, w: number): Box {
   return [Math.trunc(left * s), row[0], Math.trunc((left + BOARD_CHIP_W) * s), row[1]];
 }
 
+/** 行 `y` の [x1, x2) が、どれか 1 つのスートの色で塗りつぶされているか。 */
+function isSolidBand(img: RgbaImage, y: number, x1: number, x2: number): boolean {
+  if (x2 <= x1) return false;
+  let first = -1;
+  for (let x = x1; x < x2; x++) {
+    const { index, dist } = nearestSuit(rgbAt(img, x, y));
+    if (dist > BOARD_COLOUR_TOLERANCE) return false;
+    if (first < 0) first = index;
+    else if (index !== first) return false;
+  }
+  return true;
+}
+
 /**
  * ボードのチップの行を上から順に返す（各 [y1, y2)）。フロップ / ターン / リバーで最大 3 行。
  * 「文字が来ない帯」が単色で続く縦の範囲を探す。行の高さは実測せず、上端から定数で決める
@@ -369,15 +413,7 @@ export function boardChipRows(img: RgbaImage): ChipRow[] {
   let start: number | null = null;
   let last = 0;
   for (let y = top; y < Math.min(bottom, img.height); y++) {
-    let solid = x2 > x1;
-    let first = -1;
-    for (let x = x1; x < x2 && solid; x++) {
-      const { index, dist } = nearestSuit(rgbAt(img, x, y));
-      if (dist > BOARD_COLOUR_TOLERANCE) solid = false;
-      else if (first < 0) first = index;
-      else if (index !== first) solid = false;
-    }
-    if (!solid) continue;
+    if (!isSolidBand(img, y, x1, x2)) continue;
     const yy = y - top;
     if (start === null) start = yy;
     else if (yy - last > BOARD_CHIP_GAP_TOLERANCE) {

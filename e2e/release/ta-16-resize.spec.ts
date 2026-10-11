@@ -82,7 +82,8 @@ test('投稿: Action・Board・Spot・タイトルを入れたあと PC → ス�
   // Card の選択ボード（Hand）を開いたまま幅を変える → 落ちない。閉じてから続けられる
   await page.getByRole('button', { name: 'SB の Hand' }).click();
   await page.setViewportSize(NARROW);
-  await page.waitForTimeout(300);
+  // スマホの構成に切り替わってから閉じる
+  await expect(page.locator('.pf.sp')).toBeVisible();
   await page.keyboard.press('Escape');
   await page.setViewportSize(WIDE);
   await expect(dock(page)).toHaveCount(0); // ハンドは終わっているので台は無い

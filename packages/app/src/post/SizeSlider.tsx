@@ -8,7 +8,7 @@ type Range = { min: Mbb; max: Mbb };
  * 額のボタンとスライダー（スマホ。14 章 §3.1）。ボタンを押すと縦のスライダーが上に伸び、つまみをなぞって額を選ぶ
  * （ソフトウェアキーボードを出さない）。▲▼ で 0.1bb ずつ。外を押すと閉じる。額は選ぶだけで、打つのは台のボタン。
  */
-export function SizeSlider(props: {
+export function SizeSlider(props: Readonly<{
   /** 「to」または「bet」 */
   unit: string;
   label: string;
@@ -17,7 +17,7 @@ export function SizeSlider(props: {
   /** 額の添え書き（「50% pot」「×3」） */
   note: (to: Mbb) => string | null;
   onChange: (to: Mbb) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const [open, setOpen] = useState(false);
   const value = props.value ?? props.range.min;
   return (
@@ -31,14 +31,14 @@ export function SizeSlider(props: {
   );
 }
 
-function SliderPop(props: {
+function SliderPop(props: Readonly<{
   range: Range;
   value: Mbb;
   note: string | null;
   label: string;
   onChange: (to: Mbb) => void;
   onClose: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { range, value } = props;
   const track = useRef<HTMLDivElement>(null);
   const thumb = useRef<HTMLDivElement>(null);
@@ -69,6 +69,13 @@ function SliderPop(props: {
   const onUp = (e: PointerEvent<HTMLDivElement>): void => {
     if (drag.current === e.pointerId) drag.current = null;
   };
+  // Esc で閉じる。つまみの上の Enter でも閉じる（キー操作は、ポップの中の操作要素で受ける）
+  const onPopKey = (e: KeyboardEvent<HTMLElement>): void => {
+    if (e.key === 'Escape' || (e.key === 'Enter' && e.target === thumb.current)) {
+      e.preventDefault();
+      props.onClose();
+    }
+  };
   const onKey = (e: KeyboardEvent<HTMLDivElement>): void => {
     const step = sliderStep(range);
     const moves: Record<string, Mbb> = {
@@ -91,22 +98,12 @@ function SliderPop(props: {
   return (
     <>
       <div className="sl-backdrop" onClick={props.onClose} aria-hidden="true" />
-      <div
-        className="sl-pop"
-        role="group"
-        aria-label={props.label}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' || (e.key === 'Enter' && e.target === thumb.current)) {
-            e.preventDefault();
-            props.onClose();
-          }
-        }}
-      >
+      <fieldset className="sl-pop" aria-label={props.label}>
         <div className="sl-val">
           <b className="num">{formatBb(value)}</b>
           {props.note && <span className="num">{props.note}</span>}
         </div>
-        <button type="button" className="sl-nudge" aria-label="0.1bb 上げる" disabled={value >= range.max} onClick={() => nudge(1)}>
+        <button type="button" className="sl-nudge" aria-label="0.1bb 上げる" disabled={value >= range.max} onClick={() => nudge(1)} onKeyDown={onPopKey}>
           ▲
         </button>
         <span className="sl-end num">{formatBb(range.max)}</span>
@@ -125,14 +122,17 @@ function SliderPop(props: {
             aria-valuetext={`${formatBb(value)}bb`}
             // つまみ（高さ 18px）が溝からはみ出さないよう、溝の高さから つまみの分を引いた範囲で動かす
             style={{ bottom: `calc(${ratio} * (100% - 18px))` }}
-            onKeyDown={onKey}
+            onKeyDown={(e) => {
+              onKey(e);
+              onPopKey(e);
+            }}
           />
         </div>
         <span className="sl-end num">{formatBb(range.min)}</span>
-        <button type="button" className="sl-nudge" aria-label="0.1bb 下げる" disabled={value <= range.min} onClick={() => nudge(-1)}>
+        <button type="button" className="sl-nudge" aria-label="0.1bb 下げる" disabled={value <= range.min} onClick={() => nudge(-1)} onKeyDown={onPopKey}>
           ▼
         </button>
-      </div>
+      </fieldset>
     </>
   );
 }

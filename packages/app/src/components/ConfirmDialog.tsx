@@ -6,7 +6,7 @@ import { Modal } from './Modal.tsx';
  * Esc と背景クリックは「やめる」。破壊的な操作は実行ボタンを赤にする。
  * 初期フォーカスは「やめる」（Enter の押し間違いで破壊的な操作を実行しない）。
  */
-export function ConfirmDialog(props: {
+export function ConfirmDialog(props: Readonly<{
   title: string;
   body: string;
   confirmLabel: string;
@@ -15,7 +15,7 @@ export function ConfirmDialog(props: {
   busyLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const cancel = (): void => {
     if (!props.busy) props.onCancel();

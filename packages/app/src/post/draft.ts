@@ -289,23 +289,8 @@ export type SizePreset = { label: string; sub: string; to: Mbb; allin: boolean }
 export function sizePresets(state: State, legal: Legal): SizePreset[] {
   const range = legal.bet ?? legal.raise;
   if (!range) return [];
-  const bb = state.bb;
-  const pot = totalPot(state);
-  // % pot は 0.1bb に丸める（ログ・集計の表示で 1.82 のような額にしない）。倍率は 0.01bb
-  const raw: { label: string; to: number; unit: number }[] = [];
-  if (state.street === 'pf' && state.currentBet <= bb) {
-    const limpers = limperCount(state);
-    const opens = limpers === 0 ? [2, 2.2, 2.5, 3] : [3, 4, 5].map((x) => x + limpers);
-    for (const x of opens) raw.push({ label: formatBb(x * bb), to: x * bb, unit: 10 });
-  } else if (state.street === 'pf') {
-    for (const k of [2.2, 2.5, 3, 4]) raw.push({ label: `×${k}`, to: state.currentBet * k, unit: 10 });
-  } else if (state.currentBet === 0) {
-    for (const pct of [25, 33, 50, 75, 100, 150]) raw.push({ label: `${pct}%`, to: (pot * pct) / 100, unit: 100 });
-  } else {
-    for (const k of [2.5, 3, 4]) raw.push({ label: `×${k}`, to: state.currentBet * k, unit: 10 });
-  }
   const out: SizePreset[] = [];
-  for (const r of raw) {
+  for (const r of rawPresets(state)) {
     const to = Math.round(r.to / r.unit) * r.unit;
     if (to < range.min || to >= range.max || out.some((o) => o.to === to)) continue;
     out.push({ label: r.label, sub: formatBb(to), to, allin: false });
@@ -314,12 +299,36 @@ export function sizePresets(state: State, legal: Legal): SizePreset[] {
   return out;
 }
 
+/** 丸める前のよく使う額の候補。% pot は 0.1bb に丸める（ログ・集計の表示で 1.82 のような額にしない）。倍率は 0.01bb */
+function rawPresets(state: State): { label: string; to: number; unit: number }[] {
+  const bb = state.bb;
+  const times = (ks: readonly number[]): { label: string; to: number; unit: number }[] =>
+    ks.map((k) => ({ label: `×${k}`, to: state.currentBet * k, unit: 10 }));
+  if (state.street === 'pf' && state.currentBet <= bb) {
+    const limpers = limperCount(state);
+    const opens = limpers === 0 ? [2, 2.2, 2.5, 3] : [3, 4, 5].map((x) => x + limpers);
+    return opens.map((x) => ({ label: formatBb(x * bb), to: x * bb, unit: 10 }));
+  }
+  if (state.street === 'pf') return times([2.2, 2.5, 3, 4]);
+  if (state.currentBet === 0) {
+    const pot = totalPot(state);
+    return [25, 33, 50, 75, 100, 150].map((pct) => ({ label: `${pct}%`, to: (pot * pct) / 100, unit: 100 }));
+  }
+  return times([2.5, 3, 4]);
+}
+
+/** 最初に選んでおく額の名前: オープン 2.5bb・3bet ×3・ベット 33%・レイズ ×3 */
+function defaultPresetLabel(state: State): string {
+  if (state.street === 'pf') return state.currentBet <= state.bb ? '2.5' : '×3';
+  return state.currentBet === 0 ? '33%' : '×3';
+}
+
 /** 最初に選んでおく額: オープン 2.5bb・3bet ×3・ベット 33%・レイズ ×3（無ければ最小） */
 export function defaultPreset(state: State, legal: Legal): Mbb | null {
   const range = legal.bet ?? legal.raise;
   if (!range) return null;
   const ps = sizePresets(state, legal);
-  const want = state.street === 'pf' ? (state.currentBet <= state.bb ? '2.5' : '×3') : state.currentBet === 0 ? '33%' : '×3';
+  const want = defaultPresetLabel(state);
   return ps.find((p) => p.label === want)?.to ?? ps.find((p) => !p.allin)?.to ?? range.min;
 }
 
@@ -379,7 +388,8 @@ export function skipTargets(state: State, pos: Pos, legalNow: Legal): { kind: 'f
 /** なぞったときの刻み（mbb）: 幅が 10bb まで 0.1bb、50bb まで 0.5bb、それより広ければ 1bb。▲▼ は常に 0.1bb */
 export function sliderStep(range: { min: Mbb; max: Mbb }): Mbb {
   const span = range.max - range.min;
-  return span <= 10_000 ? 100 : span <= 50_000 ? 500 : 1000;
+  if (span <= 10_000) return 100;
+  return span <= 50_000 ? 500 : 1000;
 }
 export const SLIDER_NUDGE: Mbb = 100;
 
@@ -499,9 +509,15 @@ export function addBoardCard(d: Draft, card: Card): Draft {
   return d.board.length >= 5 ? d : { ...d, board: [...d.board, card] };
 }
 
+/** ボードの i 枚目（0 から）が出る Street（0〜2 は Flop、3 は Turn、4 は River） */
+export function boardCardStreet(i: number): Street {
+  if (i < 3) return 'flop';
+  return i === 3 ? 'turn' : 'river';
+}
+
 /** ボードの i 枚目を押す: そのカード以降のボードと、そのストリート以降のアクションを消す（確認なし） */
 export function removeBoardFrom(d: Draft, i: number): Draft {
-  const street: Street = i < 3 ? 'flop' : i === 3 ? 'turn' : 'river';
+  const street = boardCardStreet(i);
   const cut = d.actions.findIndex((a) => STREETS.indexOf(a.street) >= STREETS.indexOf(street));
   return normalizeSpot({ ...d, board: d.board.slice(0, i), actions: cut < 0 ? d.actions : d.actions.slice(0, cut) });
 }
@@ -559,30 +575,42 @@ function noSpotError(d: Draft): string {
 export function buildSubmission(d: Draft): Submission {
   const errors: string[] = [];
   const { setup, invalid } = parseSettings(d);
-  const seats = seatsOf(d);
   if (d.players === null) errors.push(PLAYERS_REQUIRED);
   for (const f of invalid) errors.push(`${FIELD_LABEL[f]} の値が正しくありません`);
+  errors.push(...handErrors(d));
 
-  const heroCards = handCards(d.hands[d.hero]);
-  if (heroCards.length !== 2 || !isHandComplete(d.hands[d.hero])) errors.push(`Hero（${d.hero}）の Hand を入力してください`);
-  for (const p of seats) {
-    if (p !== d.hero && !isHandComplete(d.hands[p])) errors.push(`${p} の Hand が途中です`);
-  }
-
-  const phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' as const };
+  const phase: Phase = invalid.length === 0 ? phaseOf(setup, d.actions, d.board) : { kind: 'invalid' };
   if (phase.kind !== 'done' && invalid.length === 0 && d.players !== null) errors.push('Hand を最後まで入力してください');
   if (d.spotIndex === null) errors.push(phase.kind === 'done' && candidates(d).length === 0 ? noSpotError(d) : 'Spot を選択してください');
   if (d.title.trim() === '') errors.push('タイトルを入力してください');
-  if (d.fmt === 'mtt') {
-    const mtt = parseMtt(d.mtt);
-    for (const f of mtt.invalid) errors.push(`MTT の ${MTT_FIELD_LABEL[f]} の値が正しくありません`);
-    errors.push(...mttOrderErrors(mtt.info));
-  }
+  errors.push(...mttErrors(d));
   for (const p of incompleteSeats(d.reads, villainContext(d).seats)) errors.push(`${p} の General Read を最後まで選んでください`);
   if (errors.length > 0 || !setup || phase.kind !== 'done' || d.spotIndex === null) {
     return { ok: false, errors };
   }
+  return verifiedSubmission(d);
+}
 
+/** Hand の入力のエラー（Hero は 2 枚ちょうど、ほかの席は入れかけでないこと） */
+function handErrors(d: Draft): string[] {
+  const errors: string[] = [];
+  const heroCards = handCards(d.hands[d.hero]);
+  if (heroCards.length !== 2 || !isHandComplete(d.hands[d.hero])) errors.push(`Hero（${d.hero}）の Hand を入力してください`);
+  for (const p of seatsOf(d)) {
+    if (p !== d.hero && !isHandComplete(d.hands[p])) errors.push(`${p} の Hand が途中です`);
+  }
+  return errors;
+}
+
+/** MTT の欄のエラー（MTT のときだけ。値の形 → 数の大小の順） */
+function mttErrors(d: Draft): string[] {
+  if (d.fmt !== 'mtt') return [];
+  const mtt = parseMtt(d.mtt);
+  return [...mtt.invalid.map((f) => `MTT の ${MTT_FIELD_LABEL[f]} の値が正しくありません`), ...mttOrderErrors(mtt.info)];
+}
+
+/** 送る本文を作り、サーバーと同じ検証にかける（通らなければその理由を画面のエラーにする） */
+function verifiedSubmission(d: Draft): Submission {
   try {
     const body = submissionBody(d);
     verifyPost(validateInput(body));
@@ -591,6 +619,38 @@ export function buildSubmission(d: Draft): Submission {
     if (e instanceof ValidationError) return { ok: false, errors: [messageForCode(e.code, e.index)] };
     throw e;
   }
+}
+
+/**
+ * 再生できた Hand から送る Board と派生メタ。到達したストリートより後のボード（「1つ戻す」で残ったカード）は送らない。
+ * スポットが決まらなければ派生メタは null。Action が再生できなければ入力のまま（サーバーが断る）
+ */
+function playedParts(d: Draft, setup: HandSetup): { board: Card[]; derived: Record<string, unknown> | null } {
+  let board = d.board;
+  let derived: Record<string, unknown> | null = null;
+  try {
+    const phase = phaseOf(setup, d.actions, d.board);
+    if (phase.kind === 'done') board = d.board.slice(0, phase.boardCount);
+    if (d.spotIndex !== null) derived = derivedMeta(spotView(setup, d.actions, d.hero, d.spotIndex).derived);
+  } catch (e) {
+    if (!(e instanceof ValidationError)) throw e;
+  }
+  return { board, derived };
+}
+
+/** 派生メタの本文（額は bb） */
+function derivedMeta(v: ReturnType<typeof spotView>['derived']): Record<string, unknown> {
+  const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
+  return {
+    street: v.street,
+    keys: v.keys,
+    s1_label: v.s1Label,
+    min_to: bb(v.minTo),
+    max_to: bb(v.maxTo),
+    pot_base: mbbToBb(v.potBase),
+    effective_stack: mbbToBb(v.effectiveStack),
+    stop_index: v.stopIndex,
+  };
 }
 
 /**
@@ -609,31 +669,7 @@ export function submissionBody(d: Draft): Record<string, unknown> {
     const cards = handCards(d.hands[p]);
     if (p !== d.hero && cards.length > 0) known[p] = cards;
   }
-  let board = d.board;
-  let derived: Record<string, unknown> | null = null;
-  if (setup) {
-    try {
-      const phase = phaseOf(setup, d.actions, d.board);
-      // 到達したストリートより後のボード（「1つ戻す」で残ったカード）は送らない
-      if (phase.kind === 'done') board = d.board.slice(0, phase.boardCount);
-      if (d.spotIndex !== null) {
-        const v = spotView(setup, d.actions, d.hero, d.spotIndex).derived;
-        const bb = (m: Mbb | null): number | null => (m === null ? null : mbbToBb(m));
-        derived = {
-          street: v.street,
-          keys: v.keys,
-          s1_label: v.s1Label,
-          min_to: bb(v.minTo),
-          max_to: bb(v.maxTo),
-          pot_base: mbbToBb(v.potBase),
-          effective_stack: mbbToBb(v.effectiveStack),
-          stop_index: v.stopIndex,
-        };
-      }
-    } catch (e) {
-      if (!(e instanceof ValidationError)) throw e;
-    }
-  }
+  const { board, derived } = setup ? playedParts(d, setup) : { board: d.board, derived: null };
   const rake = d.rake.trim();
   const vc = villainContext(d);
   const reads = readsForSubmit(d.reads, vc.seats, vc.cands);

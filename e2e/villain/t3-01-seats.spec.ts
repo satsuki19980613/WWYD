@@ -150,6 +150,7 @@ for (const v of ['', ' @sp'] as const) {
   });
 
   test(`V-038 スマホの集計画面は最初のタブ（集計）からも All Villains を開ける。情報の無い投稿はボタンを出さない${v}`, async ({ page }) => {
+    // 集計画面のタブはスマホの構成にだけある（PC は 3 列で、タブが無い）
     test.skip(!isSp(page), 'スマホの集計画面のタブの話');
     await openResult(page, { ...hmw(), villain_reads: { UTG: { vpip: 10 }, BB: { agg: 1 } } });
     await expect(page.getByRole('tab', { name: '集計' })).toHaveAttribute('aria-selected', 'true');

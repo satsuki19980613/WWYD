@@ -2,6 +2,7 @@
  * T2-09（MTT の欄）と T2-10（画面の大きさ）。
  */
 import type { Locator, Page } from '@playwright/test';
+import { animationsDone } from '../settle.ts';
 import {
   doubleRaise,
   draftJson,
@@ -188,14 +189,18 @@ for (const v of ['', ' @sp'] as const) {
       expect(await invalid('Avg Stack（bb）'), `Avg "${t}" は赤い枠`).toBe(true);
     }
     // 赤い枠の見た目（枠の色が通常と違い、赤い。色の遷移が終わるまで待つ）
+    const borderColor = async (): Promise<string> => {
+      await animationsDone(box(page, 'ITM'));
+      return box(page, 'ITM').evaluate((el) => getComputedStyle(el).borderTopColor);
+    };
     await box(page, 'ITM').fill('');
     await box(page, 'ITM').blur();
-    await page.waitForTimeout(700);
-    const normal = await box(page, 'ITM').evaluate((el) => getComputedStyle(el).borderTopColor);
+    await expect(box(page, 'ITM')).not.toHaveAttribute('aria-invalid', 'true');
+    const normal = await borderColor();
     await box(page, 'ITM').fill('x');
     await box(page, 'ITM').blur();
-    await page.waitForTimeout(700);
-    const bad = await box(page, 'ITM').evaluate((el) => getComputedStyle(el).borderTopColor);
+    await expect(box(page, 'ITM')).toHaveAttribute('aria-invalid', 'true');
+    const bad = await borderColor();
     expect(bad).not.toBe(normal);
     const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(bad);
     expect(Number(m?.[1]), '赤み（R が G・B より大きい）').toBeGreaterThan(Number(m?.[2]) + 40);
@@ -213,7 +218,7 @@ for (const v of ['', ' @sp'] as const) {
     await submitBtn(page).click();
     await expect(page.locator('.pf-errors')).toContainText('MTT の スポットの順位 の値が正しくありません');
     await expect(page.locator('.pf-errors')).toContainText('MTT の Avg Stack（bb） の値が正しくありません');
-    expect(cp.calls.length).toBe(0);
+    expect(cp.calls).toHaveLength(0);
     await step(page, S_SETTINGS);
     await box(page, 'スポットの順位').fill('30');
     await box(page, 'Avg Stack（bb）').fill('22.5');

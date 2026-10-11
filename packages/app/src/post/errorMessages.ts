@@ -45,3 +45,8 @@ export function messageForCode(code: string, index?: number): string {
       return 'エラーが発生しました';
   }
 }
+
+/** 送る前の検査のエラーの後ろに、サーバーが返したエラー（あれば）を足す */
+export function withServerError(errors: readonly string[], serverError: string | null): string[] {
+  return serverError ? [...errors, serverError] : [...errors];
+}

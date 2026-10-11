@@ -58,7 +58,7 @@ describe('B 投稿の詳細の解釈と Replay', () => {
       // 卓の表示: Hero が手前・座っている席だけ・NaN なし
       const seats = seatViews(frames[un.hand.stopIndex]!, { hero: un.post.hero, actor: un.post.hero, you: true });
       expect(seats[0]?.pos).toBe(un.post.hero);
-      expect(seats.length).toBe(Object.values(full.hand.setup.stacks).filter((x) => x > 0).length);
+      expect(seats).toHaveLength(Object.values(full.hand.setup.stacks).filter((x) => x > 0).length);
       expect(JSON.stringify(seats)).not.toMatch(/NaN|undefined/);
       // 回答するときの合法キーと額の範囲は、停止位置の Hero の合法手から作ったもの
       expect(un.post.keys, label).toEqual(v.derived.keys);
