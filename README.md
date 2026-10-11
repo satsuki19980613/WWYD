@@ -95,6 +95,8 @@
 | [CodeQL](https://github.com/satsuki19980613/WWYD/actions/workflows/codeql.yml) | GitHub 公式のコードスキャン（危ない書き方が無いか） | コードを変えるたびと毎週 |
 | [Mozilla HTTP Observatory](https://developer.mozilla.org/en-US/observatory/analyze?host=wwyd.pages.dev) | 公開しているサイトの保護ヘッダ。**A+**（130 点、12 項目すべて合格。2026-10-11 に測定） | リンク先でいつでも測り直せる（Live も毎週測る） |
 
+ほかに、使っている部品に弱点が見つかったら GitHub から知らせが届くようにしています（Dependabot）。
+
 ### 問題を見つけたら
 
 [SECURITY.md](SECURITY.md) を見てください。このリポジトリの Security タブから、公開されない形で運営者に知らせることができます。

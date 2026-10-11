@@ -914,5 +914,6 @@
 - **変更したファイル**: `README.md`（新）・`SECURITY.md`（新）・`.github/workflows/codeql.yml`（新）・`.github/workflows/live.yml`（新）・`scripts/liveCheck.mjs`（新）・`docs/plan.md`
 - **試験**: 型検査・単体 1333 が通る。`liveCheck.mjs` は手元の `npm run preview`（本番と同じヘッダ）に向けてヘッダの確認 7 件が通ることを確かめた（外への通信はこの環境から届かない）。
 - **Observatory**: push 後の Live（GitHub 上）で本番を測り A+（130 点、12/12 項目合格。2026-10-11T01:55Z）。ほかの確認（ヘッダ・中継・Data API 400・create-post 401）もすべて通った。README に記入。
-- **残課題（さつき）**: リポジトリの Settings → Code security で **Private vulnerability reporting**（SECURITY.md の知らせ方）と **Dependabot alerts** を有効にする。CodeQL の指摘が Security タブに出たら直す。
+- **CodeQL**: 初回の指摘 1 件（Live のまとめに通信で受け取った値を書く）を直した。
+- **追記（2026-10-11）**: さつきがリポジトリの Private vulnerability reporting と Dependabot alerts を有効にした。README に Dependabot の 1 行を足した。
 
