@@ -916,4 +916,4 @@
 - **Observatory**: push 後の Live（GitHub 上）で本番を測り A+（130 点、12/12 項目合格。2026-10-11T01:55Z）。ほかの確認（ヘッダ・中継・Data API 400・create-post 401）もすべて通った。README に記入。
 - **CodeQL**: 初回の指摘 1 件（Live のまとめに通信で受け取った値を書く）を直した。
 - **追記（2026-10-11）**: さつきがリポジトリの Private vulnerability reporting と Dependabot alerts を有効にした。README に Dependabot の 1 行を足した。
-
+- **追記（2026-10-11）**: 別のセッションが同じ目的の README だけの PR #31 を作っていた（README.md がどちらも新規で衝突する）。さつきの判断（推奨どおり）で、#30 をマージしたあと #31 のよい点（根拠の欄の DB テスト・E2E へのリンク、題名は自由記述なので個人が分かることを書かない注意、運営者はどの投稿でも削除できる、読む・回答する回数には制限が無い、公開前の点検の報告書、Spot より後の展開も伏せる）を README に取り込み、#31 は重複として閉じる。あわせて、集計の表の権限を `can_view_aggregate`（20260928000000_author_answers.sql）に直した（前は置き換え前の `can_view_results` を挙げていた）。開発用の依存の弱点のうち `npm audit fix` で直る 2 件（source-map-js・diff）も推奨どおり別の PR で直す。
