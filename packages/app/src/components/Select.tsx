@@ -110,6 +110,12 @@ function SelectList<T extends string>(props: Readonly<{
           className={i === props.active ? 'active' : ''}
           onPointerDown={(e) => e.preventDefault()}
           onClick={() => props.onPick(i)}
+          // 候補には通常フォーカスが来ない（キーはトリガーが受ける）が、支援技術がフォーカスを移したときも Enter / Space で決められるように
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            props.onPick(i);
+          }}
         >
           {o.label}
         </li>
