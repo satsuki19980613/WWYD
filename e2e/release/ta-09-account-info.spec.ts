@@ -231,8 +231,9 @@ for (const v of VARIANTS) {
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
       const t = await page.locator('article').innerText();
       for (const w of ['取得する情報', '画像は送信も保存もしません', '端末のブラウザにだけ保存', 'Neon', 'Cloudflare', 'Google', 'アカウントを削除']) expect(t, w).toContain(w);
-      // 実際の保存データ（不変条件 6）との食い違い: 表示名とメールアドレスは「受け取る」が保存はしない、と書くべき所に「取得する」とだけある
+      // 表示名とメールアドレスは「受け取る」が保存はしない（不変条件 6。20261011000000_auth_scrub.sql）
       expect(t).toContain('表示名、メールアドレス');
+      expect(t).toContain('保存しません');
     });
 
     test(`規約からログイン画面（未ログイン）と、アプリ内リンクの遷移。外部リンクは rel=noopener${v}`, async ({ page }) => {

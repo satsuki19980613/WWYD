@@ -11,10 +11,10 @@
 | 項目 | 内容 |
 |---|---|
 | 現在のフェーズ | **P10・P11 は完了・本番に公開済み**（2026-09-30。PR #26 をマージ `1dfabe0`。create-post は dev 版 10・本番 版 8、本番に F-006 のマイグレーション）。公開後の確認: iPhone 実機・数日後のログイン・M-12 を dev で試す・本番で Read・MTT 付きの投稿 |
-| 直近で完了したこと | **SonarCloud の指摘の整理**（2026-10-11。セッション 13）: 未解決 758 件を、設定で外すもの（編集禁止の docs/source・生成物・PostgreSQL に当てはまらない PL/SQL の規則・順番どおりの await）と、コードで直すものに分けて直した（`.sonarcloud.properties`・CI の `npm ci --ignore-scripts`）。その前: **README とセキュリティの表示**（2026-10-11。PR #30・#32 をマージ `38060bc`。#31 は重複として閉じた）: README（安全とプライバシー）・SECURITY.md・CodeQL・Live（本番の保護ヘッダ・ログインの中継・トークン無しの拒否・Observatory）。main の Live で Observatory A+（130 点、12/12）。Private vulnerability reporting と Dependabot alerts を有効化（さつき）。その前: P10・P11 の仕上げ（2026-09-30） |
+| 直近で完了したこと | **ログインの個人の情報を保存しない**（2026-10-11。セッション 13）: Neon Auth の表のメールアドレス・表示名・画像・Google のトークン・IP アドレス・ブラウザの種類をトリガーで置き換える（`20261011000000_auth_scrub.sql`）。README・プライバシーポリシー・ⓘ を合わせた。dev・本番への適用はさつき。その前: **SonarCloud の指摘の整理**（2026-10-11。セッション 13）: 未解決 758 件を、設定で外すもの（編集禁止の docs/source・生成物・PostgreSQL に当てはまらない PL/SQL の規則・順番どおりの await）と、コードで直すものに分けて直した（`.sonarcloud.properties`・CI の `npm ci --ignore-scripts`）。その前: **README とセキュリティの表示**（2026-10-11。PR #30・#32 をマージ `38060bc`。#31 は重複として閉じた）: README（安全とプライバシー）・SECURITY.md・CodeQL・Live（本番の保護ヘッダ・ログインの中継・トークン無しの拒否・Observatory）。main の Live で Observatory A+（130 点、12/12）。Private vulnerability reporting と Dependabot alerts を有効化（さつき）。その前: P10・P11 の仕上げ（2026-09-30） |
 | 次にやること | 1. さつき: 画面の見た目の承認（承認用のページ）<br>2. 公開後の確認（さつきのついでのとき）: iPhone 実機（[device-checklist.md](release-test/device-checklist.md)）、数日後のログイン、M-12 を dev で試す、本番で Read・MTT 付きの投稿<br>3. 見送った S4（確認待ち）は公開後の声を見て |
 | ブロッカー | なし |
-| さつきの確認待ち | SonarCloud の PR の解析で `.sonarcloud.properties` の規則の除外（multicriteria）が効くか（自動解析で効かなければ、SonarCloud の画面の Analysis Scope に同じ内容を入れる）。画面の見た目の承認（承認用のページ）。見送った S4（V-022 重複した General Read・V-041・F-008・F-009・F-013・F-018・F-020 の起動の直列）は公開後の声を見て |
+| さつきの確認待ち | `20261011000000_auth_scrub.sql` の dev・本番への適用（`npm run db:migrate -- --branch dev` / `production`。既存のメールアドレス等は元に戻せない形で置き換わる）と、プライバシーポリシーの §1・§5 の文面の承認。SonarCloud の PR の解析で `.sonarcloud.properties` の規則の除外（multicriteria）が効くか（自動解析で効かなければ、SonarCloud の画面の Analysis Scope に同じ内容を入れる）。画面の見た目の承認（承認用のページ）。見送った S4（V-022 重複した General Read・V-041・F-008・F-009・F-013・F-018・F-020 の起動の直列）は公開後の声を見て |
 
 ---
 
@@ -341,6 +341,7 @@
 | 2026-10-11 | **README・SECURITY.md と自動の確認（CodeQL・Live）を privatematch に倣って足す**。README は「安全とプライバシー」を要点 → 扱う情報の表 → 期待できること・できないこと → 仕組みと根拠 → 自動の確認の順に書き、バッジは CI・Live・CodeQL。privatematch と違い WWYD は Neon Auth が表示名・メールアドレスを保存する（Q-26 で許容）ので、運営者が見られることを限界として明記した。Live（`scripts/liveCheck.mjs`）は秘密情報を使わず、本番の保護ヘッダ・ログインの中継・Data API と create-post がトークン無しを拒むこと・Mozilla HTTP Observatory の評価が A+ かを毎週見る | さつきの指示（privatematch の README に倣う） | さつき |
 | 2026-10-11 | **開発用の依存の弱点の残り 2 件を npm の overrides で直す**: `diff` 5.2.0 → 5.2.2（GHSA-73rr-hh4g-fpgx）、`@hono/node-server` 2.0.4 → 2.0.12（同じ 2.0 系の修正版）。どちらも neonctl（最新の 8.3.5 も同じ版に固定）の中の neon が版を固定しているため、neonctl の更新では直らない。`npm audit fix --force` は neonctl を 2.37.1 に下げるので使わない。neonctl の版が上がって固定が外れたら overrides を消す | さつきの指示（「残りの依存の弱点も最適化して」） | さつき |
 | 2026-10-11 | **SonarCloud の指摘の扱い**: docs/source（編集禁止の参照資料）と生成物（rankTemplates.ts・showcase.sql・03_paint_vectors）は解析から外し、E2E・pgTAP・*.test.ts・*.tb.*.ts はテストのコードとして分ける。規則で外すのは、順番どおりでないといけない await（E2E・スクリプト・OCR の Worker）、db/ の SQL への PL/SQL（Oracle）の文字列の繰り返しと改行の規則、Neon Auth の表の名前 `user` だけ。ほかはコードで直す。NOSONAR は使わない。残したもの（理由つき）は 2026-10-11 のセッションログ | さつきの指示（SonarCloud を見て最適化） | さつき |
+| 2026-10-11 | **ログインで届く個人の情報を DB に残さない**（Q-26 を改める）。privatematch と同じく、Neon Auth が書く `neon_auth."user"`（email を `<id>@wwyd.invalid`、name を `Player`、image を空）・`account`（idToken・accessToken・refreshToken を空）・`session`（ipAddress・userAgent を空）を、書き込みの直前にトリガーで置き換える。既存の行も置き換える（元に戻せない）。Google の番号（accountId）は次のログインで本人を見分けるために残す。本番に残っていないかを Live（毎週）の `db.mjs auth-audit` で数える。README・プライバシーポリシー・ⓘ の文面を合わせた | さつきの指示（privatematch のようにメールアドレスなどを一切見られないようにして README に書く） | さつき |
 
 ---
 
@@ -933,4 +934,5 @@
 - **試験**: 型検査・単体 1357（カバレッジ・core 行 98.86%）・ビルド・check:db-vectors が通る。E2E は 759 件が通り 29 件はスキップ（sample/ の画像が要る OCR の試験ほか）、失敗 0。この環境の Chromium は @playwright/test の版と合わないため、実行ファイルを直接指す手元専用の設定で回した（コミットしない）。
 - **変更したファイル**: `.sonarcloud.properties`（新）・`.github/workflows/ci.yml`・`package.json`・`db/seed/sample-large.sql`、packages/core・ocr・functions・app（`randomId.ts` 新）、scripts、e2e（`settle.ts` 新）、`docs/plan.md`
 - **残課題**: マージ後の SonarCloud の再解析で件数と multicriteria の効き目を確かめる。liveCheck.mjs のログの注入は自前の無害化なので、SonarCloud が認めなければ画面で「確認済み」にする。
-
+- **追記（2026-10-11）**: PR #36 で Select の候補にキー操作を足し、SonarCloud の Reliability を A にした（Bug 0・Vulnerability 0、残りは Code Smell 38）。multicriteria は自動解析では読まれないので、SonarCloud の画面の Analysis Scope に入れる（さつき）。
+- **追記（2026-10-11）**: さつきの指示で、ログインの個人の情報を保存しないようにした（決定ログ）。`db/migrations/20261011000000_auth_scrub.sql`（新）、`db/tests/09_auth_scrub.test.sql`（新。DB-21）、`scripts/db.mjs`（`auth-audit`）、`.github/workflows/live.yml`（`auth` ジョブ。毎週と手動）、README、`legal/privacy.md`、`info/infoSections.ts`、E2E 2 件、09・12 章、CLAUDE.md 不変条件 6。手元の Postgres 16 で、Neon Auth の表を模した表に適用し、既存の行・権限の無いロールの書き込みも置き換わることを確かめた。残り: dev・本番への適用とプライバシーポリシーの文面の承認（さつき）。

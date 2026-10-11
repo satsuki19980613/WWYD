@@ -1,5 +1,6 @@
 # 本番の通信確認（scripts/liveCheck.mjs）。ログインせずに確かめられることだけを見る。書き込まない。秘密情報は使わない。
 #   サイトの保護ヘッダ・ログインの中継・Data API と create-post がトークン無しを拒むこと・Mozilla HTTP Observatory の評価（A+ か）
+# 本番の DB にログインの個人の情報が残っていないか（scripts/db.mjs auth-audit）。読み取りだけで値は出さない。NEON_API_KEY を使う
 # 起動: Actions → Live → Run workflow、作業ブランチ（claude/**）への push（ヘッダ・中継・確認スクリプトが変わったとき）、毎週月曜
 name: Live
 
@@ -29,3 +30,28 @@ jobs:
           node-version-file: .node-version
       - name: 本番の通信確認
         run: node scripts/liveCheck.mjs
+
+  # 本番の DB に、ログインで届く個人の情報（メールアドレス・表示名・画像・Google のトークン・IP アドレス・ブラウザの種類）が
+  # 残っていないか、置き換えのトリガーが外れていないかを数える（20261011000000_auth_scrub.sql）。読み取りだけで、値は出さない。
+  # 毎週と手動のときだけ（作業ブランチへの push では動かさない）。NEON_API_KEY が無いとき（フォークなど）は飛ばす
+  auth:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: 依存のインストール（インストールスクリプトは動かさない）
+        if: env.NEON_API_KEY != ''
+        run: npm ci --ignore-scripts
+      - name: 本番の DB にログインの個人の情報が残っていないか
+        if: env.NEON_API_KEY != ''
+        run: npm run db:auth-audit -- --branch production
+      - name: NEON_API_KEY が無いので飛ばす
+        if: env.NEON_API_KEY == ''
+        run: echo "NEON_API_KEY が設定されていないため、本番の DB の確認を飛ばしました。"
