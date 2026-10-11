@@ -11,8 +11,8 @@
 | 項目 | 内容 |
 |---|---|
 | 現在のフェーズ | **P10・P11 は完了・本番に公開済み**（2026-09-30。PR #26 をマージ `1dfabe0`。create-post は dev 版 10・本番 版 8、本番に F-006 のマイグレーション）。公開後の確認: iPhone 実機・数日後のログイン・M-12 を dev で試す・本番で Read・MTT 付きの投稿 |
-| 直近で完了したこと | **P10・P11 の仕上げ**（2026-09-30。さつきの判断 16 問はすべて推奨どおり。決定ログ）: F-037 Stack 1000bb・V-039 Runout の Brick・F-006 author_uid を隠す（マイグレーション）・V-006 PFR の境目・F-028 回答画面の離脱確認・V-038・F-036 Q-2・F-033/F-034/F-031 見やすさ（PC とスマホの境目を幅 927・高さ 605 に）・F-004 ErrorBoundary・F-015/F-016・F-027・F-014/F-020・V-018・V-040・F-035・F-038、規約の文言・CLAUDE.md・Skill・13 章・M-12・実機の確認表。worktree 6 つを削除。単体 1329・カバレッジ 99.04%（行）・pgTAP 380・E2E 776 通過（負荷で 4 件。単独では通る） |
-| 次にやること | 1. さつき: 画面の見た目の承認（承認用のページ）<br>2. 公開後の確認（さつきのついでのとき）: iPhone 実機（[device-checklist.md](release-test/device-checklist.md)）、数日後のログイン、M-12 を dev で試す、本番で Read・MTT 付きの投稿<br>3. 見送った S4（確認待ち）は公開後の声を見て |
+| 直近で完了したこと | **README とセキュリティの表示**（2026-10-11。PR #30・#32 をマージ `38060bc`。#31 は重複として閉じた）: README（安全とプライバシー）・SECURITY.md・CodeQL・Live（本番の保護ヘッダ・ログインの中継・トークン無しの拒否・Observatory）。main の Live で Observatory A+（130 点、12/12）。Private vulnerability reporting と Dependabot alerts を有効化（さつき）。その前: P10・P11 の仕上げ（2026-09-30） |
+| 次にやること | 1. さつき: 画面の見た目の承認（承認用のページ）<br>2. 公開後の確認（さつきのついでのとき）: iPhone 実機（[device-checklist.md](release-test/device-checklist.md)）、数日後のログイン、M-12 を dev で試す、本番で Read・MTT 付きの投稿<br>3. 見送った S4（確認待ち）は公開後の声を見て<br>4. 開発用の依存の残り（diff・@hono/node-server。neonctl の中）は neonctl の新しい版が出たら |
 | ブロッカー | なし |
 | さつきの確認待ち | 画面の見た目の承認（承認用のページ）。見送った S4（V-022 重複した General Read・V-041・F-008・F-009・F-013・F-018・F-020 の起動の直列）は公開後の声を見て |
 
@@ -918,3 +918,4 @@
 - **追記（2026-10-11）**: さつきがリポジトリの Private vulnerability reporting と Dependabot alerts を有効にした。README に Dependabot の 1 行を足した。
 - **追記（2026-10-11）**: 別のセッションが同じ目的の README だけの PR #31 を作っていた（README.md がどちらも新規で衝突する）。さつきの判断（推奨どおり）で、#30 をマージしたあと #31 のよい点（根拠の欄の DB テスト・E2E へのリンク、題名は自由記述なので個人が分かることを書かない注意、運営者はどの投稿でも削除できる、読む・回答する回数には制限が無い、公開前の点検の報告書、Spot より後の展開も伏せる）を README に取り込み、#31 は重複として閉じる。あわせて、集計の表の権限を `can_view_aggregate`（20260928000000_author_answers.sql）に直した（前は置き換え前の `can_view_results` を挙げていた）。開発用の依存の弱点のうち `npm audit fix` で直る 2 件（source-map-js・diff）も推奨どおり別の PR で直す。
 - **追記（2026-10-11）**: `npm audit fix`（--force なし）で source-map-js 1.2.1 → 1.2.2（高）を直した。同じ範囲の中で neonctl・neon が 6.2.3 → 6.4.0、acorn が 8.18.0 → 8.19.0 に上がった（lockfile だけ）。diff は neon が 5.2.0 に固定しているため直らず、@hono/node-server は --force（版が大きく変わる）が要るので残した。どちらも開発用（neonctl の中）で、公開するアプリの依存の弱点は 0 件。ブランチは 1 本だけと決められているので、README の取り込みと同じ PR に入れた。
+- **追記（2026-10-11）**: PR #32 をマージ（`38060bc`）。さつきが main で Live を手動で起動（Claude の GitHub 連携には Actions を起動する権限が無く 403）。03:12 と 03:25 の 2 回とも全部通り、Observatory は A+（130 点、12/12 項目合格）。README の Live のバッジは main の結果を示す。
