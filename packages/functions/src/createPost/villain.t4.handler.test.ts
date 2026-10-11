@@ -219,7 +219,7 @@ describe('T4-02 サイズの境目', () => {
     const base = { ...hs1(), pad: '' };
     const n = new TextEncoder().encode(JSON.stringify(base)).length;
     const exact = { ...base, pad: 'x'.repeat(MAX_BODY_BYTES - n) };
-    expect(new TextEncoder().encode(JSON.stringify(exact)).length).toBe(MAX_BODY_BYTES);
+    expect(new TextEncoder().encode(JSON.stringify(exact))).toHaveLength(MAX_BODY_BYTES);
     expect((await send(exact)).status).toBe(201);
     const over = { ...base, pad: 'x'.repeat(MAX_BODY_BYTES - n + 1) };
     const r = await send(over);

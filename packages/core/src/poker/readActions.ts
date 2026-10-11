@@ -88,36 +88,157 @@ export function actsBefore(a: Pos, b: Pos): boolean {
   return postIndex(a) < postIndex(b);
 }
 
+/** 1 つの Action を候補にする関数（添字・席・Street はその Action のもの） */
+type MakeCandidate = (action: ReadAction, size?: ReadSize | null, checkRaise?: boolean) => ReadCandidate;
+
+/** Preflop の経過 */
+type PreflopTrack = {
+  raises: number;
+  opener: Pos | null;
+  steal: boolean;
+  callersAfterOpen: number;
+  threeBettor: Pos | null;
+  /** 最初の Raise より前に Fold 以外の Action があったか（Limp） */
+  anyBefore: boolean;
+  aggressor: Pos | null;
+};
+
+type LastKind = 'cbet' | 'barrel' | 'bet' | 'raise';
+
+/** Postflop の経過 */
+type PostflopTrack = {
+  street: Street;
+  aggressor: Pos | null;
+  prevHadBet: boolean;
+  streetHadBet: boolean;
+  checked: Set<Pos>;
+  acted: Set<Pos>;
+  lastKind: LastKind | null;
+};
+
+const FOLD_OF: Record<LastKind, ReadAction> = { cbet: 'fold_cbet', barrel: 'fold_barrel', bet: 'fold_bet', raise: 'fold_raise' };
+
+function preflopCall(pf: PreflopTrack, a: Action, cand: MakeCandidate): ReadCandidate | null {
+  let c: ReadCandidate | null = null;
+  if (pf.raises === 0 && a.pos !== 'BB') c = cand('limp');
+  else if (pf.raises === 1) pf.callersAfterOpen++;
+  if (pf.raises === 0) pf.anyBefore = true;
+  return c;
+}
+
+function preflopRaise(pf: PreflopTrack, a: Action, cand: MakeCandidate): ReadCandidate | null {
+  pf.raises++;
+  pf.aggressor = a.pos;
+  if (pf.raises === 1) {
+    pf.opener = a.pos;
+    pf.steal = !pf.anyBefore && (a.pos === 'CO' || a.pos === 'BTN' || a.pos === 'SB');
+    return null;
+  }
+  if (pf.raises === 2) {
+    pf.threeBettor = a.pos;
+    return cand(pf.callersAfterOpen > 0 ? 'squeeze' : '3bet');
+  }
+  return pf.raises === 3 ? cand('4bet') : null;
+}
+
+function preflopFold(pf: PreflopTrack, a: Action, cand: MakeCandidate): ReadCandidate | null {
+  if (pf.raises === 2 && a.pos === pf.opener) return cand('fold_3bet');
+  if (pf.raises === 3 && a.pos === pf.threeBettor) return cand('fold_4bet');
+  // Steal に Call が入ったら Steal ではなくなる（PT4 の定義。2026-09-30 さつき。villain-reads-test V-002）
+  const blind = a.pos === 'SB' || a.pos === 'BB';
+  if (pf.raises === 1 && pf.steal && pf.callersAfterOpen === 0 && blind && a.pos !== pf.opener) return cand('fold_steal');
+  return null;
+}
+
+function classifyPreflop(pf: PreflopTrack, a: Action, cand: MakeCandidate): ReadCandidate | null {
+  switch (a.type) {
+    case 'call':
+      return preflopCall(pf, a, cand);
+    case 'raise':
+    case 'bet':
+      return preflopRaise(pf, a, cand);
+    case 'fold':
+      return preflopFold(pf, a, cand);
+    default:
+      // Check
+      if (pf.raises === 0) pf.anyBefore = true;
+      return null;
+  }
+}
+
+/** Street が変わったときに Postflop の経過を切り替える */
+function enterStreet(post: PostflopTrack, pf: PreflopTrack, street: Street): void {
+  post.prevHadBet = post.street === 'pf' ? pf.raises > 0 : post.streetHadBet;
+  if (post.street === 'pf') post.aggressor = pf.aggressor;
+  post.street = street;
+  post.streetHadBet = false;
+  post.checked = new Set();
+  post.acted = new Set();
+  post.lastKind = null;
+}
+
+/** Postflop の Bet を語彙に当てはめる（当たらなければ null） */
+function betAction(post: PostflopTrack, s: State, pos: Pos): ReadAction | null {
+  const { aggressor, street } = post;
+  if (pos === aggressor) {
+    if (street === 'flop') return 'cbet';
+    if (street === 'turn' && !post.prevHadBet) return 'delayed_cbet';
+    return 'barrel';
+  }
+  // All-in の Aggressor はもう動けないので、その人への Bet は Donk・Probe にしない（2026-09-30 さつき。villain-reads-test V-003）
+  const aggInHand = aggressor !== null && !s.folded.has(aggressor) && !s.allin.has(aggressor);
+  if (aggInHand && !post.acted.has(aggressor) && actsBefore(pos, aggressor)) return post.prevHadBet ? 'donk' : 'probe';
+  return post.checked.size > 0 ? 'bet_vs_check' : null;
+}
+
+/** Bet の後に Fold されたときの語彙の種類 */
+function betKind(action: ReadAction | null): LastKind {
+  if (action === 'cbet') return 'cbet';
+  if (action === 'barrel' || action === 'delayed_cbet') return 'barrel';
+  return 'bet';
+}
+
+function classifyPostflop(post: PostflopTrack, s: State, a: Action, cand: MakeCandidate): ReadCandidate | null {
+  let c: ReadCandidate | null = null;
+  if (a.type === 'check') {
+    post.checked.add(a.pos);
+  } else if (a.type === 'bet' && a.to !== undefined) {
+    const action = betAction(post, s, a.pos);
+    if (action) c = cand(action, sizeOf(s, a.pos, a.to));
+    post.lastKind = betKind(action);
+    post.aggressor = a.pos;
+    post.streetHadBet = true;
+  } else if (a.type === 'raise' && a.to !== undefined) {
+    c = cand('raise', sizeOf(s, a.pos, a.to), post.checked.has(a.pos));
+    post.lastKind = 'raise';
+    post.aggressor = a.pos;
+    post.streetHadBet = true;
+  } else if (a.type === 'fold' && post.lastKind !== null) {
+    c = cand(FOLD_OF[post.lastKind]);
+  }
+  post.acted.add(a.pos);
+  return c;
+}
+
 /**
  * Action の列の各 Action を語彙に当てはめる（当たらなければ null。§10.3 の規則）。
  * 添字 i の結果は i までの Action だけで決まる（後の Action を見ない）。
  */
 export function classifyActions(setup: HandSetup, actions: readonly Action[]): (ReadCandidate | null)[] {
   const states = runActions(setup, actions);
-  const out: (ReadCandidate | null)[] = [];
+  const pf: PreflopTrack = { raises: 0, opener: null, steal: false, callersAfterOpen: 0, threeBettor: null, anyBefore: false, aggressor: null };
+  const post: PostflopTrack = {
+    street: 'pf',
+    aggressor: null,
+    prevHadBet: false,
+    streetHadBet: false,
+    checked: new Set(),
+    acted: new Set(),
+    lastKind: null,
+  };
 
-  // Preflop
-  let raises = 0;
-  let opener: Pos | null = null;
-  let steal = false;
-  let callersAfterOpen = 0;
-  let threeBettor: Pos | null = null;
-  let anyBefore = false; // 最初の Raise より前に Fold 以外の Action があったか（Limp）
-  let pfAggressor: Pos | null = null;
-
-  // Postflop
-  let street: Street = 'pf';
-  let aggressor: Pos | null = null;
-  let prevHadBet = false;
-  let streetHadBet = false;
-  let checked = new Set<Pos>();
-  let acted = new Set<Pos>();
-  let lastKind: 'cbet' | 'barrel' | 'bet' | 'raise' | null = null;
-
-  actions.forEach((a, i) => {
-    let s = states[i] as State;
-    while (s.street !== a.street && status(s).kind === 'streetEnd') s = advance(s);
-    const cand = (action: ReadAction, size: ReadSize | null = null, checkRaise = false): ReadCandidate => ({
+  return actions.map((a, i) => {
+    const cand: MakeCandidate = (action, size = null, checkRaise = false) => ({
       index: i,
       pos: a.pos,
       street: a.street,
@@ -125,76 +246,13 @@ export function classifyActions(setup: HandSetup, actions: readonly Action[]): (
       size,
       checkRaise,
     });
-
-    if (a.street === 'pf') {
-      let c: ReadCandidate | null = null;
-      if (a.type === 'call') {
-        if (raises === 0 && a.pos !== 'BB') c = cand('limp');
-        else if (raises === 1) callersAfterOpen++;
-        if (raises === 0) anyBefore = true;
-      } else if (a.type === 'raise' || a.type === 'bet') {
-        raises++;
-        pfAggressor = a.pos;
-        if (raises === 1) {
-          opener = a.pos;
-          steal = !anyBefore && (a.pos === 'CO' || a.pos === 'BTN' || a.pos === 'SB');
-        } else if (raises === 2) {
-          threeBettor = a.pos;
-          c = cand(callersAfterOpen > 0 ? 'squeeze' : '3bet');
-        } else if (raises === 3) c = cand('4bet');
-      } else if (a.type === 'fold') {
-        if (raises === 2 && a.pos === opener) c = cand('fold_3bet');
-        else if (raises === 3 && a.pos === threeBettor) c = cand('fold_4bet');
-        // Steal に Call が入ったら Steal ではなくなる（PT4 の定義。2026-09-30 さつき。villain-reads-test V-002）
-        else if (raises === 1 && steal && callersAfterOpen === 0 && (a.pos === 'SB' || a.pos === 'BB') && a.pos !== opener) c = cand('fold_steal');
-      } else if (a.type === 'check' && raises === 0) anyBefore = true;
-      out.push(c);
-      return;
-    }
-
+    if (a.street === 'pf') return classifyPreflop(pf, a, cand);
+    let s = states[i] as State;
+    while (s.street !== a.street && status(s).kind === 'streetEnd') s = advance(s);
     // Street が変わった
-    if (a.street !== street) {
-      prevHadBet = street === 'pf' ? raises > 0 : streetHadBet;
-      if (street === 'pf') aggressor = pfAggressor;
-      street = a.street;
-      streetHadBet = false;
-      checked = new Set();
-      acted = new Set();
-      lastKind = null;
-    }
-
-    let c: ReadCandidate | null = null;
-    if (a.type === 'check') {
-      checked.add(a.pos);
-    } else if (a.type === 'bet' && a.to !== undefined) {
-      const size = sizeOf(s, a.pos, a.to);
-      let action: ReadAction | null = null;
-      // All-in の Aggressor はもう動けないので、その人への Bet は Donk・Probe にしない（2026-09-30 さつき。villain-reads-test V-003）
-      const aggInHand = aggressor !== null && !s.folded.has(aggressor) && !s.allin.has(aggressor);
-      if (a.pos === aggressor) {
-        if (street === 'flop') action = 'cbet';
-        else if (street === 'turn' && !prevHadBet) action = 'delayed_cbet';
-        else action = 'barrel';
-      } else if (aggInHand && aggressor !== null && !acted.has(aggressor) && actsBefore(a.pos, aggressor)) {
-        action = prevHadBet ? 'donk' : 'probe';
-      } else if (checked.size > 0) action = 'bet_vs_check';
-      if (action) c = cand(action, size);
-      lastKind = action === 'cbet' ? 'cbet' : action === 'barrel' || action === 'delayed_cbet' ? 'barrel' : 'bet';
-      aggressor = a.pos;
-      streetHadBet = true;
-    } else if (a.type === 'raise' && a.to !== undefined) {
-      c = cand('raise', sizeOf(s, a.pos, a.to), checked.has(a.pos));
-      lastKind = 'raise';
-      aggressor = a.pos;
-      streetHadBet = true;
-    } else if (a.type === 'fold' && lastKind !== null) {
-      const map = { cbet: 'fold_cbet', barrel: 'fold_barrel', bet: 'fold_bet', raise: 'fold_raise' } as const;
-      c = cand(map[lastKind]);
-    }
-    acted.add(a.pos);
-    out.push(c);
+    if (a.street !== post.street) enterStreet(post, pf, a.street);
+    return classifyPostflop(post, s, a, cand);
   });
-  return out;
 }
 
 /** Spot Read の候補: Hero の判断地点（`spotIndex`）より前の、Hero 以外の席の Action（§2.1.4） */

@@ -8,14 +8,14 @@ import { inRange, parseSizeText, PRESETS, presetActive, presetSize, sizeSummary,
  * スマホはブラシの道具の行の「Size」ボタンからモーダルで開く（SizeButton。2026-09-29 さつき）。
  * 値は入力欄の文字列で持つ（入力途中の「17.」なども受け付ける）。
  */
-export function SizeControl(props: {
+export function SizeControl(props: Readonly<{
   label: string;
   spot: SizeSpot;
   text: string;
   onText: (t: string) => void;
   open: boolean;
   onOpen: (open: boolean) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const id = useId();
   const to = parseSizeText(props.text);
   const ok = inRange(to, props.spot);
@@ -42,7 +42,7 @@ export function SizeControl(props: {
 }
 
 /** スマホのサイズのボタン（ブラシの道具の行）。押すとモーダルでプリセット・入力欄・ゲージを開く */
-export function SizeButton(props: { label: string; spot: SizeSpot; text: string; onText: (t: string) => void }): JSX.Element {
+export function SizeButton(props: Readonly<{ label: string; spot: SizeSpot; text: string; onText: (t: string) => void }>): JSX.Element {
   const [open, setOpen] = useState(false);
   const to = parseSizeText(props.text);
   const ok = inRange(to, props.spot);
@@ -85,7 +85,7 @@ export function SizeButton(props: { label: string; spot: SizeSpot; text: string;
 }
 
 /** サイズの中身: プリセット・入力欄（0.1 刻みの増減）・ゲージ・「min / max」・範囲外の表示 */
-function SizeBody(props: { label: string; spot: SizeSpot; text: string; onText: (t: string) => void }): JSX.Element {
+function SizeBody(props: Readonly<{ label: string; spot: SizeSpot; text: string; onText: (t: string) => void }>): JSX.Element {
   const { spot } = props;
   const to = parseSizeText(props.text);
   const ok = inRange(to, spot);

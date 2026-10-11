@@ -16,7 +16,7 @@ export type NavItem = 'list' | 'new' | null;
  * ヘッダー（06 章 §0.2）。左に「＜」（一覧へ。一覧以外）と投稿のタイトル（回答・集計）、右に下書き・ⓘ・アカウントアイコン。
  * ⓘ は `data-keep-open` を付けて、アカウントメニューを開いたまま押せるようにする（開いていればアカウントの節を出す）。
  */
-export function Header(props: {
+export function Header(props: Readonly<{
   title?: HeaderTitle;
   /** 回答・集計の画面の投稿のタイトル（あれば画面名の代わりに見出しとして出す。収まらなければ流す） */
   postTitle?: string | null;
@@ -29,7 +29,7 @@ export function Header(props: {
   onInfo: (accountMenuOpen: boolean) => void;
   onLogout?: () => void;
   onDeleteAccount?: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const accountRef = useRef<HTMLButtonElement>(null);
   const { title } = props;

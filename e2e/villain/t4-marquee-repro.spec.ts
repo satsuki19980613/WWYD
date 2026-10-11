@@ -10,6 +10,7 @@ import { expect, test } from '@playwright/test';
 import { detailJson } from '../../packages/app/src/answer/detailFixtures.ts';
 import { hs1bb } from '../../packages/core/src/post/postFixtures.ts';
 import { fakeBackend } from '../fakeBackend.ts';
+import { untilStable } from '../settle.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
 
@@ -30,7 +31,9 @@ for (const c of CASES) {
       });
       await fakeBackend(page, detailJson({ ...hs1bb(), title: c.ch.repeat(c.n) }, { viewer: 'unanswered', id: ID }));
       await page.goto(`/s/${ID}/answer`);
-      await page.waitForTimeout(300);
+      // タイトルが出て、Marquee の表示（static / clip）が落ち着くまで見る（行き来し続けると落ちる）
+      await expect(page.locator('header h1')).toHaveText(c.ch.repeat(c.n));
+      await untilStable(() => page.evaluate(() => document.querySelector('header .mq')?.className ?? null), 'Marquee の表示が落ち着かない');
       await expect(page.locator('header h1')).toHaveCount(1);
       expect(errors).toEqual([]);
     });

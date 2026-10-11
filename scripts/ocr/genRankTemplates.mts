@@ -61,10 +61,10 @@ if (check) {
   let worst = 0;
   for (const s of samples) {
     const m = nearestRank(s.glyph);
-    const hit = m && m.rank === s.label && m.distance <= MAX_GLYPH_DISTANCE;
+    const hit = m?.rank === s.label && m.distance <= MAX_GLYPH_DISTANCE;
     if (hit) ok++;
     else console.log('不一致', s.where, s.label, m);
-    if (m && m.rank === s.label) worst = Math.max(worst, m.distance);
+    if (m?.rank === s.label) worst = Math.max(worst, m.distance);
   }
   console.log(`一致 ${ok} / ${samples.length}、正しいラベルへの最大距離 ${worst}（上限 ${MAX_GLYPH_DISTANCE}）`);
   process.exit(ok === samples.length ? 0 : 1);

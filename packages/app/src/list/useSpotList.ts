@@ -96,7 +96,7 @@ export function useSpotList(query: ListQuery): SpotList {
 export async function deletePost(postId: string): Promise<void> {
   const { data, error } = await db.from('posts').delete().eq('id', postId).select('id');
   if (error) throw new Error(error.message);
-  if (!data || data.length !== 1) throw new Error('削除できませんでした');
+  if (data?.length !== 1) throw new Error('削除できませんでした');
 }
 
 /** 次に答えるスポットの ID（14 章）。探している間は undefined、無ければ null。失敗も null（ボタンを出さないだけ） */

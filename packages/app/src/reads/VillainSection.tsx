@@ -35,6 +35,7 @@ import {
   setGeneralStreet,
   setRead,
   SIZE_LABEL,
+  sizeSuffix,
   spotCandidateOf,
   STEP_DEFS,
   STREET_NAME,
@@ -56,14 +57,14 @@ import {
  * 情報を登録できる席（`seats`。core の villainSeats）ごとに折りたたむ。閉じた席は 1 行（席と要約）。開けるのは 1 席ずつ。
  * 中身: VPIP・PFR の Slider、5 分割のボタン 3 つ、Spot Read（判断地点より前の実際の Action に Lean を付ける）、General Read 2 件まで。
  */
-export function VillainSection(props: {
+export function VillainSection(props: Readonly<{
   seats: readonly Pos[];
   hero: Pos;
   reads: ReadsDraft;
   /** Spot Read の候補（Spot を選ぶまでは空） */
   cands: readonly ReadCandidate[];
   onChange: (reads: ReadsDraft) => void;
-}): JSX.Element | null {
+}>): JSX.Element | null {
   const [open, setOpen] = useState<Pos | null>(null);
   const [preset, setPreset] = useState<Pos | null>(null);
   const baseId = useId();
@@ -123,7 +124,6 @@ export function VillainSection(props: {
                   {cands.length > 0 && (
                     <SpotRead
                       seat={p}
-                      hero={props.hero}
                       cands={cands}
                       spot={read.spot}
                       onChange={(spot) => {
@@ -177,7 +177,7 @@ export function VillainSection(props: {
 }
 
 /** 5 分割のボタン（Postflop Aggression・Hero Image）。押すと選び、もう一度押すと未入力。左右の端に名前 */
-function StepButtons(props: { def: StepDef; value: number | undefined; onPick: (v: number) => void }): JSX.Element {
+function StepButtons(props: Readonly<{ def: StepDef; value: number | undefined; onPick: (v: number) => void }>): JSX.Element {
   const { def, value } = props;
   const set = value !== undefined;
   return (
@@ -205,7 +205,7 @@ function StepButtons(props: { def: StepDef; value: number | undefined; onPick: (
 }
 
 /** 選択肢のボタンの行（見出しつき） */
-function ChoiceRow(props: { label: string; children: ReactNode }): JSX.Element {
+function ChoiceRow(props: Readonly<{ label: string; children: ReactNode }>): JSX.Element {
   return (
     <div className="vr-choice" role="group" aria-label={props.label}>
       <span className="mono-lbl vr-choice-l" aria-hidden="true">
@@ -216,7 +216,7 @@ function ChoiceRow(props: { label: string; children: ReactNode }): JSX.Element {
   );
 }
 
-function Choice(props: { on: boolean; label: string; speech?: string; strong?: boolean; onClick: () => void }): JSX.Element {
+function Choice(props: Readonly<{ on: boolean; label: string; speech?: string; strong?: boolean; onClick: () => void }>): JSX.Element {
   return (
     <button
       type="button"
@@ -231,7 +231,7 @@ function Choice(props: { on: boolean; label: string; speech?: string; strong?: b
 }
 
 /** Lean のボタン（未選択 → 通常 → 強い → 未選択。§10 C-6） */
-function LeanRow(props: { leans: readonly Lean[]; lean: Lean | null; strong: boolean; onPick: (lean: Lean) => void }): JSX.Element {
+function LeanRow(props: Readonly<{ leans: readonly Lean[]; lean: Lean | null; strong: boolean; onPick: (lean: Lean) => void }>): JSX.Element {
   return (
     <ChoiceRow label="Lean">
       {props.leans.map((l) => {
@@ -243,19 +243,19 @@ function LeanRow(props: { leans: readonly Lean[]; lean: Lean | null; strong: boo
   );
 }
 
-const candText = (c: ReadCandidate): string => `${STREET_NAME[c.street]} · ${actionName(c.action, c.checkRaise)}${c.size ? ` (${SIZE_LABEL[c.size]})` : ''}`;
+const candText = (c: ReadCandidate): string => `${STREET_NAME[c.street]} · ${actionName(c.action, c.checkRaise)}${sizeSuffix(c.size)}`;
 
 /**
  * Spot Read（§2.1.4）: Hero の判断地点より前に、この席が実際に取った Action に Lean を付ける。When と Action は Action の列から。
  * 候補が複数なら投稿者が 1 つ選ぶ（最初は判断地点にいちばん近いもの。§10 C-4）。
  * 「この Hand の結果を知る前の読みで」の注記は不変条件 1 の例外（§10 C-10。2026-09-30 さつき）。
  */
-function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]; spot: SpotDraft | undefined; onChange: (s: SpotDraft | undefined) => void }): JSX.Element {
+function SpotRead(props: Readonly<{ seat: Pos; cands: readonly ReadCandidate[]; spot: SpotDraft | undefined; onChange: (s: SpotDraft | undefined) => void }>): JSX.Element {
   const { cands, spot } = props;
   // 投稿者が押して選んだ候補（Action の列の添字）。選んでいなければ判断地点にいちばん近い候補（§10 C-4。Spot を変えて候補が増えても追従する。V-011）
   const [pick, setPick] = useState<number | null>(null);
   const chosen = spot ? spotCandidateOf(spot, props.seat, cands) : undefined;
-  const cur = chosen ?? cands.find((c) => c.index === pick) ?? (cands[cands.length - 1] as ReadCandidate);
+  const cur = chosen ?? cands.find((c) => c.index === pick) ?? (cands.at(-1) as ReadCandidate);
   const choose = (c: ReadCandidate): void => {
     setPick(c.index);
     if (!spot) return;
@@ -292,7 +292,7 @@ function SpotRead(props: { seat: Pos; hero: Pos; cands: readonly ReadCandidate[]
 }
 
 /** General Read（1 席 2 件まで。Street → Action → Lean の順、条件は任意で後から） */
-function GeneralReads(props: { seat: Pos; hero: Pos; list: readonly GeneralDraft[]; onChange: (list: GeneralDraft[]) => void }): JSX.Element {
+function GeneralReads(props: Readonly<{ seat: Pos; hero: Pos; list: readonly GeneralDraft[]; onChange: (list: GeneralDraft[]) => void }>): JSX.Element {
   const set = (i: number, g: GeneralDraft): void => props.onChange(props.list.map((x, j) => (j === i ? g : x)));
   // 部品の key は General Read ごとに固定する（添字にすると、1 件目を消したとき 2 件目が「Board · Size」の開閉を取り違える。V-013）
   const ids = useRef<number[]>([]);
@@ -324,14 +324,14 @@ function GeneralReads(props: { seat: Pos; hero: Pos; list: readonly GeneralDraft
   );
 }
 
-function GeneralEditor(props: {
+function GeneralEditor(props: Readonly<{
   n: number;
   seat: Pos;
   hero: Pos;
   g: GeneralDraft;
   onChange: (g: GeneralDraft) => void;
   onRemove: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { g } = props;
   const [cond, setCond] = useState(Object.keys(g.texture).length > 0 || g.runout.length > 0 || g.size !== null);
   const condId = useId();

@@ -46,12 +46,12 @@ async function stroke(page: Page, labels: string[]): Promise<void> {
   await page.mouse.up();
 }
 
-/** 長押し（スポイト） */
-async function longPress(page: Page, label: string): Promise<void> {
+/** 長押し（スポイト）。押したまま picked（スポイトが効いたときに見える変化）を待ってから離す */
+async function longPress(page: Page, label: string, picked: () => Promise<void>): Promise<void> {
   const p = await center(cell(page, label));
   await page.mouse.move(p.x, p.y);
   await page.mouse.down();
-  await page.waitForTimeout(700);
+  await picked();
   await page.mouse.up();
 }
 
@@ -246,7 +246,8 @@ test.describe('塗り・道具（06 章 §4.5・§4.6）', () => {
     await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 50% / Raise 50%');
     // フォールド 100% に変えてから AKs を長押し
     await tile(page, 'Fold').click();
-    await longPress(page, 'AKs');
+    // スポイトが効くとブラシにマスの Mix が入る（Fold は 0%）
+    await longPress(page, 'AKs', () => expect(tile(page, 'Fold')).toHaveAccessibleName(/^Fold 0%/));
     await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 50% / Raise 50%');
     await expect(tile(page, 'Call')).toHaveAccessibleName(/^Call 50%/);
     await expect(tile(page, 'Raise')).toHaveAccessibleName(/^Raise 50%/);
@@ -258,7 +259,7 @@ test.describe('塗り・道具（06 章 §4.5・§4.6）', () => {
 
   test('スポイト: Range 外のマスでは「Range 外」とトーストし、塗らない', async ({ page }) => {
     await open(page);
-    await longPress(page, 'KK');
+    await longPress(page, 'KK', () => expect(page.locator('.toast')).toHaveText('Range 外'));
     await expect(page.locator('.toast')).toHaveText('Range 外');
     await expect(cell(page, 'KK')).toHaveAccessibleName('KK Range 外');
     await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled();
@@ -526,7 +527,8 @@ test.describe('スマホ（06 章 §4.1）', () => {
     // 長押し
     await tile(page, 'Fold').tap();
     await touch('touchStart', await center(cell(page, 'AKs')));
-    await page.waitForTimeout(700);
+    // 押したまま、スポイトが効いて（ブラシが Call になって）から離す
+    await expect(tile(page, 'Call')).toHaveAttribute('aria-pressed', 'true');
     await touch('touchEnd');
     await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 100%');
     await expect(tile(page, 'Call')).toHaveAttribute('aria-pressed', 'true');

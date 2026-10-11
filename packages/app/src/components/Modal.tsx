@@ -4,7 +4,7 @@ import { useLayer } from './useLayer.ts';
 
 /**
  * モーダルの共通の器（面取りプレート）。スマホは下からのシート、PC は中央。
- * Esc と背景クリックで閉じる。`tone` は上端の線の意味の色（情報 = シアン、確認 = 黄、破壊的 = 赤）。
+ * Esc と背景クリックで閉じる（背景の押下は、読み上げから隠した下敷きの層で受ける）。`tone` は上端の線の意味の色（情報 = シアン、確認 = 黄、破壊的 = 赤）。
  * body の直下に描く（上部固定のパネルの中から開いても、下部固定のバーより前に出るように）。
  */
 export function Modal(props: {
@@ -24,14 +24,14 @@ export function Modal(props: {
   useLayer(ref, props.onClose, { trapFocus: true, initialFocus: props.initialFocus });
 
   return createPortal(
-    <div className="modal-backdrop" role="presentation" onClick={props.onClose}>
+    <div className="modal-backdrop">
+      <div className="modal-scrim" onClick={props.onClose} aria-hidden="true" />
       <div
         ref={ref}
         className={`modal tone-${props.tone}${props.wide ? ' wide' : ''}`}
         role={props.role ?? 'dialog'}
         aria-modal="true"
         aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
           <h2 id={titleId} className="modal-title">

@@ -36,7 +36,7 @@ export function hasPreflopAllin(setup: HandSetup, actions: readonly Action[]): b
     pf.push(a);
   }
   const states = runActions(setup, pf);
-  const last = states[states.length - 1] as State;
+  const last = states.at(-1) as State;
   return last.seated.some((p) => last.stacks[p] === 0);
 }
 
@@ -88,13 +88,16 @@ export function spotView(setup: HandSetup, actions: readonly Action[], hero: Pos
   const s1 = lg.bet ?? lg.raise;
   if (s1) keys.push('s1');
 
+  let s1Label: Derived['s1Label'] = null;
+  if (s1) s1Label = s.currentBet === 0 ? 'bet' : 'raise';
+
   const deepest = Math.max(...s.seated.filter((p) => p !== hero && !s.folded.has(p)).map((p) => setup.stacks[p]));
 
   return {
     derived: {
       street: spotAction.street,
       keys,
-      s1Label: s1 ? (s.currentBet === 0 ? 'bet' : 'raise') : null,
+      s1Label,
       minTo: s1 ? s1.min : null,
       maxTo: s1 ? s1.max : null,
       potBase: potBaseOf(s, hero),
@@ -114,7 +117,7 @@ export function spotView(setup: HandSetup, actions: readonly Action[], hero: Pos
  */
 export function stopState(setup: HandSetup, actions: readonly Action[], stopIndex: number, street: Street): State {
   const states = runActions(setup, actions.slice(0, stopIndex));
-  let s = states[states.length - 1] as State;
+  let s = states.at(-1) as State;
   while (s.street !== street && status(s).kind === 'streetEnd') s = advance(s);
   return s;
 }

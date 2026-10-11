@@ -9,24 +9,22 @@ import type { Card } from '@wwyd/core';
 export const RANK_CHARS = 'AKQJT98765432';
 export const SUIT_CHARS = 'shdc';
 
-/** キー: ランク（`2`〜`9`・`A` `K` `Q` `J` `T`）、`1`、`0`、スート（`s` `h` `d` `c`）、消す（`C`）、1 文字消す（`BS`）。 */
-export type CardKey = string;
-
 export type KeyResult = { hand: string; used?: Card };
 
 const isRank = (c: string | undefined): boolean => c !== undefined && RANK_CHARS.includes(c);
 
 /**
  * 1 キー分の入力を適用する。`used` は他の席のハンドとボードのカード（使用済み）。
+ * キー: ランク（`2`〜`9`・`A` `K` `Q` `J` `T`）、`1`、`0`、スート（`s` `h` `d` `c`）、消す（`C`）、1 文字消す（`BS`）。
  * 使用済みのカードになるスートは入力せず、`used` にそのカードを入れて返す（画面はトーストを出す）。
  */
-export function applyCardKey(hand: string, key: CardKey, used: ReadonlySet<Card>): KeyResult {
+export function applyCardKey(hand: string, key: string, used: ReadonlySet<Card>): KeyResult {
   if (key === 'C') return { hand: '' };
   if (key === 'BS') return { hand: hand.slice(0, -1) };
   if (hand.length >= 4) return { hand }; // 3 枚目は無視
 
   const awaitingSuit = hand.length % 2 === 1;
-  const last = hand.charAt(hand.length - 1);
+  const last = hand.at(-1);
 
   if (isRank(key) || key === '1') {
     // スート待ちでランク（`1` → 他のランクを含む）は直前のランクを置き換える
@@ -35,14 +33,18 @@ export function applyCardKey(hand: string, key: CardKey, used: ReadonlySet<Card>
   if (key === '0') {
     return { hand: awaitingSuit && last === '1' ? `${hand.slice(0, -1)}T` : hand };
   }
-  if (SUIT_CHARS.includes(key) && key.length === 1) {
-    // ランク待ち・`1` の後のスートは無視
-    if (!awaitingSuit || !isRank(last)) return { hand };
-    const card = last + key;
-    if (used.has(card) || hand.slice(0, 2) === card) return { hand, used: card };
-    return { hand: hand + key };
-  }
+  if (SUIT_CHARS.includes(key) && key.length === 1) return applySuit(hand, key, used);
   return { hand };
+}
+
+/** スートのキー: 直前のランクと合わせて 1 枚にする。使用済みのカードになるなら入れずに `used` で知らせる */
+function applySuit(hand: string, suit: string, used: ReadonlySet<Card>): KeyResult {
+  const last = hand.at(-1);
+  // ランク待ち・`1` の後のスートは無視
+  if (last === undefined || hand.length % 2 !== 1 || !isRank(last)) return { hand };
+  const card = last + suit;
+  if (used.has(card) || hand.slice(0, 2) === card) return { hand, used: card };
+  return { hand: hand + suit };
 }
 
 /**
@@ -109,11 +111,11 @@ export const RANK_FLICK: Record<FlickDir, string | null> = { tap: 'Q', up: 'K', 
 export const SUIT_FLICK: Record<FlickDir, string | null> = { tap: 's', up: 'h', right: null, down: 'c', left: 'd' };
 
 /** パソコンのキーボードから打つとき（`c` はクラブ。ハンドを消すのは Delete）。 */
-export function keyFromKeyboard(key: string): CardKey | null {
+export function keyFromKeyboard(key: string): string | null {
   if (key === 'Backspace') return 'BS';
   if (key === 'Delete') return 'C';
   const k = key.length === 1 ? key : '';
-  if (/^[0-9]$/.test(k)) return k;
+  if (/^\d$/.test(k)) return k;
   const up = k.toUpperCase();
   if ('AKQJT'.includes(up) && up !== '') return up;
   if (SUIT_CHARS.includes(k.toLowerCase()) && k !== '') return k.toLowerCase();

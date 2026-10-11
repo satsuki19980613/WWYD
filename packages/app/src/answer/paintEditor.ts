@@ -62,13 +62,13 @@ export function cancelStroke(e: Editor): Editor {
 }
 
 export function undo(e: Editor): Editor {
-  const prev = e.undo[e.undo.length - 1];
+  const prev = e.undo.at(-1);
   if (!prev || e.strokeBase) return e;
   return { paint: prev, undo: e.undo.slice(0, -1), redo: [...e.redo, e.paint], strokeBase: null };
 }
 
 export function redo(e: Editor): Editor {
-  const next = e.redo[e.redo.length - 1];
+  const next = e.redo.at(-1);
   if (!next || e.strokeBase) return e;
   return { paint: next, undo: pushUndo(e.undo, e.paint), redo: e.redo.slice(0, -1), strokeBase: null };
 }

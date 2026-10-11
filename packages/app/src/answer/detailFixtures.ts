@@ -30,9 +30,11 @@ export type DetailOpts = {
 const BOARD_BY_STREET: Record<string, number> = { pf: 0, flop: 3, turn: 4, river: 5 };
 
 /** 集計の初期値（1690 バイトすべて 0）。 */
-export const EMPTY_AGG_HEX = `\\x${'00'.repeat(1690)}`;
+export const EMPTY_AGG_HEX = String.raw`\x${'00'.repeat(1690)}`;
 
-export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unknown> {
+/** `raw` を省く（undefined）と H-S1 の見本 */
+export function detailJson(rawOrDefault: Raw | undefined, o: DetailOpts): Record<string, unknown> {
+  const raw = rawOrDefault ?? hs1();
   const d = raw.derived as Record<string, unknown>;
   const canView = o.viewer !== 'unanswered';
   // 集計は回答済みだけ（投稿者も回答してから。2026-09-28）
@@ -84,7 +86,7 @@ export function detailJson(raw: Raw = hs1(), o: DetailOpts): Record<string, unkn
 
 /** 回答の paint から集計（`\x…`）を作る（DB のトリガと同じ差分更新）。 */
 export function aggregateHex(paints: readonly Paint[]): string {
-  return toHex(encodeAggregate(paints.reduce(addAnswer, emptyAggregate())));
+  return toHex(encodeAggregate(paints.reduce((agg, p) => addAnswer(agg, p), emptyAggregate())));
 }
 
 /** マスのラベル → ミックス の paint（`\x…`）。 */

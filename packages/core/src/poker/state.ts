@@ -214,6 +214,28 @@ export function legal(s: State, p: Pos): Legal {
   };
 }
 
+/** アクションが合法手で、Bet / Raise の額が範囲内か（違えば ValidationError）。 */
+function assertLegal(lg: Legal, action: Action, index?: number): void {
+  switch (action.type) {
+    case 'fold':
+      if (!lg.fold) fail('illegal_action', index);
+      return;
+    case 'check':
+      if (!lg.check) fail('illegal_action', index);
+      return;
+    case 'call':
+      if (lg.call === null) fail('illegal_action', index);
+      return;
+    case 'bet':
+    case 'raise': {
+      const range = action.type === 'bet' ? lg.bet : lg.raise;
+      if (!range) fail('illegal_action', index);
+      const to = action.to as Mbb;
+      if (!Number.isInteger(to) || to < range.min || to > range.max) fail('amount_out_of_range', index);
+    }
+  }
+}
+
 /**
  * アクションを適用する（§6）。`index` はエラーに添える添字。
  * 前提（手番・ストリート・合法・額）を満たさなければ ValidationError を投げる。
@@ -236,26 +258,22 @@ export function apply(s: State, action: Action, index?: number): State {
   let actedSinceFullRaise = new Set(s.actedSinceFullRaise);
   let { currentBet, minRaise } = s;
 
+  assertLegal(lg, action, index);
   switch (action.type) {
     case 'fold':
-      if (!lg.fold) fail('illegal_action', index);
       folded.add(p);
       break;
     case 'check':
-      if (!lg.check) fail('illegal_action', index);
       break;
     case 'call': {
-      if (lg.call === null) fail('illegal_action', index);
-      stacks[p] -= lg.call;
-      bets[p] += lg.call;
+      const call = lg.call as Mbb;
+      stacks[p] -= call;
+      bets[p] += call;
       break;
     }
     case 'bet':
     case 'raise': {
-      const range = action.type === 'bet' ? lg.bet : lg.raise;
-      if (!range) fail('illegal_action', index);
       const to = action.to as Mbb;
-      if (!Number.isInteger(to) || to < range.min || to > range.max) fail('amount_out_of_range', index);
       stacks[p] -= to - bets[p];
       bets[p] = to;
       const size = to - currentBet;

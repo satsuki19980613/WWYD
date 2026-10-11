@@ -55,7 +55,7 @@ describe('B-03b 額のボタン・スライダー・% pot（ランダムなハ�
         expect(clean(callName(state, pos)) && clean(aggressiveName(state, prefix)), label).toBe(true);
         // 実際のログの文字
         const logs = actionLog(setup, prefix);
-        expect(logs.length).toBe(prefix.length);
+        expect(logs).toHaveLength(prefix.length);
         for (const l of logs) expect(clean(l.text), `${label} ${l.text}`).toBe(true);
 
         const range = legal.bet ?? legal.raise;
@@ -77,7 +77,7 @@ describe('B-03b 額のボタン・スライダー・% pot（ランダムなハ�
             expect(() => apply(state, a), `${label} apply ${p.to}`).not.toThrow();
           }
           // All-in 以外は max 未満（All-in が最後に 1 つだけ）
-          expect(ps.filter((p) => p.allin).length).toBe(1);
+          expect(ps.filter((p) => p.allin)).toHaveLength(1);
           // 初期値
           const dp = defaultPreset(state, legal);
           expect(dp, label).not.toBeNull();

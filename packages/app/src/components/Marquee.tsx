@@ -10,14 +10,14 @@ const HOLD = 0.18;
  * 収まれば止めたまま。収まらなければ左端で止まる → 右端まで流れる → 止まる → 左端に戻る、を繰り返す。
  * 動きを減らす設定の端末では流さず、末尾を「…」で省略し、押すと全文を折り返して出す（もう一度押すと戻す）。
  */
-export function Marquee(props: { text: string; className?: string }): JSX.Element {
+export function Marquee(props: Readonly<{ text: string; className?: string }>): JSX.Element {
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)');
   const box = useRef<HTMLSpanElement>(null);
   const inner = useRef<HTMLSpanElement>(null);
   const [over, setOver] = useState(0);
   const [expanded, setExpanded] = useState(false);
 
-  const mode = over <= 1 && !expanded ? 'static' : reduced ? 'clip' : 'run';
+  const mode = modeOf(over, expanded, reduced);
   // 表示の形が変わると要素が作り直されるので、そのたびに測り直して監視し直す。全文を折り返している間は測らない。
   // 省略（clip）の形では文字が箱の幅に切られて scrollWidth が箱の幅になるので、文字そのものの幅を測る。
   // そうしないと境目の幅で static と clip が切り替わり続け、画面が落ちる（V-033。villain-reads-test）
@@ -36,7 +36,7 @@ export function Marquee(props: { text: string; className?: string }): JSX.Elemen
     return () => ro.disconnect();
   }, [props.text, mode, expanded]);
 
-  const cls = `mq${props.className ? ` ${props.className}` : ''}`;
+  const cls = props.className ? `mq ${props.className}` : 'mq';
   if (mode === 'static') {
     return (
       <span ref={box} className={cls}>
@@ -70,11 +70,15 @@ export function Marquee(props: { text: string; className?: string }): JSX.Elemen
   );
 }
 
+/** 表示の形: 収まれば止める（static）。収まらないか全文を開いているときは、動きを減らす設定なら省略（clip）、それ以外は流す（run） */
+function modeOf(over: number, expanded: boolean, reduced: boolean): 'static' | 'clip' | 'run' {
+  if (over <= 1 && !expanded) return 'static';
+  return reduced ? 'clip' : 'run';
+}
+
 /** 要素の中の文字そのものの幅（箱に切られていても、折り返さない 1 行の幅） */
 function textWidth(el: HTMLElement): number {
   const range = document.createRange();
   range.selectNodeContents(el);
-  const w = range.getBoundingClientRect().width;
-  range.detach();
-  return w;
+  return range.getBoundingClientRect().width;
 }

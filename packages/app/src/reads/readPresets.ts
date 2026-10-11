@@ -1,6 +1,7 @@
 import type { Tendency } from '@wwyd/core';
 import { useSyncExternalStore } from 'react';
 import { activeUser, type KeyValue } from '../post/savedDrafts.ts';
+import { localId } from '../randomId.ts';
 import { isCompleteGeneral, sanitizeGeneral, sanitizeTendency, type GeneralDraft, type SeatDraft } from './readsModel.ts';
 
 /**
@@ -110,7 +111,7 @@ export function clearPresets(uid: string, store: KeyValue | null = browserStorag
 }
 
 function newId(): string {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  return localId(Date.now());
 }
 
 // ---- 購読 ----
@@ -144,7 +145,7 @@ export function usePresets(): ReadPreset[] {
     const uid = activeUser();
     if (!uid) return EMPTY;
     const c = cache.get(uid);
-    if (c && c.version === version) return c.list;
+    if (c?.version === version) return c.list;
     const list = readPresets(uid);
     cache.set(uid, { version, list });
     return list;

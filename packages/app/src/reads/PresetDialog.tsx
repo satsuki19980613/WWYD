@@ -17,7 +17,7 @@ const SAVE_ERROR: Record<Exclude<PresetResult, { ok: true }>['reason'], string> 
  * 呼び出すと、今の席の全体の傾向と General Read を置き換える（Spot Read はそのまま）。
  * 端末（localStorage）だけに保存する。
  */
-export function PresetDialog(props: { seat: Pos; read: SeatDraft; onApply: (read: PresetRead) => void; onClose: () => void }): JSX.Element {
+export function PresetDialog(props: Readonly<{ seat: Pos; read: SeatDraft; onApply: (read: PresetRead) => void; onClose: () => void }>): JSX.Element {
   const presets = usePresets();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);

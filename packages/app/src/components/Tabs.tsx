@@ -4,16 +4,17 @@ import { useRef, type KeyboardEvent } from 'react';
  * タブ（一覧の「すべて」「自分の投稿」、集計の「全体」「自分」など）。
  * 選択中は黄の下線（アクティブ）。矢印キー・Home・End で移動する（WAI-ARIA の tablist）。
  */
-export function Tabs<T extends string>(props: {
+export function Tabs<T extends string>(props: Readonly<{
   label: string;
   items: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const index = props.items.findIndex((i) => i.value === props.value);
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+  // 矢印キーは各タブで受ける（フォーカスは常にタブにある）
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>): void => {
     const n = props.items.length;
     let next = -1;
     if (e.key === 'ArrowRight') next = (index + 1) % n;
@@ -28,7 +29,7 @@ export function Tabs<T extends string>(props: {
   };
 
   return (
-    <div className="tabs" role="tablist" aria-label={props.label} onKeyDown={onKeyDown}>
+    <div className="tabs" role="tablist" aria-label={props.label}>
       {props.items.map((item, i) => {
         const selected = item.value === props.value;
         return (
@@ -43,6 +44,7 @@ export function Tabs<T extends string>(props: {
             tabIndex={selected ? 0 : -1}
             className="tab"
             onClick={() => props.onChange(item.value)}
+            onKeyDown={onKeyDown}
           >
             {item.label}
           </button>

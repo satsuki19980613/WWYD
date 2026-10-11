@@ -32,23 +32,32 @@ export function validatePaintBytes(
   const legal = ANSWER_KEYS.map((k) => keys.includes(k));
   for (let i = 0; i < PAINT_BYTES; i++) if (!legal[i % 4] && bytes[i] !== 0) return 'paint_illegal_key';
 
+  return checkCellSums(bytes) ?? checkSize(usesS1(bytes), size, minTo, maxTo);
+}
+
+/** マスの合計が 0 か 20 か（paint_sum）、塗ったマスがあるか（paint_empty）。 */
+function checkCellSums(bytes: Uint8Array): PaintError | null {
   let filled = 0;
-  let usesS1 = false;
   for (let idx = 0; idx < CELL_COUNT; idx++) {
     const o = idx * 4;
     const sum = (bytes[o] as number) + (bytes[o + 1] as number) + (bytes[o + 2] as number) + (bytes[o + 3] as number);
     if (sum !== 0 && sum !== MIX_TOTAL) return 'paint_sum';
     if (sum === MIX_TOTAL) filled++;
-    if ((bytes[o + 3] as number) > 0) usesS1 = true;
   }
-  if (filled === 0) return 'paint_empty';
+  return filled === 0 ? 'paint_empty' : null;
+}
 
-  if (usesS1) {
-    if (size === null || minTo === null || maxTo === null) return 'size_out_of_range';
-    if (!Number.isInteger(size) || size < minTo || size > maxTo) return 'size_out_of_range';
-  } else if (size !== null) {
-    return 'size_not_allowed';
-  }
+/** s1（サイズ付きの Bet / Raise）を塗ったマスがあるか。 */
+function usesS1(bytes: Uint8Array): boolean {
+  for (let idx = 0; idx < CELL_COUNT; idx++) if ((bytes[idx * 4 + 3] as number) > 0) return true;
+  return false;
+}
+
+/** サイズは s1 を塗ったときだけ持ち、min〜max の整数であること。 */
+function checkSize(s1: boolean, size: Mbb | null, minTo: Mbb | null, maxTo: Mbb | null): PaintError | null {
+  if (!s1) return size === null ? null : 'size_not_allowed';
+  if (size === null || minTo === null || maxTo === null) return 'size_out_of_range';
+  if (!Number.isInteger(size) || size < minTo || size > maxTo) return 'size_out_of_range';
   return null;
 }
 

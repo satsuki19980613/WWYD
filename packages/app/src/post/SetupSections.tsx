@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { ChipGroup } from '../components/ChipGroup.tsx';
 import { PlayingCard } from '../components/PlayingCard.tsx';
 import { POS_VAR } from '../components/posColor.ts';
-import { handSlots } from './cardInput.ts';
+import { handSlots, type Slot } from './cardInput.ts';
 import { seatsOf, type Draft, type SettingField } from './draft.ts';
 
 const FMT_ITEMS = [
@@ -12,7 +12,7 @@ const FMT_ITEMS = [
 ] as const;
 
 /** 数値の入力欄（ラベル付き）。不正な値は赤い枠。 */
-export function NumField(props: {
+export function NumField(props: Readonly<{
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -20,7 +20,7 @@ export function NumField(props: {
   invalid?: boolean;
   placeholder?: string;
   inputMode?: 'decimal' | 'numeric';
-}): JSX.Element {
+}>): JSX.Element {
   const id = useId();
   return (
     <div className="pf-field">
@@ -43,11 +43,11 @@ export function NumField(props: {
 }
 
 /** 基本設定（06 章 §3.3）。Action を入れたあとも変えられる（2026-09-29）。 */
-export function SettingsSection(props: {
+export function SettingsSection(props: Readonly<{
   draft: Draft;
   invalid: readonly SettingField[];
   onChange: (patch: Partial<Draft>) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { draft: d } = props;
   const bad = (f: SettingField): boolean => props.invalid.includes(f);
   return (
@@ -95,14 +95,14 @@ const COUNT_ITEMS = PLAYER_COUNTS.map((n) => ({ value: String(n) as `${PlayerCou
  * プレイヤーとハンド（06 章 §3.4）。人数（2〜6）を選ぶまで席の表は出さない（必須）。
  * すべて Action を入れたあとも変えられる（2026-09-29。合法でなくなった Action は外す。draft の settleActions）。
  */
-export function PlayersSection(props: {
+export function PlayersSection(props: Readonly<{
   draft: Draft;
   invalid: readonly SettingField[];
   activeSeat: Pos | null;
   onChange: (patch: Partial<Draft>) => void;
   onPlayers: (n: PlayerCount) => void;
   onOpenHand: (seat: Pos) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const { draft: d } = props;
   const seats = seatsOf(d);
   return (
@@ -183,8 +183,8 @@ export function PlayersSection(props: {
 }
 
 /** ハンド欄（2 枠）。押すとカードキーボードを開く。入力中はシアンの枠。 */
-export function HandButton(props: { seat: Pos; hand: string; active: boolean; onOpen: () => void }): JSX.Element {
-  const slots = handSlots(props.hand);
+export function HandButton(props: Readonly<{ seat: Pos; hand: string; active: boolean; onOpen: () => void }>): JSX.Element {
+  const [first, second] = handSlots(props.hand);
   return (
     <button
       type="button"
@@ -195,15 +195,16 @@ export function HandButton(props: { seat: Pos; hand: string; active: boolean; on
       aria-expanded={props.active}
       onClick={props.onOpen}
     >
-      {slots.map((s, i) =>
-        s.kind === 'card' ? (
-          <PlayingCard key={i} card={s.card} size="sm" />
-        ) : s.kind === 'rank' ? (
-          <PlayingCard key={i} rank={s.rank} size="sm" />
-        ) : (
-          <span key={i} className="pcard-empty" />
-        ),
-      )}
+      <HandSlot slot={first} />
+      <HandSlot slot={second} />
     </button>
   );
+}
+
+/** Hand の 1 枠: カード、ランクだけ（スート待ち）、または空 */
+function HandSlot(props: Readonly<{ slot: Slot }>): JSX.Element {
+  const s = props.slot;
+  if (s.kind === 'card') return <PlayingCard card={s.card} size="sm" />;
+  if (s.kind === 'rank') return <PlayingCard rank={s.rank} size="sm" />;
+  return <span className="pcard-empty" />;
 }

@@ -3,7 +3,7 @@ import type { InfoSection } from '../info/infoSections.ts';
 import { Modal } from './Modal.tsx';
 
 /** ⓘ のインフォメーションモーダル（09 章）。見出し（dt）＋本文（dd）の定義リスト。閉じるボタンは「閉じる」。 */
-export function InfoModal(props: { section: InfoSection; title?: string; onClose: () => void }): JSX.Element {
+export function InfoModal(props: Readonly<{ section: InfoSection; title?: string; onClose: () => void }>): JSX.Element {
   const closeRef = useRef<HTMLButtonElement>(null);
   return (
     <Modal

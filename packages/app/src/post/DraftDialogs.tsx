@@ -13,7 +13,7 @@ import { activeUser, deleteDraft, draftSummary, MAX_DRAFTS, saveDraft, useSavedD
  * 下書きが 3 件あって新しく保存できなければ、どれかを消すダイアログを出し、消したら保存して進む。
  * 入力が無い・保存済みから変わっていなければ聞かずに、入力を空に戻して進む。
  */
-export function LeaveDraftDialog(props: { active: boolean }): JSX.Element | null {
+export function LeaveDraftDialog(props: Readonly<{ active: boolean }>): JSX.Element | null {
   const [pending, setPending] = useState<string | null>(null);
   const [full, setFull] = useState(false);
   const toast = useToast();
@@ -68,7 +68,7 @@ export function LeaveDraftDialog(props: { active: boolean }): JSX.Element | null
   return <SaveDialog onSave={save} onDiscard={proceed} onCancel={() => setPending(null)} />;
 }
 
-function SaveDialog(props: { onSave: () => void; onDiscard: () => void; onCancel: () => void }): JSX.Element {
+function SaveDialog(props: Readonly<{ onSave: () => void; onDiscard: () => void; onCancel: () => void }>): JSX.Element {
   const saveRef = useRef<HTMLButtonElement>(null);
   return (
     <Modal
@@ -97,7 +97,7 @@ function SaveDialog(props: { onSave: () => void; onDiscard: () => void; onCancel
 }
 
 /** 下書きがいっぱい（3 件）: どれかを消すと、消したあとに保存して進む */
-function DraftsFullDialog(props: { onDelete: (id: string) => void; onCancel: () => void }): JSX.Element {
+function DraftsFullDialog(props: Readonly<{ onDelete: (id: string) => void; onCancel: () => void }>): JSX.Element {
   const drafts = useSavedDrafts();
   const [target, setTarget] = useState<SavedDraft | null>(null);
   const now = Date.now();

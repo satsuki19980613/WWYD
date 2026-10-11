@@ -5,6 +5,7 @@
  */
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { watchErrors } from '../release/taKit.ts';
+import { animationsDone } from '../settle.ts';
 import { openNew, pickSpot, playSrpTurn, step, S_SETTINGS } from '../release/taPost.ts';
 import { baseHs1bb, isSp, openAnswer } from './t3-kit.ts';
 
@@ -192,7 +193,7 @@ for (const v of ['', ' @sp'] as const) {
     expect(unsel, '選択していないボタンが黄').toEqual([]);
     // 色の移り変わり（transition）の途中を測らないように、ポインタを外して待つ（スマホで押した直後は途中の色になる）
     await page.mouse.move(0, 0);
-    await page.waitForTimeout(600);
+    await animationsDone(g);
     const sel = await g.getByRole('button', { pressed: true }).evaluateAll((els) => els.map((e) => ({ n: e.textContent, c: getComputedStyle(e).color, bg: getComputedStyle(e).backgroundColor, bd: getComputedStyle(e).borderTopColor })));
     // 選んだボタンは黄（背景か文字か枠）
     for (const s of sel) expect([s.c, s.bg, s.bd].some((c) => c === YELLOW), `選んだボタンが黄でない: ${s.n}`).toBe(true);

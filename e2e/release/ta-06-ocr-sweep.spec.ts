@@ -90,7 +90,7 @@ async function sweep(page: import('@playwright/test').Page, baseURL: string | un
   expect(Math.max(0, ...requests.map((r) => r.body))).toBeLessThan(2048);
   // 画像の Object URL は確認画面を閉じるたびに破棄している。ファイル入力に参照を残さない
   const blobs = await page.evaluate(() => (window as unknown as { __blobs: { created: string[]; revoked: string[] } }).__blobs);
-  expect(blobs.created.length).toBe(reviews);
+  expect(blobs.created).toHaveLength(reviews);
   expect([...blobs.revoked].sort()).toEqual([...blobs.created].sort());
   expect(await page.evaluate(() => (document.querySelector('[data-testid=ocr-file]') as HTMLInputElement).files?.length)).toBe(0);
   // 画像を IndexedDB・localStorage・sessionStorage に保存していない
@@ -113,20 +113,24 @@ const pc = loadSamples('pc');
 const sp = loadSamples('sp');
 
 test.describe('A-06 全画像', () => {
+  // T4 の画像は個人の対戦画像なのでリポジトリに置けない。手元の sample/ に無ければ行わない
   test.skip(pc.length + sp.length === 0, '試験画像（sample/）が無いので skip');
 
   test(`PC の画像 ${pc.length} 枚を PC の画面で読み込む`, async ({ page, baseURL }) => {
-    test.skip(pc.length === 0);
+    // 手元の sample/ に、この試験に使う画像が無ければ行わない
+    test.skip(pc.length === 0, 'sample/pc に画像が無いので skip');
     await sweep(page, baseURL, pc, 'pc画像');
   });
 
   test(`スマホの画像 ${sp.length} 枚をスマホの画面で読み込む @sp`, async ({ page, baseURL }) => {
-    test.skip(sp.length === 0);
+    // 手元の sample/ に、この試験に使う画像が無ければ行わない
+    test.skip(sp.length === 0, 'sample/sp に画像が無いので skip');
     await sweep(page, baseURL, sp, 'sp画像');
   });
 
   test(`PC の画像の一部をスマホの画面で、スマホの画像の一部を PC の画面で読み込んでも動く（画面の幅は画像に依らない）`, async ({ page, baseURL }) => {
-    test.skip(pc.length === 0 || sp.length === 0);
+    // 手元の sample/ に、この試験に使う画像が無ければ行わない
+    test.skip(pc.length === 0 || sp.length === 0, 'sample/pc か sample/sp に画像が無いので skip');
     await sweep(page, baseURL, sp.slice(0, 6), 'sp画像をPC画面');
   });
 });

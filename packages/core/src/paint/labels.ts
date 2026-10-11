@@ -33,6 +33,8 @@ export function combos(idx: number): 6 | 4 | 12 {
 /** 実カード 2 枚 → ラベル（高いランクが先、同スートなら s、違えば o、同ランクならペア）。 */
 export function labelOfCards(c1: Card, c2: Card): string {
   const [hi, lo] = rankIndex(c1) <= rankIndex(c2) ? [c1, c2] : [c2, c1];
-  if (hi.charAt(0) === lo.charAt(0)) return `${hi.charAt(0)}${lo.charAt(0)}`;
-  return `${hi.charAt(0)}${lo.charAt(0)}${hi.charAt(1) === lo.charAt(1) ? 's' : 'o'}`;
+  const hiRank = hi.charAt(0);
+  const loRank = lo.charAt(0);
+  if (hiRank === loRank) return `${hiRank}${loRank}`;
+  return `${hiRank}${loRank}${hi.charAt(1) === lo.charAt(1) ? 's' : 'o'}`;
 }

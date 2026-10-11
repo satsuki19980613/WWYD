@@ -85,7 +85,7 @@ async function pgtap(url) {
     try {
       const out = await psql(url, `-At -f /db/tests/${f}`, undefined, 'tap,public');
       const oks = out.split('\n').filter((l) => /^ok \d+/.test(l)).length;
-      const bad = out.split('\n').filter((l) => /^not ok/.test(l));
+      const bad = out.split('\n').filter((l) => l.startsWith('not ok'));
       total += oks;
       if (bad.length) failed.push(`${f}: ${bad.join(' / ')}`);
       console.log(`${bad.length ? 'NG' : 'ok'}  ${f}（${oks} 件）`);
@@ -103,10 +103,11 @@ async function concurrency(url) {
   const N = 10;
   const uid = (n) => `00000000-0000-0000-0000-9${String(n).padStart(11, '0')}`;
   const users = Array.from({ length: N + 1 }, (_, i) => uid(i));
-  const cleanup = `delete from neon_auth."user" where id in (${users.map((u) => `'${u}'`).join(',')});`;
+  const ids = users.map((u) => `'${u}'`).join(',');
+  const cleanup = `delete from neon_auth."user" where id in (${ids});`;
   await psql(url, '-f -', cleanup);
-  await psql(url, '-f -', `insert into neon_auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt") values ${users
-    .map((u, i) => `('${u}', 'c${i}', 'c${i}@example.test', false, now(), now())`).join(',')};`);
+  const rows = users.map((u, i) => `('${u}', 'c${i}', 'c${i}@example.test', false, now(), now())`).join(',');
+  await psql(url, '-f -', `insert into neon_auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt") values ${rows};`);
   try {
     const post = (await psql(url, '-At -f -', `select public.insert_post('${uid(0)}', jsonb_build_object(
       'title','DB-19','fmt','cash','hero','BTN','street','turn','effective_stack',100,

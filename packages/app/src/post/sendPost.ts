@@ -2,6 +2,11 @@ import { CREATE_POST_URL, getToken } from '../backend/neon.ts';
 
 export type SendResult = { ok: true; id: string } | { ok: false; code: string; index?: number };
 
+/** 本文に理由の無い失敗の理由（5xx はサーバーの中、それ以外は通信） */
+function statusCode(status: number): string {
+  return status >= 500 ? 'internal' : 'network';
+}
+
 /**
  * Neon Function `create-post` に投稿を送る（詳細仕様 03 章 §3）。
  * 失敗はエラーコードで返す（通信の失敗は `network`）。文言への変換は errorMessages.ts。
@@ -26,7 +31,7 @@ export async function sendPost(body: Record<string, unknown>): Promise<SendResul
     // 本文が JSON でない（ゲートウェイのエラー等）
   }
   if (res.status === 201 && typeof data.id === 'string') return { ok: true, id: data.id };
-  const code = typeof data.error === 'string' ? data.error : res.status >= 500 ? 'internal' : 'network';
+  const code = typeof data.error === 'string' ? data.error : statusCode(res.status);
   const index = typeof data.detail?.index === 'number' ? data.detail.index : undefined;
   return index === undefined ? { ok: false, code } : { ok: false, code, index };
 }

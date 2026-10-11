@@ -80,7 +80,7 @@ for (const v of ['', ' @sp'] as const) {
     await expect(seatBtn(page, 'BTN')).toContainText('VPIP 20');
     await expect(seatBtn(page, 'CO')).toContainText('VPIP 30');
     // Spot を選び直して送る本文を見る（登録できない席の入力は含まない。Hero=BB の状態）
-    expect(cp.calls.length).toBe(0);
+    expect(cp.calls).toHaveLength(0);
   });
 
   test(`T2-01 席: 「すべて消す」で席が無くなり、同じ Action を入れ直すと入力が戻る${v}`, async ({ page }) => {

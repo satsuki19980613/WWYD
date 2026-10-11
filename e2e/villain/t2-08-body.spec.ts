@@ -83,7 +83,7 @@ for (const [mtt, label, msg] of [
     await step(page, S_SPOT);
     await submitBtn(page).click();
     await expect(page.locator('.pf-errors')).toContainText(msg);
-    expect(cp.calls.length).toBe(0);
+    expect(cp.calls).toHaveLength(0);
   });
 }
 

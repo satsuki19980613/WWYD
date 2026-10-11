@@ -10,6 +10,15 @@ export type Rgba = { width: number; height: number; data: Uint8ClampedArray };
 
 export function decodePng(buf: Buffer): Rgba {
   if (buf.readUInt32BE(0) !== 0x89504e47) throw new Error('PNG ではない');
+  const { width, height, colorType, idat } = readChunks(buf);
+  const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[colorType as 0 | 2 | 4 | 6];
+  if (!channels) throw new Error(`色の形式 ${colorType} は扱わない`);
+  const px = unfilter(inflateSync(Buffer.concat(idat)), width, height, channels);
+  return { width, height, data: toRgba(px, width, height, channels) };
+}
+
+/** チャンクを読み、IHDR の値と IDAT の中身を集める。 */
+function readChunks(buf: Buffer): { width: number; height: number; colorType: number; idat: Buffer[] } {
   let pos = 8;
   let width = 0;
   let height = 0;
@@ -28,9 +37,37 @@ export function decodePng(buf: Buffer): Rgba {
     } else if (type === 'IDAT') idat.push(body);
     pos += 12 + len;
   }
-  const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[colorType as 0 | 2 | 4 | 6];
-  if (!channels) throw new Error(`色の形式 ${colorType} は扱わない`);
-  const raw = inflateSync(Buffer.concat(idat));
+  return { width, height, colorType, idat };
+}
+
+/** Paeth の予測（左 a・上 b・左上 c のうち、a + b - c にいちばん近いもの。同じなら a、b の順） */
+function paeth(a: number, b: number, c: number): number {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+  if (pa <= pb && pa <= pc) return a;
+  return pb <= pc ? b : c;
+}
+
+/** フィルタの種類ごとの予測値（0 = なし、1 = Sub、2 = Up、3 = Average、4 = Paeth） */
+function predict(filter: number | undefined, a: number, b: number, c: number): number {
+  switch (filter) {
+    case 1:
+      return a;
+    case 2:
+      return b;
+    case 3:
+      return (a + b) >> 1;
+    case 4:
+      return paeth(a, b, c);
+    default:
+      return 0;
+  }
+}
+
+/** 行ごとのフィルタを戻して、画素のバイト列にする。 */
+function unfilter(raw: Buffer, width: number, height: number, channels: number): Uint8Array {
   const stride = width * channels;
   const px = new Uint8Array(height * stride);
   for (let y = 0; y < height; y++) {
@@ -40,20 +77,14 @@ export function decodePng(buf: Buffer): Rgba {
       const a = x >= channels ? (px[y * stride + x - channels] as number) : 0;
       const b = y > 0 ? (px[(y - 1) * stride + x] as number) : 0;
       const c = x >= channels && y > 0 ? (px[(y - 1) * stride + x - channels] as number) : 0;
-      let out = v;
-      if (filter === 1) out = v + a;
-      else if (filter === 2) out = v + b;
-      else if (filter === 3) out = v + ((a + b) >> 1);
-      else if (filter === 4) {
-        const p = a + b - c;
-        const pa = Math.abs(p - a);
-        const pb = Math.abs(p - b);
-        const pc = Math.abs(p - c);
-        out = v + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c);
-      }
-      px[y * stride + x] = out & 0xff;
+      px[y * stride + x] = (v + predict(filter, a, b, c)) & 0xff;
     }
   }
+  return px;
+}
+
+/** グレー・グレー＋α・RGB・RGBA の画素を RGBA にそろえる。 */
+function toRgba(px: Uint8Array, width: number, height: number, channels: number): Uint8ClampedArray {
   const data = new Uint8ClampedArray(width * height * 4);
   for (let i = 0; i < width * height; i++) {
     const s = i * channels;
@@ -63,11 +94,14 @@ export function decodePng(buf: Buffer): Rgba {
       data[i * 4 + 2] = px[s + 2] as number;
       data[i * 4 + 3] = channels === 4 ? (px[s + 3] as number) : 255;
     } else {
-      data[i * 4] = data[i * 4 + 1] = data[i * 4 + 2] = px[s] as number;
+      const gray = px[s] as number;
+      data[i * 4] = gray;
+      data[i * 4 + 1] = gray;
+      data[i * 4 + 2] = gray;
       data[i * 4 + 3] = channels === 2 ? (px[s + 1] as number) : 255;
     }
   }
-  return { width, height, data };
+  return data;
 }
 
 const CRC_TABLE = (() => {

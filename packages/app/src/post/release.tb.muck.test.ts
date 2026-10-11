@@ -45,7 +45,7 @@ describe('B-02 known_cards の補完（Muck）', () => {
       for (const k of Object.keys(p.known_cards)) expect(SEATS_BY_COUNT[b.draft.players!] as readonly Pos[]).toContain(k);
       if (Object.values(p.known_cards).includes('muck')) withMuck++;
       // 座っている席の全員のスタックが保存され、空席は無い
-      expect(Object.keys(p.stacks).length).toBe(POSITIONS.filter((q) => b.played.setup.stacks[q] > 0).length);
+      expect(Object.keys(p.stacks)).toHaveLength(POSITIONS.filter((q) => b.played.setup.stacks[q] > 0).length);
       checked++;
     }
     expect(checked).toBeGreaterThan(400);

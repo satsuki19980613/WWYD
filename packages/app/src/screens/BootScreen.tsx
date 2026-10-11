@@ -1,9 +1,9 @@
 /** 起動中（セッション確認中）。ロゴのみ・文字なし（06 章 §0.3）。 */
 export function BootScreen(): JSX.Element {
   return (
-    <div className="boot" role="status" aria-label="読み込み中">
+    <output className="boot" aria-label="読み込み中">
       <AppMark className="boot-mark" />
-    </div>
+    </output>
   );
 }
 
@@ -17,7 +17,7 @@ const CELLS: readonly (readonly [number, number, 'y' | 'c' | 'r' | 'o'])[] = [
   [12, 40, 'c'], [26, 40, 'r'], [40, 40, 'o'],
 ];
 
-export function AppMark(props: { className?: string }): JSX.Element {
+export function AppMark(props: Readonly<{ className?: string }>): JSX.Element {
   return (
     <svg className={props.className} viewBox="0 0 64 64" aria-hidden="true">
       <path className="am-plate" d="M3 3h48l10 10v48H13L3 51z" strokeWidth="3" />

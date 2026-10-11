@@ -266,7 +266,7 @@ describe('B-06b 保存した下書きは、画面に見えていた Action を�
     const store = new MemStore();
     saveDraft('u1', raw, null, new Date(0), store);
     const back = readDrafts('u1', store)[0]!.draft;
-    expect(back.actions.length).toBe(shown.actions.length);
+    expect(back.actions).toHaveLength(shown.actions.length);
   });
 });
 
@@ -298,7 +298,7 @@ describe('B-07 sanitizeDraft（保存した下書きの復元）', () => {
     store.setItem(key, JSON.stringify([big]));
     const t0 = Date.now();
     const out = readDrafts('u1', store);
-    expect(out.length).toBe(1);
+    expect(out).toHaveLength(1);
     expect(Date.now() - t0).toBeLessThan(5000);
   });
 

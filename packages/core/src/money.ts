@@ -39,5 +39,12 @@ export function formatBb(mbb: Mbb): string {
   const int = Math.floor(abs / MBB_PER_BB);
   const frac = abs % MBB_PER_BB;
   if (frac === 0) return `${sign}${int}`;
-  return `${sign}${int}.${String(frac).padStart(3, '0').replace(/0+$/, '')}`;
+  // 末尾の 0 を削る（frac は 0 でないので必ず止まる）
+  let digits = 3;
+  let f = frac;
+  while (f % 10 === 0) {
+    f /= 10;
+    digits--;
+  }
+  return `${sign}${int}.${String(f).padStart(digits, '0')}`;
 }

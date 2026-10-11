@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { APP_STATES, type AppState } from './appState.ts';
-import { useAuth } from './auth/useAuth.ts';
+import { useAuth, type Auth } from './auth/useAuth.ts';
 import { ConfirmDialog } from './components/ConfirmDialog.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
-import { Header, type HeaderTitle } from './components/Header.tsx';
+import { Header, type HeaderTitle, type NavItem } from './components/Header.tsx';
 import { useHeaderTitle } from './components/headerTitle.ts';
 import { InfoModal } from './components/InfoModal.tsx';
 import { useToast } from './components/Toast.tsx';
@@ -52,6 +52,32 @@ const SCREEN_TITLE: Partial<Record<Route['name'], HeaderTitle>> = {
   privacy: { text: 'プライバシーポリシー', heading: false },
 };
 
+/** 回答・結果の画面か（ヘッダーとタブの名前を投稿のタイトルにする） */
+const isSpotRoute = (name: Route['name']): boolean => name === 'answer' || name === 'result';
+const isLegalRoute = (name: Route['name']): boolean => name === 'terms' || name === 'privacy';
+
+/** ヘッダーのナビで今いる項目（ログイン前などはナビを出さない） */
+function navOf(state: AppState, name: Route['name']): NavItem | undefined {
+  if (state !== 'ready') return undefined;
+  return name === 'list' || name === 'new' ? name : null;
+}
+
+/** 使える状態でないときの画面（ready・booting は null。booting は先に起動中の画面を出す） */
+function statusBody(state: AppState, auth: Auth): ReactNode {
+  switch (state) {
+    case 'signedOut':
+      return <LoginScreen onLogin={auth.signIn} busy={auth.signingIn} failed={auth.loginFailed} expired={auth.sessionExpired} />;
+    case 'unavailable':
+      return <StatusScreen title="このアカウントは利用できません" actionLabel="ログアウト" tone="error" onAction={() => void auth.signOut()} />;
+    case 'maintenance':
+      return <StatusScreen title="メンテナンス中" actionLabel="再読み込み" tone="warn" onAction={reload} />;
+    case 'offline':
+      return <StatusScreen title="オフラインです" actionLabel="再読み込み" tone="warn" onAction={reload} />;
+    default:
+      return null;
+  }
+}
+
 export function App(): JSX.Element {
   const route = useRoute();
   const { pathname, search } = useLocation();
@@ -65,8 +91,8 @@ export function App(): JSX.Element {
   const drafts = useSavedDrafts();
   const postTitle = useHeaderTitle();
   // ブラウザのタブ・履歴の名前を画面ごとに（F-035）。回答・結果は投稿のタイトル。ログイン前などは WWYD だけ
-  const screenName = state === 'ready' || route.name === 'terms' || route.name === 'privacy' ? SCREEN_TITLE[route.name]?.text : undefined;
-  const tabTitle = (route.name === 'answer' || route.name === 'result') && postTitle ? postTitle : screenName;
+  const screenName = state === 'ready' || isLegalRoute(route.name) ? SCREEN_TITLE[route.name]?.text : undefined;
+  const tabTitle = isSpotRoute(route.name) && postTitle ? postTitle : screenName;
   useEffect(() => {
     document.title = tabTitle ? `${tabTitle} · WWYD` : 'WWYD';
   }, [tabTitle]);
@@ -90,22 +116,11 @@ export function App(): JSX.Element {
 
   if (state === 'booting') return <BootScreen />;
 
-  const isLegal = route.name === 'terms' || route.name === 'privacy';
+  const isLegal = isLegalRoute(route.name);
   const showBack = isLegal || (state === 'ready' && route.name !== 'list' && route.name !== 'notFound');
 
-  let body: ReactNode;
-  if (isLegal) body = <RouteScreen route={route} />;
-  else if (state === 'signedOut')
-    body = <LoginScreen onLogin={auth.signIn} busy={auth.signingIn} failed={auth.loginFailed} expired={auth.sessionExpired} />;
-  else if (state === 'unavailable')
-    body = (
-      <StatusScreen title="このアカウントは利用できません" actionLabel="ログアウト" tone="error" onAction={() => void auth.signOut()} />
-    );
-  else if (state === 'maintenance')
-    body = <StatusScreen title="メンテナンス中" actionLabel="再読み込み" tone="warn" onAction={reload} />;
-  else if (state === 'offline')
-    body = <StatusScreen title="オフラインです" actionLabel="再読み込み" tone="warn" onAction={reload} />;
-  else body = <RouteScreen route={route} />;
+  // 規約はログインの状態によらず読める
+  const body: ReactNode = (isLegal ? null : statusBody(state, auth)) ?? <RouteScreen route={route} />;
 
   const infoTitle = info === 'login' && state !== 'signedOut' ? 'WWYD' : undefined;
 
@@ -113,9 +128,9 @@ export function App(): JSX.Element {
     <>
       <Header
         title={state === 'ready' || isLegal ? SCREEN_TITLE[route.name] : undefined}
-        postTitle={state === 'ready' && (route.name === 'answer' || route.name === 'result') ? postTitle : null}
+        postTitle={state === 'ready' && isSpotRoute(route.name) ? postTitle : null}
         back={showBack}
-        nav={state === 'ready' ? (route.name === 'list' ? 'list' : route.name === 'new' ? 'new' : null) : undefined}
+        nav={navOf(state, route.name)}
         showAccount={state === 'ready'}
         drafts={state === 'ready' ? drafts.length : undefined}
         onInfo={(menuOpen) => setInfo(infoSectionFor(state, route.name, menuOpen))}
@@ -145,7 +160,7 @@ export function App(): JSX.Element {
   );
 }
 
-function RouteScreen(props: { route: Route }): JSX.Element {
+function RouteScreen(props: Readonly<{ route: Route }>): JSX.Element {
   const { route } = props;
   switch (route.name) {
     case 'list':

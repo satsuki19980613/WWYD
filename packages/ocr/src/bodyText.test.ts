@@ -1,6 +1,6 @@
 import type { Pos } from '@wwyd/core';
 import { describe, expect, it } from 'vitest';
-import { fuzzyPosition, leadingPosition, parseBody, similarity, splitHeading } from './bodyText.ts';
+import { firstAmount, fuzzyPosition, leadingPosition, parseBody, similarity, splitHeading } from './bodyText.ts';
 
 // 本文の例は、実画像を tesseract.js で読んだときの出方（バッジの括弧・誤読・名前と動詞のくっつき）に合わせた架空のもの
 describe('fuzzyPosition / leadingPosition', () => {
@@ -18,10 +18,42 @@ describe('fuzzyPosition / leadingPosition', () => {
     expect(leadingPosition('{BB Carol won 4.5bb')).toBe('BB');
     expect(leadingPosition('Somebody Fold')).toBeNull();
   });
+  it('末尾の : と . を外す。行頭の語は前後の括弧・記号をすべて外す', () => {
+    expect(fuzzyPosition('btn:.:')).toBe('BTN');
+    expect(fuzzyPosition(':.')).toBeNull();
+    expect(fuzzyPosition('.CO')).toBe('CO');
+    expect(leadingPosition('([{|HJ|}]):,. Bob Fold')).toBe('HJ');
+    expect(leadingPosition('()[]{} Bob Fold')).toBeNull();
+    expect(leadingPosition('(S.B) Bob Fold')).toBe('SB');
+  });
   it('類似度は difflib と同じ考え方', () => {
     expect(similarity('abc', 'abc')).toBe(1);
     expect(similarity('abcd', 'abxd')).toBeCloseTo(0.75);
     expect(similarity('', '')).toBe(1);
+  });
+});
+
+describe('firstAmount', () => {
+  it.each<[string, number | null]>([
+    ['Raise 2bb', 2],
+    [' 4.5 bb', 4.5],
+    ['to 12.25bb and 3bb', 12.25],
+    ['1.2.5bb', 2.5],
+    ['7.bb', null],
+    ['7. bb', null],
+    ['7  bb', null],
+    ['7\u00a0bb', 7],
+    ['3BB', null],
+    ['3b', null],
+    ['x 10bbb', 10],
+    ['0099bb', 99],
+    ['', null],
+  ])('%j → %s', (text, amount) => {
+    expect(firstAmount(text)).toBe(amount);
+  });
+  it('数字が長く続いても一致しないときにすぐ終わる', () => {
+    expect(firstAmount('1'.repeat(100_000) + 'x')).toBeNull();
+    expect(firstAmount('1.'.repeat(50_000))).toBeNull();
   });
 });
 

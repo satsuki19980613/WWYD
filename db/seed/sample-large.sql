@@ -68,7 +68,8 @@ insert into big_post values
   (4, 2000, 10, '試験 回答が多い投稿 2000 件（ターン・広いレンジ）',   0.30, 0.25, 0.25, null);
 
 update big_post b set id = pg_temp.seed_post(('00000000-0000-0000-5eed-' || lpad(b.no::text, 12, '0'))::uuid, b.title,
-  (select s from seed_spot s where s.spot_index = b.spot_index), 'cash');
+  (select s from seed_spot s where s.spot_index = b.spot_index), 'cash')
+where b.id is null;  -- まだ作っていない投稿（ここでは全行）
 
 update public.app_settings set daily_post_limit = (select daily_post_limit from seed_limit);
 

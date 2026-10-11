@@ -25,6 +25,8 @@ body::before {
 
 h1, h2, h3, p, dl, dd { margin: 0; }
 button, input { font: inherit; color: inherit; }
+/* role="group" の代わりに使う fieldset は、div と同じ見た目にする（既定の枠・余白・最小幅を消す） */
+fieldset { margin: 0; padding: 0; border: 0; min-width: auto; }
 a { color: var(--cyan); }
 
 /* フォーカス表示はシアンのリング（06 章 §0.4） */

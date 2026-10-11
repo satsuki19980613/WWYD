@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { UPSTREAM } from '../../../../functions/api/auth/[[path]].ts';
-import { authCookies, firstPartyCookie, isProxiedPath, proxyAuth } from './authProxy.ts';
+import { authCookies, firstPartyCookie, isProxiedPath, proxyAuth, trimTrailingSlashes } from './authProxy.ts';
 
 describe('Neon Auth の中継（12 章 §7.2。2026-09-29）', () => {
   it('Set-Cookie は自サイトのクッキーに（Domain・Partitioned を外し SameSite=Lax。期限はそのまま）', () => {
@@ -25,6 +25,9 @@ describe('Neon Auth の中継（12 章 §7.2。2026-09-29）', () => {
   it('中継するのはログインの開始・セッション・JWT・ログアウト・ヘルスチェックだけ', () => {
     for (const p of ['sign-in/social', 'get-session', '/token', 'sign-out/', 'ok']) expect(isProxiedPath(p)).toBe(true);
     for (const p of ['sign-in/email', 'callback/google', 'admin/list-users', '', '../x']) expect(isProxiedPath(p)).toBe(false);
+    // 前後の / はいくつあっても無視する（途中の / は残す）
+    for (const p of ['//get-session//', '///ok', 'sign-in/social///']) expect(isProxiedPath(p)).toBe(true);
+    expect(isProxiedPath('sign-in//social')).toBe(false);
   });
 
   it('要求を Neon Auth へ作り直し、応答の Set-Cookie を自サイトのものにする', async () => {
@@ -78,5 +81,14 @@ describe('Neon Auth の中継（12 章 §7.2。2026-09-29）', () => {
     expect(host).toMatch(/\.neonauth\./);
     expect(headers).toContain(`https://${host}`);
     expect(new URL(UPSTREAM).pathname).toBe('/neondb/auth');
+  });
+});
+
+describe('末尾の / を除く', () => {
+  it('末尾の / だけをすべて除く（先頭・途中は残す）', () => {
+    expect(trimTrailingSlashes('https://x.test/neondb/auth///')).toBe('https://x.test/neondb/auth');
+    expect(trimTrailingSlashes('/a//b')).toBe('/a//b');
+    expect(trimTrailingSlashes('///')).toBe('');
+    expect(trimTrailingSlashes('')).toBe('');
   });
 });

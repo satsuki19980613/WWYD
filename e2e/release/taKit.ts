@@ -4,10 +4,10 @@
  * 捕まえていない例外（pageerror）・console.error の記録を足す。本物のバックエンドにはつながない。
  */
 import type { Page, Route } from '@playwright/test';
-import { AUTH, DATA, fakeBackend, type Backend } from '../fakeBackend.ts';
+import { DATA } from '../fakeBackend.ts';
 
-export { AUTH, DATA, fakeBackend };
-export type { Backend };
+export { AUTH, fakeBackend, type Backend } from '../fakeBackend.ts';
+export { DATA };
 export const FN = 'http://fn.e2e.test';
 
 export type Json = Record<string, unknown> | unknown[] | null;

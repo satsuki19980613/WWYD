@@ -78,8 +78,40 @@ const HEADINGS: ReadonlyArray<readonly [string, Heading]> = [
 /** 動詞。**行の中でいちばん右**のものを採る（名前に Call や Bet が入っていても、動詞は名前の後ろにある） */
 const VERB_RE = /(all[\s-]?in|fold|check|call|bet|raise)/gi;
 
-/** 額。小文字の bb だけ（大文字の BB はポジションのバッジ） */
-const AMOUNT_RE = /(\d+(?:\.\d+)?)\s?bb/;
+const isDigit = (c: string | undefined): boolean => c !== undefined && c >= '0' && c <= '9';
+const isSpace = (c: string | undefined): boolean => c !== undefined && /^\s$/.test(c);
+
+/** `i` から続く数字の終わりの位置。 */
+function digitsEnd(s: string, i: number): number {
+  let j = i;
+  while (isDigit(s[j])) j++;
+  return j;
+}
+
+/**
+ * 最初に現れる額（`2bb`・`4.5 bb`）の数値。無ければ null。小文字の bb だけ（大文字の BB はポジションのバッジ）。
+ * 正規表現 `/(\d+(?:\.\d+)?)\s?bb/` の最初の一致と同じ結果を、後戻りせずに 1 回の走査で求める。
+ */
+export function firstAmount(s: string): number | null {
+  for (let i = 0; i < s.length; i++) {
+    // 数字の並びの途中から始まる一致は、並びの先頭から始まる一致より後ろにしかない
+    if (!isDigit(s[i]) || isDigit(s[i - 1])) continue;
+    let end = digitsEnd(s, i);
+    if (s[end] === '.' && isDigit(s[end + 1])) end = digitsEnd(s, end + 1);
+    const unit = isSpace(s[end]) ? end + 1 : end;
+    if (s.startsWith('bb', unit)) return Number(s.slice(i, end));
+  }
+  return null;
+}
+
+/** 文字列の先頭（`start`）・末尾（`end`）から、`chars` に含まれる文字を取り除く。 */
+function trimChars(s: string, chars: string, start: boolean, end: boolean): string {
+  let a = 0;
+  let b = s.length;
+  if (start) while (a < b && chars.includes(s[a] as string)) a++;
+  if (end) while (b > a && chars.includes(s[b - 1] as string)) b--;
+  return s.slice(a, b);
+}
 
 /** difflib の SequenceMatcher.ratio と同じ考え方の類似度（一致した文字数 × 2 ÷ 両方の長さ）。 */
 export function similarity(a: string, b: string): number {
@@ -113,7 +145,7 @@ function matchingChars(a: string, b: string): number {
 
 /** バッジの文字列を席に正規化する。候補に無ければ null。 */
 export function fuzzyPosition(raw: string): Pos | null {
-  const t = raw.toUpperCase().trim().replace(/[:.]+$/, '');
+  const t = trimChars(raw.toUpperCase().trim(), ':.', false, true);
   if (t === '') return null;
   if ((POSITIONS_6MAX as readonly string[]).includes(t)) return t as Pos;
   const fixed = POSITION_FIXES[t];
@@ -133,7 +165,7 @@ export function fuzzyPosition(raw: string): Pos | null {
 /** 行頭のバッジ。`'BIN) Somebody Fold'` → `'BTN'`。読めなければ null。 */
 export function leadingPosition(line: string): Pos | null {
   const head = line.trim().split(/\s+/)[0] ?? '';
-  const t = head.replace(/^[()[\]{}|:.,]+|[()[\]{}|:.,]+$/g, '');
+  const t = trimChars(head, '()[]{}|:.,', true, true);
   if (t === '' || t.length > 5) return null;
   return fuzzyPosition(t);
 }
@@ -178,24 +210,26 @@ function positionByName(line: string, names: ReadonlyMap<Pos, string>): Pos | nu
   for (const [pos, name] of names) {
     if (name.length >= 2 && low.includes(name.toLowerCase())) return pos;
   }
-  let best: Pos | null = null;
-  let bestScore = 0.75;
+  // 語ごと（末尾にくっついた動詞を剥がしたものも）に名前と比べ、いちばん似ている席（先に見つかった方を優先）
+  const best: { pos: Pos | null; score: number } = { pos: null, score: 0.75 };
   for (const word of line.split(/\s+/)) {
-    const candidates = [word];
     const stripped = stripTrailingVerb(word);
-    if (stripped) candidates.push(stripped);
-    for (const c of candidates) {
-      for (const [pos, name] of names) {
-        if (name.length < 2) continue;
-        const s = similarity(c.toLowerCase(), name.toLowerCase());
-        if (s >= bestScore && (best === null || s > bestScore)) {
-          best = pos;
-          bestScore = s;
-        }
-      }
+    const candidates = stripped ? [word, stripped] : [word];
+    for (const c of candidates) closestName(c.toLowerCase(), names, best);
+  }
+  return best.pos;
+}
+
+/** 語 `c` に似た名前の席で `best` を更新する（同点なら先の候補のまま。ただし最初の 1 つは下限ちょうどでも採る）。 */
+function closestName(c: string, names: ReadonlyMap<Pos, string>, best: { pos: Pos | null; score: number }): void {
+  for (const [pos, name] of names) {
+    if (name.length < 2) continue;
+    const s = similarity(c, name.toLowerCase());
+    if (s >= best.score && (best.pos === null || s > best.score)) {
+      best.pos = pos;
+      best.score = s;
     }
   }
-  return best;
 }
 
 /**
@@ -211,20 +245,26 @@ export function parseBody(text: string, names: ReadonlyMap<Pos, string> = new Ma
     const { heading, rest } = splitHeading(raw);
     if (heading) {
       section = heading;
-      if ((heading === 'flop' || heading === 'turn' || heading === 'river') && !boardStreets.includes(heading)) {
-        boardStreets.push(heading);
-      }
+      if (isStreet(heading) && heading !== 'pf' && !boardStreets.includes(heading)) boardStreets.push(heading);
     }
-    if (section !== 'pf' && section !== 'flop' && section !== 'turn' && section !== 'river') continue;
-    const line = rest;
-    const v = lastVerb(line);
-    if (!v) continue;
-    // 先頭の語がプレイヤー名そのものならバッジが落ちている（`Bob` を BB と読まない）
-    const head = (line.split(/\s+/)[0] ?? '').toLowerCase();
-    const headIsName = [...names.values()].some((n) => n.toLowerCase() === head);
-    const pos = (headIsName ? null : leadingPosition(line)) ?? positionByName(line.slice(0, v.start), names);
-    const m = AMOUNT_RE.exec(line.slice(v.end));
-    actions.push({ street: section, pos, verb: v.verb, amount: m ? Number(m[1]) : null });
+    if (!isStreet(section)) continue;
+    const action = actionOfLine(rest, section, names);
+    if (action) actions.push(action);
   }
   return { actions, boardStreets };
+}
+
+function isStreet(h: Heading): h is Street {
+  return h === 'pf' || h === 'flop' || h === 'turn' || h === 'river';
+}
+
+/** アクションの 1 行を解釈する（動詞が無ければ null）。 */
+function actionOfLine(line: string, street: Street, names: ReadonlyMap<Pos, string>): OcrAction | null {
+  const v = lastVerb(line);
+  if (!v) return null;
+  // 先頭の語がプレイヤー名そのものならバッジが落ちている（`Bob` を BB と読まない）
+  const head = (line.split(/\s+/)[0] ?? '').toLowerCase();
+  const headIsName = [...names.values()].some((n) => n.toLowerCase() === head);
+  const pos = (headIsName ? null : leadingPosition(line)) ?? positionByName(line.slice(0, v.start), names);
+  return { street, pos, verb: v.verb, amount: firstAmount(line.slice(v.end)) };
 }

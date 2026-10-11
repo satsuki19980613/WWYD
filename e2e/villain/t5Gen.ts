@@ -24,7 +24,6 @@ import { submissionBody, villainContext, type Draft } from '../../packages/app/s
 import {
   cycleLean,
   emptyGeneral,
-  isAggressive,
   readsForSubmit,
   setGeneralAction,
   setGeneralStreet,
@@ -85,7 +84,6 @@ export function randomGeneral(rng: Rng): GeneralDraft {
   const lean = rng.pick(leansOf(action));
   let c = cycleLean({ lean: null, strong: false }, lean);
   if (rng.chance(0.3)) c = cycleLean(c, lean);
-  void isAggressive;
   return { ...g, lean: c.lean, strong: c.strong };
 }
 
@@ -120,35 +118,41 @@ export type Built = { draft: Draft; body: Record<string, unknown>; seats: Pos[];
  * 投稿できる（サーバーの判定を通る）ランダムな下書きを作る。Villain の席と Spot Read の候補があるものを選ぶ。
  * `withReads` なら下書きにランダムな Read・MTT を入れる（Read は core の検証を通る形）。
  */
-export function postableDraft(seed: number, n: number, opts: { withReads?: boolean; needCands?: boolean; mtt?: boolean } = {}): Built {
+export function postableDraft(seed: number, n: number, opts: PostableOpts = {}): Built {
   for (let k = 0; k < 400; k++) {
-    const rng = new Rng(seed * 100003 + n * 7919 + k * 31 + 1);
-    const { draft } = buildDraft(rng);
-    if (opts.mtt) draft.fmt = 'mtt';
-    if (draft.spotIndex === null) continue;
-    let vc;
-    try {
-      vc = villainContext(draft);
-    } catch {
-      continue;
-    }
-    if (vc.seats.length === 0) continue;
-    if (opts.needCands && vc.cands.length === 0) continue;
-    if (draft.title.trim() === '') continue;
-    if (opts.withReads) {
-      draft.reads = randomReadsDraft(rng, vc.seats, vc.cands);
-      draft.mtt = draft.fmt === 'mtt' ? randomMttDraft(rng) : draft.mtt;
-    }
-    let body: Record<string, unknown>;
-    try {
-      body = submissionBody(draft);
-    } catch {
-      continue;
-    }
-    if (!serverJudge(body).ok) continue;
-    return { draft, body, seats: vc.seats, cands: vc.cands };
+    const built = tryPostable(new Rng(seed * 100003 + n * 7919 + k * 31 + 1), opts);
+    if (built) return built;
   }
   throw new Error(`postableDraft: 作れない seed=${seed} n=${n}`);
+}
+
+type PostableOpts = { withReads?: boolean; needCands?: boolean; mtt?: boolean };
+
+/** 1 つの種で下書きを作ってみる。条件に合わない・サーバーの判定を通らなければ null */
+function tryPostable(rng: Rng, opts: PostableOpts): Built | null {
+  const { draft } = buildDraft(rng);
+  if (opts.mtt) draft.fmt = 'mtt';
+  if (draft.spotIndex === null) return null;
+  const vc = attempt(() => villainContext(draft));
+  if (!vc || vc.seats.length === 0) return null;
+  if (opts.needCands && vc.cands.length === 0) return null;
+  if (draft.title.trim() === '') return null;
+  if (opts.withReads) {
+    draft.reads = randomReadsDraft(rng, vc.seats, vc.cands);
+    draft.mtt = draft.fmt === 'mtt' ? randomMttDraft(rng) : draft.mtt;
+  }
+  const body = attempt(() => submissionBody(draft));
+  if (!body || !serverJudge(body).ok) return null;
+  return { draft, body, seats: vc.seats, cands: vc.cands };
+}
+
+/** 例外を投げたら null */
+function attempt<T>(f: () => T): T | null {
+  try {
+    return f();
+  } catch {
+    return null;
+  }
 }
 
 /** 回答画面の本文（get_post_detail の元）。Villain・MTT の情報は bodyで入れ替えられる */

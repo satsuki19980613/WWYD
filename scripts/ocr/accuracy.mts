@@ -76,7 +76,8 @@ for (const dir of dirs) {
         problems: r.problems,
       };
       writeFileSync(join(dir, f.replace(/\.png$/, '.ocr.json')), JSON.stringify(draft, null, 1));
-      console.log(`${dir}/${f}: 下書きを書き出した${r.problems.length ? ` [${r.problems.map((p) => p.code).join(',')}]` : ''}`);
+      const codes = r.problems.map((p) => p.code).join(',');
+      console.log(`${dir}/${f}: 下書きを書き出した${codes ? ' [' + codes + ']' : ''}`);
       continue;
     }
     const exp = JSON.parse(readFileSync(expPath, 'utf8')) as Expected;
@@ -112,7 +113,8 @@ for (const dir of dirs) {
 
     // 結果に名前が入っていないこと（不変条件 6）は単体テストで確かめる。ここでは表示だけ
     const problems = r.problems.map((p) => p.code).join(',');
-    console.log(`${dir}/${f} ${ms}ms ${diffs.length === 0 ? 'OK' : 'NG'}${problems ? ` [${problems}]` : ''}`);
+    const mark = problems ? ' [' + problems + ']' : '';
+    console.log(`${dir}/${f} ${ms}ms ${diffs.length === 0 ? 'OK' : 'NG'}${mark}`);
     for (const d of diffs) console.log(`    ${d}`);
   }
 }

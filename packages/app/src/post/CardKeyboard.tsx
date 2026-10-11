@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useLayer, useOutsidePress } from '../components/useLayer.ts';
-import { flickDirection, keyFromKeyboard, RANK_FLICK, SUIT_FLICK, SUIT_SYMBOL, type CardKey, type FlickDir } from './cardInput.ts';
+import { flickDirection, keyFromKeyboard, RANK_FLICK, SUIT_FLICK, SUIT_SYMBOL, type FlickDir } from './cardInput.ts';
 
 /**
  * カードキーボード（06 章 §3.5）。画面下部に固定して出す。
@@ -11,15 +11,15 @@ import { flickDirection, keyFromKeyboard, RANK_FLICK, SUIT_FLICK, SUIT_SYMBOL, t
  * フリックのキーは右端の列なので、右（外側）には割り当てない。キーの面に払う先の文字を小さく出す。
  * 閉じる: 「完了」、キーボード外のタップ（`data-keep-open` の要素は除く）、Esc。パソコンのキーでも打てる。
  */
-export function CardKeyboard(props: {
+export function CardKeyboard(props: Readonly<{
   seat: string;
-  onKey: (key: CardKey) => void;
+  onKey: (key: string) => void;
   onClose: () => void;
   /** 前の席・次の席へ（座っている席を順に巡る。UTG の前は BB、BB の次は UTG） */
   onPrev: () => void;
   onNext: () => void;
-}): JSX.Element {
-  const ref = useRef<HTMLDivElement>(null);
+}>): JSX.Element {
+  const ref = useRef<HTMLFieldSetElement>(null);
   const onKey = useRef(props.onKey);
   onKey.current = props.onKey;
   useLayer(ref, props.onClose);
@@ -38,10 +38,10 @@ export function CardKeyboard(props: {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const press = (k: CardKey) => () => props.onKey(k);
+  const press = (k: string) => () => props.onKey(k);
 
   return (
-    <div ref={ref} className="ckb" role="group" aria-label="Card キーボード">
+    <fieldset ref={ref} className="ckb" aria-label="Card キーボード">
       <div className="ckb-head">
         <span className="ckb-seat">{props.seat}</span>
         <span className="ckb-nav">
@@ -85,11 +85,11 @@ export function CardKeyboard(props: {
           onKey={props.onKey}
         />
       </div>
-    </div>
+    </fieldset>
   );
 }
 
-function KeyButton(props: { label: string; aria?: string; onPress: () => void }): JSX.Element {
+function KeyButton(props: Readonly<{ label: string; aria?: string; onPress: () => void }>): JSX.Element {
   return (
     <button
       type="button"
@@ -110,13 +110,13 @@ const ORDER: FlickDir[] = ['tap', 'up', 'right', 'down', 'left'];
  * フリックのキー。押して 150ms、または 5px を超えて動かすとポップアップを出す。
  * 方向は移動量 25px 超で判定。離したときの方向の値を入力する（割り当ての無い方向は何もしない）。
  */
-function FlickKey(props: {
+function FlickKey(props: Readonly<{
   className: string;
   map: Record<FlickDir, string | null>;
   render: (v: string) => string;
   label: string;
-  onKey: (k: CardKey) => void;
-}): JSX.Element {
+  onKey: (k: string) => void;
+}>): JSX.Element {
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const [popup, setPopup] = useState(false);

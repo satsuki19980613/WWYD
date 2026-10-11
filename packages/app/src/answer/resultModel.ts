@@ -54,7 +54,7 @@ export function heroHand(d: PostDetail): Card[] | null {
 /** 白枠を付けるマス（Hero の実際のハンド。05 章 §4.3）。 */
 export function actualCell(d: PostDetail): number | null {
   const h = heroHand(d);
-  return h && h.length === 2 ? idxOf(labelOfCards(h[0] as Card, h[1] as Card)) : null;
+  return h?.length === 2 ? idxOf(labelOfCards(h[0] as Card, h[1] as Card)) : null;
 }
 
 /** 最初に選ぶマス: Hero の実際のハンド、なければ AA（§5.2）。 */

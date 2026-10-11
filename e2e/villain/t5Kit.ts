@@ -54,7 +54,7 @@ export function mulberry32(seed: number): Rng {
         r -= w;
         if (r < 0) return x;
       }
-      return (xs[xs.length - 1] as readonly [never, number])[0];
+      return (xs.at(-1) as readonly [never, number])[0];
     },
   };
 }
@@ -272,6 +272,8 @@ export function makeCfg(screen: ScreenId, seed: number): Cfg {
     storage: rng.pick(['/new', '/drafts', '/new']),
   }[screen];
   const zone = { post: 'villain', mtt: 'mtt', answer: 'reads', result: 'reads', storage: rng.pick(['villain', 'villain', '']) }[screen] as Zone;
+  // 集計画面だけ、見る人をばらつかせる（乱数を引く順は前と同じ）
+  const viewer: Cfg['viewer'] = screen === 'result' ? rng.pick(['answered', 'author', 'answered'] as const) : 'unanswered';
   return {
     screen,
     start,
@@ -280,7 +282,7 @@ export function makeCfg(screen: ScreenId, seed: number): Cfg {
     vr,
     mtt,
     wellFormed,
-    viewer: screen === 'answer' ? 'unanswered' : screen === 'result' ? rng.pick(['answered', 'author', 'answered']) : 'unanswered',
+    viewer,
     // 視差効果を減らす設定（Replay の自動再生のタイマーで再現しにくくなるのを避ける）。4 種に 1 種は動かす
     reduced: seed % 4 !== 0,
     storage: screen === 'storage' ? storageOf(seed, built) : {},
@@ -299,7 +301,7 @@ const DRAFT_KEY = `wwyd.drafts.v1.${UID}`;
 
 /** 前の版（Memo・conf・0〜100 の agg）や壊れた形を混ぜた下書き 1 件 */
 function hostileDraft(rng: Rng, built: Built, i: number): unknown {
-  const d = JSON.parse(JSON.stringify(built.draft)) as Record<string, unknown>;
+  const d = structuredClone(built.draft) as unknown as Record<string, unknown>;
   const k = rng.int(9);
   const seat = (built.seats[0] ?? 'BB') as string;
   if (k === 0) d.reads = { [seat]: { memo: '古い Memo', conf: 2, agg: 77, vpip: 30 } };
@@ -330,29 +332,48 @@ function storageOf(seed: number, built: Built): Record<string, string> {
   const n = rng.pick([1, 2, 3, 3]);
   const list: unknown[] = Array.from({ length: n }, (_, i) => hostileDraft(rng, built, i));
   if (rng.chance(0.3)) list.push({ id: 7 }, null, 'x');
-  const kind = rng.int(8);
-  out[DRAFT_KEY] = kind === 0 ? 'これは JSON ではない{' : kind === 1 ? JSON.stringify({ not: 'array' }) : kind === 2 ? 'x'.repeat(200_000) : JSON.stringify(list);
-  const pk = rng.int(9);
-  const good = { id: 'p1', name: 'Fish', read: { vpip: 45, general: [{ street: 'flop', action: 'fold_cbet', texture: {}, runout: [], size: null, lean: 'over', strong: false }] } };
-  const presetValue: string | null =
-    pk === 0
-      ? '{broken'
-      : pk === 1
-        ? JSON.stringify({ schema: 1, presets: [{ id: 'a', name: 'Old', read: { memo: 'x', vpip: 10 } }] })
-        : pk === 2
-          ? JSON.stringify({ schema: 2, presets: 'x' })
-          : pk === 3
-            ? JSON.stringify({ schema: 2, presets: [{ id: 1, name: 5 }, null, { id: 'z', name: '  ', read: {} }, { id: 'q', name: 'Q', read: 'x' }, good] })
-            : pk === 4
-              ? JSON.stringify({ schema: 2, presets: Array.from({ length: 60 }, (_, i) => ({ id: `id${i}`, name: `名前${i}`.repeat(9), read: { vpip: i, pfr: 101 } })) })
-              : pk === 5
-                ? 'y'.repeat(300_000)
-                : pk === 6
-                  ? JSON.stringify({ schema: 2, presets: [good, { ...good, id: 'p2', read: { vpip: 10, pfr: 80, general: [{ street: 'pf', action: 'cbet' }] } }] })
-                  : null;
+  out[DRAFT_KEY] = draftStoreValue(rng.int(8), list);
+  const presetValue = presetStoreValue(rng.int(9));
   if (presetValue !== null) out[PRESET_KEY] = presetValue;
   if (rng.chance(0.5)) out[PRESET_KEY_OLD] = JSON.stringify({ presets: [{ name: 'v1', read: { memo: 'x' } }] });
   return out;
+}
+
+/** 下書きの保存の値（kind 0〜2 は壊れた形、それ以外は list） */
+function draftStoreValue(kind: number, list: unknown[]): string {
+  switch (kind) {
+    case 0:
+      return 'これは JSON ではない{';
+    case 1:
+      return JSON.stringify({ not: 'array' });
+    case 2:
+      return 'x'.repeat(200_000);
+    default:
+      return JSON.stringify(list);
+  }
+}
+
+/** Preset の保存の値（壊れた形・前の版・上限を超えた数など。7 以上は入れない = null） */
+function presetStoreValue(kind: number): string | null {
+  const good = { id: 'p1', name: 'Fish', read: { vpip: 45, general: [{ street: 'flop', action: 'fold_cbet', texture: {}, runout: [], size: null, lean: 'over', strong: false }] } };
+  switch (kind) {
+    case 0:
+      return '{broken';
+    case 1:
+      return JSON.stringify({ schema: 1, presets: [{ id: 'a', name: 'Old', read: { memo: 'x', vpip: 10 } }] });
+    case 2:
+      return JSON.stringify({ schema: 2, presets: 'x' });
+    case 3:
+      return JSON.stringify({ schema: 2, presets: [{ id: 1, name: 5 }, null, { id: 'z', name: '  ', read: {} }, { id: 'q', name: 'Q', read: 'x' }, good] });
+    case 4:
+      return JSON.stringify({ schema: 2, presets: Array.from({ length: 60 }, (_, i) => ({ id: `id${i}`, name: `名前${i}`.repeat(9), read: { vpip: i, pfr: 101 } })) });
+    case 5:
+      return 'y'.repeat(300_000);
+    case 6:
+      return JSON.stringify({ schema: 2, presets: [good, { ...good, id: 'p2', read: { vpip: 10, pfr: 80, general: [{ street: 'pf', action: 'cbet' }] } }] });
+    default:
+      return null;
+  }
 }
 
 function cors(route: Route): Record<string, string> {
@@ -402,7 +423,7 @@ export async function setupBackend(page: Page, cfg: Cfg, seed: number, validate?
     const n = (counts.get(path) ?? 0) + 1;
     counts.set(path, n);
     let h = seed;
-    for (const ch of path) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
+    for (const ch of path) h = (Math.imul(h, 31) + (ch.codePointAt(0) ?? 0)) | 0; // path は URL の pathname（ASCII）
     return mulberry32(h + n * 977).next();
   };
   await page.route(`${DATA}/**`, async (route) => {
@@ -427,7 +448,7 @@ export async function setupBackend(page: Page, cfg: Cfg, seed: number, validate?
       ctx.inflight--;
     }
   });
-  await page.route('**/api/auth/**', async (route) => {
+  await page.route('**/api/auth/**', (route) => {
     if (ctx.net.mode !== 'authdown' || route.request().method() === 'OPTIONS') return route.fallback();
     const path = new URL(route.request().url()).pathname;
     if (!/get-session|token/.test(path)) return route.fallback();
@@ -524,7 +545,7 @@ export type Snapshot = {
 };
 
 /** ブラウザの中で動く。引数は無し（文字列で渡して評価する） */
-export const SNAPSHOT_JS = `(async () => {
+export const SNAPSHOT_JS = String.raw`(async () => {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   // フォントの読み込みと、走っている CSS の動き（遷移・アニメーション）が終わるのを待つ（座標が揺れると同じ種で同じ操作にならない）
   try { await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* 無視 */ }
@@ -547,11 +568,11 @@ export const SNAPSHOT_JS = `(async () => {
     problems.push({ kind: 'blank', detail: 'root children=' + (root ? root.children.length : -1) + ' textLen=' + text.trim().length + ' hdr=' + !!document.querySelector('.hdr') });
   }
   // 2 「undefined」「NaN」「[object Object]」が画面に出ない（表示文字・aria-label・title・alt・placeholder）
-  const bad = /(^|[^A-Za-z0-9_])(undefined|NaN)($|[^A-Za-z0-9_])|\\[object Object\\]/;
+  const bad = /(^|[^A-Za-z0-9_])(undefined|NaN)($|[^A-Za-z0-9_])|\[object Object\]/;
   const m = text.match(bad);
   if (m) {
     const i = text.indexOf(m[0]);
-    problems.push({ kind: 'bad-text', detail: text.slice(Math.max(0, i - 40), i + 40).replace(/\\s+/g, ' ') });
+    problems.push({ kind: 'bad-text', detail: text.slice(Math.max(0, i - 40), i + 40).replace(/\s+/g, ' ') });
   }
   for (const el of document.querySelectorAll('[aria-label],[title],[alt],[placeholder],[aria-valuetext]')) {
     for (const a of ['aria-label', 'title', 'alt', 'placeholder', 'aria-valuetext']) {
@@ -561,7 +582,7 @@ export const SNAPSHOT_JS = `(async () => {
   }
   // 3 はみ出し
   const de = document.documentElement;
-  const fit = !mobile && (path === '/new' || /^\\/s\\/[^/]+\\/(answer|result)$/.test(path));
+  const fit = !mobile && (path === '/new' || /^\/s\/[^/]+\/(answer|result)$/.test(path));
   if (de.scrollWidth > w + 1 || (document.body && document.body.scrollWidth > w + 1)) {
     problems.push({ kind: mobile ? 'overflow-x-sp' : 'overflow-x-pc', detail: 'scrollWidth=' + de.scrollWidth + '/' + document.body.scrollWidth + ' innerWidth=' + w + ' path=' + path });
   }
@@ -667,7 +688,7 @@ export const SNAPSHOT_JS = `(async () => {
   }
   // 回答・集計画面: 開いているモーダルの Villain・MTT の表示と、卓の席の印
   let rv, marks;
-  if (/^\\/s\\/[^/]+\\/(answer|result)$/.test(path)) {
+  if (/^\/s\/[^/]+\/(answer|result)$/.test(path)) {
     marks = document.querySelector('.ptable') ? document.querySelectorAll('.pseat-read').length : undefined;
     rv = [];
     for (const dlg of document.querySelectorAll('[role=dialog]')) {
@@ -715,7 +736,7 @@ export const SNAPSHOT_JS = `(async () => {
     if (!top || !(el === top || el.contains(top) || top.contains(el))) continue;
     if (el.tagName === 'A') {
       const href = el.getAttribute('href') || '';
-      if (el.target === '_blank' || !/^\\//.test(href)) continue;
+      if (el.target === '_blank' || !/^\//.test(href)) continue;
     }
     if (el.tagName === 'INPUT' && el.type === 'file') continue;
     els.push({
@@ -832,25 +853,46 @@ export function checkView(snapshot: Snapshot, raw: Raw, vr: VillainReads): { kin
   }
   const actions = raw.actions as Action[];
   for (const m of snapshot.rv ?? []) {
-    for (const seat of m.seats) {
-      const read = vr[seat.pos as Pos];
-      const visible = hasVisibleRead(read);
-      if (m.title === 'All Villains' && seat.none !== !visible) out.push({ kind: 'rv-none-mismatch', detail: `${seat.pos} none=${seat.none} visible=${visible}` });
-      if (!read || !visible) continue;
-      const wantChips = tendencyChips(read);
-      if (JSON.stringify(seat.chips) !== JSON.stringify(wantChips)) out.push({ kind: 'rv-chips-mismatch', detail: `${seat.pos} shown=${seat.chips.join('|')} expected=${wantChips.join('|')}` });
-      const entries = read.reads ?? [];
-      if (seat.reads.length !== entries.length) out.push({ kind: 'rv-reads-count', detail: `${seat.pos} shown=${seat.reads.length} expected=${entries.length}` });
-      entries.forEach((e, i) => {
-        const a = readLine(e, false);
-        const b = readLine(e, true);
-        const xr = entryCheckRaise(e, seat.pos as Pos, hero, actions);
-        const shown = seat.reads[i];
-        if (shown !== a && shown !== b) out.push({ kind: 'rv-read-line', detail: `${seat.pos}#${i} shown=${shown} expected=${xr ? b : a}` });
-      });
-    }
+    for (const seat of m.seats) out.push(...checkSeatView(m.title, seat, vr, hero, actions));
   }
   return out;
+}
+
+type SeatView = NonNullable<Snapshot['rv']>[number]['seats'][number];
+
+/** モーダルの 1 席の表示（チップ・Read の行）が、その席の情報と合うか */
+function checkSeatView(title: string, seat: SeatView, vr: VillainReads, hero: Pos, actions: Action[]): { kind: string; detail: string }[] {
+  const out: { kind: string; detail: string }[] = [];
+  const read = vr[seat.pos as Pos];
+  const visible = hasVisibleRead(read);
+  if (title === 'All Villains' && seat.none !== !visible) out.push({ kind: 'rv-none-mismatch', detail: `${seat.pos} none=${seat.none} visible=${visible}` });
+  if (!read || !visible) return out;
+  const wantChips = tendencyChips(read);
+  if (JSON.stringify(seat.chips) !== JSON.stringify(wantChips)) out.push({ kind: 'rv-chips-mismatch', detail: `${seat.pos} shown=${seat.chips.join('|')} expected=${wantChips.join('|')}` });
+  const entries = read.reads ?? [];
+  if (seat.reads.length !== entries.length) out.push({ kind: 'rv-reads-count', detail: `${seat.pos} shown=${seat.reads.length} expected=${entries.length}` });
+  entries.forEach((e, i) => {
+    const a = readLine(e, false);
+    const b = readLine(e, true);
+    const xr = entryCheckRaise(e, seat.pos as Pos, hero, actions);
+    const shown = seat.reads[i];
+    if (shown !== a && shown !== b) out.push({ kind: 'rv-read-line', detail: `${seat.pos}#${i} shown=${shown} expected=${xr ? b : a}` });
+  });
+  return out;
+}
+
+/** 手「storage」で入れる値（kind 0: でたらめ、1: Preset、2: 下書き、3: 大きな値）。乱数は kind の分だけ引く */
+function storageOpValue(rng: Rng, kind: number): string {
+  switch (kind) {
+    case 0:
+      return weirdText(rng);
+    case 1:
+      return JSON.stringify({ schema: 2, presets: [{ id: 'a', name: weirdText(rng).slice(0, 30) || 'n', read: { vpip: rng.range(-5, 120), general: [{ street: 'flop', action: 'cbet', lean: 'value' }] } }] });
+    case 2:
+      return JSON.stringify([{ id: 'z', savedAt: 'x', draft: { reads: weirdText(rng), mtt: weirdText(rng) } }]);
+    default:
+      return 'z'.repeat(rng.pick([10_000, 200_000]));
+  }
 }
 
 export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass, seed: number, steps: number, opts: { skipInitialGoto?: boolean } = {}): Promise<RunResult> {
@@ -863,7 +905,6 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
   const res: RunResult = { screen: cfg.screen, size, seed, steps: 0, violations: [], consoleErrors: [], ops: {}, hung: false, ms: 0, stuck: [], cover: { maxActions: 0, maxBoard: 0, maxHands: 0, handDone: 0, spotSelected: 0, titled: 0, paths: [], dialogsMax: 0, posts: 0, inserts: 0, deletes: 0, villainVisible: 0, mttVisible: 0, rvChecked: 0, marksChecked: 0, subJudged: 0 } };
   let step = 0;
   let lastOp = 'start';
-  let prevOp = 'start';
   let netUntil = 0;
 
   page.on('dialog', (d) => void d.accept().catch(() => undefined));
@@ -1030,7 +1071,7 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
     // 通信の失敗は一定の手数で元に戻す
     if (ctx.net.mode !== 'ok' && step >= netUntil) ctx.net.mode = 'ok';
     // 元の画面から離れたら、ときどき戻す（その画面に集中する）
-    if (s.path !== new URL(cfg.start, 'http://x').pathname && rng.chance(cfg.screen === 'storage' ? 0.15 : 0.4)) {
+    if (s.path !== new URL(cfg.start, 'https://x').pathname && rng.chance(cfg.screen === 'storage' ? 0.15 : 0.4)) {
       lastOp = 'home(away)';
       count('home');
       await gotoStart();
@@ -1040,7 +1081,7 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
     }
     const els = s.els;
     const modalEls = els.filter((e) => e.modal);
-    prevOp = lastOp;
+    const prevOp = lastOp;
     const opName = rng.weighted(OPS as unknown as readonly (readonly [string, number])[]);
     // 要素を選ぶ（モーダル・メニューが出ていれば、その中を多めに。chrome は上のバーを多めに）
     const chooseEl = (filter?: (e: Elt) => boolean): Elt | null => {
@@ -1115,10 +1156,11 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
         case 'drag': {
           const a = chooseEl();
           if (!a) break;
-          const same = els.filter((e) => e.tag === a.tag && e.role === a.role && !e.modal === !a.modal);
+          const same = els.filter((e) => e.tag === a.tag && e.role === a.role && Boolean(e.modal) === Boolean(a.modal));
           const b = rng.chance(0.75) && same.length > 1 ? rng.pick(same) : (chooseEl() ?? a);
           const mid = rng.chance(0.4) ? chooseEl() : null;
-          lastOp = `drag "${a.label}"@${a.x},${a.y} -> ${mid ? `"${mid.label}" -> ` : ''}"${b.label}"@${b.x},${b.y}`;
+          const via = mid ? `"${mid.label}" -> ` : '';
+          lastOp = `drag "${a.label}"@${a.x},${a.y} -> ${via}"${b.label}"@${b.x},${b.y}`;
           await page.mouse.move(a.x, a.y);
           await page.mouse.down();
           if (mid) await page.mouse.move(mid.x, mid.y, { steps: rng.range(2, 6) });
@@ -1218,7 +1260,7 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
         case 'storage': {
           const key = rng.pick(PRESET_KEYS);
           const kind = rng.int(4);
-          const value = kind === 0 ? weirdText(rng) : kind === 1 ? JSON.stringify({ schema: 2, presets: [{ id: 'a', name: weirdText(rng).slice(0, 30) || 'n', read: { vpip: rng.range(-5, 120), general: [{ street: 'flop', action: 'cbet', lean: 'value' }] } }] }) : kind === 2 ? JSON.stringify([{ id: 'z', savedAt: 'x', draft: { reads: weirdText(rng), mtt: weirdText(rng) } }]) : 'z'.repeat(rng.pick([10_000, 200_000]));
+          const value = storageOpValue(rng, kind);
           lastOp = `storage(${key.replace(UID, 'uid')} kind=${kind})+reload`;
           await page.evaluate(([k, v]) => localStorage.setItem(k as string, v as string), [key, value]).catch(() => undefined);
           await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => undefined);
@@ -1262,7 +1304,8 @@ export async function runMonkey(page: Page, cfg: Cfg, ctx: Ctx, size: SizeClass,
           if (!e) break;
           const half = Math.max(10, e.w / 2);
           const pts = Array.from({ length: rng.range(2, 6) }, () => ({ x: Math.round(e.x + rng.range(-half - 40, half + 40)), y: Math.round(e.y + rng.range(-40, 40)) }));
-          lastOp = `sdrag "${e.label}" @${e.x},${e.y} -> ${pts.map((q) => `${q.x},${q.y}`).join(' ')}`;
+          const route = pts.map((q) => `${q.x},${q.y}`).join(' ');
+          lastOp = `sdrag "${e.label}" @${e.x},${e.y} -> ${route}`;
           await page.mouse.move(Math.round(e.x + rng.range(-half, half)), e.y);
           await page.mouse.down();
           for (const q of pts) await page.mouse.move(Math.max(0, q.x), Math.max(0, q.y), { steps: rng.range(1, 5) });

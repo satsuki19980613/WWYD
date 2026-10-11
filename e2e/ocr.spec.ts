@@ -6,6 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import { AUTH, DATA, fakeBackend } from './fakeBackend.ts';
+import { nextFrames, ocrWorkerClosed } from './settle.ts';
 
 // 1×1 の灰色の PNG（T4 の画像ではない）
 const NOT_T4 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
@@ -58,12 +59,15 @@ test('読み取り中はキャンセルできる（入力はそのまま） @sp'
   await page.goto('/new');
   // スマホは 1 ステップ目（基本設定）の上にボタンがある
   await expect(page.getByRole('button', { name: 'T4 Hand History 画像を読み込む' })).toBeVisible();
+  const workerClosed = ocrWorkerClosed(page);
   await page.getByTestId('ocr-file').setInputFiles({ name: 'x.png', mimeType: 'image/png', buffer: NOT_T4 });
   const busy = page.getByRole('dialog', { name: '読み取り中…' });
   await expect(busy).toBeVisible();
   await busy.getByRole('button', { name: 'キャンセル' }).click();
   await expect(busy).toHaveCount(0);
-  // 取り消した読み取りの結果は反映しない（エラーも出さない）
-  await page.waitForTimeout(1500);
+  // 取り消した読み取りの結果は反映しない（エラーも出さない）。遅らせた学習データが届いて Worker が止まり、
+  // 取り消した読み取りが終わる（結果を捨てる）ところまで進めてから確かめる
+  await workerClosed;
+  await nextFrames(page);
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

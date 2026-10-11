@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const SRC = 'packages/core/test-vectors/paint-validation.json';
 const OUT = 'db/tests/03_paint_vectors.test.sql';
 
-const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
+const q = (s) => `'${String(s).replaceAll("'", "''")}'`;
 const num = (v) => (v === null ? 'null' : String(v));
 const { vectors } = JSON.parse(readFileSync(SRC, 'utf8'));
 
@@ -46,7 +46,7 @@ if (process.argv.includes('--check')) {
   } catch {
     // 無ければ不一致として扱う
   }
-  if (current.replace(/\r\n/g, '\n') !== sql) {
+  if (current.replaceAll('\r\n', '\n') !== sql) {
     console.error(`${OUT} が ${SRC} と一致しません。node scripts/genPaintVectorsSql.mjs で生成し直してください。`);
     process.exit(1);
   }

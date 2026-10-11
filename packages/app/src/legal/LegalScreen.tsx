@@ -10,7 +10,7 @@ const SOURCES = { terms: termsMd, privacy: privacyMd } as const;
  * 利用規約・プライバシーポリシー（06 章 §6.2）。アプリに同梱した Markdown を表示する。
  * ログインしていなくても開ける（ログイン画面の規約リンク）。
  */
-export function LegalScreen(props: { doc: keyof typeof SOURCES }): JSX.Element {
+export function LegalScreen(props: Readonly<{ doc: keyof typeof SOURCES }>): JSX.Element {
   const blocks = useMemo(() => parseMarkdown(SOURCES[props.doc]), [props.doc]);
   return (
     <article className="screen legal">
@@ -21,7 +21,10 @@ export function LegalScreen(props: { doc: keyof typeof SOURCES }): JSX.Element {
   );
 }
 
-function BlockView(props: { block: Block }): JSX.Element {
+/** 節の見出しの要素（## → h2、### → h3、#### → h4） */
+const SECTION_TAG = { 2: 'h2', 3: 'h3', 4: 'h4' } as const;
+
+function BlockView(props: Readonly<{ block: Block }>): JSX.Element {
   const { block: b } = props;
   switch (b.t) {
     case 'heading': {
@@ -33,7 +36,7 @@ function BlockView(props: { block: Block }): JSX.Element {
           </h1>
         );
       }
-      const H = b.level === 2 ? 'h2' : b.level === 3 ? 'h3' : 'h4';
+      const H = SECTION_TAG[b.level];
       return (
         <H className={`legal-h${b.level}`}>
           <Inlines c={b.c} />
@@ -91,7 +94,7 @@ function BlockView(props: { block: Block }): JSX.Element {
   }
 }
 
-function Inlines(props: { c: readonly Inline[] }): JSX.Element {
+function Inlines(props: Readonly<{ c: readonly Inline[] }>): JSX.Element {
   return (
     <>
       {props.c.map((x, i) => (

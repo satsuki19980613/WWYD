@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { ValidationError, type ValidationCode } from '../errors.ts';
 import { hmw, hs1, hs1bb, hs3, STACKS100, type Raw } from './postFixtures.ts';
-import { validateInput } from './validateInput.ts';
+import { hasUnstorableChar, validateInput } from './validateInput.ts';
 import { verifyPost } from './verifyPost.ts';
 
 function run(raw: Raw) {
@@ -245,6 +245,27 @@ describe('VAL 投稿の検証', () => {
   // DB（jsonb）が受け付けない文字。通すと insert で落ちて 500 になっていた（リリース前テスト TB-2）
   it.each(['ab\u0000cd', 'ab\ud800cd', 'ab\udc00cd', '\ud83d'])('VAL-17 DB に保存できない文字（NUL・対のないサロゲート）%j', (title) => {
     expect(codeOf({ ...hs1(), title })).toBe('invalid_title');
+  });
+
+  // 保存できない文字の判定を文字コードで数え上げた参照の実装と照合する（短い文字列を総当たり）
+  it('VAL-17 保存できない文字の判定は文字コードによる定義と一致する', () => {
+    const isHigh = (c: number) => c >= 0xd800 && c <= 0xdbff;
+    const isLow = (c: number) => c >= 0xdc00 && c <= 0xdfff;
+    const reference = (s: string): boolean => {
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        if (c === 0) return true;
+        if (isHigh(c) && !isLow(s.charCodeAt(i + 1))) return true;
+        if (isLow(c) && !(i > 0 && isHigh(s.charCodeAt(i - 1)))) return true;
+      }
+      return false;
+    };
+    const alphabet = [0x61, 0x00, 0x01, 0x1f, 0xd7ff, 0xd800, 0xdbff, 0xdc00, 0xdfff, 0xe000].map((c) => String.fromCharCode(c));
+    let words = [''];
+    for (let len = 1; len <= 4; len++) {
+      words = words.flatMap((w) => alphabet.map((ch) => w + ch));
+      for (const w of words) expect(hasUnstorableChar(w), JSON.stringify(w)).toBe(reference(w));
+    }
   });
 
   it('VAL-17 40 文字ちょうど（サロゲートペアも 1 文字）は通る', () => {

@@ -12,8 +12,11 @@ async function fillBoard(page: Page): Promise<void> {
   for (let guard = 0; guard < 6; guard++) {
     const picker = page.getByRole('dialog').filter({ has: page.getByRole('grid', { name: 'Card' }) });
     if (!(await picker.isVisible().catch(() => false))) return;
-    await picker.getByRole('gridcell').and(page.locator(':not([disabled])')).first().click();
-    await page.waitForTimeout(50);
+    const usable = picker.getByRole('gridcell').and(page.locator(':not([disabled])'));
+    const before = await usable.count();
+    await usable.first().click();
+    // 押した札が使えなくなるか、要る枚数がそろってピッカーが閉じるまで待つ
+    await expect.poll(async () => !(await picker.isVisible()) || (await usable.count()) < before).toBe(true);
   }
 }
 
@@ -34,7 +37,8 @@ for (const v of VARIANTS) {
         const call = d.getByRole('button', { name: /^(Call|Limp)/ });
         if (await check.isVisible().catch(() => false)) await check.click();
         else if (await call.isVisible().catch(() => false)) await call.click();
-        else await page.waitForTimeout(80);
+        // どれも出ていなければ、次に押せるもの（Check・Call・Board のピッカー）か Showdown が出るまで待つ
+        else await expect(check.or(call).or(page.getByRole('grid', { name: 'Card' })).or(page.getByText(/Showdown|Pot 獲得/)).first()).toBeVisible();
         acted++;
       }
       await expect(page.getByText('Showdown')).toBeVisible();

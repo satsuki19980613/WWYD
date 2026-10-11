@@ -157,6 +157,11 @@ export const RUNOUT_LABEL: Record<Runout, string> = {
 export const isAggressive = (a: ReadAction): boolean => AGGRESSIVE_ACTIONS.includes(a);
 
 /** Read 1 行: `River · Barrel (Big) → Value-heavy`（条件は Street と Action の間。§2.1.2） */
+/** Action の後ろに付ける Size（「 (Big)」。無ければ空） */
+export function sizeSuffix(size: ReadSize | null | undefined): string {
+  return size ? ' (' + SIZE_LABEL[size] + ')' : '';
+}
+
 export function readLine(e: ReadEntry, checkRaise = false): string {
   const parts = [STREET_NAME[e.street]];
   if (e.texture) for (const k of TEXTURE_KEYS) {
@@ -164,7 +169,7 @@ export function readLine(e: ReadEntry, checkRaise = false): string {
     if (v) parts.push((TEXTURE_LABEL[k] as Record<string, string>)[v] as string);
   }
   for (const r of e.runout ?? []) parts.push(RUNOUT_LABEL[r]);
-  parts.push(`${actionName(e.action, checkRaise)}${e.size ? ` (${SIZE_LABEL[e.size]})` : ''}`);
+  parts.push(`${actionName(e.action, checkRaise)}${sizeSuffix(e.size)}`);
   return `${parts.join(' · ')} → ${leanText(e.lean, e.strong)}`;
 }
 
@@ -344,21 +349,27 @@ export function readsForSubmit(reads: ReadsDraft, seats: readonly Pos[], cands: 
   for (const p of seats) {
     const s = reads[p];
     if (!s) continue;
-    const x: VillainRead = {};
-    for (const k of TENDENCY_OF) if (s[k] !== undefined) x[k] = s[k];
-    const entries: ReadEntry[] = [];
-    const c = s.spot ? spotCandidateOf(s.spot, p, cands) : undefined;
-    if (s.spot && c) {
-      entries.push({ scope: 'spot', street: c.street, action: c.action, texture: null, runout: null, size: c.size, lean: s.spot.lean, strong: s.spot.strong });
-    }
-    for (const g of s.general ?? []) {
-      const e = generalEntry(g);
-      if (e) entries.push(e);
-    }
-    if (entries.length > 0) x.reads = entries;
+    const x = seatForSubmit(s, p, cands);
     if (Object.keys(x).length > 0) out[p] = x;
   }
   return out;
+}
+
+/** 1 席分の送る形（全体の傾向と Read） */
+function seatForSubmit(s: SeatDraft, p: Pos, cands: readonly ReadCandidate[]): VillainRead {
+  const x: VillainRead = {};
+  for (const k of TENDENCY_OF) if (s[k] !== undefined) x[k] = s[k];
+  const entries: ReadEntry[] = [];
+  const c = s.spot ? spotCandidateOf(s.spot, p, cands) : undefined;
+  if (s.spot && c) {
+    entries.push({ scope: 'spot', street: c.street, action: c.action, texture: null, runout: null, size: c.size, lean: s.spot.lean, strong: s.spot.strong });
+  }
+  for (const g of s.general ?? []) {
+    const e = generalEntry(g);
+    if (e) entries.push(e);
+  }
+  if (entries.length > 0) x.reads = entries;
+  return x;
 }
 
 /** 最後まで選んでいない General Read のある席（投稿の前のエラー） */
@@ -385,6 +396,22 @@ export function sanitizeTendency(raw: unknown): Tendency {
   return out;
 }
 
+/** 保存されていた Board の特徴を選び直す（合わない値は外す） */
+function withTexture(g: GeneralDraft, texture: Record<string, unknown>): GeneralDraft {
+  let out = g;
+  for (const k of TEXTURE_KEYS) {
+    const v = oneOf(texture[k], TEXTURE_AXES[k]);
+    if (v) out = toggleTexture(out, k, v);
+  }
+  return out;
+}
+
+/** 保存されていた Runout を選び直す。前の版の下書き・Preset に残った Brick とほかの組み合わせは Brick を外す（V-039） */
+function withRunout(g: GeneralDraft, raw: readonly unknown[]): GeneralDraft {
+  const runout = RUNOUTS.filter((r) => raw.includes(r));
+  return { ...g, runout: runoutConflicts(runout) ? runout.filter((r) => r !== 'brick') : runout };
+}
+
 /** 保存されていた General Read を読み直す（合わない値は外す） */
 export function sanitizeGeneral(raw: unknown): GeneralDraft | null {
   if (!isRecord(raw)) return null;
@@ -394,17 +421,8 @@ export function sanitizeGeneral(raw: unknown): GeneralDraft | null {
   g = setGeneralStreet(g, street);
   const action = oneOf(raw.action, READ_ACTIONS);
   if (action && STREET_ACTIONS[street].includes(action)) g = setGeneralAction(g, action);
-  if (isRecord(raw.texture) && street !== 'pf') {
-    for (const k of TEXTURE_KEYS) {
-      const v = oneOf(raw.texture[k], TEXTURE_AXES[k]);
-      if (v) g = toggleTexture(g, k, v);
-    }
-  }
-  if (Array.isArray(raw.runout) && (street === 'turn' || street === 'river')) {
-    const runout = RUNOUTS.filter((r) => (raw.runout as unknown[]).includes(r));
-    // 前の版の下書き・Preset に残った Brick とほかの組み合わせは Brick を外す（V-039）
-    g = { ...g, runout: runoutConflicts(runout) ? runout.filter((r) => r !== 'brick') : runout };
-  }
+  if (isRecord(raw.texture) && street !== 'pf') g = withTexture(g, raw.texture);
+  if (Array.isArray(raw.runout) && (street === 'turn' || street === 'river')) g = withRunout(g, raw.runout);
   const size = oneOf(raw.size, sizesOf(street));
   if (size && g.action && isAggressive(g.action)) g = { ...g, size };
   const lean = oneOf(raw.lean, ['over', 'under', 'value', 'bluff'] as const);

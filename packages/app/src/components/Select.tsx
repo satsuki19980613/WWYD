@@ -5,7 +5,7 @@ import { useLayer, useOutsidePress } from './useLayer.ts';
  * カスタムセレクト（ネイティブの `<select>` は使わない。CLAUDE.md §6）。
  * WAI-ARIA の「select-only combobox」の形。↑↓ Home End で候補を動かし、Enter / Space で決定、Esc で閉じる。
  */
-export function Select<T extends string>(props: {
+export function Select<T extends string>(props: Readonly<{
   label: string;
   options: readonly { value: T; label: string }[];
   value: T;
@@ -13,7 +13,7 @@ export function Select<T extends string>(props: {
   disabled?: boolean;
   /** 値が候補に無いとき（未選択）の表示 */
   placeholder?: string;
-}): JSX.Element {
+}>): JSX.Element {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -87,7 +87,7 @@ export function Select<T extends string>(props: {
   );
 }
 
-function SelectList<T extends string>(props: {
+function SelectList<T extends string>(props: Readonly<{
   listRef: RefObject<HTMLUListElement>;
   id: string;
   label: string;
@@ -96,7 +96,7 @@ function SelectList<T extends string>(props: {
   active: number;
   onPick: (i: number) => void;
   onClose: () => void;
-}): JSX.Element {
+}>): JSX.Element {
   // Esc は最前面だけが受け取る（キー操作はトリガー側で処理しているので、ここは Esc の登録だけ）
   useLayer(props.listRef, props.onClose);
   return (

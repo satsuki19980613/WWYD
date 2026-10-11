@@ -69,7 +69,7 @@ export type ReviewView = {
 };
 
 /** 確認画面の今の内容 */
-export async function readReview(review: Locator): Promise<ReviewView> {
+export function readReview(review: Locator): Promise<ReviewView> {
   return review.evaluate((root) => {
     const label = (e: Element): string => e.getAttribute('aria-label') ?? '';
     const hands: Record<string, string[]> = {};

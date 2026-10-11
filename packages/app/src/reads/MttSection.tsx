@@ -9,7 +9,7 @@ import { MTT_FIELD_LABEL, MTT_FIELDS, parseMtt, PRIZE_HINT, PRIZE_LABEL, SPEED_D
  * Tournament Type は Deep〜Turbo の Slider（未入力あり）。数の欄はスポットの順位・残りの人数・エントリー数・ITM・Avg Stack（名前は日本語。2026-09-30 さつき）。
  * Prize Structure は押すと選び、もう一度押すと未選択に戻る。
  */
-export function MttSection(props: { mtt: MttDraft; onChange: (mtt: MttDraft) => void }): JSX.Element {
+export function MttSection(props: Readonly<{ mtt: MttDraft; onChange: (mtt: MttDraft) => void }>): JSX.Element {
   const { mtt: m } = props;
   const headId = useId();
   const invalid = parseMtt(m).invalid;
@@ -41,7 +41,7 @@ export function MttSection(props: { mtt: MttDraft; onChange: (mtt: MttDraft) => 
             Prize Structure
           </span>
           {/* 目安（1st prize の割合）は選択肢の一部として出す（18 章 §2.4。不変条件 1 の例外。2026-09-30 さつき） */}
-          <div className="chip-row segment" role="group" aria-label="Prize Structure">
+          <fieldset className="chip-row segment" aria-label="Prize Structure">
             <div className="chips">
               {PRIZE_STRUCTURES.map((p: PrizeStructure) => (
                 <button
@@ -56,7 +56,7 @@ export function MttSection(props: { mtt: MttDraft; onChange: (mtt: MttDraft) => 
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
         </div>
       </fieldset>
     </section>

@@ -140,43 +140,53 @@ function parseSaved(v: unknown, what: string): SavedAnswer | null {
   }
 }
 
+/** 席ごとの持ち点（席は stacks のキー。2〜6 人。空席は 0。04 章 §2.1） */
+function parseStacks(v: unknown): { seats: Pos[]; stacks: Record<Pos, Mbb> } {
+  const stacksRaw = obj(v, 'hand.stacks');
+  const seats = Object.keys(stacksRaw) as Pos[];
+  if (playerCountOf(seats) === null) bad('hand.stacks の席');
+  const stacks = {} as Record<Pos, Mbb>;
+  for (const pos of POSITIONS) stacks[pos] = seats.includes(pos) ? amount(stacksRaw[pos], `hand.stacks.${pos}`) : 0;
+  return { seats, stacks };
+}
+
+/** Hero のハンドと見えたカード（回答するまでは null） */
+function parseSecrets(v: unknown): PostDetail['secrets'] {
+  if (v === null || v === undefined) return null;
+  const s = obj(v, 'secrets');
+  const knownRaw = s.known_cards === null || s.known_cards === undefined ? {} : obj(s.known_cards, 'secrets.known_cards');
+  const knownCards: Partial<Record<Pos, Card[] | 'muck'>> = {};
+  for (const [pos, c] of Object.entries(knownRaw)) {
+    const key = oneOf(pos, POSITIONS, 'secrets.known_cards の席');
+    knownCards[key] = c === 'muck' ? 'muck' : cards(c, `secrets.known_cards.${pos}`);
+  }
+  return { heroCards: cards(s.hero_cards, 'secrets.hero_cards'), knownCards };
+}
+
+/** 集計（回答するまでは null） */
+function parseAggregate(v: unknown): PostDetail['aggregate'] {
+  if (v === null || v === undefined) return null;
+  const g = obj(v, 'aggregate');
+  try {
+    return { n: int(g.n, 'aggregate.n'), cells: decodeAggregate(fromHex(str(g.cells, 'aggregate.cells'))) };
+  } catch (e) {
+    if (e instanceof DetailShapeError) throw e;
+    return bad('aggregate.cells');
+  }
+}
+
 export function parsePostDetail(raw: unknown): PostDetail {
   const r = obj(raw, '全体');
   const p = obj(r.post, 'post');
   const h = obj(r.hand, 'hand');
 
-  const stacksRaw = obj(h.stacks, 'hand.stacks');
-  // 席は stacks のキー（2〜6 人。空席は 0。04 章 §2.1）
-  const seats = Object.keys(stacksRaw) as Pos[];
-  if (playerCountOf(seats) === null) bad('hand.stacks の席');
-  const stacks = {} as Record<Pos, Mbb>;
-  for (const pos of POSITIONS) stacks[pos] = seats.includes(pos) ? amount(stacksRaw[pos], `hand.stacks.${pos}`) : 0;
+  const { seats, stacks } = parseStacks(h.stacks);
 
   if (!Array.isArray(h.actions)) bad('hand.actions');
   if (!Array.isArray(p.keys)) bad('post.keys');
 
-  let secrets: PostDetail['secrets'] = null;
-  if (r.secrets !== null && r.secrets !== undefined) {
-    const s = obj(r.secrets, 'secrets');
-    const knownRaw = s.known_cards === null || s.known_cards === undefined ? {} : obj(s.known_cards, 'secrets.known_cards');
-    const knownCards: Partial<Record<Pos, Card[] | 'muck'>> = {};
-    for (const [pos, v] of Object.entries(knownRaw)) {
-      const key = oneOf(pos, POSITIONS, 'secrets.known_cards の席');
-      knownCards[key] = v === 'muck' ? 'muck' : cards(v, `secrets.known_cards.${pos}`);
-    }
-    secrets = { heroCards: cards(s.hero_cards, 'secrets.hero_cards'), knownCards };
-  }
-
-  let aggregate: PostDetail['aggregate'] = null;
-  if (r.aggregate !== null && r.aggregate !== undefined) {
-    const g = obj(r.aggregate, 'aggregate');
-    try {
-      aggregate = { n: int(g.n, 'aggregate.n'), cells: decodeAggregate(fromHex(str(g.cells, 'aggregate.cells'))) };
-    } catch (e) {
-      if (e instanceof DetailShapeError) throw e;
-      bad('aggregate.cells');
-    }
-  }
+  const secrets = parseSecrets(r.secrets);
+  const aggregate = parseAggregate(r.aggregate);
 
   return {
     viewer: oneOf(r.viewer, ['author', 'answered', 'unanswered'] as const, 'viewer'),
@@ -204,7 +214,7 @@ export function parsePostDetail(raw: unknown): PostDetail {
         stacks,
       },
       board: cards(h.board, 'hand.board'),
-      actions: h.actions.map(parseAction),
+      actions: h.actions.map((a: unknown, i: number) => parseAction(a, i)),
       spotIndex: int(h.spot_index, 'hand.spot_index'),
       stopIndex: int(h.stop_index, 'hand.stop_index'),
       truncated: h.truncated === true,

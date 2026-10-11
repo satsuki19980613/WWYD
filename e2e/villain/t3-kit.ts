@@ -125,14 +125,13 @@ export function visibleTexts(page: Page, rootSel: string): Promise<string[]> {
       let n: Node | null;
       while ((n = w.nextNode())) {
         const t = (n.textContent ?? '').replace(/\s+/g, ' ').trim();
-        if (!t) continue;
         const el = n.parentElement;
-        if (!el || el.closest('.sr-only')) continue;
+        if (!t || !el || el.closest('.sr-only')) continue;
         const cs = getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden') continue;
         const r = el.getBoundingClientRect();
-        if (r.width === 0 && r.height === 0) continue;
-        out.push(t);
+        // 表示しない（display・visibility）か、大きさが無いものは見えていない
+        const hidden = cs.display === 'none' || cs.visibility === 'hidden' || (r.width === 0 && r.height === 0);
+        if (!hidden) out.push(t);
       }
     }
     return out;

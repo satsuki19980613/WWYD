@@ -118,7 +118,7 @@ describe('C-04 Pages Functions の入口（functions/api/auth/[[path]].ts）', (
     const sent = stub();
     const res = await onRequest({ request: new Request(`${SITE}/api/auth/x`), params: { path } });
     expect(res.status).toBe(status);
-    expect(sent.length).toBe(status === 200 ? 1 : 0);
+    expect(sent).toHaveLength(status === 200 ? 1 : 0);
     if (status === 200) expect(new URL(sent[0]!.url).origin).toBe(new URL(UPSTREAM).origin);
   });
 

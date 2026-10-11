@@ -106,7 +106,9 @@ export async function walkHand(env: WalkEnv, seed: number, hand: number, opts: {
   const { page, mobile } = env;
   const rng = mulberry32(seed * 100003 + hand * 7 + 1);
   const script: string[] = [];
-  const log = (s: string): void => void script.push(s);
+  const log = (s: string): void => {
+    script.push(s);
+  };
   const players = rng.range(2, 6);
   const seats = SEATS_BY_COUNT[players as 2 | 3 | 4 | 5 | 6] as readonly Pos[];
   const res = (outcome: WalkOutcome, actions: number, detail?: string): WalkResult => ({ seed, hand, outcome, players, actions, ...(detail ? { detail } : {}), script });
@@ -200,7 +202,8 @@ export async function walkHand(env: WalkEnv, seed: number, hand: number, opts: {
       const options: [string, number][] = [];
       // Hero の Fold は少なめ（Flop 以降に Hero の手番を残して Spot の候補を作る）
       const h = phase.pos === hero;
-      if (lg.fold && !tried.has('fold')) options.push(['fold', lg.check ? 2 : h ? 5 : 14]);
+      const heroFold = h ? 5 : 14;
+      if (lg.fold && !tried.has('fold')) options.push(['fold', lg.check ? 2 : heroFold]);
       if (lg.check && !tried.has('check')) options.push(['check', 30]);
       if (lg.call !== null && !lg.check && !tried.has('call')) options.push(['call', h ? 50 : 38]);
       if ((lg.bet || lg.raise) && !tried.has('aggr')) options.push(['aggr', h ? 20 : 16]);
@@ -234,8 +237,7 @@ export async function walkHand(env: WalkEnv, seed: number, hand: number, opts: {
           log(`${phase.pos} chip#${k}`);
           await chips.nth(k).click();
         } else if (!mobile) {
-          const v =
-            how === 'min' ? range.min : how === 'max' ? range.max : Math.min(range.max, Math.max(range.min, range.min + rng.int(Math.floor((range.max - range.min) / 100) + 1) * 100));
+          const v = sizeOf(how, range, rng);
           log(`${phase.pos} size=${formatBb(v)}`);
           await dock.locator('.ad-size input').fill(formatBb(v));
         }
@@ -290,11 +292,20 @@ export async function walkHand(env: WalkEnv, seed: number, hand: number, opts: {
       })()`)
       .catch(() => null);
     const j = body ? serverJudge(body) : null;
-    return res('blocked', phase.actions, `候補ありで Spot・タイトルを入れたのに送られない。画面のエラー: ${errs} / 本文をサーバーの判定に通すと: ${j ? (j.ok ? 'ok' : j.message) : '本文なし'} / derived=${JSON.stringify((body as { derived?: unknown } | null)?.derived)} stacks=${JSON.stringify((body as { stacks?: unknown } | null)?.stacks)}`);
+    let judged = '本文なし';
+    if (j) judged = j.ok ? 'ok' : j.message;
+    return res('blocked', phase.actions, `候補ありで Spot・タイトルを入れたのに送られない。画面のエラー: ${errs} / 本文をサーバーの判定に通すと: ${judged} / derived=${JSON.stringify((body as { derived?: unknown } | null)?.derived)} stacks=${JSON.stringify((body as { stacks?: unknown } | null)?.stacks)}`);
   }
-  const last = env.judged[env.judged.length - 1];
-  if (!last || !last.ok) return { ...res('server-reject', phase.actions, `${last?.message ?? '判定なし'}`), body: last?.body, ...readsInfo };
+  const last = env.judged.at(-1);
+  if (!last?.ok) return { ...res('server-reject', phase.actions, `${last?.message ?? '判定なし'}`), body: last?.body, ...readsInfo };
   return { ...res('posted', phase.actions), body: last.body, ...readsInfo };
+}
+
+/** 額を入れるときの値（min・max は端、ほかは範囲の中の 100 刻み。乱数はほかのときだけ引く） */
+function sizeOf(how: 'chip' | 'type' | 'min' | 'max', range: { min: number; max: number }, rng: Rng): number {
+  if (how === 'min') return range.min;
+  if (how === 'max') return range.max;
+  return Math.min(range.max, Math.max(range.min, range.min + rng.int(Math.floor((range.max - range.min) / 100) + 1) * 100));
 }
 
 async function toSpotStep(env: WalkEnv): Promise<void> {

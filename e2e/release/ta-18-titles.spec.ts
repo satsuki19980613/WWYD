@@ -58,8 +58,8 @@ for (const v of ['', ' @sp'] as const) {
     await expect(page.locator('.spot-link').first()).toBeAttached({ timeout: 15_000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), '一覧').toBe(true);
     // HTML として解釈していない: 注入した要素も実行もない
-    expect(await page.locator('img[src="x"]').count()).toBe(0);
-    expect(await page.locator('.spot-link script, .spot-link b').count()).toBe(0);
+    await expect(page.locator('img[src="x"]')).toHaveCount(0);
+    await expect(page.locator('.spot-link script, .spot-link b')).toHaveCount(0);
     expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined();
     expect(errors).toEqual([]);
   });

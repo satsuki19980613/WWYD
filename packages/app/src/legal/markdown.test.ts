@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseInline, parseMarkdown } from './markdown.ts';
+import { headingOf, isHr, isTableSep, itemOf, parseInline, parseMarkdown } from './markdown.ts';
 
 const text = (v: string) => ({ t: 'text', v }) as const;
 
@@ -79,5 +79,48 @@ describe('ブロック', () => {
       const blocks = parseMarkdown(readFileSync(new URL(f, import.meta.url), 'utf8'));
       expect(blocks[0]?.t).toBe('heading');
     }
+  });
+});
+
+// 行の判定（正規表現の後戻りを避けて文字を順に見る形にした。元の正規表現と同じ結果になること）
+describe('行の判定', () => {
+  it('見出しは # 〜 #### と空白のあと（空白が無い・# が 5 つ以上は見出しでない）', () => {
+    expect(headingOf('## 第1条')).toEqual({ level: 2, text: '第1条' });
+    expect(headingOf('#\t  題 ')).toEqual({ level: 1, text: '題 ' });
+    expect(headingOf('# ')).toEqual({ level: 1, text: '' });
+    expect(headingOf('#題')).toBeNull();
+    expect(headingOf('##### 題')).toBeNull();
+    expect(headingOf(' # 題')).toBeNull();
+    expect(headingOf('# 題\u2028続き')).toBeNull();
+  });
+
+  it('リストの項目は字下げ・記号（- * 1. 1)）・空白・本文', () => {
+    expect(itemOf('   - 宣伝')).toEqual({ marker: '-', text: '宣伝' });
+    expect(itemOf('12) 十二')).toEqual({ marker: '12)', text: '十二' });
+    expect(itemOf('1.  二つの空白')).toEqual({ marker: '1.', text: '二つの空白' });
+    expect(itemOf('-なし')).toBeNull();
+    expect(itemOf('1 x')).toBeNull();
+    expect(itemOf('a. x')).toBeNull();
+    expect(itemOf('-')).toBeNull();
+  });
+
+  it('区切り線は同じ記号が 3 つ以上', () => {
+    expect(isHr('---')).toBe(true);
+    expect(isHr('*****  ')).toBe(true);
+    expect(isHr('___')).toBe(true);
+    expect(isHr('--')).toBe(false);
+    expect(isHr('-*-')).toBe(false);
+    expect(isHr(' ---')).toBe(false);
+  });
+
+  it('表の区切りの行（両端の | は省ける。マスは :?-{2,}:?）', () => {
+    expect(isTableSep('|---|:--:|')).toBe(true);
+    expect(isTableSep('--- | --:')).toBe(true);
+    expect(isTableSep('| :-- |  ')).toBe(true);
+    expect(isTableSep('|-|')).toBe(false);
+    expect(isTableSep('|---||')).toBe(false);
+    expect(isTableSep('::--')).toBe(false);
+    expect(isTableSep(' |---|')).toBe(false);
+    expect(isTableSep('|')).toBe(false);
   });
 });

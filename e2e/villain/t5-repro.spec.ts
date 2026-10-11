@@ -71,7 +71,8 @@ test('V-T5-01b Tournament Type を端で超えたまま投稿しても、送る 
   await pickSpot(page, 'Turn / BTN Bet 3');
   await setTitle(page, 'speed 101');
   await submit(page);
-  await page.waitForTimeout(800);
+  // 送られる（create-post に届く）か、画面が断る（エラーを出す）まで待つ
+  await expect.poll(async () => cp.calls.length > 0 || (await page.locator('.pf-errors').count()) > 0).toBe(true);
   const errs = await page.locator('.pf-errors').allInnerTexts();
   const sent = cp.calls[0]?.body as { mtt?: { speed?: number } } | undefined;
   console.log(`errors=${JSON.stringify(errs)} sent.mtt=${JSON.stringify(sent?.mtt)} calls=${cp.calls.length}`);

@@ -63,6 +63,7 @@ import {
 import { actorAt, answerFrames, seatViews } from '../answer/replayModel.ts';
 import { SizeButton, SizeControl } from '../answer/SizeControl.tsx';
 import { STREET_LABEL } from '../list/spotList.ts';
+import { withServerError } from '../post/errorMessages.ts';
 import { ErrorList } from '../post/SpotSection.tsx';
 import { useHeightVar } from '../useHeightVar.ts';
 import { useIsMobile } from '../useMediaQuery.ts';
@@ -88,11 +89,66 @@ export function metaLine(d: PostDetail): string {
 
 const paintKey = (p: Paint): string => toHex(encodePaint(p));
 
+/** 攻めの Action の名前（Bet か Raise。投稿に無ければ、Spot で賭けが無いなら Bet） */
+function s1NameOf(s1Label: PostDetail['post']['s1Label'], currentBet: Mbb): 'Bet' | 'Raise' {
+  return s1Label === 'bet' || (s1Label === null && currentBet === 0) ? 'Bet' : 'Raise';
+}
+
+/** Size を答える Spot の値（攻めの Action が選べないときは null） */
+function sizeSpotOf(post: PostDetail['post'], currentBet: Mbb): SizeSpot | null {
+  if (!post.keys.includes('s1') || post.minTo === null || post.maxTo === null) return null;
+  return { currentBet, potBase: post.potBase, minTo: post.minTo, maxTo: post.maxTo };
+}
+
+/** ブラシのタイルに添える Size（All-in はその文字、それ以外は額） */
+function s1SubText(sub: { amount: string; pct: string }): string {
+  return sub.pct === 'All-in' ? 'All-in' : sub.amount;
+}
+
+/** PC の塗りのキー（17 章）: Ctrl+Z で元に戻す、Ctrl+Y・Ctrl+Shift+Z でやり直す、E で消しゴム・B でブラシ */
+type PaintKey = 'undo' | 'redo' | 'eraser' | 'brush';
+function paintKeyOf(e: KeyboardEvent): PaintKey | null {
+  const k = e.key.toLowerCase();
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && k === 'z') return e.shiftKey ? 'redo' : 'undo';
+  if (mod && k === 'y') return 'redo';
+  if (!mod && k === 'e') return 'eraser';
+  if (!mod && k === 'b') return 'brush';
+  return null;
+}
+
+function usePaintKeys(enabled: boolean, setEditor: (f: (e: Editor) => Editor) => void, setTool: (t: Tool) => void): void {
+  useEffect(() => {
+    if (!enabled) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.altKey || typingOrModal(e)) return;
+      const key = paintKeyOf(e);
+      if (key === null) return;
+      if (key === 'undo') setEditor(undo);
+      else if (key === 'redo') setEditor(redo);
+      else setTool(key);
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [enabled, setEditor, setTool]);
+}
+
+/** `active` の間、ページを閉じる・再読み込みするときにブラウザの離脱確認を出す */
+function useBeforeUnload(active: boolean): void {
+  useEffect(() => {
+    if (!active) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent): void => e.preventDefault();
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [active]);
+}
+
 /**
  * 回答（レンジ入力）画面（06 章 §4。仕様書 §5.3）。未回答の人が開く（投稿者も自分の投稿に回答する。2026-09-28）。
  * `onDone` は送信が済んだとき（または既に回答済みだったとき）。
  */
-export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }): JSX.Element {
+export function AnswerScreen(props: Readonly<{ detail: PostDetail; onDone: () => void }>): JSX.Element {
   const { detail: d } = props;
   const { hand, post } = d;
   const mobile = useIsMobile();
@@ -119,13 +175,10 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
 
   // ---- アクションの名前とサイズ ----
   const facing = post.keys.includes('call');
-  const s1Name = post.s1Label === 'bet' || (post.s1Label === null && stop.currentBet === 0) ? 'Bet' : 'Raise';
+  const s1Name = s1NameOf(post.s1Label, stop.currentBet);
   const names: KeyNames = { fold: 'Fold', check: 'Check', call: 'Call', s1: s1Name };
   const callAmount = Math.min(stop.currentBet - stop.bets[post.hero], stop.stacks[post.hero]);
-  const sizeSpot: SizeSpot | null =
-    post.keys.includes('s1') && post.minTo !== null && post.maxTo !== null
-      ? { currentBet: stop.currentBet, potBase: post.potBase, minTo: post.minTo, maxTo: post.maxTo }
-      : null;
+  const sizeSpot = sizeSpotOf(post, stop.currentBet);
 
   // ---- 塗り・ブラシ・サイズ ----
   const initialPaint = useMemo(() => emptyPaint(), []);
@@ -172,37 +225,16 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
   const [serverError, setServerError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const to = sizeSpot ? parseSizeText(sizeText) : null;
-  const errors = [...(attempted ? submitErrors(editor.paint, post.keys, to, sizeSpot) : []), ...(serverError ? [serverError] : [])];
+  const errors = withServerError(attempted ? submitErrors(editor.paint, post.keys, to, sizeSpot) : [], serverError);
 
   useEffect(() => setServerError(null), [editor.paint, sizeText]);
 
-  // PC の塗りのキー（17 章）: Ctrl+Z で元に戻す、Ctrl+Y・Ctrl+Shift+Z でやり直す、E で消しゴム・B でブラシ
-  useEffect(() => {
-    if (mobile) return;
-    const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.altKey || typingOrModal(e)) return;
-      const k = e.key.toLowerCase();
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && k === 'z' && !e.shiftKey) setEditor(undo);
-      else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) setEditor(redo);
-      else if (!mod && k === 'e') setTool('eraser');
-      else if (!mod && k === 'b') setTool('brush');
-      else return;
-      e.preventDefault();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mobile]);
+  usePaintKeys(!mobile, setEditor, setTool);
 
   // 塗りを変えたまま画面を離れるとき、ブラウザの離脱確認を出す（06 章 §4.9）
   const initialKey = useMemo(() => paintKey(initialPaint), [initialPaint]);
   const dirty = !sent && paintKey(editor.paint) !== initialKey;
-  useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent): void => e.preventDefault();
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [dirty]);
+  useBeforeUnload(dirty);
   // アプリ内で移るとき（一覧・Post・ブラウザの戻る）も、塗りを捨てる確認を出す（F-028。投稿画面と同じ。2026-09-30 さつき）。
   // 送信した直後の集計への移動は止めないよう、ref で今の状態を見る
   const dirtyRef = useRef(dirty);
@@ -266,7 +298,7 @@ export function AnswerScreen(props: { detail: PostDetail; onDone: () => void }):
       names={names}
       subs={{
         call: facing ? `${formatBb(callAmount)}bb` : undefined,
-        s1: s1Sub ? (s1Sub.pct === 'All-in' ? 'All-in' : s1Sub.amount) : undefined,
+        s1: s1Sub ? s1SubText(s1Sub) : undefined,
       }}
       disabledNames={mobile ? [] : unavailableNames(post.keys, facing, s1Name)}
       brush={brush}
@@ -407,14 +439,14 @@ function spotFacts(d: PostDetail, state: State): SpotFacts {
     street: post.street,
     board: hand.board.slice(0, BOARD_COUNT[state.street]),
     hero: post.hero,
-    facing: aggressive ?? inStreet[inStreet.length - 1] ?? null,
+    facing: aggressive ?? inStreet.at(-1) ?? null,
     pot: totalPot(state),
     toCall: Math.min(state.currentBet - state.bets[post.hero], state.stacks[post.hero]),
   };
 }
 
 /** 「vs BB Bet 6.5」「vs BB Check」、このストリートで最初の Action なら「to act」 */
-function FacingText(props: { f: SpotFacts }): JSX.Element {
+function FacingText(props: Readonly<{ f: SpotFacts }>): JSX.Element {
   const a = props.f.facing;
   if (!a) return <span className="sp-facing">to act</span>;
   return (
@@ -429,7 +461,7 @@ function FacingText(props: { f: SpotFacts }): JSX.Element {
  * PC のスポットの見出し（レンジ表と道具の上の帯。17 章。2026-09-29 さつき: どこのスポットの Range を答えるか分かるように）。
  * 「SPOT · Turn · Board · Hero BTN vs BB Bet 6.5 · Pot · to call」。コーナーブラケットで囲む（シグネチャー 2）。
  */
-function SpotBanner(props: { detail: PostDetail; state: State }): JSX.Element {
+function SpotBanner(props: Readonly<{ detail: PostDetail; state: State }>): JSX.Element {
   const f = spotFacts(props.detail, props.state);
   return (
     <div className="bracket-hero spot-banner" role="group" aria-label="Spot">
@@ -466,7 +498,7 @@ function SpotBanner(props: { detail: PostDetail; state: State }): JSX.Element {
  * スマホのスポットの要約（Range のタブの 1 行。14 章・17 章）: Board・Hero・向き合う Action・Pot。行は増やさない。
  * 塗りながら Replay のタブへ戻らずに局面を確かめられるようにする。押すと Replay のタブへ。
  */
-function SpotStrip(props: { detail: PostDetail; state: State; onOpen: () => void }): JSX.Element {
+function SpotStrip(props: Readonly<{ detail: PostDetail; state: State; onOpen: () => void }>): JSX.Element {
   const f = spotFacts(props.detail, props.state);
   return (
     <button type="button" className="spot-strip" aria-label="Replay を見る" onClick={props.onOpen}>
@@ -497,16 +529,16 @@ function unavailableNames(keys: readonly AnswerKey[], facing: boolean, s1Name: s
 }
 
 /** リプレイ（テーブル・操作・ハンドヒストリー）。スマホのハンドヒストリーは卓の左上のボタンからモーダルで開く（14 章） */
-function ReplayView(props: {
+function ReplayView(props: Readonly<{
   detail: PostDetail;
   frames: ReturnType<typeof answerFrames>;
   c: ReplayControl;
   logInModal: boolean;
   reads: ReturnType<typeof useReadsUi>;
-}): JSX.Element {
+}>): JSX.Element {
   const { detail: d, c } = props;
   const { hand, post } = d;
-  const state = props.frames[c.step] ?? props.frames[props.frames.length - 1];
+  const state = props.frames[c.step] ?? props.frames.at(-1);
   if (!state) return <></>;
   const actor = actorAt(hand.actions, c.step, hand.stopIndex, post.hero);
   const board = hand.board.slice(0, BOARD_COUNT[state.street]);

@@ -196,7 +196,7 @@ describe('B-02 画面の判定とサーバーの判定の一致', () => {
           expect(v.status, `${c.name} #${index}: ${v.error}`).toBe(201);
         }
       }
-      if (!pfAllin) expect(cands.map((_, i) => c.spots[i]?.[0] ?? '').length).toBe(c.spots.length);
+      if (!pfAllin) expect(cands.map((_, i) => c.spots[i]?.[0] ?? '')).toHaveLength(c.spots.length);
     }
   });
 });

@@ -76,8 +76,10 @@ test('T2-11 二重に押しても create-post は 1 回だけ', async ({ page })
   const { cp } = await openDraft(page, draftJson({ ...srpTurn(), reads: { BB: { vpip: 30 } } }));
   await step(page, S_SPOT);
   await submitBtn(page).dblclick();
-  await page.waitForTimeout(800);
-  expect(cp.calls.length).toBe(1);
+  // 投稿が終わると一覧（自分の投稿）へ移り、その一覧の読み込みも終わる。2 回目の create-post が送られるなら、それより前に届いている
+  await expect(page).toHaveURL('/?tab=mine');
+  await expect(page.locator('.list-empty')).toBeVisible();
+  expect(cp.calls).toHaveLength(1);
 });
 
 test('T2-11 @sp タッチ: Tournament Type と VPIP の Slider をタップで動かせる', async ({ page }) => {

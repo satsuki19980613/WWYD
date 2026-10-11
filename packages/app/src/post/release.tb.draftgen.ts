@@ -21,6 +21,32 @@ export function cardsStr(cs: readonly string[]): string {
 
 export type Built = { draft: Draft; played: Played; hero: Pos };
 
+/** 基本設定（形式・SB・Ante・Rake・人数・Stack）を入れる。乱数を引く順は変えない（シードごとの試験を同じに保つ） */
+function fillSettings(rng: Rng, draft: Draft, setup: ReturnType<typeof postableSetup>, seats: readonly Pos[]): void {
+  draft.fmt = rng.chance(0.75) ? 'cash' : 'mtt';
+  draft.sb = formatBb(setup.sb);
+  draft.ante = formatBb(setup.ante);
+  draft.rake = draft.fmt === 'cash' && rng.chance(0.5) ? String(rng.int(0, 10000) / 100) : '';
+  draft.players = seats.length as PlayerCount;
+  for (const p of POSITIONS) draft.stacks[p] = setup.stacks[p] > 0 ? formatBb(setup.stacks[p]) : '100';
+}
+
+/** Hero と、ほかの席の一部にハンドを配る（`used` は使ったカード） */
+function dealHands(rng: Rng, draft: Draft, seats: readonly Pos[], hero: Pos, used: Set<string>): void {
+  for (const p of seats) {
+    if (p !== hero && !rng.chance(0.4)) continue;
+    const cs = randomCards(rng, 2, [...used]);
+    for (const c of cs) used.add(c);
+    draft.hands[p] = cardsStr(cs);
+  }
+}
+
+/** Spot（多くは候補から。ときどき未選択や候補でない手を混ぜる） */
+function randomSpot(rng: Rng, cand: readonly number[], actionCount: number): number | null {
+  if (cand.length > 0 && rng.chance(0.93)) return rng.pick(cand);
+  return rng.chance(0.5) ? null : rng.int(0, Math.max(0, actionCount));
+}
+
 export function buildDraft(rng: Rng): Built {
   const setup = postableSetup(rng);
   const played = playRandomHand(rng, setup, { pfFold: 0.05 + rng.next() * 0.25, allinP: rng.chance(0.85) ? 0.01 : 0.18 });
@@ -32,23 +58,13 @@ export function buildDraft(rng: Rng): Built {
   const boardN = played.boardCount;
   const used = new Set<string>(board.slice(0, boardN));
   const draft = emptyDraft();
-  draft.fmt = rng.chance(0.75) ? 'cash' : 'mtt';
-  draft.sb = formatBb(setup.sb);
-  draft.ante = formatBb(setup.ante);
-  draft.rake = draft.fmt === 'cash' && rng.chance(0.5) ? String(rng.int(0, 10000) / 100) : '';
-  draft.players = seats.length as PlayerCount;
-  for (const p of POSITIONS) draft.stacks[p] = setup.stacks[p] > 0 ? formatBb(setup.stacks[p]) : '100';
+  fillSettings(rng, draft, setup, seats);
   draft.hero = hero;
-  for (const p of seats) {
-    if (p !== hero && !rng.chance(0.4)) continue;
-    const cs = randomCards(rng, 2, [...used]);
-    for (const c of cs) used.add(c);
-    draft.hands[p] = cardsStr(cs);
-  }
+  dealHands(rng, draft, seats, hero, used);
   draft.actions = played.actions.map((a) => ({ ...a }));
   draft.board = board.slice(0, boardN);
   const cand = spotCandidates(played.actions, hero).map((c) => c.index);
-  draft.spotIndex = cand.length > 0 && rng.chance(0.93) ? rng.pick(cand) : rng.chance(0.5) ? null : rng.int(0, Math.max(0, played.actions.length));
+  draft.spotIndex = randomSpot(rng, cand, played.actions.length);
   draft.title = rng.chance(0.9) ? `試験 ${rng.int(0, 99999)}` : ' t ';
   return { draft, played, hero };
 }

@@ -5,6 +5,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fakeBackend } from '../fakeBackend.ts';
 import { fakeList, row, watchErrors } from '../release/taKit.ts';
+import { untilStable } from '../settle.ts';
 import { detail, baseHs1bb, ID, isSp, noHScroll, openAnswer } from './t3-kit.ts';
 
 const YELLOW = 'rgb(252, 238, 10)';
@@ -33,6 +34,7 @@ const ROWS = [
 ];
 
 test.describe('スマホのカード', () => {
+  // カードの一覧はスマホの構成だけ（PC は表。下の「PC の表」で確かめる）
   test.skip(({ viewport }) => (viewport?.width ?? 1280) >= 700, 'スマホだけ');
 
   for (const w of [320, 360, 375, 412]) {
@@ -200,7 +202,9 @@ test.describe('スマホのカード', () => {
   test('T3-06 一覧の最後までスクロールすると、最後のカードの CTA は ＋ Post の浮いたボタンに隠れない @sp', async ({ page }) => {
     await openList(page, ROWS);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await page.waitForTimeout(300);
+    // いちばん下まで行き、位置が落ち着くまで待つ
+    await expect.poll(() => page.evaluate(() => Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1)).toBe(true);
+    await untilStable(() => page.evaluate(() => [window.scrollY, document.documentElement.scrollHeight].join(',')));
     const last = page.locator('.spot-card').last();
     const fab = page.locator('.list-fab .btn');
     const lb = await last.boundingBox();
@@ -233,6 +237,7 @@ test.describe('スマホのカード', () => {
 }); // describe
 
 test.describe('PC の表', () => {
+  // 表の一覧は PC の構成だけ（スマホはカード。上の「スマホのカード」で確かめる）
   test.skip(({ viewport }) => (viewport?.width ?? 1280) < 700, 'PC だけ');
   test('T3-06 PC の表: 条件の行の後ろに印、回答数は黄、状態の札は控えめ、カードの形は使わない', async ({ page }) => {
     await openList(page, ROWS);
@@ -279,6 +284,8 @@ test.describe('PC の表', () => {
 
 for (const v of ['', ' @sp'] as const) {
   test(`T3-07 スクロールバー: 4px・is-scrolling はスクロールした要素だけに付き、0.9 秒で消え、続けてスクロールすると延びる${v}`, async ({ page }) => {
+    // 0.9 秒のタイマーを、決まった時間を待たずに確かめるため、ページの時計を差し替えて手で進める
+    await page.clock.install();
     await fakeBackend(page, null);
     await fakeList(page, Array.from({ length: 30 }, (_, i) => row(i + 1)));
     await page.goto('/');
@@ -296,21 +303,36 @@ for (const v of ['', ' @sp'] as const) {
     // ふだんはつまみが透明（見えない）
     expect(w.thumb).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
     const html = page.locator('html');
+    // 時計を少し先へ進めて止める（以降のタイマーは runFor で進めた分だけ進む。時計は止めるまで実時間で進むので、余裕を持たせる）。
+    // スクロールの数を数えて、スクロールが届いたのを確かめる
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 5000);
+    await page.evaluate(() => {
+      const w = window as unknown as { __scrolls: number };
+      w.__scrolls = 0;
+      document.addEventListener('scroll', () => w.__scrolls++, { capture: true, passive: true });
+    });
+    const scrolls = (): Promise<number> => page.evaluate(() => (window as unknown as { __scrolls: number }).__scrolls);
+    /** ホイールで回し、スクロールが届いて止まるまで待つ */
+    const wheel = async (dy: number): Promise<void> => {
+      const before = await scrolls();
+      await page.mouse.wheel(0, dy);
+      await expect.poll(scrolls).toBeGreaterThan(before);
+      await untilStable(() => page.evaluate(() => window.scrollY), 'スクロールが止まらない');
+    };
     await page.mouse.move(200, 400);
-    await page.mouse.wheel(0, 200);
+    await wheel(200);
     await expect(html).toHaveClass(/is-scrolling/);
     // 600ms 後、もう一度スクロール → 最初の 900ms では消えない（タイマーの延長）
-    await page.waitForTimeout(600);
+    await page.clock.runFor(600);
     await expect(html).toHaveClass(/is-scrolling/);
-    await page.mouse.wheel(0, 100);
-    const t0 = Date.now();
-    await page.waitForTimeout(600);
+    await wheel(100);
+    await page.clock.runFor(600);
     await expect(html).toHaveClass(/is-scrolling/); // 最初のタイマー（残り 300ms）が切れても残っている
-    // 最後のスクロールから 0.9 秒前後で外れる
-    await expect(html).not.toHaveClass(/is-scrolling/, { timeout: 3000 });
-    const dt = Date.now() - t0;
-    expect(dt).toBeGreaterThan(200);
-    expect(dt).toBeLessThan(1600);
+    // 最後のスクロールから 0.9 秒で外れる（0.85 秒ではまだ付いていて、0.95 秒では外れている）
+    await page.clock.runFor(250);
+    await expect(html).toHaveClass(/is-scrolling/);
+    await page.clock.runFor(100);
+    await expect(html).not.toHaveClass(/is-scrolling/);
   });
 
   test(`T3-07 入れ子のスクロール（All Villains のモーダルの中）は、その枠だけに is-scrolling${v}`, async ({ page }) => {
@@ -352,7 +374,10 @@ for (const v of ['', ' @sp'] as const) {
 test('T3-07 PC: 回答画面の History の横スクロール（入れ子）も、スクロールした枠だけに is-scrolling', async ({ page }) => {
   await openAnswer(page, baseHs1bb());
   await expect(page.locator('.ptable')).toBeVisible();
-  await page.waitForTimeout(500);
+  // 横にスクロールする枠ができる（レイアウトが落ち着く）まで待つ
+  await expect
+    .poll(() => page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('body *')).some((el) => el.scrollWidth > el.clientWidth + 20 && ['auto', 'scroll'].includes(getComputedStyle(el).overflowX))), { message: '横にスクロールする枠が無い' })
+    .toBe(true);
   const handle = await page.evaluateHandle(() => {
     const all = Array.from(document.querySelectorAll<HTMLElement>('body *'));
     return all.find((el) => el.scrollWidth > el.clientWidth + 20 && ['auto', 'scroll'].includes(getComputedStyle(el).overflowX)) ?? null;

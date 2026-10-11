@@ -83,32 +83,42 @@ export async function fakeBackend(page: Page, detail: Json, opts: { signedIn?: b
     const req = route.request();
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors(route) });
     const path = new URL(req.url()).pathname;
-    const body = (req.postDataJSON() ?? {}) as Record<string, unknown>;
     if (path === '/rpc/whoami') return json(route, 200, { allowed: true, admin: false });
-    if (path === '/rpc/get_post_detail') {
-      if (be.detail === null) return json(route, 400, { code: 'P0001', message: 'post_not_found', details: null, hint: null });
-      return json(route, 200, be.detail);
-    }
-    if (path === '/answers' && req.method() === 'POST') {
-      if (be.insertError) return json(route, be.insertError.status, be.insertError.body);
-      be.inserts.push(body);
-      if (be.afterInsert) be.detail = be.afterInsert;
-      return route.fulfill({ status: 201, headers: cors(route), body: '' });
-    }
-    if (path === '/posts' && req.method() === 'DELETE') {
-      // `delete ... eq('id', …) select('id')`: 消した行を返す
-      const id = (new URL(req.url()).searchParams.get('id') ?? '').replace(/^eq\./, '');
-      be.deletes.push(id);
-      return json(route, 200, [{ id }]);
-    }
+    if (path === '/rpc/get_post_detail') return postDetail(route, be);
+    if (path === '/answers' && req.method() === 'POST') return insertAnswer(route, be);
+    if (path === '/posts' && req.method() === 'DELETE') return deletePost(route, be);
     if (path === '/rpc/list_posts') return json(route, 200, be.listRows ?? []);
-    if (path === '/rpc/delete_my_account') {
-      be.calls.push('delete_my_account');
-      if (be.deleteAccountError) return json(route, be.deleteAccountError.status, be.deleteAccountError.body);
-      return route.fulfill({ status: 204, headers: cors(route), body: '' });
-    }
+    if (path === '/rpc/delete_my_account') return deleteMyAccount(route, be);
     return json(route, 404, { code: 'PGRST202', message: `偽のバックエンドに無い: ${req.method()} ${path}` });
   });
 
   return be;
+}
+
+/** get_post_detail: 投稿の詳細（be.detail が null なら post_not_found） */
+function postDetail(route: Route, be: Backend): Promise<void> {
+  if (be.detail === null) return json(route, 400, { code: 'P0001', message: 'post_not_found', details: null, hint: null });
+  return json(route, 200, be.detail);
+}
+
+/** answers への insert: 受け付けたら本文を記録し、afterInsert があれば詳細を回答済みに替える */
+function insertAnswer(route: Route, be: Backend): Promise<void> {
+  if (be.insertError) return json(route, be.insertError.status, be.insertError.body);
+  be.inserts.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
+  if (be.afterInsert) be.detail = be.afterInsert;
+  return route.fulfill({ status: 201, headers: cors(route), body: '' });
+}
+
+/** posts の delete（`delete ... eq('id', …) select('id')`）: 消した行を返す */
+function deletePost(route: Route, be: Backend): Promise<void> {
+  const id = (new URL(route.request().url()).searchParams.get('id') ?? '').replace(/^eq\./, '');
+  be.deletes.push(id);
+  return json(route, 200, [{ id }]);
+}
+
+/** delete_my_account: 呼ばれたことを記録する（deleteAccountError があれば拒否する） */
+function deleteMyAccount(route: Route, be: Backend): Promise<void> {
+  be.calls.push('delete_my_account');
+  if (be.deleteAccountError) return json(route, be.deleteAccountError.status, be.deleteAccountError.body);
+  return route.fulfill({ status: 204, headers: cors(route), body: '' });
 }

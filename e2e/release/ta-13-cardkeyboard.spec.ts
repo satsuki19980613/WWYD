@@ -18,8 +18,8 @@ async function openKeyboard(page: Page, seat = 'BTN'): Promise<void> {
 
 const handText = async (page: Page, seat = 'BTN'): Promise<string> => (await page.getByRole('button', { name: `${seat} の Hand` }).innerText()).replace(/\s+/g, '');
 
-/** キーの中心から (dx, dy) だけ払う。hold ms 押したままにしてから離す */
-async function flick(page: Page, label: string, dx: number, dy: number, hold = 0): Promise<void> {
+/** キーの中心から (dx, dy) だけ払う */
+async function flick(page: Page, label: string, dx: number, dy: number): Promise<void> {
   const key = page.getByRole('button', { name: label });
   const b = (await key.boundingBox())!;
   const x = b.x + b.width / 2;
@@ -28,7 +28,6 @@ async function flick(page: Page, label: string, dx: number, dy: number, hold = 0
   const t = (type: 'touchStart' | 'touchMove' | 'touchEnd', px: number, py: number): Promise<unknown> =>
     cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: px, y: py, id: 1 }] });
   await t('touchStart', x, y);
-  if (hold > 0) await page.waitForTimeout(hold);
   if (dx !== 0 || dy !== 0) {
     await t('touchMove', x + dx / 2, y + dy / 2);
     await t('touchMove', x + dx, y + dy);
@@ -111,7 +110,6 @@ test.describe('カードキーボードのフリック @sp', () => {
     await page.keyboard.press('Escape');
     await expect(kb).toHaveCount(0);
     await page.getByRole('button', { name: 'CO の Hand' }).click();
-    await page.getByRole('heading', { name: 'Player と Hand' }).click({ force: true }).catch(() => undefined);
     await page.mouse.click(200, 120); // キーボードの外
     await expect(kb).toHaveCount(0);
   });

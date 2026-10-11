@@ -18,7 +18,7 @@ export type KeyNames = Record<AnswerKey, string>;
  * ブラシパネル（06 章 §4.4・§4.6）: アクションのタイル、ミックスバー、道具（ブラシ / 消しゴム・元に戻す・
  * やり直す・取れないアクション（PC のみ）・`extra`（スマホの Size と Hand History のボタン）・クリア）。
  */
-export function BrushPanel(props: {
+export function BrushPanel(props: Readonly<{
   keys: readonly AnswerKey[];
   names: KeyNames;
   /** タイルの 3 行目（コール額・サイズ） */
@@ -37,7 +37,7 @@ export function BrushPanel(props: {
   onClear: () => void;
   /** クリアの前に並べるボタン（スマホの Size・Hand History） */
   extra?: ReactNode;
-}): JSX.Element {
+}>): JSX.Element {
   const erasing = props.tool === 'eraser';
   return (
     <div className={`brush${erasing ? ' erasing' : ''}`}>
@@ -74,14 +74,14 @@ export function BrushPanel(props: {
         />
       )}
       <div className="brush-tools">
-        <div className="tool-seg" role="group" aria-label="道具">
+        <fieldset className="tool-seg" aria-label="道具">
           <button type="button" className="tool-btn" aria-label="ブラシ" aria-pressed={!erasing} onClick={() => props.onTool('brush')}>
             <BrushIcon />
           </button>
           <button type="button" className="tool-btn" aria-label="消しゴム" aria-pressed={erasing} onClick={() => props.onTool('eraser')}>
             <EraserIcon />
           </button>
-        </div>
+        </fieldset>
         <button type="button" className="tool-btn" aria-label="元に戻す" disabled={!props.canUndo} onClick={props.onUndo}>
           <UndoIcon />
         </button>
@@ -106,6 +106,9 @@ export function BrushPanel(props: {
   );
 }
 
+/** 矢印キーで境界を動かす向き（左・下で減らし、右・上で増やす） */
+const ARROW_DELTA: Readonly<Record<string, number>> = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 };
+
 /** ハンドルを掴める距離（px）。タッチでも掴めるよう幅を持たせる */
 const HIT_PX = 16;
 
@@ -115,13 +118,13 @@ type Drag = { id: number; x0: number; handle: number | null; candidates: number[
  * ミックスバー。境界のハンドルをドラッグして隣り合うキーの頻度を 5% 刻みで変える。
  * 重なったハンドルは、6px 動くまで掴むものを決めず、動いた向きに動けるものを掴む（brush.ts の pickHandle）。
  */
-function MixBar(props: {
+function MixBar(props: Readonly<{
   keys: readonly AnswerKey[];
   names: KeyNames;
   brush: Mix;
   off: boolean;
   onChange: (b: Mix) => void;
-}): JSX.Element {
+}>): JSX.Element {
   const bar = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const bounds = boundaries(props.brush, props.keys);
@@ -164,7 +167,7 @@ function MixBar(props: {
   };
 
   const onKeyDown = (i: number, e: KeyboardEvent<HTMLSpanElement>): void => {
-    const delta = e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : 0;
+    const delta = ARROW_DELTA[e.key] ?? 0;
     if (delta === 0) return;
     e.preventDefault();
     const next = moveBoundary(props.brush, props.keys, i, (bounds[i] as number) + delta);
@@ -191,7 +194,7 @@ function MixBar(props: {
         const right = props.keys[i + 1] as AnswerKey;
         return (
           <span
-            key={i}
+            key={`${left}-${right}`}
             className="mhandle"
             role="slider"
             tabIndex={0}

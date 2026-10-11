@@ -232,8 +232,8 @@ for (const v of ['', ' @sp'] as const) {
       // 未回答に、判断地点より後の Action・Hero のハンドが出ない（答えの漏れ）: 読み込んだ応答の形
       const hand = (be.detail as { hand: { actions: unknown[]; truncated: boolean; board: string[] } }).hand;
       expect(hand.truncated).toBe(true);
-      expect(hand.actions.length).toBe(payload.stop_index);
-      expect(hand.board.length).toBe(4);
+      expect(hand.actions).toHaveLength(payload.stop_index);
+      expect(hand.board).toHaveLength(4);
       expect((be.detail as { secrets: unknown }).secrets).toBeNull();
 
       // 集計画面でも同じ

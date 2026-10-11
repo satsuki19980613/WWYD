@@ -9,6 +9,7 @@ import { expect, test } from '@playwright/test';
 import { detailJson } from '../../packages/app/src/answer/detailFixtures.ts';
 import { hs1bb } from '../../packages/core/src/post/postFixtures.ts';
 import { fakeBackend } from '../fakeBackend.ts';
+import { untilStable } from '../settle.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
 const CHARS = ['あ', 'W', 'i'];
@@ -36,7 +37,9 @@ for (const motion of ['reduce', 'no-preference'] as const) {
           errs.length = 0;
           await page.goto(`/s/${ID}/answer`);
           await page.locator('header').waitFor();
-          await page.waitForTimeout(150);
+          // タイトルが出て、Marquee の表示（static / clip）が落ち着くまで見る（落ちたら下で真っ白・例外として数える）
+          await page.locator('header h1', { hasText: title }).waitFor({ timeout: 5000 }).catch(() => undefined);
+          await untilStable(() => page.evaluate(() => document.querySelector('header .mq')?.className ?? null)).catch(() => undefined);
           const blank = (await page.locator('header h1').count()) === 0;
           if (blank || errs.length > 0) crashes.push(`${motion} ${w}x${h} 「${ch}」×${n} (${[...title].length}字): ${blank ? '真っ白' : ''} ${errs[0] ?? ''}`);
         }

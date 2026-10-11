@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
-import { AUTH_PROXY_PREFIX, authCookies, firstPartyCookie, isProxiedPath } from './src/backend/authProxy.ts';
+import { AUTH_PROXY_PREFIX, authCookies, firstPartyCookie, isProxiedPath, trimTrailingSlashes } from './src/backend/authProxy.ts';
 
 /**
  * public/_headers（Cloudflare Pages のヘッダー。CSP など）の `/*` の分を読む。
@@ -34,7 +34,7 @@ function authProxy(authUrl: string | undefined): Record<string, ProxyOptions> {
       target: upstream.origin,
       changeOrigin: true,
       bypass: (req) => (isProxiedPath((req.url ?? '').split('?')[0]!.slice(AUTH_PROXY_PREFIX.length)) ? undefined : false),
-      rewrite: (p) => upstream.pathname.replace(/\/+$/, '') + p.slice(AUTH_PROXY_PREFIX.length),
+      rewrite: (p) => trimTrailingSlashes(upstream.pathname) + p.slice(AUTH_PROXY_PREFIX.length),
       configure: (proxy) => {
         proxy.on('proxyReq', (proxyReq) => {
           // Neon Auth のクッキーだけを送る

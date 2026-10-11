@@ -32,8 +32,8 @@ const sizes = (process.env.T5_SIZES?.split(',') as ('pc1280' | 'sp')[] | undefin
 
 test.describe.configure({ mode: 'parallel' });
 
+/** 画面の点検（SNAPSHOT_JS が描画を進め、CSS の動きが終わるのを待ってから測る） */
 async function snap(page: Page): Promise<Snapshot> {
-  await page.waitForTimeout(150);
   return (await page.evaluate(SNAPSHOT_JS)) as Snapshot;
 }
 
