@@ -1,0 +1,31 @@
+# 本番の通信確認（scripts/liveCheck.mjs）。ログインせずに確かめられることだけを見る。書き込まない。秘密情報は使わない。
+#   サイトの保護ヘッダ・ログインの中継・Data API と create-post がトークン無しを拒むこと・Mozilla HTTP Observatory の評価（A+ か）
+# 起動: Actions → Live → Run workflow、作業ブランチ（claude/**）への push（ヘッダ・中継・確認スクリプトが変わったとき）、毎週月曜
+name: Live
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['claude/**']
+    paths: ['scripts/liveCheck.mjs', '.github/workflows/live.yml', 'packages/app/public/_headers', 'functions/**', '.env.production']
+  schedule:
+    - cron: '17 0 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live
+  cancel-in-progress: false
+
+jobs:
+  prod:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - name: 本番の通信確認
+        run: node scripts/liveCheck.mjs

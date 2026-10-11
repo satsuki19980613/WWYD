@@ -338,6 +338,7 @@
 | 2026-09-30 | **Villain の情報の Sample を項目ごと廃止**（V-007。Long と HUD Stats の並びが情報の量の順に読める指摘に対し、ⓘ の 7 項目の上限で目安を置けなかったため）。新しい投稿の `sample` はサーバーが malformed で断り、前の版の投稿・下書き・Preset の `sample` は読むときに捨てる。create-post の配備が要る。**PC とスマホの境目は推奨どおり**（FitStage の倍率の下限 0.65。幅 927px・高さ 605px 未満はスマホの構成） | さつきの判断（「その情報は無くてもいい。項目ごと消していい」「境目は推奨で問題ない」） | さつき |
 | 2026-09-30 | **公開前に本番の投稿を整理し、機能を一通り見せるサンプル 6 件にする**。さつき自身の投稿（T4・テスト・てすと）も消す。題名は普通の題名（「サンプル」を付けない）。サンプルは試験用ユーザーの投稿と回答（`db/seed/showcase.sql`、`npm run db:showcase`）: ①6 人 Cash の Flop の C-Bet ②3-Bet Pot の Turn の Barrel を受ける（Spot Read）③MTT・Ante・River の All-in に Call（MTT の情報、Fold／Call だけ）④ヘッズアップの Check-Raise を受ける ⑤4 人の Limp Pot ⑥5 人の River の Overbet の All-in（長い題名） | さつきの指示（AskUserQuestion 2 問、推奨どおり） | さつき |
 | 2026-10-01 | **サンプル 6 件を、公開されているプロのハンドから抜粋したものに差し替える**（初級者のプレイに見えたため）。①WSOP Main Event 2003 の Heads-up、River の All-in を受ける（MTT）②High Stakes Poker 2006、3-Bet Pot の Flop の Check-Raise を受ける ③High Stakes Poker 2022、4 人の Pot の River の Check-Raise All-in（5 人に詰めた）④WSOP Main Event 2019、Turn の Bet に Check-Raise All-in ⑤Triton 2022 の残り 8 人、River の Bet に T 高で Call（4 人）⑥Polk vs Negreanu の Heads-up Cash、4-Bet Pot の River の Bluff。額は bb に直して丸め、BB Ante は全員のアンティに、降りた人は除いて席を詰め、出典に無い Stack は推定。題名に人の名前と Hero のハンドが分かる言葉は入れない（出典は `scripts/genShowcaseSql.ts` のコメント） | さつきの指示 | さつき |
+| 2026-10-11 | **README・SECURITY.md と自動の確認（CodeQL・Live）を privatematch に倣って足す**。README は「安全とプライバシー」を要点 → 扱う情報の表 → 期待できること・できないこと → 仕組みと根拠 → 自動の確認の順に書き、バッジは CI・Live・CodeQL。privatematch と違い WWYD は Neon Auth が表示名・メールアドレスを保存する（Q-26 で許容）ので、運営者が見られることを限界として明記した。Live（`scripts/liveCheck.mjs`）は秘密情報を使わず、本番の保護ヘッダ・ログインの中継・Data API と create-post がトークン無しを拒むこと・Mozilla HTTP Observatory の評価が A+ かを毎週見る | さつきの指示（privatematch の README に倣う） | さつき |
 
 ---
 
@@ -905,3 +906,12 @@
 - **追記（2026-09-30）**: さつきの指示で公開用のサンプル 6 件を作った（`scripts/genShowcaseSql.ts` → `db/seed/showcase.sql`。投稿画面と同じ下書きから core の検証を通した値で作り、回答は試験用ユーザー同士で paint コーデックから作る）。一時ブランチで 2 回流して 6 件・回答 39 件が入り、6 件とも get_post_detail → 画面の parsePostDetail で読めることを確かめた。本番への投入（`npm run db:showcase -- --branch production`）と、さつき自身の投稿 3 件の削除はさつき。
 - **追記（2026-10-01）**: さつきが本番にサンプル 6 件を入れた（`npm run db:showcase -- --branch production`。前の試験データ 40 件は消えた）。Claude が本番の一覧と回答画面を確かめた。アプリのアイコンをさつきの選んだ案 D（レンジ表を 3×3 に縮めた形）に差し替え、ホーム画面用の apple-touch-icon・manifest を足した（PR #28 をマージ `9d02e7e`。本番でアイコン 4 種とマニフェストが配信され、コンソールのエラー 0）。残り: さつき自身の投稿 3 件（T4・テスト・てすと）の削除。
 - **追記（2026-10-01）**: 本番で Android の Chrome に「このアプリはインストールできません」と出たので manifest を外した（ホーム画面用は apple-touch-icon だけ）。起動中のマークをアプリのアイコンと同じ絵にした（`AppMark`）。サンプル 6 件を、公開されているプロのハンド（WSOP Main Event 2003・2019、High Stakes Poker 2006・2022、Triton 2022、Polk vs Negreanu）から抜粋したものに差し替えた。dev に入れて 6 件・回答 39 件、回答画面の Pot と to call が元の記録と合うことを確かめた。本番への投入（`npm run db:showcase -- --branch production`）はさつき。
+
+
+### 2026-10-11（セッション 12・README とセキュリティの表示）
+
+- **行ったこと**: さつきの指示で、privatematch（https://github.com/satsuki19980613/privatematch）が行ったバッジの取得（CI・Live・CodeQL）と Mozilla HTTP Observatory の確認に倣い、README を新しく書いた。README の主張はコードで裏を取った（RLS・author_uid を隠すマイグレーション・回答前に返さない判定・トリガの検証と集計・create-post の JWT の検証と再生・投稿上限・CSP・ログインの中継・アカウント削除）。Observatory の採点は、この環境から本番と Observatory の API に届かないため、Live のワークフローが GitHub 上で測る。
+- **変更したファイル**: `README.md`（新）・`SECURITY.md`（新）・`.github/workflows/codeql.yml`（新）・`.github/workflows/live.yml`（新）・`scripts/liveCheck.mjs`（新）・`docs/plan.md`
+- **試験**: 型検査・単体 1333 が通る。`liveCheck.mjs` は手元の `npm run preview`（本番と同じヘッダ）に向けてヘッダの確認 7 件が通ることを確かめた（外への通信はこの環境から届かない）。
+- **残課題（さつき）**: リポジトリの Settings → Code security で **Private vulnerability reporting**（SECURITY.md の知らせ方）と **Dependabot alerts** を有効にする。CodeQL の指摘が Security タブに出たら直す。
+
