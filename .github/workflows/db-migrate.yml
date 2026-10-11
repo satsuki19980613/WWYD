@@ -1,0 +1,45 @@
+# DB のマイグレーションの適用（scripts/db.mjs migrate）と、ログインの個人の情報の確認（auth-audit）。
+# 手で起動するだけ（Actions → DB migrate → Run workflow で、ブランチ dev か production を選ぶ）。
+# production への適用はさつきの判断で起動する（CLAUDE.md §12）。NEON_API_KEY を使い、接続文字列は画面に出さない。
+name: DB migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 適用する Neon のブランチ
+        required: true
+        type: choice
+        options: [dev, production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-migrate-${{ inputs.branch }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      BRANCH: ${{ inputs.branch }}
+    steps:
+      - name: NEON_API_KEY があるか
+        if: env.NEON_API_KEY == ''
+        run: |
+          echo "NEON_API_KEY が設定されていないため、適用できません。"
+          exit 1
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      # 依存のインストールスクリプトは動かさない（どの依存も不要）
+      - run: npm ci --ignore-scripts
+      - name: 未適用のマイグレーションを ${{ inputs.branch }} に適用
+        run: npm run db:migrate -- --branch "$BRANCH"
+      - name: ${{ inputs.branch }} にログインの個人の情報が残っていないか
+        run: npm run db:auth-audit -- --branch "$BRANCH"
