@@ -14,6 +14,8 @@ const RESULT = `/s/${ID}/result`;
 
 const unanswered = (): Record<string, unknown> => detailJson(hs1bb(), { viewer: 'unanswered', id: ID });
 const answered = (): Record<string, unknown> => detailJson(hs1bb(), { viewer: 'answered', id: ID, answerCount: 1 });
+/** スポイトが効くまでの長押しの時間（RangeGrid.tsx の PICK_MS と同じ値） */
+const PICK_MS = 480;
 
 /** 回答画面を開く（視差効果を減らす設定にして、リプレイは停止位置から始める） */
 async function open(page: Page, detail: Record<string, unknown> | null = unanswered(), path = ANSWER): Promise<Backend> {
@@ -513,21 +515,31 @@ test.describe('スマホ（06 章 §4.1）', () => {
   });
 
   test('指でなぞる・長押し（スポイト）@sp', async ({ page }) => {
+    // 長押しの 480ms（PICK_MS）を実時間で測ると、負荷の高い CI では指の操作の合間がそれを超え、なぞりが長押しに化ける。
+    // ページの時計を止め、長押しの時間は runFor で進めた分だけにする
+    await page.clock.install();
     await open(page);
     await page.getByRole('tab', { name: 'Range' }).click();
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 5000);
     const cdp = await page.context().newCDPSession(page);
     const touch = async (type: 'touchStart' | 'touchMove' | 'touchEnd', p?: { x: number; y: number }): Promise<void> => {
       await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: p ? [p] : [] });
     };
     // なぞる
-    await touch('touchStart', await center(cell(page, 'AA')));
-    for (const l of ['AKs', 'AQs', 'AJs']) await touch('touchMove', await center(cell(page, l)));
+    const pts = await Promise.all(['AA', 'AKs', 'AQs', 'AJs'].map((l) => center(cell(page, l))));
+    await touch('touchStart', pts[0]);
+    for (const p of pts.slice(1)) await touch('touchMove', p);
     await touch('touchEnd');
     for (const l of ['AA', 'AKs', 'AQs', 'AJs']) await expect(cell(page, l)).toHaveAccessibleName(`${l} Call 100%`);
-    // 長押し
-    await tile(page, 'Fold').tap();
+    // 長押し。Fold が効いたのを確かめてから押す（効く前に押すと、Call のブラシで Call のマスを押す消去になる）。
+    // なぞった直後の tap() は、Chromium がクリックを次のタッチまで出さないことがあるので click() で選ぶ
+    await tile(page, 'Fold').click();
+    await expect(tile(page, 'Fold')).toHaveAttribute('aria-pressed', 'true');
+    await expect(tile(page, 'Call')).toHaveAttribute('aria-pressed', 'false');
     await touch('touchStart', await center(cell(page, 'AKs')));
-    // 押したまま、スポイトが効いて（ブラシが Call になって）から離す
+    // 押している間は Fold で塗られ、480ms 押し続けるとスポイトが効く（ブラシが Call になり、塗りは取り消される）
+    await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Fold 100%');
+    await page.clock.runFor(PICK_MS);
     await expect(tile(page, 'Call')).toHaveAttribute('aria-pressed', 'true');
     await touch('touchEnd');
     await expect(cell(page, 'AKs')).toHaveAccessibleName('AKs Call 100%');
