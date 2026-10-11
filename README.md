@@ -93,7 +93,7 @@
 | [CI](https://github.com/satsuki19980613/WWYD/actions/workflows/ci.yml) | 型検査・単体テスト・ビルド、データベースの権限のテスト（ログインしていない人・回答していない人に見えないか）、ブラウザでの操作のテスト | コードを変えるたび |
 | [Live](https://github.com/satsuki19980613/WWYD/actions/workflows/live.yml) | 本番のサイトに保護ヘッダが付いているか、ログインせずに本番のデータベースと投稿の関数を読めない・呼べないか、Mozilla HTTP Observatory の評価が A+ か | 毎週と、ヘッダや中継を変えたとき |
 | [CodeQL](https://github.com/satsuki19980613/WWYD/actions/workflows/codeql.yml) | GitHub 公式のコードスキャン（危ない書き方が無いか） | コードを変えるたびと毎週 |
-| [Mozilla HTTP Observatory](https://developer.mozilla.org/en-US/observatory/analyze?host=wwyd.pages.dev) | 公開しているサイトの保護ヘッダ | リンク先でいつでも測り直せる |
+| [Mozilla HTTP Observatory](https://developer.mozilla.org/en-US/observatory/analyze?host=wwyd.pages.dev) | 公開しているサイトの保護ヘッダ。**A+**（130 点、12 項目すべて合格。2026-10-11 に測定） | リンク先でいつでも測り直せる（Live も毎週測る） |
 
 ### 問題を見つけたら
 

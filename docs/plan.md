@@ -913,5 +913,6 @@
 - **行ったこと**: さつきの指示で、privatematch（https://github.com/satsuki19980613/privatematch）が行ったバッジの取得（CI・Live・CodeQL）と Mozilla HTTP Observatory の確認に倣い、README を新しく書いた。README の主張はコードで裏を取った（RLS・author_uid を隠すマイグレーション・回答前に返さない判定・トリガの検証と集計・create-post の JWT の検証と再生・投稿上限・CSP・ログインの中継・アカウント削除）。Observatory の採点は、この環境から本番と Observatory の API に届かないため、Live のワークフローが GitHub 上で測る。
 - **変更したファイル**: `README.md`（新）・`SECURITY.md`（新）・`.github/workflows/codeql.yml`（新）・`.github/workflows/live.yml`（新）・`scripts/liveCheck.mjs`（新）・`docs/plan.md`
 - **試験**: 型検査・単体 1333 が通る。`liveCheck.mjs` は手元の `npm run preview`（本番と同じヘッダ）に向けてヘッダの確認 7 件が通ることを確かめた（外への通信はこの環境から届かない）。
+- **Observatory**: push 後の Live（GitHub 上）で本番を測り A+（130 点、12/12 項目合格。2026-10-11T01:55Z）。ほかの確認（ヘッダ・中継・Data API 400・create-post 401）もすべて通った。README に記入。
 - **残課題（さつき）**: リポジトリの Settings → Code security で **Private vulnerability reporting**（SECURITY.md の知らせ方）と **Dependabot alerts** を有効にする。CodeQL の指摘が Security タブに出たら直す。
 
