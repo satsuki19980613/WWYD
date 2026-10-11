@@ -14,7 +14,7 @@
 | 直近で完了したこと | **ログインの個人の情報を保存しない**（2026-10-11。セッション 13）: Neon Auth の表のメールアドレス・表示名・画像・Google のトークン・IP アドレス・ブラウザの種類をトリガーで置き換える（`20261011000000_auth_scrub.sql`）。README・プライバシーポリシー・ⓘ を合わせた。dev・本番への適用はさつき。その前: **SonarCloud の指摘の整理**（2026-10-11。セッション 13）: 未解決 758 件を、設定で外すもの（編集禁止の docs/source・生成物・PostgreSQL に当てはまらない PL/SQL の規則・順番どおりの await）と、コードで直すものに分けて直した（`.sonarcloud.properties`・CI の `npm ci --ignore-scripts`）。その前: **README とセキュリティの表示**（2026-10-11。PR #30・#32 をマージ `38060bc`。#31 は重複として閉じた）: README（安全とプライバシー）・SECURITY.md・CodeQL・Live（本番の保護ヘッダ・ログインの中継・トークン無しの拒否・Observatory）。main の Live で Observatory A+（130 点、12/12）。Private vulnerability reporting と Dependabot alerts を有効化（さつき）。その前: P10・P11 の仕上げ（2026-09-30） |
 | 次にやること | 1. さつき: 画面の見た目の承認（承認用のページ）<br>2. 公開後の確認（さつきのついでのとき）: iPhone 実機（[device-checklist.md](release-test/device-checklist.md)）、数日後のログイン、M-12 を dev で試す、本番で Read・MTT 付きの投稿<br>3. 見送った S4（確認待ち）は公開後の声を見て |
 | ブロッカー | なし |
-| さつきの確認待ち | `20261011000000_auth_scrub.sql` の dev・本番への適用（`npm run db:migrate -- --branch dev` / `production`。既存のメールアドレス等は元に戻せない形で置き換わる）と、プライバシーポリシーの §1・§5 の文面の承認。SonarCloud の PR の解析で `.sonarcloud.properties` の規則の除外（multicriteria）が効くか（自動解析で効かなければ、SonarCloud の画面の Analysis Scope に同じ内容を入れる）。画面の見た目の承認（承認用のページ）。見送った S4（V-022 重複した General Read・V-041・F-008・F-009・F-013・F-018・F-020 の起動の直列）は公開後の声を見て |
+| さつきの確認待ち | `20261011000000_auth_scrub.sql` の dev・本番への適用（PR #37 のマージ後に Actions → DB migrate → Run workflow で dev → production。既存のメールアドレス等は元に戻せない形で置き換わる）。プライバシーポリシーの §1・§5 の文面は承認済み（2026-10-11）。SonarCloud の PR の解析で `.sonarcloud.properties` の規則の除外（multicriteria）が効くか（自動解析で効かなければ、SonarCloud の画面の Analysis Scope に同じ内容を入れる）。画面の見た目の承認（承認用のページ）。見送った S4（V-022 重複した General Read・V-041・F-008・F-009・F-013・F-018・F-020 の起動の直列）は公開後の声を見て |
 
 ---
 
@@ -936,3 +936,4 @@
 - **残課題**: マージ後の SonarCloud の再解析で件数と multicriteria の効き目を確かめる。liveCheck.mjs のログの注入は自前の無害化なので、SonarCloud が認めなければ画面で「確認済み」にする。
 - **追記（2026-10-11）**: PR #36 で Select の候補にキー操作を足し、SonarCloud の Reliability を A にした（Bug 0・Vulnerability 0、残りは Code Smell 38）。multicriteria は自動解析では読まれないので、SonarCloud の画面の Analysis Scope に入れる（さつき）。
 - **追記（2026-10-11）**: さつきの指示で、ログインの個人の情報を保存しないようにした（決定ログ）。`db/migrations/20261011000000_auth_scrub.sql`（新）、`db/tests/09_auth_scrub.test.sql`（新。DB-21）、`scripts/db.mjs`（`auth-audit`）、`.github/workflows/live.yml`（`auth` ジョブ。毎週と手動）、README、`legal/privacy.md`、`info/infoSections.ts`、E2E 2 件、09・12 章、CLAUDE.md 不変条件 6。手元の Postgres 16 で、Neon Auth の表を模した表に適用し、既存の行・権限の無いロールの書き込みも置き換わることを確かめた。残り: dev・本番への適用とプライバシーポリシーの文面の承認（さつき）。
+- **追記（2026-10-11）**: さつきの承認で、GitHub の画面からマイグレーションを適用するワークフロー `db-migrate.yml`（Actions → DB migrate。dev / production を選ぶ。適用のあと auth-audit）を足した。Claude の GitHub 連携は Actions を起動できない（403）ので、ボタンはさつきが押す。プライバシーポリシーの §1・§5 の文面はさつきが承認。
