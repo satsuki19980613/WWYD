@@ -4,7 +4,8 @@
 //   3. Data API: トークン無しでは投稿を読めない（2xx を返さない）
 //   4. Function create-post: トークン無しでは 401
 //   5. Mozilla HTTP Observatory: 公開サイトを測らせ、評価が A+ か
-// 住所は .env.production（公開の住所）から読む。結果は表にして標準出力と GITHUB_STEP_SUMMARY に書く。
+// 住所は .env.production（公開の住所）から読む。詳しい結果は標準出力（ジョブのログ）に、合否の表は GITHUB_STEP_SUMMARY に書く。
+// GITHUB_STEP_SUMMARY には、通信で受け取った値をそのまま書かない（確認の名前と合否、Observatory は決まった評価の文字だけ）。
 //   node scripts/liveCheck.mjs                 … すべて
 //   node scripts/liveCheck.mjs --no-observatory … Observatory を飛ばす
 import { appendFileSync, readFileSync } from 'node:fs';
@@ -21,10 +22,10 @@ const DATA_URL = env.VITE_NEON_DATA_API_URL.replace(/\/+$/, '');
 const CREATE_POST_URL = env.VITE_NEON_CREATE_POST_URL;
 const OBSERVATORY = 'https://observatory-api.mdn.mozilla.net/api/v2/scan';
 
-/** @type {{ name: string, ok: boolean, detail: string }[]} */
+/** @type {{ name: string, ok: boolean }[]} */
 const results = [];
 const record = (name, ok, detail) => {
-  results.push({ name, ok, detail });
+  results.push({ name, ok });
   console.log(`${ok ? 'OK  ' : 'FAIL'} ${name}: ${detail}`);
 };
 
@@ -84,33 +85,38 @@ async function request(url, init = {}) {
 }
 
 // 5. Mozilla HTTP Observatory
-let observatory = null;
+const GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
+/** Observatory の評価（GRADES のどれか。測れなかったら null） */
+let grade = null;
 if (!process.argv.includes('--no-observatory')) {
   const host = new URL(SITE).host;
   const r = await request(`${OBSERVATORY}?host=${encodeURIComponent(host)}`, { method: 'POST' });
+  let body = null;
   try {
-    observatory = JSON.parse(r.text);
+    body = JSON.parse(r.text);
   } catch {
-    observatory = null;
+    body = null;
   }
-  if (r.status === 200 && observatory?.grade) {
-    const { grade, score, tests_passed: passed, tests_quantity: total, scanned_at: at } = observatory;
+  grade = GRADES.find((g) => g === body?.grade) ?? null;
+  if (r.status === 200 && grade) {
+    const { score, tests_passed: passed, tests_quantity: total, scanned_at: at } = body;
     record('Mozilla HTTP Observatory', grade === 'A+', `${grade}（${score} 点、${passed}/${total} 項目合格、${at}）`);
   } else {
     record('Mozilla HTTP Observatory', false, `${r.status} ${r.text.slice(0, 200)}`);
   }
 }
 
-// まとめ
-const cell = (s) => String(s).replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+// まとめ（詳細はジョブのログ）
 const lines = [
   `### 本番の通信確認（${SITE}）`,
   '',
-  '| 確認 | 結果 | 詳細 |',
-  '|---|---|---|',
-  ...results.map((r) => `| ${cell(r.name)} | ${r.ok ? 'OK' : '**FAIL**'} | ${cell(r.detail)} |`),
+  '| 確認 | 結果 |',
+  '|---|---|',
+  ...results.map((r) => `| ${r.name} | ${r.ok ? 'OK' : '**FAIL**'} |`),
 ];
-if (observatory?.details_url) lines.push('', `Observatory の詳細: ${observatory.details_url}`);
+if (grade) {
+  lines.push('', `Observatory の評価: ${grade}（https://developer.mozilla.org/en-US/observatory/analyze?host=${encodeURIComponent(new URL(SITE).host)}）`);
+}
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
 
 const failed = results.filter((r) => !r.ok);
