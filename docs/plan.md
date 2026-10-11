@@ -202,7 +202,7 @@
 | 2026-09-27 | STEP 1〜3 を承認。詳細仕様 11 章の Q-1〜Q-23 をすべて推奨案で決定（ダーク固定、アクション配色＝fold 赤 / check・call シアン / s1 黄＋斜線、受領モックで進める、BB 1 固定、mbb 整数と 0.01bb 丸め、実効スタック＝開始スタック、最大額＝自席のベット額＋残り、不完全レイズは累積でも再オープンしない、未回答者には停止位置まで返す、投稿枠は削除で戻らない、技術構成は CLAUDE.md §3 のとおり、表示名は認証基盤側の保持を許容、休止は定期アクセスで防止、ログイン画面は最小構成、予想入力時の Hero ハンドは表向き、完了トーストなし、OCR は tenfour_watcher を tesseract.js で移植、Cloudflare Pages、問い合わせ先は専用メール＋ハンドルネーム、許可リストは最初から入れて無効、Hero の予想も回答と同じ検証、アプリ名 WWYD・ロゴなし、一覧は自動の追加読み込み） | すべて推奨でよいとの回答 | さつき |
 | 2026-09-27 | OCR の正解画像（個人の対戦画像）は公開リポジトリに置かず、ローカルのみで検証する | Q-17 ③は推奨を示していなかったため、公開範囲を広げない側を選んだ | Claude |
 | 2026-09-27 | ICMCLEC（pocket-ICM・非公開）由来の本番モックとトークンの写しは git 管理外にし、未 push の履歴からも削除する | WWYD は公開リポジトリのため | さつき（履歴の削除を許可） |
-| 2026-09-27 | 正となる資料 2 点を `C:\Users\sa641.SATSUKIPC\Downloads` から `docs/source/` に配置（内容は無変更） | 依頼時点でリポジトリが空だったため | Claude |
+| 2026-09-27 | 正となる資料 2 点を 手元のダウンロードフォルダから `docs/source/` に配置（内容は無変更） | 依頼時点でリポジトリが空だったため | Claude |
 | 2026-09-27 | 依存の版: TypeScript ~5.9.3、Vite ^8.3.1、@vitejs/plugin-react ^6.1.1、Vitest ^5.0.2、React 18.3、Supabase CLI ^2.118.0（開発用） | TypeScript 7（Go 版）はエコシステムの対応を待つため 5 系の最新にした。他は執筆時点の最新 | Claude |
 | 2026-09-27 | ESLint は入れず、tsc の検査（`noUnusedLocals` / `noUnusedParameters` / `noImplicitReturns` / `noFallthroughCasesInSwitch` / `noUncheckedIndexedAccess`）で「ESLint 相当」とする | 承認済みの依存に ESLint が無く、依存を増やさない方針（T-101） | Claude |
 | 2026-09-27 | UI 部品の単体テストは入れない（jsdom 等を追加しない）。画面の挙動は P6 以降の Playwright で確かめる。純関数（ルーター・状態判定・ⓘ の対応）は Vitest | 依存を増やさない | Claude |

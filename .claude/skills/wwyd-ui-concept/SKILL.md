@@ -5,7 +5,7 @@ description: WWYD の UI を作る・直す・レビューするときに必ず�
 
 # WWYD UI コンセプト（ICMCLEC 踏襲）
 
-WWYD の UI は、ICMCLEC（`C:\Users\sa641.SATSUKIPC\OneDrive\ドキュメント\一時ツール\ICMCLEC`）で確立した
+WWYD の UI は、ICMCLEC（手元の `ICMCLEC` フォルダ）で確立した
 デザイン言語を**そのまま**使う。新しい世界観を作らない。方向性の提案・確認（frontend-design-principles の
 「Before Generating」の 3.）は、このファイルが既に確定した答えなので**やり直さない**。
 ただし「Before Showing」の 4 つの自己レビュー（swap / squint / signature / token）は毎回行う。

@@ -1,12 +1,12 @@
 /**
- * A-06（画像の読み込み）の部品。T4 の試験画像は個人の対戦画像で git 管理外。元のリポジトリの sample/ から絶対パスで読むだけで、
+ * A-06（画像の読み込み）の部品。T4 の試験画像は個人の対戦画像で git 管理外。環境変数 WWYD_SAMPLE_DIR（無ければカレントの `sample`）から読むだけで、
  * リポジトリの管理下にコピーしない。無ければ試験は skip する。
  */
 import { expect, type Locator, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const SAMPLE_ROOT = process.env['WWYD_SAMPLE_DIR'] ?? 'C:/Users/sa641.SATSUKIPC/OneDrive/ドキュメント/一時ツール/WWYD/sample';
+export const SAMPLE_ROOT = process.env['WWYD_SAMPLE_DIR'] ?? path.resolve(process.cwd(), 'sample');
 
 export type ExpectedAction = { street: 'pf' | 'flop' | 'turn' | 'river'; pos: string; verb: string; amount: number | null };
 export type Expected = { hero: string; hands: Record<string, string[]>; board: string[]; actions: ExpectedAction[] };

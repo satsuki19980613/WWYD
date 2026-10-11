@@ -119,7 +119,7 @@ WWYD/
 | Function の配備 | `npx neonctl functions deploy <slug> --project-id patient-leaf-06853495 --branch <ブランチ> --src <入口>`（本番は**さつきの確認が必要**）。配備直後の 1 分ほどは新旧の版が混ざって応答する |
 
 - マイグレーションの新規作成は `db/migrations/` に `YYYYMMDDHHMMSS_<目的>.sql` を置く。適用済みは `migrations.applied` 表に記録される。
-- Claude のシェル（Git Bash）で `docker` が見つからないときは `export PATH="$PATH:/c/Users/sa641.SATSUKIPC/AppData/Local/Programs/DockerDesktop/resources/bin"`。
+- Claude のシェル（Git Bash）で `docker` が見つからないときは `export PATH="$PATH:/c/Users/<ユーザー名>/AppData/Local/Programs/DockerDesktop/resources/bin"`。
 - DB の接続文字列（パスワードを含む）は `npx neonctl connection-string <ブランチ> --role-name neondb_owner` でその場で取り、画面・ログ・ファイルに出さない。
 
 ---

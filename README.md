@@ -3,6 +3,7 @@
 [![CI](https://github.com/satsuki19980613/WWYD/actions/workflows/ci.yml/badge.svg)](https://github.com/satsuki19980613/WWYD/actions/workflows/ci.yml)
 [![Live](https://github.com/satsuki19980613/WWYD/actions/workflows/live.yml/badge.svg)](https://github.com/satsuki19980613/WWYD/actions/workflows/live.yml)
 [![CodeQL](https://github.com/satsuki19980613/WWYD/actions/workflows/codeql.yml/badge.svg)](https://github.com/satsuki19980613/WWYD/actions/workflows/codeql.yml)
+[![Secrets](https://github.com/satsuki19980613/WWYD/actions/workflows/secrets.yml/badge.svg)](https://github.com/satsuki19980613/WWYD/actions/workflows/secrets.yml)
 
 ポーカーの Hero の手番（Spot）について、他のプレイヤーならどの Range でどう打つかを回答から集計する Web アプリ。ソルバーの解ではなく、人の判断のばらつきを可視化するアンケートに近いツールである。
 
@@ -103,6 +104,7 @@
 | [CI](https://github.com/satsuki19980613/WWYD/actions/workflows/ci.yml) | 型検査・単体テスト・ビルド、データベースの権限のテスト（未ログイン・未回答の利用者に見えないこと）、ブラウザでの E2E テスト | コード変更時 |
 | [Live](https://github.com/satsuki19980613/WWYD/actions/workflows/live.yml) | 本番サイトのセキュリティヘッダー、未ログインで本番のデータベースと投稿の関数を読めない・呼べないこと、Mozilla HTTP Observatory の評価が A+ であること、本番のデータベースに個人情報が残っていないこと | 毎週・ヘッダーや中継の変更時（個人情報の検査は毎週） |
 | [CodeQL](https://github.com/satsuki19980613/WWYD/actions/workflows/codeql.yml) | GitHub CodeQL による静的解析 | コード変更時・毎週 |
+| [Secrets](https://github.com/satsuki19980613/WWYD/actions/workflows/secrets.yml) | gitleaks による秘密情報（API キー・トークン・パスワード・秘密鍵など）の検査。全ブランチの全履歴が対象 | コード変更時・毎週 |
 | [Mozilla HTTP Observatory](https://developer.mozilla.org/en-US/observatory/analyze?host=wwyd.pages.dev) | 公開サイトのセキュリティヘッダー。**A+**（130 点、12 項目すべて合格。2026-10-11 測定） | リンク先で随時再測定できる（Live も毎週測定） |
 
 このほか、依存パッケージの脆弱性を Dependabot で通知している。
