@@ -95,7 +95,7 @@ const isDigit = (c: string | undefined): boolean => c !== undefined && c >= '0' 
 export function itemOf(line: string): { marker: string; text: string } | null {
   const body = line.trimStart();
   let n = 0;
-  if (body[0] === '-' || body[0] === '*') n = 1;
+  if (body.startsWith('-') || body.startsWith('*')) n = 1;
   else {
     while (isDigit(body[n])) n++;
     if (n === 0 || (body[n] !== '.' && body[n] !== ')')) return null;

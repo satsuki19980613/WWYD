@@ -150,7 +150,7 @@ function PercentField(props: Readonly<{ name: string; value: number | undefined;
   }
   return (
     <button type="button" className="rs-num num" aria-label={`${props.name} を数で入力`} onClick={() => setEditing(true)}>
-      {props.value === undefined ? '--' : props.value}
+      {props.value ?? '--'}
       <small>%</small>
     </button>
   );
